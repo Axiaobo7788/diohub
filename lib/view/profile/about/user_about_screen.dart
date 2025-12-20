@@ -5,7 +5,6 @@ import 'package:diohub/providers/users/user_contributions_provider.dart';
 import 'package:diohub/view/profile/about/widgets/activity_overview_section.dart';
 import 'package:diohub/view/profile/about/widgets/activity_timeline_section.dart';
 import 'package:diohub/view/profile/about/widgets/contribution_calendar_section.dart';
-import 'package:diohub/view/profile/about/widgets/contribution_statistics_section.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -80,6 +79,11 @@ class _UserAboutScreenState extends ConsumerState<UserAboutScreen> {
     final contributionSlivers = contributionsAsync.when(
       data: (viewModel) {
         return <Widget>[
+          SliverToBoxAdapter(
+            child: SizedBox(
+              height: 16,
+            ),
+          ),
           // Animated calendar section with fade-in
           SliverToBoxAdapter(
             child: _DelayedFadeAnimation(
@@ -95,16 +99,6 @@ class _UserAboutScreenState extends ConsumerState<UserAboutScreen> {
                 customToDate: widget.customToDate,
                 useCustomRange: widget.useCustomRange,
                 createdAt: widget.userData.createdAt,
-              ),
-            ),
-          ),
-          const SliverToBoxAdapter(child: SizedBox(height: 8)),
-          // Animated statistics section with staggered delay
-          SliverToBoxAdapter(
-            child: _DelayedFadeAnimation(
-              delay: const Duration(milliseconds: 100),
-              duration: const Duration(milliseconds: 400),
-              child: ContributionStatisticsSection(
                 commits: viewModel.totalCommitContributions,
                 pullRequests: viewModel.totalPullRequestContributions,
                 issues: viewModel.totalIssueContributions,
@@ -112,7 +106,6 @@ class _UserAboutScreenState extends ConsumerState<UserAboutScreen> {
               ),
             ),
           ),
-          const SliverToBoxAdapter(child: SizedBox(height: 8)),
           // Animated activity overview with more delay
           SliverToBoxAdapter(
             child: _DelayedFadeAnimation(
@@ -133,7 +126,6 @@ class _UserAboutScreenState extends ConsumerState<UserAboutScreen> {
               ),
             ),
           ),
-          const SliverToBoxAdapter(child: SizedBox(height: 8)),
           // Activity timeline section (now returns slivers with staggered animations)
           ActivityTimelineSection(
             userName: widget.userData.login,
@@ -149,9 +141,6 @@ class _UserAboutScreenState extends ConsumerState<UserAboutScreen> {
       },
       loading: () => [
         const SliverToBoxAdapter(child: ContributionCalendarSectionLoading()),
-        const SliverToBoxAdapter(child: SizedBox(height: 8)),
-        const SliverToBoxAdapter(child: ContributionStatisticsSectionLoading()),
-        const SliverToBoxAdapter(child: SizedBox(height: 8)),
         const SliverToBoxAdapter(child: ActivityOverviewSectionLoading()),
       ],
       error: (error, stackTrace) {
@@ -213,12 +202,7 @@ class _UserAboutScreenState extends ConsumerState<UserAboutScreen> {
     }
 
     return Padding(
-      padding: const EdgeInsets.fromLTRB(
-        8,
-        16,
-        8,
-        0,
-      ),
+      padding: const EdgeInsets.symmetric(horizontal: 8),
       child: CustomScrollView(
         slivers: slivers,
       ),

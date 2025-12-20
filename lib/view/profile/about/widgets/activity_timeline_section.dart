@@ -1,5 +1,5 @@
 import 'package:diohub/common/misc/button.dart';
-import 'package:diohub/common/misc/shimmer_widget.dart';
+import 'package:diohub/common/timeline/timeline_shimmer_item.dart';
 import 'package:diohub/models/activity_timeline_progress.dart';
 import 'package:diohub/models/contributions/contribution_query_models.dart';
 import 'package:diohub/providers/users/user_activity_timeline_provider.dart';
@@ -92,7 +92,11 @@ class ActivityTimelineSection extends ConsumerWidget {
         return const SliverToBoxAdapter(child: SizedBox.shrink());
       },
       loading: () => const SliverToBoxAdapter(
-        child: ActivityTimelineSectionLoading(),
+        child: TimelineShimmerList(
+          itemCount: 5,
+          showAvatar: false,
+          padding: EdgeInsets.symmetric(horizontal: 8),
+        ),
       ),
       error: (error, stackTrace) {
         if (kDebugMode) {
@@ -115,9 +119,10 @@ class ActivityTimelineSection extends ConsumerWidget {
   ) {
     // Use the flat events list directly - it's already sorted and has flags set
     final events = timelineData.events;
+    final eventsByMonth = timelineData.eventsByMonth;
 
     return SliverPadding(
-      padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+      padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
       sliver: SliverList(
         delegate: SliverChildBuilderDelegate(
           (context, index) {
@@ -127,18 +132,26 @@ class ActivityTimelineSection extends ConsumerWidget {
 
             // Handle empty months
             if (eventWithFlags.isEmpty) {
-              return Column(
+              final needsSpacing = !isLast &&
+                  events[index + 1].event != null &&
+                  events[index + 1].monthHeader != null;
+
+              final item = Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   _buildMonthHeader(
                     context,
                     eventWithFlags.monthHeader!.year,
                     eventWithFlags.monthHeader!.month,
+                    showNoActivity: true,
                   ),
-                  const SizedBox(height: 12),
-                  _buildNoActivityPlaceholder(context),
-                  if (!isLast) const SizedBox(height: 20),
+                  if (needsSpacing) const SizedBox(height: 24),
                 ],
+              );
+
+              return _StaggeredTimelineItem(
+                index: index,
+                child: item,
               );
             }
 
@@ -152,15 +165,20 @@ class ActivityTimelineSection extends ConsumerWidget {
 
             // If event has monthHeader, render header + event together
             if (eventWithFlags.monthHeader != null) {
+              final year = eventWithFlags.monthHeader!.year;
+              final month = eventWithFlags.monthHeader!.month;
+              final eventCount = eventsByMonth[year]?[month]?.length ?? 0;
+
               item = Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   _buildMonthHeader(
                     context,
-                    eventWithFlags.monthHeader!.year,
-                    eventWithFlags.monthHeader!.month,
+                    year,
+                    month,
+                    eventCount: eventCount,
                   ),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 4),
                   ActivityTimelineItem(
                     event: event!,
                     userLogin: userName,
@@ -168,7 +186,7 @@ class ActivityTimelineSection extends ConsumerWidget {
                     isFirst: eventWithFlags.isFirst,
                     isLast: eventWithFlags.isLast,
                   ),
-                  if (needsSpacing) const SizedBox(height: 20),
+                  if (needsSpacing) const SizedBox(height: 24),
                 ],
               );
             } else {
@@ -183,7 +201,7 @@ class ActivityTimelineSection extends ConsumerWidget {
                     isFirst: eventWithFlags.isFirst,
                     isLast: eventWithFlags.isLast,
                   ),
-                  if (needsSpacing) const SizedBox(height: 20),
+                  if (needsSpacing) const SizedBox(height: 24),
                 ],
               );
             }
@@ -210,22 +228,6 @@ class ActivityTimelineSection extends ConsumerWidget {
         current.date.month != next.date.month;
   }
 
-  /// Build placeholder widget for months with no activity
-  Widget _buildNoActivityPlaceholder(BuildContext context) {
-    final theme = Theme.of(context);
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      child: Center(
-        child: Text(
-          'No activity',
-          style: theme.textTheme.bodyMedium?.copyWith(
-            color: theme.colorScheme.onSurfaceVariant.withOpacity(0.6),
-          ),
-        ),
-      ),
-    );
-  }
-
   /// Build message for when there are no events at all
   Widget _buildNoActivityMessage(BuildContext context) {
     final theme = Theme.of(context);
@@ -243,7 +245,13 @@ class ActivityTimelineSection extends ConsumerWidget {
     );
   }
 
-  Widget _buildMonthHeader(BuildContext context, int year, int month) {
+  Widget _buildMonthHeader(
+    BuildContext context,
+    int year,
+    int month, {
+    bool showNoActivity = false,
+    int? eventCount,
+  }) {
     final theme = Theme.of(context);
     final monthNames = [
       'January',
@@ -260,14 +268,44 @@ class ActivityTimelineSection extends ConsumerWidget {
       'December',
     ];
 
+    // Adjust padding based on whether there are events below
+    final padding = showNoActivity
+        ? const EdgeInsets.only(top: 24, bottom: 8)
+        : EdgeInsets.zero;
+
     return Padding(
-      padding: const EdgeInsets.only(top: 8),
-      child: Text(
-        '${monthNames[month - 1]} $year',
-        style: theme.textTheme.titleSmall?.copyWith(
-          fontWeight: FontWeight.w600,
-          color: theme.colorScheme.onSurfaceVariant,
-        ),
+      padding: padding,
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.baseline,
+        textBaseline: TextBaseline.alphabetic,
+        children: [
+          Text(
+            '${monthNames[month - 1]} $year',
+            style: theme.textTheme.titleSmall?.copyWith(
+              fontWeight: FontWeight.w600,
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
+          ),
+          if (showNoActivity) ...[
+            const SizedBox(width: 8),
+            Text(
+              'No activity',
+              style: theme.textTheme.bodySmall?.copyWith(
+                fontWeight: FontWeight.w400,
+                color: theme.colorScheme.onSurfaceVariant.withOpacity(0.6),
+              ),
+            ),
+          ] else if (eventCount != null && eventCount > 0) ...[
+            const SizedBox(width: 8),
+            Text(
+              eventCount == 1 ? '1 event' : '$eventCount events',
+              style: theme.textTheme.bodySmall?.copyWith(
+                fontWeight: FontWeight.w400,
+                color: theme.colorScheme.onSurfaceVariant.withOpacity(0.6),
+              ),
+            ),
+          ],
+        ],
       ),
     );
   }
@@ -487,30 +525,6 @@ class _ActivityTimelineSectionProgressState
               ],
             ),
           ],
-        ),
-      ),
-    );
-  }
-}
-
-/// Loading state for activity timeline section
-class ActivityTimelineSectionLoading extends StatelessWidget {
-  const ActivityTimelineSectionLoading({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8),
-      child: Column(
-        children: List.generate(
-          5,
-          (index) => Padding(
-            padding: const EdgeInsets.only(bottom: 12),
-            child: ShimmerWidget.container(
-              height: 60,
-              borderRadius: BorderRadius.circular(8),
-            ),
-          ),
         ),
       ),
     );

@@ -1,6 +1,5 @@
 import 'package:diohub/common/bottom_sheet/bottom_sheets.dart';
 import 'package:diohub/common/charts/radar_chart_widget.dart';
-import 'package:diohub/common/misc/nested_card_with_header.dart';
 import 'package:diohub/common/misc/repository_card.dart';
 import 'package:diohub/common/misc/shimmer_widget.dart';
 import 'package:diohub/common/utils/contribution_utils.dart';
@@ -72,51 +71,38 @@ class ActivityOverviewSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
-
-    return NestedCardWithHeader(
-      header: Row(
-        children: [
-          Icon(
-            Octicons.pulse,
-            size: 16,
-            color: colorScheme.onSurfaceVariant,
-          ),
-          const SizedBox(width: 8),
-          Text(
-            'Activity overview',
-            style: theme.textTheme.titleMedium?.copyWith(
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-        ],
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: LayoutBuilder(
-          builder: (context, constraints) {
-            // On smaller screens, stack vertically
-            if (constraints.maxWidth < 600) {
-              return Column(
+    final colorScheme = Theme.of(context).colorScheme;
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+      child: Material(
+        color: colorScheme.surfaceContainerLow,
+        borderRadius: BorderRadius.circular(12),
+        child: Padding(
+          padding: const EdgeInsets.all(12),
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              // On smaller screens, stack vertically
+              if (constraints.maxWidth < 600) {
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _buildContributedTo(context),
+                    const SizedBox(height: 16),
+                    _buildCodeReviewChart(context),
+                  ],
+                );
+              }
+              // On larger screens, side by side
+              return Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _buildContributedTo(context),
-                  const SizedBox(height: 16),
-                  _buildCodeReviewChart(context),
+                  Expanded(child: _buildContributedTo(context)),
+                  const SizedBox(width: 16),
+                  Expanded(child: _buildCodeReviewChart(context)),
                 ],
               );
-            }
-            // On larger screens, side by side
-            return Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Expanded(child: _buildContributedTo(context)),
-                const SizedBox(width: 16),
-                Expanded(child: _buildCodeReviewChart(context)),
-              ],
-            );
-          },
+            },
+          ),
         ),
       ),
     );
@@ -294,7 +280,8 @@ class ActivityOverviewSection extends StatelessWidget {
                                     height: 12,
                                     decoration: BoxDecoration(
                                       color: repo.languageColor != null
-                                          ? parseContributionColor(repo.languageColor!)
+                                          ? parseContributionColor(
+                                              repo.languageColor!)
                                           : colorScheme.primary,
                                       shape: BoxShape.circle,
                                     ),
@@ -372,7 +359,8 @@ class ActivityOverviewSection extends StatelessWidget {
                                   height: 10,
                                   decoration: BoxDecoration(
                                     color: repo.languageColor != null
-                                        ? parseContributionColor(repo.languageColor!)
+                                        ? parseContributionColor(
+                                            repo.languageColor!)
                                         : colorScheme.primary,
                                     shape: BoxShape.circle,
                                   ),
@@ -406,7 +394,6 @@ class ActivityOverviewSection extends StatelessWidget {
     );
   }
 
-
   String _formatNumber(int number) {
     if (number < 1000) return number.toString();
     if (number < 1000000) return '${(number / 1000).toStringAsFixed(1)}k';
@@ -433,14 +420,17 @@ class ActivityOverviewSection extends StatelessWidget {
             color: colorScheme.surfaceContainerHighest.withOpacity(0.3),
             borderRadius: BorderRadius.circular(12),
           ),
-          child: SizedBox(
-            height: 150,
-            child: ContributionRadarChart(
-              commits: commits,
-              issues: issues,
-              pullRequests: pullRequests,
-              reviews: reviews,
-              color: const Color(0xFF40C463), // GitHub green color
+          child: Padding(
+            padding: const EdgeInsets.all(8),
+            child: SizedBox(
+              height: 150,
+              child: ContributionRadarChart(
+                commits: commits,
+                issues: issues,
+                pullRequests: pullRequests,
+                reviews: reviews,
+                color: const Color(0xFF40C463), // GitHub green color
+              ),
             ),
           ),
         ),
@@ -480,9 +470,9 @@ class ActivityOverviewSection extends StatelessWidget {
             url: repo.url,
             description: repo.description,
             language: repo.language,
-            stargazersCount: repo.stargazersCount,
-            private: repo.isPrivate,
-            fork: repo.isFork,
+            stargazersCount: repo.stargazersCount ?? 0,
+            private: repo.isPrivate ?? false,
+            fork: repo.isFork ?? false,
             contributionCount: repo.contributionCount,
           );
           return Padding(
@@ -506,139 +496,130 @@ class ActivityOverviewSectionLoading extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return NestedCardWithHeader(
-      header: Row(
-        children: [
-          ShimmerWidget.container(
-            height: 16,
-            width: 16,
-            borderRadius: BorderRadius.circular(2),
-          ),
-          const SizedBox(width: 8),
-          ShimmerWidget.container(
-            height: 20,
-            width: 160,
-            borderRadius: BorderRadius.circular(4),
-          ),
-        ],
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: LayoutBuilder(
-          builder: (context, constraints) {
-            if (constraints.maxWidth < 600) {
-              return Column(
+    final colorScheme = Theme.of(context).colorScheme;
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+      child: Material(
+        color: colorScheme.surfaceContainerLow,
+        borderRadius: BorderRadius.circular(12),
+        child: Padding(
+          padding: const EdgeInsets.all(12),
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              if (constraints.maxWidth < 600) {
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Contributed to section
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        ShimmerWidget.container(
+                          height: 16,
+                          width: 120,
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        const SizedBox(height: 8),
+                        ...List.generate(
+                            4,
+                            (index) => Padding(
+                                  padding: const EdgeInsets.only(bottom: 8),
+                                  child: Row(
+                                    children: [
+                                      ShimmerWidget.container(
+                                        height: 14,
+                                        width: 14,
+                                        borderRadius: BorderRadius.circular(2),
+                                      ),
+                                      const SizedBox(width: 6),
+                                      ShimmerWidget.container(
+                                        height: 14,
+                                        width: 150,
+                                        borderRadius: BorderRadius.circular(4),
+                                      ),
+                                    ],
+                                  ),
+                                )),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    // Radar chart shimmer
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        ShimmerWidget.container(
+                          height: 16,
+                          width: 100,
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        const SizedBox(height: 12),
+                        ShimmerWidget.container(
+                          height: 150,
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                      ],
+                    ),
+                  ],
+                );
+              }
+              return Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Contributed to section
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      ShimmerWidget.container(
-                        height: 16,
-                        width: 120,
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                      const SizedBox(height: 8),
-                      ...List.generate(
-                          4,
-                          (index) => Padding(
-                                padding: const EdgeInsets.only(bottom: 8),
-                                child: Row(
-                                  children: [
-                                    ShimmerWidget.container(
-                                      height: 14,
-                                      width: 14,
-                                      borderRadius: BorderRadius.circular(2),
-                                    ),
-                                    const SizedBox(width: 6),
-                                    ShimmerWidget.container(
-                                      height: 14,
-                                      width: 150,
-                                      borderRadius: BorderRadius.circular(4),
-                                    ),
-                                  ],
-                                ),
-                              )),
-                    ],
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        ShimmerWidget.container(
+                          height: 16,
+                          width: 120,
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        const SizedBox(height: 8),
+                        ...List.generate(
+                            4,
+                            (index) => Padding(
+                                  padding: const EdgeInsets.only(bottom: 8),
+                                  child: Row(
+                                    children: [
+                                      ShimmerWidget.container(
+                                        height: 14,
+                                        width: 14,
+                                        borderRadius: BorderRadius.circular(2),
+                                      ),
+                                      const SizedBox(width: 6),
+                                      ShimmerWidget.container(
+                                        height: 14,
+                                        width: 150,
+                                        borderRadius: BorderRadius.circular(4),
+                                      ),
+                                    ],
+                                  ),
+                                )),
+                      ],
+                    ),
                   ),
-                  const SizedBox(height: 16),
-                  // Radar chart shimmer
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      ShimmerWidget.container(
-                        height: 16,
-                        width: 100,
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                      const SizedBox(height: 12),
-                      ShimmerWidget.container(
-                        height: 150,
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                    ],
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        ShimmerWidget.container(
+                          height: 16,
+                          width: 100,
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        const SizedBox(height: 12),
+                        ShimmerWidget.container(
+                          height: 150,
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                      ],
+                    ),
                   ),
                 ],
               );
-            }
-            return Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      ShimmerWidget.container(
-                        height: 16,
-                        width: 120,
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                      const SizedBox(height: 8),
-                      ...List.generate(
-                          4,
-                          (index) => Padding(
-                                padding: const EdgeInsets.only(bottom: 8),
-                                child: Row(
-                                  children: [
-                                    ShimmerWidget.container(
-                                      height: 14,
-                                      width: 14,
-                                      borderRadius: BorderRadius.circular(2),
-                                    ),
-                                    const SizedBox(width: 6),
-                                    ShimmerWidget.container(
-                                      height: 14,
-                                      width: 150,
-                                      borderRadius: BorderRadius.circular(4),
-                                    ),
-                                  ],
-                                ),
-                              )),
-                    ],
-                  ),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      ShimmerWidget.container(
-                        height: 16,
-                        width: 100,
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                      const SizedBox(height: 12),
-                      ShimmerWidget.container(
-                        height: 150,
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            );
-          },
+            },
+          ),
         ),
       ),
     );

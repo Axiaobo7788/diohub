@@ -1125,9 +1125,11 @@ class _DateRangeExpandedContent extends ConsumerWidget {
       ),
     );
 
-    // Year options
+    // Year options (sorted in descending order - newest first)
     if (availableYears.isNotEmpty) {
-      for (final year in availableYears) {
+      final sortedYears = List<int>.from(availableYears)
+        ..sort((a, b) => b.compareTo(a));
+      for (final year in sortedYears) {
         optionTiles.add(
           _buildOptionTile(
             context: context,
