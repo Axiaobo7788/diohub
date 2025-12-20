@@ -25,8 +25,8 @@ class TimelineCreateContent extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
       children: [
-          if (refType != 'repository' && refName != null) ...[
-            // Show ref info for branch/tag
+          // Show ref info for tags only (branches are shown in repo card)
+          if (refType == 'tag' && refName != null) ...[
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
@@ -40,7 +40,7 @@ class TimelineCreateContent extends StatelessWidget {
               child: Row(
                 children: [
                   Icon(
-                    refType == 'branch' ? Octicons.git_branch : Octicons.tag,
+                    Octicons.tag,
                     size: 16,
                     color: theme.colorScheme.onSurfaceVariant,
                   ),
@@ -58,11 +58,15 @@ class TimelineCreateContent extends StatelessWidget {
             ),
             const SizedBox(height: 8),
           ],
-          // Repository card - pass branch so it shows in the card
+          // Repository card - pass branch/tag so it shows in the card
+          // Green color for created branches (muted)
           RepoCardLoading(
             repoUrl,
             repoName,
             branch: refType != 'repository' && refName != null ? refName : null,
+            branchColor: refType == 'branch'
+                ? const Color(0xFF66BB6A) // Lighter green for created branches
+                : null,
             refresh: false,
           ),
         ],

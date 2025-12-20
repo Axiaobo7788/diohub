@@ -63,11 +63,15 @@ class TimelineDeleteContent extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 8),
-        // Repository card - pass branch so it shows with strikethrough in card
+        // Repository card - pass branch so it shows with red color and strikethrough in card
         RepoCardLoading(
           repoUrl,
           repoName,
           branch: refName.isNotEmpty ? refName : null,
+          branchColor: refType == 'branch'
+              ? const Color(0xFFE57373) // Lighter red for deleted branches
+              : null,
+          branchStrikethrough: refType == 'branch',
           refresh: false,
         ),
       ],

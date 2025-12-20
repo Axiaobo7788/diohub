@@ -15,6 +15,7 @@ import 'package:diohub/common/wrappers/infinite_scroll_wrapper.dart';
 import 'package:diohub/models/commits/commit_card_data_model.dart';
 import 'package:diohub/models/events/events_model.dart' hide Key;
 import 'package:diohub/models/issues/issue_card_data_model.dart';
+import 'package:diohub/models/issues/issue_model.dart';
 import 'package:diohub/providers/users/current_user_provider.dart';
 import 'package:diohub/services/activity/events_service.dart';
 import 'package:diohub/utils/utils.dart';
@@ -33,12 +34,14 @@ class Events extends StatelessWidget {
   final String? specificUser;
 
   // Spacing constants for consistent user group separation
-  static const double itemSpacing = 12.0; // Between items from same user
-  static const double groupSpacing = 24.0; // Between user groups
+  static const double itemSpacing = 8.0; // Between items from same user
+  static const double groupSpacing = 8.0; // Between user groups
 
   @override
   Widget build(final BuildContext context) {
     final CurrentUserProvider user = Provider.of<CurrentUserProvider>(context);
+    // Add bottom padding to account for SafeArea/system UI
+    final bottomPadding = MediaQuery.of(context).padding.bottom;
     return InfiniteScrollWrapper<EventsModel>(
       // header: (final BuildContext context) => Padding(
       //   padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
@@ -49,6 +52,10 @@ class Events extends StatelessWidget {
       //     ),
       //   ),
       // ),
+      padding: EdgeInsets.only(
+        top: 16,
+        bottom: 16 + bottomPadding, // Add SafeArea bottom padding
+      ),
       firstPageLoadingBuilder: (final BuildContext context) =>
           const TimelineShimmerList(
         itemCount: 5,
@@ -123,6 +130,19 @@ class Events extends StatelessWidget {
 
         return Column(
           children: [
+            // Divider between groups (not for first item)
+            // if (isFirstInUserGroup && data.index > 0)
+            //   Padding(
+            //     padding: EdgeInsets.symmetric(
+            //       horizontal: MediaQuery.of(context).size.width * 0.05,
+            //       // vertical: groupSpacing / 2,
+            //     ).copyWith(top: 16),
+            //     child: Divider(
+            //       height: 1,
+            //       thickness: 1,
+            //       color: context.colorScheme.outlineVariant.withOpacity(0.2),
+            //     ),
+            //   ),
             // User group header (only show for first item in group)
             if (isFirstInUserGroup)
               _buildUserGroupHeader(
@@ -130,14 +150,9 @@ class Events extends StatelessWidget {
                 item.actor,
                 isFirst: data.index == 0,
               ),
-            // Timeline event with spacing
+            // Timeline event
             Padding(
-              padding: EdgeInsets.only(
-                left: 16,
-                right: 16,
-                top: isFirstInUserGroup ? itemSpacing : 0,
-                bottom: 0,
-              ),
+              padding: const EdgeInsets.symmetric(horizontal: 16),
               child: buildTimelineEvent(
                 item,
                 data,
@@ -167,21 +182,21 @@ class Events extends StatelessWidget {
 
     switch (item.type) {
       case EventsType.PushEvent:
-        actionText = 'pushed';
+        actionText = 'pushed commits';
         final commitData = CommitCardDataModel.fromPushEvent(item);
         // Extract branch name from ref (e.g., "refs/heads/main" -> "main")
         // for RepoCardLoading which shows it in the card
         final branchName = item.payload?.ref?.split('/').last;
-        // Pass full ref string for display in commit count text
-        final ref = item.payload?.ref;
+        // Pass commit SHA (head) as ref - this is the latest commit SHA
+        final commitSha = item.payload?.head;
         content = TimelineCommitContent(
           commitData: commitData,
           branchName: branchName,
-          ref: ref,
+          ref: commitSha, // Commit SHA, not branch ref
         );
 
       case EventsType.WatchEvent:
-        actionText = 'starred';
+        actionText = 'starred repository';
         content = TimelineWatchContent(
           repoName: item.repo?.name ?? '',
           repoUrl: item.repo?.url ?? '',
@@ -189,7 +204,7 @@ class Events extends StatelessWidget {
 
       case EventsType.ForkEvent:
         final forkee = item.payload?.forkee;
-        actionText = 'forked';
+        actionText = 'forked repository';
         content = TimelineForkContent(
           sourceRepoName: item.repo?.name ?? '',
           sourceRepoUrl: item.repo?.url ?? '',
@@ -201,14 +216,15 @@ class Events extends StatelessWidget {
         final refType = item.payload?.refType;
         final ref = item.payload?.ref;
 
-        actionText = 'created';
         if (refType == RefType.REPOSITORY) {
+          actionText = 'created a repository';
           content = TimelineCreateContent(
             refType: 'repository',
             repoName: item.repo?.name ?? '',
             repoUrl: item.repo?.url ?? '',
           );
         } else if (refType == RefType.BRANCH) {
+          actionText = 'created a branch';
           content = TimelineCreateContent(
             refType: 'branch',
             repoName: item.repo?.name ?? '',
@@ -216,8 +232,10 @@ class Events extends StatelessWidget {
             refName: ref,
           );
         } else {
+          final refTypeName = refTypeValues.reverse![refType] ?? 'tag';
+          actionText = 'created a $refTypeName';
           content = TimelineCreateContent(
-            refType: refTypeValues.reverse![refType] ?? 'tag',
+            refType: refTypeName,
             repoName: item.repo?.name ?? '',
             repoUrl: item.repo?.url ?? '',
             refName: ref,
@@ -230,12 +248,7 @@ class Events extends StatelessWidget {
         final refTypeName = refTypeValues.reverse![refType] ?? 'branch';
         final refName = ref?.split('/').last ?? '';
 
-        // Restore action text: "deleted branch 'name'" or "deleted tag 'name'"
-        if (refName.isNotEmpty) {
-          actionText = 'deleted $refTypeName \'$refName\'';
-        } else {
-          actionText = 'deleted $refTypeName';
-        }
+        actionText = 'deleted a $refTypeName';
 
         content = TimelineDeleteContent(
           refType: refTypeName,
@@ -245,7 +258,7 @@ class Events extends StatelessWidget {
         );
 
       case EventsType.PublicEvent:
-        actionText = 'made public';
+        actionText = 'made repository public';
         content = TimelinePublicContent(
           repoName: item.repo?.name ?? '',
           repoUrl: item.repo?.url ?? '',
@@ -254,7 +267,7 @@ class Events extends StatelessWidget {
       case EventsType.MemberEvent:
         final member = item.payload?.member;
         final action = item.payload?.action ?? 'added';
-        actionText = action;
+        actionText = '$action a member';
         content = TimelineMemberContent(
           member: member!,
           action: action,
@@ -265,7 +278,7 @@ class Events extends StatelessWidget {
       case EventsType.IssuesEvent:
         final issue = item.payload?.issue;
         final action = item.payload?.action ?? 'opened';
-        actionText = action;
+        actionText = '$action an issue';
         content = TimelineIssueContent(
           issueData: IssueCardDataModel.fromIssueModel(issue!),
         );
@@ -273,7 +286,7 @@ class Events extends StatelessWidget {
       case EventsType.IssueCommentEvent:
         final issue = item.payload?.issue;
         final comment = item.payload?.comment;
-        actionText = 'commented';
+        actionText = 'commented on issue';
         content = TimelineIssueContent(
           issueData: IssueCardDataModel.fromIssueModel(issue!),
           commentBody: comment?.body,
@@ -284,7 +297,11 @@ class Events extends StatelessWidget {
         final pr = item.payload?.pullRequest;
         final action = item.payload?.action ?? 'opened';
         // Use "merged" action text if PR is merged, otherwise use the action from payload
-        actionText = (pr?.merged == true) ? 'merged' : action;
+        if (pr?.merged == true) {
+          actionText = 'merged a pull request';
+        } else {
+          actionText = '$action a pull request';
+        }
         // Extract head (from) and base (to) branch refs
         final fromRef = pr?.head?.ref; // Source branch
         final toRef = pr?.base?.ref; // Target/base branch
@@ -307,11 +324,11 @@ class Events extends StatelessWidget {
     }
 
     return UnifiedTimelineItem(
-      eventIcon: _getEventIcon(eventType),
-      eventIconColor: _getEventIconColor(context, eventType),
+      eventIcon: _getEventIcon(eventType, item),
+      eventIconColor: _getEventIconColor(context, eventType, item),
       actionText: actionText,
       date: date,
-      // highlighted: true,
+      highlighted: true,
       isFirst: isFirstInUserGroup,
       isLast: isLastInUserGroup,
       actionHeaderTopPadding: isFirstInUserGroup ? 0.0 : 16.0,
@@ -319,14 +336,30 @@ class Events extends StatelessWidget {
     );
   }
 
-  IconData _getEventIcon(EventsType? type) {
+  IconData _getEventIcon(EventsType? type, EventsModel item) {
     switch (type) {
       case EventsType.PushEvent:
         return Octicons.git_commit;
       case EventsType.PullRequestEvent:
-        return Octicons.git_pull_request;
+        final pr = item.payload?.pullRequest;
+        // State-aware icon for PRs
+        if (pr?.merged == true) {
+          return Octicons.git_merge;
+        } else if (pr?.draft == true) {
+          return Octicons.git_pull_request_draft;
+        } else if (pr?.state == IssueState.CLOSED) {
+          return Octicons.git_pull_request_closed;
+        } else {
+          return Octicons.git_pull_request;
+        }
       case EventsType.IssuesEvent:
-        return Octicons.issue_opened;
+        final issue = item.payload?.issue;
+        // State-aware icon for issues
+        if (issue?.state == IssueState.CLOSED) {
+          return Octicons.issue_closed;
+        } else {
+          return Octicons.issue_opened;
+        }
       case EventsType.IssueCommentEvent:
         return Octicons.comment;
       case EventsType.WatchEvent:
@@ -346,15 +379,32 @@ class Events extends StatelessWidget {
     }
   }
 
-  Color _getEventIconColor(BuildContext context, EventsType? type) {
+  Color _getEventIconColor(
+      BuildContext context, EventsType? type, EventsModel item) {
     final colorScheme = context.colorScheme;
     switch (type) {
       case EventsType.PushEvent:
         return const Color(0xFF2196F3); // Blue
       case EventsType.PullRequestEvent:
-        return const Color(0xFF9C27B0); // Purple
+        final pr = item.payload?.pullRequest;
+        // State-aware color for PRs
+        if (pr?.merged == true) {
+          return Colors.deepPurple; // Purple for merged
+        } else if (pr?.draft == true) {
+          return Colors.grey; // Grey for draft
+        } else if (pr?.state == IssueState.CLOSED) {
+          return Colors.red; // Red for closed
+        } else {
+          return Colors.green; // Green for open
+        }
       case EventsType.IssuesEvent:
-        return const Color(0xFF4CAF50); // Green
+        final issue = item.payload?.issue;
+        // State-aware color for issues
+        if (issue?.state == IssueState.CLOSED) {
+          return Colors.red; // Red for closed
+        } else {
+          return Colors.green; // Green for open
+        }
       case EventsType.IssueCommentEvent:
         return const Color(0xFF00ACC1); // Cyan/Teal for comments
       case EventsType.WatchEvent:
@@ -385,43 +435,44 @@ class Events extends StatelessWidget {
 
     return Container(
       margin: EdgeInsets.only(
-        top: isFirst ? 8 : groupSpacing,
-        bottom: 0,
+        top: isFirst ? 0 : groupSpacing,
       ),
-      decoration: BoxDecoration(
-        color: context.colorScheme.surfaceVariant.withOpacity(0.3),
-        border: Border(
-          bottom: BorderSide(
-            color: context.colorScheme.outlineVariant.withOpacity(0.2),
-            width: 1,
-          ),
-        ),
-      ),
-      child: InkWell(
-        onTap: () {
-          navigateToProfile(
-            context: context,
-            login: actor.login!,
-          );
-        },
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-          child: Row(
-            children: [
-              UserAvatar(
-                avatarUrl: actor.avatarUrl,
-                size: 32,
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Text(
-                  actor.login!,
-                  style: context.textTheme.titleSmall?.copyWith(
-                    fontWeight: FontWeight.w600,
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: () {
+            navigateToProfile(
+              context: context,
+              login: actor.login!,
+            );
+          },
+          child: Padding(
+            padding: EdgeInsets.fromLTRB(
+              16,
+              16,
+              16,
+              0,
+            ),
+            child: Row(
+              children: [
+                UserAvatar(
+                  avatarUrl: actor.avatarUrl,
+                  size: 24,
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.only(bottom: 4),
+                    child: Text(
+                      actor.login!,
+                      style: context.textTheme.bodyMedium?.copyWith(
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
                   ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
