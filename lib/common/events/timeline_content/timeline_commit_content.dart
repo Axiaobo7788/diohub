@@ -1,5 +1,4 @@
 import 'package:diohub/common/misc/repository_card.dart';
-import 'package:diohub/common/timeline/timeline_container.dart';
 import 'package:diohub/models/commits/commit_card_data_model.dart';
 import 'package:diohub/models/repositories/repo_card_data_model.dart';
 import 'package:flutter/material.dart';
@@ -21,11 +20,10 @@ class TimelineCommitContent extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return TimelineContainer(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min,
-        children: [
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
           // Show repository cards for each repo
           ...commitData.repositories.map((repoInfo) {
             // Use existing repoData if available, otherwise create from basic info
@@ -45,7 +43,6 @@ class TimelineCommitContent extends StatelessWidget {
             );
           }),
         ],
-      ),
     );
   }
 }

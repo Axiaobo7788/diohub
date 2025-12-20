@@ -1,5 +1,4 @@
 import 'package:diohub/common/misc/repository_card.dart';
-import 'package:diohub/common/timeline/timeline_container.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_vector_icons/flutter_vector_icons.dart';
 
@@ -22,11 +21,10 @@ class TimelineCreateContent extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
-    return TimelineContainer(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min,
-        children: [
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
           if (refType != 'repository' && refName != null) ...[
             // Show ref info for branch/tag
             Container(
@@ -60,14 +58,14 @@ class TimelineCreateContent extends StatelessWidget {
             ),
             const SizedBox(height: 8),
           ],
-          // Repository card
+          // Repository card - pass branch so it shows in the card
           RepoCardLoading(
             repoUrl,
             repoName,
+            branch: refType != 'repository' && refName != null ? refName : null,
             refresh: false,
           ),
         ],
-      ),
     );
   }
 }

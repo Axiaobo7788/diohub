@@ -1,5 +1,4 @@
 import 'package:diohub/common/misc/repository_card.dart';
-import 'package:diohub/common/timeline/timeline_container.dart';
 import 'package:flutter/material.dart';
 
 /// Simple timeline content for WatchEvent (star)
@@ -15,12 +14,10 @@ class TimelineWatchContent extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return TimelineContainer(
-      child: RepoCardLoading(
-        repoUrl,
-        repoName,
-        refresh: false,
-      ),
+    return RepoCardLoading(
+      repoUrl,
+      repoName,
+      refresh: false,
     );
   }
 }
