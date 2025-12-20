@@ -33,6 +33,8 @@ class RepositoryCard extends StatelessWidget {
     this.commitShaUrl,
     this.contributionCount,
     this.withBackground = false,
+    this.branchColor,
+    this.branchStrikethrough = false,
     // this.padding = const EdgeInsets.symmetric(vertical: 8),
     super.key,
   });
@@ -45,6 +47,10 @@ class RepositoryCard extends StatelessWidget {
   final String? commitShaUrl;
   final int? contributionCount;
   final bool withBackground;
+  final Color?
+      branchColor; // Optional color for branch indicator (e.g., green for created, red for deleted)
+  final bool
+      branchStrikethrough; // Whether to show strikethrough on branch text
 
   // final EdgeInsets padding;
 
@@ -111,7 +117,8 @@ class RepositoryCard extends StatelessWidget {
                 ),
             ],
           ),
-          // Branch display - styled to match fork indicator but more prominent
+          // Branch display - styled to match fork indicator for better blending
+          // Can be colored (green for created, red for deleted) with optional strikethrough
           if (branch != null) ...[
             const SizedBox(height: 6),
             Wrap(
@@ -120,32 +127,42 @@ class RepositoryCard extends StatelessWidget {
               children: <Widget>[
                 Container(
                   padding:
-                      const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                   decoration: BoxDecoration(
-                    color: context.colorScheme.surfaceVariant.withOpacity(0.7),
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(
-                      color: context.colorScheme.primary.withOpacity(0.3),
-                      width: 1,
-                    ),
+                    color: branchColor != null
+                        ? branchColor!.withOpacity(0.12)
+                        : context.colorScheme.surfaceVariant.withOpacity(0.5),
+                    borderRadius: BorderRadius.circular(4),
+                    border: branchColor != null
+                        ? Border.all(
+                            color: branchColor!.withOpacity(0.25),
+                            width: 1,
+                          )
+                        : null,
                   ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: <Widget>[
                       Icon(
                         Octicons.git_branch,
-                        size: 13,
-                        color: context.colorScheme.primary,
+                        size: 12,
+                        color: branchColor != null
+                            ? branchColor!.withOpacity(0.7)
+                            : context.colorScheme.onSurfaceVariant,
                       ),
-                      const SizedBox(width: 6),
+                      const SizedBox(width: 4),
                       Flexible(
                         child: Text(
                           branch!,
                           style:
                               Theme.of(context).textTheme.bodySmall?.copyWith(
-                                    color: context.colorScheme.primary,
-                                    fontWeight: FontWeight.w500,
-                                    fontSize: 12,
+                                    color: branchColor != null
+                                        ? branchColor!.withOpacity(0.7)
+                                        : context.colorScheme.onSurfaceVariant,
+                                    fontSize: 11,
+                                    decoration: branchStrikethrough
+                                        ? TextDecoration.lineThrough
+                                        : null,
                                   ),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
@@ -155,6 +172,7 @@ class RepositoryCard extends StatelessWidget {
                   ),
                 ),
                 // Commit SHA indicator - inline with branch
+                // Uses commit event blue color (0xFF2196F3)
                 if (commitSha != null)
                   InkPot(
                     onTap: commitShaUrl != null
@@ -170,16 +188,16 @@ class RepositoryCard extends StatelessWidget {
                         Icon(
                           Octicons.git_commit,
                           size: 11,
-                          color: context.colorScheme.onSurfaceVariant
-                              .withOpacity(0.6),
+                          color: const Color(0xFF2196F3).withOpacity(
+                              0.7), // Commit event blue with reduced intensity
                         ),
                         const SizedBox(width: 4),
                         Text(
                           commitSha!.substring(0, 7),
                           style:
                               Theme.of(context).textTheme.bodySmall?.copyWith(
-                                    color: context.colorScheme.onSurfaceVariant
-                                        .withOpacity(0.6),
+                                    color: const Color(0xFF2196F3).withOpacity(
+                                        0.7), // Commit event blue with reduced intensity
                                     fontFamily: 'monospace',
                                     fontSize: 11,
                                     fontWeight: FontWeight.w500,
@@ -318,6 +336,8 @@ class RepoCardLoading extends StatelessWidget {
     this.commitSha,
     this.commitShaUrl,
     this.refresh = false,
+    this.branchColor,
+    this.branchStrikethrough = false,
     super.key,
   });
 
@@ -329,6 +349,9 @@ class RepoCardLoading extends StatelessWidget {
   final String? branch;
   final String? commitSha;
   final String? commitShaUrl;
+  final Color? branchColor; // Optional color for branch indicator
+  final bool
+      branchStrikethrough; // Whether to show strikethrough on branch text
 
   @override
   Widget build(final BuildContext context) =>
@@ -343,6 +366,8 @@ class RepoCardLoading extends StatelessWidget {
           branch: branch,
           commitSha: commitSha,
           commitShaUrl: commitShaUrl,
+          branchColor: branchColor,
+          branchStrikethrough: branchStrikethrough,
         ),
       );
 
