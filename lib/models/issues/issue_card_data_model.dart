@@ -1,4 +1,5 @@
 import 'package:diohub/graphql/queries/issues_pulls/__generated__/issue_pull_info.data.gql.dart';
+import 'package:diohub/graphql/queries/users/__generated__/user_activity_timeline_full.data.gql.dart';
 import 'package:diohub/models/issues/issue_model.dart';
 import 'package:diohub/models/repositories/repo_card_data_model.dart';
 import 'package:diohub/models/users/user_info_model.dart';
