@@ -327,6 +327,8 @@ class PullLoadingCard extends StatelessWidget {
             data,
             showRepoName: showRepoName,
             isNested: isNested,
+            from: data.head?.ref,
+            to: data.base?.ref,
           );
         },
       );

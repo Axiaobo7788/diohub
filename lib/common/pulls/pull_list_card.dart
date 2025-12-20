@@ -18,12 +18,16 @@ class PullListCard extends StatelessWidget {
     this.item, {
     this.showRepoName = true,
     this.isNested = false,
+    this.from,
+    this.to,
     super.key,
   });
 
   final PullRequestModel item;
   final bool showRepoName;
   final bool isNested;
+  final String? from;
+  final String? to;
 
   @override
   Widget build(final BuildContext context) {
@@ -145,6 +149,48 @@ class PullListCard extends StatelessWidget {
                   ],
                 ),
             ],
+            // From and To refs
+            if (from != null || to != null) ...[
+              const SizedBox(width: 6),
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: <Widget>[
+                  if (from != null) ...[
+                    Text(
+                      from!,
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: context.colorScheme.onSurfaceVariant
+                                .withOpacity(0.7),
+                            fontFamily: 'monospace',
+                            fontSize: 10,
+                          ),
+                    ),
+                    if (to != null) ...[
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 3),
+                        child: Icon(
+                          Octicons.arrow_right,
+                          size: 10,
+                          color: context.colorScheme.onSurfaceVariant
+                              .withOpacity(0.6),
+                        ),
+                      ),
+                    ],
+                  ],
+                  if (to != null)
+                    Text(
+                      to!,
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: context.colorScheme.onSurfaceVariant
+                                .withOpacity(0.7),
+                            fontFamily: 'monospace',
+                            fontSize: 10,
+                          ),
+                    ),
+                ],
+              ),
+            ],
           ],
         ),
         trailing: isNested
@@ -187,6 +233,48 @@ class PullListCard extends StatelessWidget {
                   item.labels!.length,
                   (final int index) => IssueLabel(item.labels![index]),
                 ),
+              ),
+            ],
+            // From and To refs (when showRepoName is true, show below title)
+            if (showRepoName && (from != null || to != null)) ...[
+              const SizedBox(height: 5),
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: <Widget>[
+                  if (from != null) ...[
+                    Text(
+                      from!,
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: context.colorScheme.onSurfaceVariant
+                                .withOpacity(0.7),
+                            fontFamily: 'monospace',
+                            fontSize: 11,
+                          ),
+                    ),
+                    if (to != null) ...[
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 4),
+                        child: Icon(
+                          Octicons.arrow_right,
+                          size: 12,
+                          color: context.colorScheme.onSurfaceVariant
+                              .withOpacity(0.6),
+                        ),
+                      ),
+                    ],
+                  ],
+                  if (to != null)
+                    Text(
+                      to!,
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: context.colorScheme.onSurfaceVariant
+                                .withOpacity(0.7),
+                            fontFamily: 'monospace',
+                            fontSize: 11,
+                          ),
+                    ),
+                ],
               ),
             ],
             // Metadata: creator, comments (only if showRepoName is true)
