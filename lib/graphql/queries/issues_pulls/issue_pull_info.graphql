@@ -108,6 +108,26 @@ fragment pullParticipantUserList on PullRequest{
     }
 }
 
+# Timeline fragment: Minimal fields for activity timeline (no bodyHTML, no labels, no assignees)
+fragment issueInfoTimeline on Issue {
+    title
+    number
+    state
+    url
+    body
+    createdAt
+    comments {
+        totalCount
+    }
+    repository {
+        name
+        url
+        owner {
+            login
+        }
+    }
+}
+
 fragment issueInfo on Issue{
     id
     activeLockReason
@@ -230,6 +250,25 @@ fragment issueInfo on Issue{
     viewerSubscription
 }
 
+# Timeline fragment: Minimal fields for activity timeline (no bodyHTML, no labels, no assignees)
+fragment pullInfoTimeline on PullRequest {
+    title
+    number
+    state
+    url
+    body
+    createdAt
+    merged
+    mergedAt
+    repository {
+        name
+        url
+        owner {
+            login
+        }
+    }
+}
+
 fragment pullInfo on PullRequest{
     activeLockReason
     assignees(first: 5){
@@ -326,6 +365,7 @@ fragment pullInfo on PullRequest{
 
 fragment repoInfo on Repository{
     name
+    url
     owner{
         login
         avatarUrl
