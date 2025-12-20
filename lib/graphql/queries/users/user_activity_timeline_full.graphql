@@ -1,5 +1,4 @@
 # import './user_info.graphql'
-# import '../issues_pulls/issue_pull_info.graphql'
 
 # Combined Phase 2 query: Fetch all event types in a single query
 # Uses cursors and counts from Phase 1 to fetch exactly what we need
@@ -112,6 +111,41 @@ query userActivityTimelineFull(
   }
 }
 
-# Fragments are imported from issue_pull_info.graphql
-# No need to redefine them here
+# Timeline fragments: Minimal fields for activity timeline (no bodyHTML, no labels, no assignees)
+fragment issueInfoTimeline on Issue {
+    title
+    number
+    state
+    url
+    body
+    createdAt
+    comments {
+        totalCount
+    }
+    repository {
+        name
+        url
+        owner {
+            login
+        }
+    }
+}
+
+fragment pullInfoTimeline on PullRequest {
+    title
+    number
+    state
+    url
+    body
+    createdAt
+    merged
+    mergedAt
+    repository {
+        name
+        url
+        owner {
+            login
+        }
+    }
+}
 
