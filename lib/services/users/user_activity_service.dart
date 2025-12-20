@@ -23,6 +23,26 @@ class Phase1Result {
   });
 }
 
+/// Processing result for a single page
+class PageProcessResult {
+  final int countInRange;
+  final String? cursorBeforeRange;
+  final String? lastInRangeCursor;
+  final bool foundFirstInRange;
+  final bool rangeComplete; // true if we've fully traversed the range
+  final bool
+      needsMorePages; // true if we're still in range and need to continue
+
+  PageProcessResult({
+    required this.countInRange,
+    this.cursorBeforeRange,
+    this.lastInRangeCursor,
+    required this.foundFirstInRange,
+    required this.rangeComplete,
+    required this.needsMorePages,
+  });
+}
+
 /// Phase 1 state: tracks pagination for all types
 class Phase1State {
   int? firstRepos = 100;
@@ -32,18 +52,35 @@ class Phase1State {
   String? afterPRs;
   String? afterIssues;
 
+  // Accumulated state for each type
+  int reposTotalInRange = 0;
+  String? reposCursorBeforeRange;
+  String? reposLastInRangeCursor;
+  bool reposFoundFirstInRange = false;
+  bool reposRangeComplete = false;
+
+  int prsTotalInRange = 0;
+  String? prsCursorBeforeRange;
+  String? prsLastInRangeCursor;
+  bool prsFoundFirstInRange = false;
+  bool prsRangeComplete = false;
+
+  int issuesTotalInRange = 0;
+  String? issuesCursorBeforeRange;
+  String? issuesLastInRangeCursor;
+  bool issuesFoundFirstInRange = false;
+  bool issuesRangeComplete = false;
+
   Phase1Result? reposResult;
   Phase1Result? prsResult;
   Phase1Result? issuesResult;
 
   bool get allRangesFound =>
-      reposResult != null && prsResult != null && issuesResult != null;
+      reposRangeComplete && prsRangeComplete && issuesRangeComplete;
 }
 
 class UserActivityService {
-  static final GraphqlHandler _gqlHandler = GraphqlHandler(
-      apiLogSettings:
-          APILoggingSettings(compact: true, responseBody: true, error: true,request: true,  requestBody: true));
+  static final GraphqlHandler _gqlHandler = GraphqlHandler();
 
   /// Phase 1: Combined minimal fetch with dynamic first params
   /// As we find ranges for each type, set their first to 0
@@ -116,76 +153,134 @@ class UserActivityService {
       final data = parsedData.user!;
 
       // Process repositories
-      if (state.reposResult == null && data.repositories.edges != null) {
-        final reposResult = _processRepositories(
+      if (!state.reposRangeComplete && data.repositories.edges != null) {
+        final pageResult = _processRepositories(
           data.repositories.edges!,
           data.repositories.pageInfo,
           from,
           to,
         );
-        if (reposResult != null) {
-          state.reposResult = reposResult;
-          results['repos'] = reposResult;
-          state.firstRepos = 0; // Stop fetching repos
-        } else {
-          // Only continue pagination if there are more pages
-          if (data.repositories.pageInfo.hasNextPage) {
-            state.afterRepos = data.repositories.pageInfo.endCursor;
-          } else {
-            // Exhausted but range not found - stop fetching
-            state.firstRepos = 0;
+
+        // Accumulate counts
+        if (pageResult.foundFirstInRange) {
+          if (!state.reposFoundFirstInRange) {
+            // First time finding items in range - save the cursor before range
+            state.reposFoundFirstInRange = true;
+            state.reposCursorBeforeRange = pageResult.cursorBeforeRange;
           }
+          state.reposTotalInRange += pageResult.countInRange;
+          if (pageResult.lastInRangeCursor != null) {
+            state.reposLastInRangeCursor = pageResult.lastInRangeCursor;
+          }
+        }
+
+        // Check if we're done with this type
+        if (pageResult.rangeComplete) {
+          state.reposRangeComplete = true;
+          if (state.reposFoundFirstInRange) {
+            // Create final result
+            state.reposResult = Phase1Result(
+              cursorBeforeRange: state.reposCursorBeforeRange,
+              totalInRange: state.reposTotalInRange,
+              cursorAfterRange: state.reposLastInRangeCursor,
+            );
+            results['repos'] = state.reposResult!;
+          }
+          state.firstRepos = 0; // Stop fetching repos
+        } else if (pageResult.needsMorePages) {
+          // Continue paginating - update cursor for next page
+          state.afterRepos = data.repositories.pageInfo.endCursor;
+        } else {
+          // Shouldn't happen with updated logic, but handle it safely
+          state.reposRangeComplete = true;
+          state.firstRepos = 0;
         }
       }
 
       // Process pull requests
-      if (state.prsResult == null && data.pullRequests.edges != null) {
-        final prsResult = _processPullRequests(
+      if (!state.prsRangeComplete && data.pullRequests.edges != null) {
+        final pageResult = _processPullRequests(
           data.pullRequests.edges!,
           data.pullRequests.pageInfo,
           from,
           to,
         );
-        if (prsResult != null) {
-          state.prsResult = prsResult;
-          results['prs'] = prsResult;
-          state.firstPRs = 0; // Stop fetching PRs
-        } else {
-          // Only continue pagination if there are more pages
-          if (data.pullRequests.pageInfo.hasNextPage) {
-            state.afterPRs = data.pullRequests.pageInfo.endCursor;
-          } else {
-            // Exhausted but range not found - stop fetching
-            state.firstPRs = 0;
+
+        // Accumulate counts
+        if (pageResult.foundFirstInRange) {
+          if (!state.prsFoundFirstInRange) {
+            state.prsFoundFirstInRange = true;
+            state.prsCursorBeforeRange = pageResult.cursorBeforeRange;
           }
+          state.prsTotalInRange += pageResult.countInRange;
+          if (pageResult.lastInRangeCursor != null) {
+            state.prsLastInRangeCursor = pageResult.lastInRangeCursor;
+          }
+        }
+
+        // Check if we're done with this type
+        if (pageResult.rangeComplete) {
+          state.prsRangeComplete = true;
+          if (state.prsFoundFirstInRange) {
+            state.prsResult = Phase1Result(
+              cursorBeforeRange: state.prsCursorBeforeRange,
+              totalInRange: state.prsTotalInRange,
+              cursorAfterRange: state.prsLastInRangeCursor,
+            );
+            results['prs'] = state.prsResult!;
+          }
+          state.firstPRs = 0; // Stop fetching PRs
+        } else if (pageResult.needsMorePages) {
+          state.afterPRs = data.pullRequests.pageInfo.endCursor;
+        } else {
+          state.prsRangeComplete = true;
+          state.firstPRs = 0;
         }
       }
 
       // Process issues
-      if (state.issuesResult == null && data.issues.edges != null) {
-        final issuesResult = _processIssues(
+      if (!state.issuesRangeComplete && data.issues.edges != null) {
+        final pageResult = _processIssues(
           data.issues.edges!,
           data.issues.pageInfo,
           from,
           to,
         );
-        if (issuesResult != null) {
-          state.issuesResult = issuesResult;
-          results['issues'] = issuesResult;
-          state.firstIssues = 0; // Stop fetching issues
-        } else {
-          // Only continue pagination if there are more pages
-          if (data.issues.pageInfo.hasNextPage) {
-            state.afterIssues = data.issues.pageInfo.endCursor;
-          } else {
-            // Exhausted but range not found - stop fetching
-            state.firstIssues = 0;
+
+        // Accumulate counts
+        if (pageResult.foundFirstInRange) {
+          if (!state.issuesFoundFirstInRange) {
+            state.issuesFoundFirstInRange = true;
+            state.issuesCursorBeforeRange = pageResult.cursorBeforeRange;
           }
+          state.issuesTotalInRange += pageResult.countInRange;
+          if (pageResult.lastInRangeCursor != null) {
+            state.issuesLastInRangeCursor = pageResult.lastInRangeCursor;
+          }
+        }
+
+        // Check if we're done with this type
+        if (pageResult.rangeComplete) {
+          state.issuesRangeComplete = true;
+          if (state.issuesFoundFirstInRange) {
+            state.issuesResult = Phase1Result(
+              cursorBeforeRange: state.issuesCursorBeforeRange,
+              totalInRange: state.issuesTotalInRange,
+              cursorAfterRange: state.issuesLastInRangeCursor,
+            );
+            results['issues'] = state.issuesResult!;
+          }
+          state.firstIssues = 0; // Stop fetching issues
+        } else if (pageResult.needsMorePages) {
+          state.afterIssues = data.issues.pageInfo.endCursor;
+        } else {
+          state.issuesRangeComplete = true;
+          state.firstIssues = 0;
         }
       }
 
       // Check if we should continue
-      // Only check hasNextPage for collections that are still being fetched
+      // Continue if any type is still being fetched and has more pages
       final reposStillFetching =
           state.firstRepos != null && state.firstRepos! > 0;
       final prsStillFetching = state.firstPRs != null && state.firstPRs! > 0;
@@ -204,16 +299,18 @@ class UserActivityService {
   }
 
   /// Process repositories to find range
-  static Phase1Result? _processRepositories(
+  /// Returns processing result for this page, indicating if we need to continue
+  static PageProcessResult _processRepositories(
     BuiltList<GuserActivityTimelineMinimalData_user_repositories_edges?> edges,
     GuserActivityTimelineMinimalData_user_repositories_pageInfo pageInfo,
     DateTime from,
     DateTime to,
   ) {
     String? cursorBeforeRange;
-    int totalInRange = 0;
+    int countInRange = 0;
     String? lastInRangeCursor;
     bool foundFirstInRange = false;
+    bool passedRange = false;
 
     for (final edge in edges) {
       if (edge == null) continue;
@@ -225,6 +322,7 @@ class UserActivityService {
 
       // Stop if date is before range (ordered DESC)
       if (createdAt.isBefore(from)) {
+        passedRange = true;
         break;
       }
 
@@ -233,41 +331,50 @@ class UserActivityService {
           foundFirstInRange = true;
           // cursorBeforeRange is already set from previous iteration
         }
-        totalInRange++;
+        countInRange++;
         lastInRangeCursor = currentCursor;
       } else {
         if (!foundFirstInRange) {
           cursorBeforeRange = currentCursor; // Save cursor before range
         } else {
-          // Passed range
+          // Passed range - we've seen items in range, now we're past it
+          passedRange = true;
           break;
         }
       }
     }
 
-    if (foundFirstInRange) {
-      return Phase1Result(
-        cursorBeforeRange: cursorBeforeRange,
-        totalInRange: totalInRange,
-        cursorAfterRange: lastInRangeCursor,
-      );
-    }
+    // Determine if we need more pages:
+    // - If we haven't found the range yet but there are more pages, continue searching
+    // - If we found items in range but haven't passed it yet, and there are more pages, continue
+    // - If we passed the range or no more pages, we're done
+    final needsMorePages = pageInfo.hasNextPage &&
+        (!foundFirstInRange || (foundFirstInRange && !passedRange));
+    final rangeComplete = passedRange || !pageInfo.hasNextPage;
 
-    // Range not found yet, continue pagination
-    return null;
+    return PageProcessResult(
+      countInRange: countInRange,
+      cursorBeforeRange: cursorBeforeRange,
+      lastInRangeCursor: lastInRangeCursor,
+      foundFirstInRange: foundFirstInRange,
+      rangeComplete: rangeComplete,
+      needsMorePages: needsMorePages,
+    );
   }
 
   /// Process pull requests to find range
-  static Phase1Result? _processPullRequests(
+  /// Returns processing result for this page, indicating if we need to continue
+  static PageProcessResult _processPullRequests(
     BuiltList<GuserActivityTimelineMinimalData_user_pullRequests_edges?> edges,
     GuserActivityTimelineMinimalData_user_pullRequests_pageInfo pageInfo,
     DateTime from,
     DateTime to,
   ) {
     String? cursorBeforeRange;
-    int totalInRange = 0;
+    int countInRange = 0;
     String? lastInRangeCursor;
     bool foundFirstInRange = false;
+    bool passedRange = false;
 
     for (final edge in edges) {
       if (edge == null) continue;
@@ -278,6 +385,7 @@ class UserActivityService {
       final currentCursor = edge.cursor;
 
       if (createdAt.isBefore(from)) {
+        passedRange = true;
         break;
       }
 
@@ -285,39 +393,45 @@ class UserActivityService {
         if (!foundFirstInRange) {
           foundFirstInRange = true;
         }
-        totalInRange++;
+        countInRange++;
         lastInRangeCursor = currentCursor;
       } else {
         if (!foundFirstInRange) {
           cursorBeforeRange = currentCursor;
         } else {
+          passedRange = true;
           break;
         }
       }
     }
 
-    if (foundFirstInRange) {
-      return Phase1Result(
-        cursorBeforeRange: cursorBeforeRange,
-        totalInRange: totalInRange,
-        cursorAfterRange: lastInRangeCursor,
-      );
-    }
+    final needsMorePages =
+        foundFirstInRange && !passedRange && pageInfo.hasNextPage;
+    final rangeComplete = passedRange || !pageInfo.hasNextPage;
 
-    return null;
+    return PageProcessResult(
+      countInRange: countInRange,
+      cursorBeforeRange: cursorBeforeRange,
+      lastInRangeCursor: lastInRangeCursor,
+      foundFirstInRange: foundFirstInRange,
+      rangeComplete: rangeComplete,
+      needsMorePages: needsMorePages,
+    );
   }
 
   /// Process issues to find range
-  static Phase1Result? _processIssues(
+  /// Returns processing result for this page, indicating if we need to continue
+  static PageProcessResult _processIssues(
     BuiltList<GuserActivityTimelineMinimalData_user_issues_edges?> edges,
     GuserActivityTimelineMinimalData_user_issues_pageInfo pageInfo,
     DateTime from,
     DateTime to,
   ) {
     String? cursorBeforeRange;
-    int totalInRange = 0;
+    int countInRange = 0;
     String? lastInRangeCursor;
     bool foundFirstInRange = false;
+    bool passedRange = false;
 
     for (final edge in edges) {
       if (edge == null) continue;
@@ -328,6 +442,7 @@ class UserActivityService {
       final currentCursor = edge.cursor;
 
       if (createdAt.isBefore(from)) {
+        passedRange = true;
         break;
       }
 
@@ -335,26 +450,30 @@ class UserActivityService {
         if (!foundFirstInRange) {
           foundFirstInRange = true;
         }
-        totalInRange++;
+        countInRange++;
         lastInRangeCursor = currentCursor;
       } else {
         if (!foundFirstInRange) {
           cursorBeforeRange = currentCursor;
         } else {
+          passedRange = true;
           break;
         }
       }
     }
 
-    if (foundFirstInRange) {
-      return Phase1Result(
-        cursorBeforeRange: cursorBeforeRange,
-        totalInRange: totalInRange,
-        cursorAfterRange: lastInRangeCursor,
-      );
-    }
+    final needsMorePages =
+        foundFirstInRange && !passedRange && pageInfo.hasNextPage;
+    final rangeComplete = passedRange || !pageInfo.hasNextPage;
 
-    return null;
+    return PageProcessResult(
+      countInRange: countInRange,
+      cursorBeforeRange: cursorBeforeRange,
+      lastInRangeCursor: lastInRangeCursor,
+      foundFirstInRange: foundFirstInRange,
+      rangeComplete: rangeComplete,
+      needsMorePages: needsMorePages,
+    );
   }
 
   /// Check if date is in range (inclusive boundaries)
@@ -363,18 +482,19 @@ class UserActivityService {
         date.isBefore(to.add(const Duration(days: 1)));
   }
 
-  /// Phase 2: Single combined query with full fields (includes commits)
-  static Future<GuserActivityTimelineFullData_user> _fetchDetailedData(
-    Map<String, Phase1Result> phase1Results,
-    String login,
-    DateTime from,
-    DateTime to, {
+  /// Fetch a single batch of detailed data with specified counts and cursors
+  static Future<GuserActivityTimelineFullData_user> _fetchDetailedDataBatch({
+    required String login,
+    required DateTime from,
+    required DateTime to,
+    required int reposCount,
+    String? reposAfter,
+    required int prsCount,
+    String? prsAfter,
+    required int issuesCount,
+    String? issuesAfter,
     bool refreshCache = false,
   }) async {
-    final reposResult = phase1Results['repos'];
-    final prsResult = phase1Results['prs'];
-    final issuesResult = phase1Results['issues'];
-
     GQLResponse response;
     try {
       response = await _gqlHandler.query(
@@ -386,55 +506,182 @@ class UserActivityService {
               ..to = to;
 
             // Repositories
-            if (reposResult != null && reposResult.totalInRange > 0) {
-              b
-                ..vars.firstRepos = reposResult.totalInRange
-                ..vars.afterRepos = reposResult.cursorBeforeRange;
-            } else {
-              b..vars.firstRepos = 0;
-            }
+            b
+              ..vars.firstRepos = reposCount
+              ..vars.afterRepos = reposAfter;
 
             // Pull Requests
-            if (prsResult != null && prsResult.totalInRange > 0) {
-              b
-                ..vars.firstPRs = prsResult.totalInRange
-                ..vars.afterPRs = prsResult.cursorBeforeRange;
-            } else {
-              b..vars.firstPRs = 0;
-            }
+            b
+              ..vars.firstPRs = prsCount
+              ..vars.afterPRs = prsAfter;
 
             // Issues
-            if (issuesResult != null && issuesResult.totalInRange > 0) {
-              b
-                ..vars.firstIssues = issuesResult.totalInRange
-                ..vars.afterIssues = issuesResult.cursorBeforeRange;
-            } else {
-              b..vars.firstIssues = 0;
-            }
+            b
+              ..vars.firstIssues = issuesCount
+              ..vars.afterIssues = issuesAfter;
           },
         ),
         refreshCache: refreshCache,
       );
     } catch (e) {
       throw Exception(
-        'Phase 2 failed: Error fetching detailed activity data for user "$login": $e',
+        'Phase 2 batch failed: Error fetching detailed activity data for user "$login": $e',
       );
     }
 
     if (response.data == null) {
       throw Exception(
-        'Phase 2 failed: No data returned from detailed activity query for user "$login"',
+        'Phase 2 batch failed: No data returned from detailed activity query for user "$login"',
       );
     }
 
     final parsedData = GuserActivityTimelineFullData.fromJson(response.data!);
     if (parsedData == null || parsedData.user == null) {
       throw Exception(
-        'Phase 2 failed: Invalid response structure from detailed activity query for user "$login"',
+        'Phase 2 batch failed: Invalid response structure from detailed activity query for user "$login"',
       );
     }
 
     return parsedData.user!;
+  }
+
+  /// Get the last cursor from a connection's edges
+  static String? _getLastCursor<T>(BuiltList<T?>? edges) {
+    if (edges == null || edges.isEmpty) return null;
+
+    // Iterate from the end to find the last non-null edge with a cursor
+    for (var i = edges.length - 1; i >= 0; i--) {
+      final edge = edges[i];
+      if (edge == null) continue;
+
+      // Use dynamic to access cursor property (all edge types have cursor)
+      try {
+        final dynamic dynamicEdge = edge;
+        final cursor = dynamicEdge.cursor as String?;
+        if (cursor != null) return cursor;
+      } catch (e) {
+        // If cursor access fails, continue to next edge
+        continue;
+      }
+    }
+
+    return null;
+  }
+
+  /// Phase 2: Fetch detailed data with pagination support for >100 items per type
+  /// Uses combined queries to minimize API calls while handling large result sets
+  static Future<GuserActivityTimelineFullData_user> _fetchDetailedData(
+    Map<String, Phase1Result> phase1Results,
+    String login,
+    DateTime from,
+    DateTime to, {
+    bool refreshCache = false,
+  }) async {
+    final reposResult = phase1Results['repos'];
+    final prsResult = phase1Results['prs'];
+    final issuesResult = phase1Results['issues'];
+
+    // Step 1: Fetch first batch (up to 100 of each type)
+    final reposFirstCount = reposResult != null && reposResult.totalInRange > 0
+        ? (reposResult.totalInRange > 100 ? 100 : reposResult.totalInRange)
+        : 0;
+    final prsFirstCount = prsResult != null && prsResult.totalInRange > 0
+        ? (prsResult.totalInRange > 100 ? 100 : prsResult.totalInRange)
+        : 0;
+    final issuesFirstCount = issuesResult != null &&
+            issuesResult.totalInRange > 0
+        ? (issuesResult.totalInRange > 100 ? 100 : issuesResult.totalInRange)
+        : 0;
+
+    final firstBatch = await _fetchDetailedDataBatch(
+      login: login,
+      from: from,
+      to: to,
+      reposCount: reposFirstCount,
+      reposAfter: reposResult?.cursorBeforeRange,
+      prsCount: prsFirstCount,
+      prsAfter: prsResult?.cursorBeforeRange,
+      issuesCount: issuesFirstCount,
+      issuesAfter: issuesResult?.cursorBeforeRange,
+      refreshCache: refreshCache,
+    );
+
+    // Step 2: Initialize edge accumulators from first batch
+    final allReposEdges =
+        <GuserActivityTimelineFullData_user_repositories_edges?>[
+      ...?firstBatch.repositories.edges,
+    ];
+    final allPRsEdges =
+        <GuserActivityTimelineFullData_user_pullRequests_edges?>[
+      ...?firstBatch.pullRequests.edges,
+    ];
+    final allIssuesEdges = <GuserActivityTimelineFullData_user_issues_edges?>[
+      ...?firstBatch.issues.edges,
+    ];
+
+    // Step 3: Calculate remaining counts and initialize cursors
+    var reposRemaining = (reposResult?.totalInRange ?? 0) - reposFirstCount;
+    var prsRemaining = (prsResult?.totalInRange ?? 0) - prsFirstCount;
+    var issuesRemaining = (issuesResult?.totalInRange ?? 0) - issuesFirstCount;
+
+    var reposAfter = _getLastCursor(firstBatch.repositories.edges) ??
+        reposResult?.cursorBeforeRange;
+    var prsAfter = _getLastCursor(firstBatch.pullRequests.edges) ??
+        prsResult?.cursorBeforeRange;
+    var issuesAfter = _getLastCursor(firstBatch.issues.edges) ??
+        issuesResult?.cursorBeforeRange;
+
+    // Step 4: Loop for remaining items (combined queries)
+    while (reposRemaining > 0 || prsRemaining > 0 || issuesRemaining > 0) {
+      // Calculate batch size for each type (min of remaining and 100)
+      final reposBatchSize = reposRemaining > 0
+          ? (reposRemaining > 100 ? 100 : reposRemaining)
+          : 0;
+      final prsBatchSize =
+          prsRemaining > 0 ? (prsRemaining > 100 ? 100 : prsRemaining) : 0;
+      final issuesBatchSize = issuesRemaining > 0
+          ? (issuesRemaining > 100 ? 100 : issuesRemaining)
+          : 0;
+
+      // Fetch combined batch
+      final batch = await _fetchDetailedDataBatch(
+        login: login,
+        from: from,
+        to: to,
+        reposCount: reposBatchSize,
+        reposAfter: reposAfter,
+        prsCount: prsBatchSize,
+        prsAfter: prsAfter,
+        issuesCount: issuesBatchSize,
+        issuesAfter: issuesAfter,
+        refreshCache: refreshCache,
+      );
+
+      // Append edges to accumulators
+      if (batch.repositories.edges != null && reposBatchSize > 0) {
+        allReposEdges.addAll(batch.repositories.edges!);
+        reposRemaining -= reposBatchSize;
+        reposAfter = _getLastCursor(batch.repositories.edges) ?? reposAfter;
+      }
+
+      if (batch.pullRequests.edges != null && prsBatchSize > 0) {
+        allPRsEdges.addAll(batch.pullRequests.edges!);
+        prsRemaining -= prsBatchSize;
+        prsAfter = _getLastCursor(batch.pullRequests.edges) ?? prsAfter;
+      }
+
+      if (batch.issues.edges != null && issuesBatchSize > 0) {
+        allIssuesEdges.addAll(batch.issues.edges!);
+        issuesRemaining -= issuesBatchSize;
+        issuesAfter = _getLastCursor(batch.issues.edges) ?? issuesAfter;
+      }
+    }
+
+    // Step 5: Rebuild merged result with accumulated edges
+    return firstBatch.rebuild((b) => b
+      ..repositories.edges.replace(allReposEdges)
+      ..pullRequests.edges.replace(allPRsEdges)
+      ..issues.edges.replace(allIssuesEdges));
   }
 
   /// Stream-based version that reports progress
