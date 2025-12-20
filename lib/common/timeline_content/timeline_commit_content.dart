@@ -24,22 +24,10 @@ class TimelineCommitContent extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
       children: [
-        // Commit count text
-        if (commitData.count > 0) ...[
-          Text(
-            '${commitData.count} commit${commitData.count > 1 ? 's' : ''}',
-            style: theme.textTheme.bodyMedium?.copyWith(
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-          const SizedBox(height: 8),
-        ],
         // Show repository cards - use data if available, otherwise fetch
         // Branch name and commit SHA are passed to both RepositoryCard and RepoCardLoading
         // to display the branch and commit SHA in the repository card
@@ -62,6 +50,7 @@ class TimelineCommitContent extends StatelessWidget {
                 branch: branchName, // Branch name from PushEvent payload.ref
                 commitSha: ref, // Commit SHA from PushEvent payload.head
                 commitShaUrl: commitShaUrl,
+                contributionCount: repoInfo.count, // Commit count for this repository
               ),
             );
           } else {

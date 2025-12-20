@@ -19,8 +19,7 @@ class TimelineIssueContent extends StatelessWidget {
   final DateTime? commentsSince; // Used to show comment count since this time
 
   @override
-  Widget build(BuildContext context) {
-    return Column(
+  Widget build(BuildContext context) => Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -83,7 +82,7 @@ class TimelineIssueContent extends StatelessWidget {
               ),
             ),
           ],
+          SizedBox(height: 4),
         ],
     );
-  }
 }
