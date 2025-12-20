@@ -271,6 +271,15 @@ class _InfinitePaginationListViewState<T>
               final _ListItem<T> item,
               final int index,
             ) {
+              // Get adjacent items from state
+              final items = state.items;
+              final previousItem = index > 0 && items != null
+                  ? items[index - 1].item
+                  : null;
+              final nextItem = index < (items?.length ?? 0) - 1 && items != null
+                  ? items[index + 1].item
+                  : null;
+
               return Column(
                 children: <Widget>[
                   if (index == 0)
@@ -284,6 +293,8 @@ class _InfinitePaginationListViewState<T>
                       index: index,
                       refresh: item.refreshChildren,
                       isCurrentlyLast: (state.items?.length ?? 0) - 1 == index,
+                      previousItem: previousItem,
+                      nextItem: nextItem,
                     ),
                   ),
                 ],

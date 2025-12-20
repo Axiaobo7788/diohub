@@ -123,7 +123,7 @@ class RepositoryCard extends StatelessWidget {
                       const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(
                     color: context.colorScheme.surfaceVariant.withOpacity(0.7),
-                    borderRadius: BorderRadius.circular(4),
+                    borderRadius: BorderRadius.circular(8),
                     border: Border.all(
                       color: context.colorScheme.primary.withOpacity(0.3),
                       width: 1,
@@ -252,7 +252,7 @@ class RepositoryCard extends StatelessWidget {
                         const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                     decoration: BoxDecoration(
                       color: const Color(0xFF2196F3).withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(6),
+                      borderRadius: BorderRadius.circular(8),
                       border: Border.all(
                         color: const Color(0xFF2196F3).withOpacity(0.3),
                         width: 1,
