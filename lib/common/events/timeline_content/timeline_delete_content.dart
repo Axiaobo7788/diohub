@@ -25,45 +25,47 @@ class TimelineDeleteContent extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
       children: [
-        // Deleted ref info
-        Container(
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            color: theme.colorScheme.errorContainer.withOpacity(0.3),
-            borderRadius: BorderRadius.circular(8),
-            border: Border.all(
-              color: theme.colorScheme.error.withOpacity(0.3),
-              width: 1,
-            ),
-          ),
-          child: Row(
-            children: [
-              Icon(
-                refType == 'branch' ? Octicons.git_branch : Octicons.tag,
-                size: 16,
-                color: theme.colorScheme.error,
+        // Deleted ref info - only show for non-branch deletions
+        if (refType != 'branch') ...[
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: theme.colorScheme.errorContainer.withOpacity(0.3),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(
+                color: theme.colorScheme.error.withOpacity(0.3),
+                width: 1,
               ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  refName,
-                  style: theme.textTheme.bodyMedium?.copyWith(
-                    fontWeight: FontWeight.w600,
-                    decoration: TextDecoration.lineThrough,
-                    color: theme.colorScheme.error,
+            ),
+            child: Row(
+              children: [
+                Icon(
+                  Octicons.tag,
+                  size: 16,
+                  color: theme.colorScheme.error,
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    refName,
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      fontWeight: FontWeight.w600,
+                      decoration: TextDecoration.lineThrough,
+                      color: theme.colorScheme.error,
+                    ),
                   ),
                 ),
-              ),
-              Icon(
-                Octicons.trash,
-                size: 14,
-                color: theme.colorScheme.error,
-              ),
-            ],
+                Icon(
+                  Octicons.trash,
+                  size: 14,
+                  color: theme.colorScheme.error,
+                ),
+              ],
+            ),
           ),
-        ),
-        const SizedBox(height: 8),
-        // Repository card - pass branch so it shows with red color and strikethrough in card
+          const SizedBox(height: 8),
+        ],
+        // Repository card
         RepoCardLoading(
           repoUrl,
           repoName,

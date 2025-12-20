@@ -13,7 +13,7 @@ import 'package:diohub/common/timeline_content/timeline_issue_content.dart';
 import 'package:diohub/common/timeline_content/timeline_pull_request_content.dart';
 import 'package:diohub/common/wrappers/infinite_scroll_wrapper.dart';
 import 'package:diohub/models/commits/commit_card_data_model.dart';
-import 'package:diohub/models/events/events_model.dart' hide Key;
+import 'package:diohub/models/events/events_model.dart' hide Key, State;
 import 'package:diohub/models/issues/issue_card_data_model.dart';
 import 'package:diohub/models/issues/issue_model.dart';
 import 'package:diohub/providers/users/current_user_provider.dart';
@@ -56,10 +56,16 @@ class Events extends StatelessWidget {
         top: 16,
         bottom: 16 + bottomPadding, // Add SafeArea bottom padding
       ),
-      firstPageLoadingBuilder: (final BuildContext context) =>
-          const TimelineShimmerList(
-        itemCount: 5,
-        showAvatar: true,
+      firstPageLoadingBuilder: (final BuildContext context) => _KeepAlive(
+        child: TimelineShimmerList(
+          itemCount: 5,
+          showAvatar: false,
+          showUserHeaders: true,
+          padding: EdgeInsets.only(
+            top: 16,
+            bottom: 16 + bottomPadding,
+          ),
+        ),
       ),
       filterFn: (final List<EventsModel> items) {
         final List<EventsModel> temp = <EventsModel>[];
@@ -122,6 +128,7 @@ class Events extends StatelessWidget {
         final currentUser = item.actor?.login;
         final previousUser = data.previousItem?.actor?.login;
         final nextUser = data.nextItem?.actor?.login;
+        final bool shouldShowUserHeader = specificUser == null;
 
         final isFirstInUserGroup =
             previousUser != currentUser || data.index == 0;
@@ -144,7 +151,7 @@ class Events extends StatelessWidget {
             //     ),
             //   ),
             // User group header (only show for first item in group)
-            if (isFirstInUserGroup)
+            if (shouldShowUserHeader && isFirstInUserGroup)
               _buildUserGroupHeader(
                 context,
                 item.actor,
@@ -296,8 +303,13 @@ class Events extends StatelessWidget {
       case EventsType.PullRequestEvent:
         final pr = item.payload?.pullRequest;
         final action = item.payload?.action ?? 'opened';
+        final bool isMergedAction = action
+            .toLowerCase()
+            .contains('merged'); // payload can be "merged a pull request"
+        final bool isMerged =
+            isMergedAction || pr?.merged == true || pr?.mergedAt != null;
         // Use "merged" action text if PR is merged, otherwise use the action from payload
-        if (pr?.merged == true) {
+        if (isMerged) {
           actionText = 'merged a pull request';
         } else {
           actionText = '$action a pull request';
@@ -342,12 +354,17 @@ class Events extends StatelessWidget {
         return Octicons.git_commit;
       case EventsType.PullRequestEvent:
         final pr = item.payload?.pullRequest;
+        final action = item.payload?.action;
         // State-aware icon for PRs
-        if (pr?.merged == true) {
+        final bool isMergedAction =
+            action?.toLowerCase().contains('merged') ?? false;
+        final bool isClosedAction =
+            action?.toLowerCase().contains('closed') ?? false;
+        if (isMergedAction || pr?.merged == true || pr?.mergedAt != null) {
           return Octicons.git_merge;
         } else if (pr?.draft == true) {
           return Octicons.git_pull_request_draft;
-        } else if (pr?.state == IssueState.CLOSED) {
+        } else if (isClosedAction || pr?.state == IssueState.CLOSED) {
           return Octicons.git_pull_request_closed;
         } else {
           return Octicons.git_pull_request;
@@ -387,12 +404,17 @@ class Events extends StatelessWidget {
         return const Color(0xFF2196F3); // Blue
       case EventsType.PullRequestEvent:
         final pr = item.payload?.pullRequest;
+        final action = item.payload?.action;
         // State-aware color for PRs
-        if (pr?.merged == true) {
+        final bool isMergedAction =
+            action?.toLowerCase().contains('merged') ?? false;
+        final bool isClosedAction =
+            action?.toLowerCase().contains('closed') ?? false;
+        if (isMergedAction || pr?.merged == true || pr?.mergedAt != null) {
           return Colors.deepPurple; // Purple for merged
         } else if (pr?.draft == true) {
           return Colors.grey; // Grey for draft
-        } else if (pr?.state == IssueState.CLOSED) {
+        } else if (isClosedAction || pr?.state == IssueState.CLOSED) {
           return Colors.red; // Red for closed
         } else {
           return Colors.green; // Green for open
@@ -477,5 +499,26 @@ class Events extends StatelessWidget {
         ),
       ),
     );
+  }
+}
+
+class _KeepAlive extends StatefulWidget {
+  const _KeepAlive({required this.child});
+
+  final Widget child;
+
+  @override
+  State<_KeepAlive> createState() => _KeepAliveState();
+}
+
+class _KeepAliveState extends State<_KeepAlive>
+    with AutomaticKeepAliveClientMixin {
+  @override
+  bool get wantKeepAlive => true; // keep loading cards alive while scrolling
+
+  @override
+  Widget build(final BuildContext context) {
+    super.build(context);
+    return widget.child;
   }
 }
