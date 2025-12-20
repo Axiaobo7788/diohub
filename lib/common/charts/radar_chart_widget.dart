@@ -92,11 +92,8 @@ class RadarChartWidget extends StatelessWidget {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
 
-    // Calculate max value
-    final calculatedMax = maxValue ??
-        (data.isEmpty
-            ? 100.0
-            : data.reduce((a, b) => a > b ? a : b).ceilToDouble() * 1.2);
+    // Calculate max value - use provided maxValue or default to 100
+    final calculatedMax = maxValue ?? 100.0;
 
     // Default colors from theme
     final defaultFillColor = fillColor ?? colorScheme.primary.withOpacity(0.3);
@@ -107,10 +104,17 @@ class RadarChartWidget extends StatelessWidget {
           color: colorScheme.onSurfaceVariant,
         );
 
-    // Create data entries
+    // Create data entries - normalize to 0-100 scale
     final dataEntries = data
         .map((value) => RadarEntry(value: value.clamp(0.0, calculatedMax)))
         .toList();
+
+    // Create transparent dataset with max values to set the chart scale
+    // This ensures the chart always scales to calculatedMax (100) even if actual data is lower
+    final maxValueEntries = List.generate(
+      dataEntries.length,
+      (index) => RadarEntry(value: calculatedMax),
+    );
 
     return SizedBox(
       height: height,
@@ -118,6 +122,20 @@ class RadarChartWidget extends StatelessWidget {
       child: RadarChart(
         RadarChartData(
           dataSets: [
+            // Transparent dataset with max values to set the scale (invisible but affects max)
+            RadarDataSet(
+              dataEntries: [
+                RadarEntry(value: 125),
+                RadarEntry(value: 125),
+                RadarEntry(value: 125),
+                RadarEntry(value: 125),
+              ],
+              fillColor: Colors.transparent,
+              borderColor: Colors.transparent,
+              borderWidth: 1,
+              // entryRadius: 3,
+            ),
+            // Actual data dataset
             RadarDataSet(
               dataEntries: dataEntries,
               fillColor: defaultFillColor,
@@ -145,16 +163,19 @@ class RadarChartWidget extends StatelessWidget {
             }
             return RadarChartTitle(
               text: labels[index],
-              angle: angle,
-              positionPercentageOffset: 0.1,
+              // angle: angle,
+              // positionPercentageOffset: -0.3,
             );
           },
+
           titleTextStyle: defaultLabelStyle,
-          tickCount: 4,
+          tickCount: 5,
+
           ticksTextStyle: theme.textTheme.labelSmall?.copyWith(
             color: colorScheme.onSurfaceVariant.withOpacity(0.6),
             fontSize: 10,
           ),
+          // radarTouchData: RadarTouchData(enabled: false),
           tickBorderData: BorderSide(
             color: defaultGridColor,
             width: gridStrokeWidth,

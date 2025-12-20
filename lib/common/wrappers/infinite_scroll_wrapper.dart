@@ -35,12 +35,16 @@ class ScrollWrapperBuilderData<T> {
     required this.index,
     required this.refresh,
     required this.isCurrentlyLast,
+    this.previousItem,
+    this.nextItem,
   });
 
   final T item;
   final int index;
   final bool refresh;
   final bool isCurrentlyLast;
+  final T? previousItem;
+  final T? nextItem;
 }
 
 typedef ScrollWrapperFuture<T> = Future<List<T>> Function(
@@ -73,6 +77,7 @@ class InfiniteScrollWrapper<T> extends StatefulWidget {
     this.disableScroll = false,
     this.disableRefresh = false,
     this.firstPageLoadingBuilder,
+    this.emptyBuilder,
     this.scrollController,
     this.shrinkWrap = false,
     this.listEndIndicator = true,
@@ -111,6 +116,9 @@ class InfiniteScrollWrapper<T> extends StatefulWidget {
 
   /// First page loading indicator.
   final WidgetBuilder? firstPageLoadingBuilder;
+
+  /// Empty state builder when no items are found.
+  final WidgetBuilder? emptyBuilder;
 
   /// ListView ScrollController.
   final ScrollController? scrollController;
@@ -173,6 +181,7 @@ class InfiniteScrollWrapperState<T> extends State<InfiniteScrollWrapper<T>> {
               key: widget.paginationKey,
               filterFn: widget.filterFn,
               firstPageLoadingBuilder: widget.firstPageLoadingBuilder,
+              emptyBuilder: widget.emptyBuilder,
               padding: widget.padding,
               pageNumber: widget.pageNumber,
               separatorBuilder: widget.separatorBuilder,
@@ -245,6 +254,7 @@ class _InfinitePagination<T> extends StatefulWidget {
     required this.filterFn,
     required this.controller,
     required this.firstPageLoadingBuilder,
+    this.emptyBuilder,
     required this.pageNumber,
     required this.pageSize,
     required this.padding,
@@ -282,6 +292,9 @@ class _InfinitePagination<T> extends StatefulWidget {
 
   /// First page loading indicator.
   final WidgetBuilder? firstPageLoadingBuilder;
+
+  /// Empty state builder when no items are found.
+  final WidgetBuilder? emptyBuilder;
 
   @override
   _InfinitePaginationState<T> createState() => _InfinitePaginationState<T>();
@@ -442,6 +455,14 @@ class _InfinitePaginationState<T> extends State<_InfinitePagination<T>> {
                 }
               }
 
+              // Get adjacent items from state
+              final items = state.items;
+              final previousItem =
+                  index > 0 && items != null ? items[index - 1].item : null;
+              final nextItem = index < (items?.length ?? 0) - 1 && items != null
+                  ? items[index + 1].item
+                  : null;
+
               return Column(
                 children: <Widget>[
                   if (index == 0)
@@ -460,6 +481,8 @@ class _InfinitePaginationState<T> extends State<_InfinitePagination<T>> {
                         refresh: isRefresh,
                         isCurrentlyLast:
                             (state.items?.length ?? 0) - 1 == index,
+                        previousItem: previousItem,
+                        nextItem: nextItem,
                       ),
                     ),
                   ),
