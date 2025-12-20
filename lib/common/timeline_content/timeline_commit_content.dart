@@ -16,7 +16,7 @@ class TimelineCommitContent extends StatelessWidget {
   final CommitCardDataModel commitData;
   final String?
       branchName; // Branch name from PushEvent payload.ref (for RepoCardLoading)
-  final String? ref; // Full ref string (e.g., "refs/heads/main") for display
+  final String? ref; // Commit SHA from PushEvent payload.head (latest commit)
   final String?
       userLogin; // Optional, not currently used but kept for compatibility
   final String?
@@ -30,28 +30,54 @@ class TimelineCommitContent extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
       children: [
-        // Commit count text with ref
+        // Commit count text
         if (commitData.count > 0) ...[
           Text(
-            '${commitData.count} commit${commitData.count > 1 ? 's' : ''}${ref != null ? ' to $ref' : ''}',
+            '${commitData.count} commit${commitData.count > 1 ? 's' : ''}',
             style: theme.textTheme.bodyMedium?.copyWith(
               fontWeight: FontWeight.w600,
             ),
           ),
           const SizedBox(height: 8),
         ],
-        // Show repository cards for each repo - use RepoCardLoading to fetch full data
-        // Branch is already shown in the repo card when passed
+        // Show repository cards - use data if available, otherwise fetch
+        // Branch name and commit SHA are passed to both RepositoryCard and RepoCardLoading
+        // to display the branch and commit SHA in the repository card
         ...commitData.repositories.map((repoInfo) {
-          return Padding(
-            padding: const EdgeInsets.only(bottom: 8),
-            child: RepoCardLoading(
-              repoInfo.url,
-              repoInfo.name,
-              branch: branchName, // Branch name (will be shown in card)
-              refresh: false,
-            ),
-          );
+          // Construct commit SHA URL from repository URL and commit SHA
+          String? commitShaUrl;
+          if (ref != null && repoInfo.url.isNotEmpty) {
+            // Construct commit URL: https://github.com/owner/repo/commit/{sha}
+            final repoUrl = repoInfo.url;
+            commitShaUrl = '$repoUrl/commit/$ref';
+          }
+
+          // If repoData is available (from GraphQL), use it directly
+          // Otherwise fall back to RepoCardLoading (for REST API events)
+          if (repoInfo.repoData != null) {
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: RepositoryCard(
+                repoInfo.repoData,
+                branch: branchName, // Branch name from PushEvent payload.ref
+                commitSha: ref, // Commit SHA from PushEvent payload.head
+                commitShaUrl: commitShaUrl,
+              ),
+            );
+          } else {
+            // Fallback: fetch if data is missing (REST API events)
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: RepoCardLoading(
+                repoInfo.url,
+                repoInfo.name,
+                branch: branchName, // Branch name from PushEvent payload.ref
+                commitSha: ref, // Commit SHA from PushEvent payload.head
+                commitShaUrl: commitShaUrl,
+                refresh: false,
+              ),
+            );
+          }
         }),
       ],
     );

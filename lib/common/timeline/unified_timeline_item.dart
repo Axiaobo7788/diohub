@@ -1,6 +1,5 @@
-import 'package:diohub/common/misc/bordered_container.dart';
+import 'package:diohub/common/misc/highlighted_container.dart';
 import 'package:diohub/common/timeline/timeline_container.dart';
-import 'package:diohub/style/border_radiuses.dart';
 import 'package:diohub/utils/get_date.dart';
 import 'package:diohub/utils/utils.dart';
 import 'package:flutter/material.dart';
@@ -89,30 +88,25 @@ class UnifiedTimelineItem extends StatelessWidget {
               ),
             ),
             // Content (wrapped in Card if highlighted, otherwise in BorderedContainer)
-            highlighted
-                ? Card(
-                    elevation: 1,
-                    margin: EdgeInsets.zero,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: context
-                              .themeData.borderRadiusTheme?.smallBorderRadius ??
-                          BorderRadius.circular(8),
-                    ),
-                    clipBehavior: Clip.antiAlias,
-                    color: context.colorScheme.surfaceContainerLow,
-                    child: Padding(
-                      padding: const EdgeInsets.all(12),
-                      child: child,
-                    ),
-                  )
-                : TimelineContainer(
-                    // borderColor: eventIconColor,
-                    // borderRadius: 8.0,
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 8),
-                      child: child,
-                    ),
-                  ),
+            if (highlighted)
+              HighlightedContainer(
+                highlightColor: eventIconColor,
+                borderSide: BorderSideType.bottom,
+                child: Padding(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  child: child,
+                ),
+              )
+            else
+              TimelineContainer(
+                // borderColor: eventIconColor,
+                // borderRadius: 8.0,
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 8),
+                  child: child,
+                ),
+              ),
           ],
         ),
       ),
@@ -141,36 +135,13 @@ class UnifiedTimelineItem extends StatelessWidget {
     return _buildFormattedActionText(context, actionText);
   }
 
-  /// Build action text with proper formatting (action verb + bold name)
+  /// Build action text as plain text without formatting
   Widget _buildFormattedActionText(BuildContext context, String? actionText) {
     if (actionText == null) {
       return const SizedBox.shrink();
     }
     final theme = Theme.of(context);
 
-    // Format: "action verb name" (e.g., "created repository-name", "pushed")
-    final words = actionText.split(' ');
-    if (words.length >= 2) {
-      final action = words[0];
-      final name = words.sublist(1).join(' ');
-      return Text.rich(
-        TextSpan(
-          style: theme.textTheme.bodySmall?.copyWith(
-            color: context.colorScheme.onSurface.withOpacity(0.6),
-            fontSize: 12,
-          ),
-          children: [
-            TextSpan(text: '$action '),
-            TextSpan(
-              text: name,
-              style: const TextStyle(fontWeight: FontWeight.w600),
-            ),
-          ],
-        ),
-      );
-    }
-
-    // Fallback: plain text
     return Text(
       actionText,
       style: theme.textTheme.bodySmall?.copyWith(
