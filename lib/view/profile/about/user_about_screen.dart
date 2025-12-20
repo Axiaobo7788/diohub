@@ -8,7 +8,6 @@ import 'package:diohub/view/profile/about/widgets/contribution_calendar_section.
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 /// About screen that includes user details, contribution graph, and pinned repos
 class UserAboutScreen extends ConsumerStatefulWidget {
@@ -117,12 +116,6 @@ class _UserAboutScreenState extends ConsumerState<UserAboutScreen> {
                 issues: viewModel.totalIssueContributions,
                 pullRequests: viewModel.totalPullRequestContributions,
                 reviews: viewModel.totalPullRequestReviewContributions,
-                onRepositoryTap: (repo) async {
-                  final uri = Uri.parse(repo.url);
-                  if (await canLaunchUrl(uri)) {
-                    await launchUrl(uri, mode: LaunchMode.externalApplication);
-                  }
-                },
               ),
             ),
           ),
