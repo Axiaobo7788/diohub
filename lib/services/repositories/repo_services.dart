@@ -213,18 +213,43 @@ class RepositoryServices {
   }
 
   // Helper to parse repo URL and extract owner and repo
-  // Format: https://api.github.com/repos/{owner}/{repo}
-  static ({String owner, String repo}) parseRepoURL(
-    final String repoURL,
-  ) {
-    final List<String> parts = repoURL.split('/');
-    final int reposIndex = parts.indexWhere((p) => p == 'repos');
-    if (reposIndex == -1 || reposIndex + 2 >= parts.length) {
-      throw Exception('Invalid repo URL format');
+  // Supports both API urls (https://api.github.com/repos/{owner}/{repo})
+  // and HTML urls (https://github.com/{owner}/{repo})
+  static ({String owner, String repo}) parseRepoURL(final String repoURL) {
+    final Uri? uri = Uri.tryParse(repoURL);
+    if (uri != null) {
+      final List<String> segments =
+          uri.pathSegments.where((segment) => segment.isNotEmpty).toList();
+
+      final int reposIndex = segments.indexOf('repos');
+      if (reposIndex != -1 && reposIndex + 2 < segments.length) {
+        return (
+          owner: segments[reposIndex + 1],
+          repo: segments[reposIndex + 2],
+        );
+      }
+
+      if (uri.host.contains('github.com') && segments.length >= 2) {
+        return (owner: segments[0], repo: segments[1]);
+      }
     }
-    final String owner = parts[reposIndex + 1];
-    final String repo = parts[reposIndex + 2];
-    return (owner: owner, repo: repo);
+
+    final List<String> parts =
+        repoURL.split('/').where((part) => part.isNotEmpty).toList();
+
+    final int reposIndex = parts.indexOf('repos');
+    if (reposIndex != -1 && reposIndex + 2 < parts.length) {
+      return (
+        owner: parts[reposIndex + 1],
+        repo: parts[reposIndex + 2],
+      );
+    }
+
+    if (parts.length >= 2) {
+      return (owner: parts[parts.length - 2], repo: parts.last);
+    }
+
+    throw Exception('Invalid repo URL format');
   }
 
   // Get paginated commits list using GraphQL

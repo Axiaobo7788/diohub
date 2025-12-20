@@ -13,26 +13,32 @@ class LanguageIndicator extends StatelessWidget {
   final double size;
   // final TextStyle? textStyle;
   @override
-  Widget build(final BuildContext context) => Row(
-        mainAxisSize: MainAxisSize.min,
-        children: <Widget>[
-          Container(
-            decoration: BoxDecoration(
-              color: Color(
-                getLangColor(language),
-              ),
-              shape: BoxShape.circle,
+  Widget build(final BuildContext context) {
+    if (language == null || language!.isEmpty) {
+      return const SizedBox.shrink();
+    }
+    
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: <Widget>[
+        Container(
+          decoration: BoxDecoration(
+            color: Color(
+              getLangColor(language),
             ),
-            height: size,
-            width: size,
+            shape: BoxShape.circle,
           ),
-          const SizedBox(
-            width: 8,
-          ),
-          Text(
-            language ?? 'N/A',
-            style: context.textTheme.bodySmall?.asHint(),
-          ),
-        ],
-      );
+          height: size,
+          width: size,
+        ),
+        const SizedBox(
+          width: 8,
+        ),
+        Text(
+          language!,
+          style: context.textTheme.bodySmall?.asHint(),
+        ),
+      ],
+    );
+  }
 }

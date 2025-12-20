@@ -57,14 +57,14 @@ class HighlightedContainer extends StatelessWidget {
   // final double elevation;
 
   // TODO: Fetch from app settings
-  static const HighlightStyle _style = HighlightStyle.border;
+  static const HighlightStyle _style = HighlightStyle.elevation;
 
   @override
   Widget build(BuildContext context) {
     if (_style == HighlightStyle.elevation) {
       // Elevation mode: use Material with elevation
       return Material(
-        color: backgroundColor?? context.colorScheme.onSurface,
+        color: backgroundColor ?? context.colorScheme.onSurface,
         borderRadius: BorderRadius.circular(borderRadius),
         elevation: 1,
         child: ClipRRect(
@@ -130,7 +130,6 @@ class HighlightedContainer extends StatelessWidget {
         borderRadius: clipRadius,
         child: Container(
           decoration: BoxDecoration(
-            color: backgroundColor ?? context.colorScheme.surfaceContainerLow,
             borderRadius: BorderRadius.circular(borderRadius),
             border: border,
           ),
