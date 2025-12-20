@@ -76,7 +76,7 @@ query userActivityTimelineFull(
       edges {
         cursor
         node {
-          ...pullInfo
+          ...pullInfoTimeline
           # Ensure repository has url field (repoInfo fragment doesn't include it)
           repository {
             url
@@ -97,7 +97,7 @@ query userActivityTimelineFull(
       edges {
         cursor
         node {
-          ...issueInfo
+          ...issueInfoTimeline
           # Ensure repository has url field (repoInfo fragment doesn't include it)
           repository {
             url
