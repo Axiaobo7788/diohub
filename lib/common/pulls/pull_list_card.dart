@@ -203,9 +203,10 @@ class PullListCard extends StatelessWidget {
             // From and To refs (when showRepoName is true, show below title)
             if (showRepoName && (from != null || to != null)) ...[
               const SizedBox(height: 5),
-              Row(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.center,
+              Wrap(
+                spacing: 4,
+                runSpacing: 4,
+                crossAxisAlignment: WrapCrossAlignment.center,
                 children: <Widget>[
                   if (from != null) ...[
                     Container(
