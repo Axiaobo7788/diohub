@@ -1,3 +1,4 @@
+import 'package:diohub/common/misc/bordered_container.dart';
 import 'package:diohub/common/misc/highlighted_container.dart';
 import 'package:diohub/common/timeline/timeline_container.dart';
 import 'package:diohub/utils/get_date.dart';
@@ -89,9 +90,9 @@ class UnifiedTimelineItem extends StatelessWidget {
             ),
             // Content (wrapped in Card if highlighted, otherwise in BorderedContainer)
             if (highlighted)
-              HighlightedContainer(
-                highlightColor: eventIconColor,
-                borderSide: BorderSideType.bottom,
+              BorderedContainer(
+                borderColor: eventIconColor,
+                // borderSide: BorderSideType.bottom,
                 child: Padding(
                   padding:
                       const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
