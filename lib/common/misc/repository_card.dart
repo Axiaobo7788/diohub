@@ -223,82 +223,88 @@ class RepositoryCard extends StatelessWidget {
             ),
           ],
           // Footer: Language, Stars, Contributions
-          const SizedBox(height: 12),
-          Wrap(
-            spacing: 12,
-            crossAxisAlignment: WrapCrossAlignment.center,
-            children: <Widget>[
-              LanguageIndicator(
-                repo!.language,
-              ),
-              Builder(
-                builder: (context) {
-                  final starCount = repo?.stargazersCount ?? 0;
-                  if (starCount <= 0) {
-                    return const SizedBox.shrink();
-                  }
-                  return Row(
-                    mainAxisSize: MainAxisSize.min,
+          Builder(
+            builder: (context) {
+              final hasLanguage = repo?.language != null && repo!.language!.isNotEmpty;
+              final starCount = repo?.stargazersCount ?? 0;
+              final hasStars = starCount > 0;
+              final count = contributionCount ?? repo?.contributionCount ?? 0;
+              final hasContributions = count > 0;
+              
+              // Only show footer if at least one item exists
+              if (!hasLanguage && !hasStars && !hasContributions) {
+                return const SizedBox.shrink();
+              }
+              
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const SizedBox(height: 8),
+                  Wrap(
+                    spacing: 12,
+                    crossAxisAlignment: WrapCrossAlignment.center,
                     children: <Widget>[
-                      Icon(
-                        Octicons.star_fill,
-                        size: 12,
-                        color: context.colorScheme.onSurface.withOpacity(0.7),
+                      LanguageIndicator(
+                        repo!.language,
                       ),
-                      const SizedBox(width: 4),
-                      Text(
-                        starCount.toShortenedStr(),
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              color: context.colorScheme.onSurface
-                                  .withOpacity(0.7),
+                      if (hasStars)
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: <Widget>[
+                            Icon(
+                              Octicons.star_fill,
+                              size: 12,
+                              color: context.colorScheme.onSurface.withOpacity(0.7),
                             ),
-                      ),
-                    ],
-                  );
-                },
-              ),
-              Builder(
-                builder: (context) {
-                  final count =
-                      contributionCount ?? repo?.contributionCount ?? 0;
-                  if (count <= 0) {
-                    return const SizedBox.shrink();
-                  }
-                  // Badge style matching the old commit card design
-                  return Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF2196F3).withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(
-                        color: const Color(0xFF2196F3).withOpacity(0.3),
-                        width: 1,
-                      ),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: <Widget>[
-                        Icon(
-                          Octicons.git_commit,
-                          size: 12,
-                          color: const Color(0xFF2196F3),
-                        ),
-                        const SizedBox(width: 4),
-                        Text(
-                          '$count ${count == 1 ? 'commit' : 'commits'}',
-                          style:
-                              Theme.of(context).textTheme.bodySmall?.copyWith(
-                                    fontWeight: FontWeight.w600,
-                                    color: const Color(0xFF2196F3),
+                            const SizedBox(width: 4),
+                            Text(
+                              starCount.toShortenedStr(),
+                              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                    color: context.colorScheme.onSurface
+                                        .withOpacity(0.7),
                                   ),
+                            ),
+                          ],
                         ),
-                      ],
-                    ),
-                  );
-                },
-              ),
-            ],
+                      if (hasContributions)
+                        Container(
+                          padding:
+                              const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF2196F3).withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(
+                              color: const Color(0xFF2196F3).withOpacity(0.3),
+                              width: 1,
+                            ),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: <Widget>[
+                              Icon(
+                                Octicons.git_commit,
+                                size: 12,
+                                color: const Color(0xFF2196F3),
+                              ),
+                              const SizedBox(width: 4),
+                              Text(
+                                '$count ${count == 1 ? 'commit' : 'commits'}',
+                                style:
+                                    Theme.of(context).textTheme.bodySmall?.copyWith(
+                                          fontWeight: FontWeight.w600,
+                                          color: const Color(0xFF2196F3),
+                                        ),
+                              ),
+                            ],
+                          ),
+                        ),
+                    ],
+                  ),                
+                  const SizedBox(height: 4),
+
+                ],
+              );
+            },
           ),
         ],
       );
