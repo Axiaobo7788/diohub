@@ -164,7 +164,6 @@ class TimelineShimmerItem extends StatelessWidget {
           height: 80,
           borderRadius: BorderRadius.circular(8),
           highlightColor: context.colorScheme.surfaceVariant.withOpacity(0.5),
-
         ),
       ],
     );
@@ -218,4 +217,3 @@ class TimelineShimmerList extends StatelessWidget {
     );
   }
 }
-

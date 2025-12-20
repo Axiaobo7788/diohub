@@ -323,12 +323,16 @@ class PullLoadingCard extends StatelessWidget {
           );
         },
         builder: (final BuildContext context, final PullRequestModel data) {
+          // Extract repo name from head ref (only from can be from different repo)
+          final String? fromRepoName = data.head?.repo?.fullName;
+          
           return PullListCard(
             data,
             showRepoName: showRepoName,
             isNested: isNested,
             from: data.head?.ref,
             to: data.base?.ref,
+            fromRepoName: fromRepoName,
           );
         },
       );

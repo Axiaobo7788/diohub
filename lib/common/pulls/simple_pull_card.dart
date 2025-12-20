@@ -21,6 +21,7 @@ class SimplePullCard extends StatelessWidget {
     this.showDescription = true,
     this.from,
     this.to,
+    this.fromRepoName,
     super.key,
   });
 
@@ -29,6 +30,8 @@ class SimplePullCard extends StatelessWidget {
   final bool showDescription;
   final String? from;
   final String? to;
+  final String?
+      fromRepoName; // Full repo name (owner/repo) for head ref when different
 
   // Helper getters to access data
   String get _title => item.title;
@@ -37,6 +40,7 @@ class SimplePullCard extends StatelessWidget {
     if (item.merged == true) return IssueState.OPEN; // Merged shows as open
     return item.state == 'OPEN' ? IssueState.OPEN : IssueState.CLOSED;
   }
+
   int get _number => item.number;
   int get _comments => 0; // Comments not in card model
   String? get _body => item.body;
@@ -46,6 +50,10 @@ class SimplePullCard extends StatelessWidget {
 
   // Extract repo name from repository data
   String? get _repoName => '${item.repositoryOwner}/${item.repositoryName}';
+
+  // Check if from ref is from a different repo (only from can be different)
+  bool get _fromDifferentRepo =>
+      fromRepoName != null && _repoName != null && fromRepoName != _repoName;
 
   @override
   Widget build(final BuildContext context) {
@@ -152,21 +160,55 @@ class SimplePullCard extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: <Widget>[
                   if (from != null) ...[
-                    Text(
-                      from!,
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: context.colorScheme.onSurfaceVariant
-                                .withOpacity(0.7),
-                            fontFamily: 'monospace',
-                            fontSize: 11,
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 5,
+                        vertical: 1,
+                      ),
+                      decoration: BoxDecoration(
+                        color:
+                            context.colorScheme.surfaceVariant.withOpacity(0.4),
+                        borderRadius: BorderRadius.circular(3),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: <Widget>[
+                          if (_fromDifferentRepo) ...[
+                            Text(
+                              '$fromRepoName:',
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .bodySmall
+                                  ?.copyWith(
+                                    color: context.colorScheme.onSurfaceVariant
+                                        .withOpacity(0.8),
+                                    fontFamily: 'monospace',
+                                    fontSize: 11,
+                                  ),
+                            ),
+                            const SizedBox(width: 3),
+                          ],
+                          Text(
+                            from!,
+                            style: Theme.of(context)
+                                .textTheme
+                                .bodySmall
+                                ?.copyWith(
+                                  color: context.colorScheme.onSurfaceVariant
+                                      .withOpacity(0.8),
+                                  fontFamily: 'monospace',
+                                  fontSize: 11,
+                                ),
                           ),
+                        ],
+                      ),
                     ),
                     if (to != null) ...[
                       Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 4),
                         child: Icon(
                           Octicons.arrow_right,
-                          size: 12,
+                          size: 11,
                           color: context.colorScheme.onSurfaceVariant
                               .withOpacity(0.6),
                         ),
@@ -174,14 +216,25 @@ class SimplePullCard extends StatelessWidget {
                     ],
                   ],
                   if (to != null)
-                    Text(
-                      to!,
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: context.colorScheme.onSurfaceVariant
-                                .withOpacity(0.7),
-                            fontFamily: 'monospace',
-                            fontSize: 11,
-                          ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 5,
+                        vertical: 1,
+                      ),
+                      decoration: BoxDecoration(
+                        color:
+                            context.colorScheme.surfaceVariant.withOpacity(0.4),
+                        borderRadius: BorderRadius.circular(3),
+                      ),
+                      child: Text(
+                        to!,
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              color: context.colorScheme.onSurfaceVariant
+                                  .withOpacity(0.8),
+                              fontFamily: 'monospace',
+                              fontSize: 11,
+                            ),
+                      ),
                     ),
                 ],
               ),
@@ -276,6 +329,7 @@ class SimplePullLoadingCard extends StatelessWidget {
     this.showDescription = true,
     this.from,
     this.to,
+    this.fromRepoName,
     super.key,
   });
 
@@ -285,6 +339,7 @@ class SimplePullLoadingCard extends StatelessWidget {
   final bool showDescription;
   final String? from;
   final String? to;
+  final String? fromRepoName;
 
   @override
   Widget build(final BuildContext context) => Padding(

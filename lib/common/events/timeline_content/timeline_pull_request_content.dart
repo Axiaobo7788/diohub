@@ -26,7 +26,7 @@ class TimelinePullRequestContent extends StatelessWidget {
           SimplePullCard(
             prData,
             showRepoName: true,
-            showDescription: false,
+            // showDescription: false,
             from: from,
             to: to,
           ),
