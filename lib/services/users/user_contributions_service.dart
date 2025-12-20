@@ -1,3 +1,5 @@
+// ignore_for_file: avoid_classes_with_only_static_members
+
 import 'package:diohub/app/global.dart';
 import 'package:diohub/common/charts/contribution_calendar_widget.dart';
 import 'package:diohub/common/utils/contribution_utils.dart';
@@ -54,7 +56,7 @@ class UserContributionsService {
       }
 
       // Fetch all years in parallel
-      final results = await Future.wait(yearQueries);
+      final results = await Future.wait(yearQueries,eagerError: true);
 
       // Combine results into unified view model
       return _combineMultiYearResults(results);

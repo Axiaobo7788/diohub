@@ -58,8 +58,14 @@ class ActivityTimelineItem extends StatelessWidget {
           final state =
               event.issueData!.state == 'CLOSED' ? 'closed' : 'opened';
           actionText = state;
-          iconData = Octicons.issue_opened;
-          iconColor = const Color(0xFF4CAF50); // Green
+          // State-aware icon for issues
+          if (event.issueData!.state == 'CLOSED') {
+            iconData = Octicons.issue_closed;
+            iconColor = Colors.red; // Red for closed
+          } else {
+            iconData = Octicons.issue_opened;
+            iconColor = Colors.green; // Green for open
+          }
         } else {
           return const SizedBox.shrink();
         }
@@ -68,15 +74,26 @@ class ActivityTimelineItem extends StatelessWidget {
         if (event.pullRequestData != null) {
           // Note: from/to refs not available in pullInfoTimeline fragment
           // Only available in REST API events, not GraphQL activity timeline
+          // Pass prData to skip loading card - we already have the data
           card = TimelinePullRequestContent(
             prUrl: event.pullRequestData!.url,
             from: null,
             to: null,
+            prData: event.pullRequestData!, // Pass data to skip loading
           );
           eventDate = event.pullRequestData!.createdAt;
           actionText = event.pullRequestData!.action;
-          iconData = Octicons.git_pull_request;
-          iconColor = const Color(0xFF9C27B0); // Purple
+          // State-aware icon and color for PRs
+          if (event.pullRequestData!.merged) {
+            iconData = Octicons.git_merge;
+            iconColor = Colors.deepPurple; // Purple for merged
+          } else if (event.pullRequestData!.state == 'CLOSED') {
+            iconData = Octicons.git_pull_request_closed;
+            iconColor = Colors.red; // Red for closed
+          } else {
+            iconData = Octicons.git_pull_request;
+            iconColor = Colors.green; // Green for open
+          }
         } else {
           return const SizedBox.shrink();
         }
@@ -100,6 +117,7 @@ class ActivityTimelineItem extends StatelessWidget {
       eventIcon: iconData,
       eventIconColor: iconColor,
       actionText: actionText,
+      highlighted: true,
       date: eventDate,
       isFirst: isFirst,
       isLast: isLast,
