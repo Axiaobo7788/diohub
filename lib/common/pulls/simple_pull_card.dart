@@ -19,12 +19,16 @@ class SimplePullCard extends StatelessWidget {
     this.item, {
     this.showRepoName = true,
     this.showDescription = true,
+    this.from,
+    this.to,
     super.key,
   });
 
   final PullRequestCardDataModel item;
   final bool showRepoName;
   final bool showDescription;
+  final String? from;
+  final String? to;
 
   // Helper getters to access data
   String get _title => item.title;
@@ -38,7 +42,6 @@ class SimplePullCard extends StatelessWidget {
   String? get _body => item.body;
   String? get _bodyHtml => item.bodyHtml;
   UserInfoModel? get _user => item.author;
-  bool? get _merged => item.merged;
   DateTime? get _mergedAt => item.mergedAt;
 
   // Extract repo name from repository data
@@ -142,6 +145,46 @@ class SimplePullCard extends StatelessWidget {
                 ),
               ],
             ),
+            // From and To refs
+            if (from != null || to != null)
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: <Widget>[
+                  if (from != null) ...[
+                    Text(
+                      from!,
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: context.colorScheme.onSurfaceVariant
+                                .withOpacity(0.7),
+                            fontFamily: 'monospace',
+                            fontSize: 11,
+                          ),
+                    ),
+                    if (to != null) ...[
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 4),
+                        child: Icon(
+                          Octicons.arrow_right,
+                          size: 12,
+                          color: context.colorScheme.onSurfaceVariant
+                              .withOpacity(0.6),
+                        ),
+                      ),
+                    ],
+                  ],
+                  if (to != null)
+                    Text(
+                      to!,
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: context.colorScheme.onSurfaceVariant
+                                .withOpacity(0.7),
+                            fontFamily: 'monospace',
+                            fontSize: 11,
+                          ),
+                    ),
+                ],
+              ),
             // Comments
             if (_comments > 0)
               Row(
@@ -231,6 +274,8 @@ class SimplePullLoadingCard extends StatelessWidget {
     this.padding = const EdgeInsets.symmetric(horizontal: 3, vertical: 6),
     this.showRepoName = true,
     this.showDescription = true,
+    this.from,
+    this.to,
     super.key,
   });
 
@@ -238,6 +283,8 @@ class SimplePullLoadingCard extends StatelessWidget {
   final EdgeInsets padding;
   final bool showRepoName;
   final bool showDescription;
+  final String? from;
+  final String? to;
 
   @override
   Widget build(final BuildContext context) => Padding(
@@ -250,6 +297,8 @@ class SimplePullLoadingCard extends StatelessWidget {
             PullRequestCardDataModel.fromPullRequestModel(data),
             showRepoName: showRepoName,
             showDescription: showDescription,
+            from: from,
+            to: to,
           ),
           loadingBuilder: (final BuildContext context) => SizedBox(
             width: double.infinity,

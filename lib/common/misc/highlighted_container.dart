@@ -1,3 +1,4 @@
+import 'package:diohub/utils/utils.dart';
 import 'package:flutter/material.dart';
 
 /// Enum to specify which side the border should be on (for border mode)
@@ -63,7 +64,7 @@ class HighlightedContainer extends StatelessWidget {
     if (_style == HighlightStyle.elevation) {
       // Elevation mode: use Material with elevation
       return Material(
-        color: backgroundColor,
+        color: backgroundColor?? context.colorScheme.onSurface,
         borderRadius: BorderRadius.circular(borderRadius),
         elevation: 1,
         child: ClipRRect(
