@@ -1,5 +1,4 @@
 import 'package:diohub/common/misc/repository_card.dart';
-import 'package:diohub/common/timeline/timeline_container.dart';
 import 'package:diohub/models/repositories/repo_card_data_model.dart';
 import 'package:flutter/material.dart';
 
@@ -14,12 +13,10 @@ class TimelineRepositoryContent extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return TimelineContainer(
-      child: RepoCardLoading(
-        repoData.url,
-        repoData.name,
-        refresh: false,
-      ),
+    return RepoCardLoading(
+      repoData.url,
+      repoData.name,
+      refresh: false,
     );
   }
 }

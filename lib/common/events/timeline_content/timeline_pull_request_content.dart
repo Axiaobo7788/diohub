@@ -1,6 +1,5 @@
 import 'package:diohub/common/markdown_view/trimmable_markdown_content.dart';
 import 'package:diohub/common/pulls/simple_pull_card.dart';
-import 'package:diohub/common/timeline/timeline_container.dart';
 import 'package:diohub/models/pull_requests/pull_request_card_data_model.dart';
 import 'package:flutter/material.dart';
 
@@ -8,23 +7,28 @@ import 'package:flutter/material.dart';
 class TimelinePullRequestContent extends StatelessWidget {
   const TimelinePullRequestContent({
     required this.prData,
+    this.from,
+    this.to,
     super.key,
   });
 
   final PullRequestCardDataModel prData;
+  final String? from; // Head branch ref (source branch)
+  final String? to; // Base branch ref (target branch)
 
   @override
   Widget build(BuildContext context) {
-    return TimelineContainer(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min,
-        children: [
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
           // PR card (without description for timeline)
           SimplePullCard(
             prData,
             showRepoName: true,
             showDescription: false,
+            from: from,
+            to: to,
           ),
           // Description if available
           if (prData.body != null && prData.body!.trim().isNotEmpty) ...[
@@ -52,7 +56,6 @@ class TimelinePullRequestContent extends StatelessWidget {
             ),
           ],
         ],
-      ),
     );
   }
 }

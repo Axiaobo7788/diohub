@@ -1,5 +1,4 @@
 import 'package:diohub/common/misc/repository_card.dart';
-import 'package:diohub/common/timeline/timeline_container.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_vector_icons/flutter_vector_icons.dart';
 
@@ -18,8 +17,7 @@ class TimelinePublicContent extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     
-    return TimelineContainer(
-      child: Column(
+    return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -62,7 +60,6 @@ class TimelinePublicContent extends StatelessWidget {
           refresh: false,
         ),
       ],
-      ),
     );
   }
 }

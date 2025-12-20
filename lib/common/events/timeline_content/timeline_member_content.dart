@@ -1,6 +1,5 @@
 import 'package:diohub/common/misc/profile_card.dart';
 import 'package:diohub/common/misc/repository_card.dart';
-import 'package:diohub/common/timeline/timeline_container.dart';
 import 'package:diohub/models/users/user_info_model.dart';
 import 'package:flutter/material.dart';
 
@@ -21,8 +20,7 @@ class TimelineMemberContent extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return TimelineContainer(
-      child: Column(
+    return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -39,7 +37,6 @@ class TimelineMemberContent extends StatelessWidget {
           refresh: false,
         ),
       ],
-      ),
     );
   }
 }

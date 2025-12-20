@@ -1,6 +1,5 @@
 import 'package:diohub/common/issues/issue_list_card.dart';
 import 'package:diohub/common/markdown_view/trimmable_markdown_content.dart';
-import 'package:diohub/common/timeline/timeline_container.dart';
 import 'package:diohub/models/issues/issue_card_data_model.dart';
 import 'package:flutter/material.dart';
 
@@ -21,11 +20,10 @@ class TimelineIssueContent extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return TimelineContainer(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min,
-        children: [
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
           // Issue card (without description for timeline)
           IssueListCard(
             issueData,
@@ -86,7 +84,6 @@ class TimelineIssueContent extends StatelessWidget {
             ),
           ],
         ],
-      ),
     );
   }
 }

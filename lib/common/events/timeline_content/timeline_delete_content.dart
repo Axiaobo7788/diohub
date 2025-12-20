@@ -1,5 +1,4 @@
 import 'package:diohub/common/misc/repository_card.dart';
-import 'package:diohub/common/timeline/timeline_container.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_vector_icons/flutter_vector_icons.dart';
 
@@ -22,8 +21,7 @@ class TimelineDeleteContent extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     
-    return TimelineContainer(
-      child: Column(
+    return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -65,14 +63,14 @@ class TimelineDeleteContent extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 8),
-        // Repository card
+        // Repository card - pass branch so it shows with strikethrough in card
         RepoCardLoading(
           repoUrl,
           repoName,
+          branch: refName.isNotEmpty ? refName : null,
           refresh: false,
         ),
       ],
-      ),
     );
   }
 }
