@@ -1,3 +1,4 @@
+import 'package:diohub/models/events/events_model.dart';
 import 'package:diohub/models/repositories/repo_card_data_model.dart';
 
 /// Unified data model for CommitCard
@@ -9,6 +10,36 @@ class CommitCardDataModel {
     required this.date,
     required this.repositories,
   });
+
+  /// Factory for creating from EventsModel (PushEvent)
+  factory CommitCardDataModel.fromPushEvent(EventsModel event) {
+    final payload = event.payload;
+    // Use size (total commits) or distinctSize (distinct commits) instead of commits.length
+    // because the commits array may be truncated by the GitHub API
+    final commitCount = payload?.size ?? payload?.distinctSize ?? payload?.commits?.length ?? 0;
+    final date = event.createdAt ?? DateTime.now();
+
+    // Extract repo info from event
+    final repo = event.repo;
+    final repoName = repo?.name ?? '';
+    final repoParts = repoName.split('/');
+    final owner = repoParts.isNotEmpty ? repoParts[0] : '';
+    final name = repoParts.length > 1 ? repoParts[1] : repoName;
+    final url = repo?.url ?? 'https://github.com/$repoName';
+
+    return CommitCardDataModel(
+      count: commitCount,
+      date: date,
+      repositories: [
+        CommitRepositoryInfo(
+          owner: owner,
+          name: name,
+          url: url,
+          count: commitCount,
+        ),
+      ],
+    );
+  }
 
   /// Total commit count for this day
   final int count;
@@ -43,6 +74,6 @@ class CommitRepositoryInfo {
   final String url;
   final int count; // Commit count for this repository on this date
   final String? id; // Repository ID from GraphQL (for future use)
-  final RepoCardDataModel? repoData; // Full repository metadata preserved from GraphQL
+  final RepoCardDataModel?
+      repoData; // Full repository metadata preserved from GraphQL
 }
-

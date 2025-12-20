@@ -9,9 +9,9 @@ class RepoCardDataModel {
     required this.url,
     this.description,
     this.language,
-    this.stargazersCount,
-    this.private,
-    this.fork,
+    this.stargazersCount = 0,
+    this.private = false,
+    this.fork = false,
     this.contributionCount,
   });
 
@@ -19,9 +19,9 @@ class RepoCardDataModel {
   final String url;
   final String? description;
   final String? language;
-  final int? stargazersCount;
-  final bool? private;
-  final bool? fork;
+  final int stargazersCount;
+  final bool private;
+  final bool fork;
   final int? contributionCount;
 
   /// Construct from RepositoryModel
@@ -31,16 +31,21 @@ class RepoCardDataModel {
       url: repo.url ?? '',
       description: repo.description,
       language: repo.language,
-      stargazersCount: repo.stargazersCount,
-      private: repo.private,
-      fork: repo.fork,
+      stargazersCount: repo.stargazersCount ?? 0,
+      private: repo.private ?? false,
+      fork: repo.fork ?? false,
     );
   }
 
-  /// Construct from GraphQL repository type
-  /// Uses GrepositoryFields interface (from fragment) to handle all GraphQL repository types
-  /// This works because all repository types from different queries implement GrepositoryFields
+  /// Construct from GraphQL repository type (uses repositoryFields fragment)
+  /// Works with any repository type that implements GrepositoryFields
   factory RepoCardDataModel.fromGraphQL(GrepositoryFields repo) {
+    return _fromGraphQLCommon(repo);
+  }
+
+  /// Common implementation for repository types
+  /// Uses dynamic to work with any repository fragment type
+  static RepoCardDataModel _fromGraphQLCommon(dynamic repo) {
     String? language;
     if (repo.languages?.edges?.isNotEmpty ?? false) {
       final firstEdge = repo.languages!.edges!.first;
