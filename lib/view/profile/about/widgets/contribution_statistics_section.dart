@@ -1,5 +1,4 @@
 import 'package:diohub/common/charts/stat_card_widget.dart';
-import 'package:diohub/common/misc/nested_card_with_header.dart';
 import 'package:diohub/common/misc/shimmer_widget.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_vector_icons/flutter_vector_icons.dart';
@@ -70,30 +69,45 @@ class ContributionStatisticsSection extends StatelessWidget {
         ),
     ];
 
-    return NestedCardWithHeader(
-      header: Row(
-        children: [
-          Icon(
-            Octicons.graph,
-            size: 16,
-            color: colorScheme.onSurfaceVariant,
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+      child: Material(
+        color: colorScheme.surfaceContainerLow,
+        borderRadius: BorderRadius.circular(12),
+        child: Padding(
+          padding: const EdgeInsets.all(12),
+          child: Row(
+            children: stats.asMap().entries.map((entry) {
+              final index = entry.key;
+              final stat = entry.value;
+              return Expanded(
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    if (index > 0)
+                      Container(
+                        width: 1,
+                        height: 20,
+                        margin: const EdgeInsets.symmetric(horizontal: 8),
+                        color: colorScheme.outlineVariant.withOpacity(0.3),
+                      ),
+                    Expanded(
+                      child: StatCardWidget(
+                        icon: stat.icon,
+                        value: stat.value,
+                        label: stat.label,
+                        color: stat.color,
+                        onTap: stat.onTap,
+                        padding: const EdgeInsets.symmetric(
+                            vertical: 8, horizontal: 4),
+                        iconSize: 12.0,
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            }).toList(),
           ),
-          const SizedBox(width: 8),
-          Text(
-            'Contribution Statistics',
-            style: theme.textTheme.titleMedium?.copyWith(
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-        ],
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: StatCardGrid(
-          stats: stats,
-          crossAxisCount: stats.length.clamp(2, 4),
-          spacing: 8.0,
-          runSpacing: 8.0,
         ),
       ),
     );
@@ -112,43 +126,38 @@ class ContributionStatisticsSectionLoading extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return NestedCardWithHeader(
-      header: Row(
-        children: [
-          ShimmerWidget.container(
-            height: 16,
-            width: 16,
-            borderRadius: BorderRadius.circular(2),
+    final colorScheme = Theme.of(context).colorScheme;
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+      child: Material(
+        color: colorScheme.surfaceContainerLow,
+        borderRadius: BorderRadius.circular(12),
+        child: Padding(
+          padding: const EdgeInsets.all(12),
+          child: Row(
+            children: List.generate(4, (index) {
+              return Expanded(
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    if (index > 0)
+                      Container(
+                        width: 1,
+                        height: 20,
+                        margin: const EdgeInsets.symmetric(horizontal: 8),
+                        color: Colors.grey.withOpacity(0.3),
+                      ),
+                    Expanded(
+                      child: ShimmerWidget.container(
+                        height: 40,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            }),
           ),
-          const SizedBox(width: 8),
-          ShimmerWidget.container(
-            height: 20,
-            width: 180,
-            borderRadius: BorderRadius.circular(4),
-          ),
-        ],
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: LayoutBuilder(
-          builder: (context, constraints) {
-            final crossAxisCount = (constraints.maxWidth / 120).floor().clamp(2, 4);
-            return GridView.builder(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: crossAxisCount,
-                crossAxisSpacing: 8,
-                mainAxisSpacing: 8,
-                childAspectRatio: 1.2,
-              ),
-              itemCount: 4,
-              itemBuilder: (context, index) => ShimmerWidget.container(
-                height: 80,
-                borderRadius: BorderRadius.circular(8),
-              ),
-            );
-          },
         ),
       ),
     );

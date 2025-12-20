@@ -1,3 +1,6 @@
+// ignore_for_file: avoid_classes_with_only_static_members
+
+import 'package:diohub/graphql/queries/issues_pulls/__generated__/issue_pull_info.data.gql.dart';
 import 'package:diohub/graphql/queries/users/__generated__/user_activity_timeline_full.data.gql.dart';
 import 'package:diohub/graphql/queries/users/__generated__/user_info.data.gql.dart';
 import 'package:diohub/models/commits/commit_card_data_model.dart';
@@ -118,8 +121,11 @@ class ActivityTimelineConverter {
       final name = pr.repository.name;
       final url = pr.repository.url.toString();
 
-      // Create unified PR data model
-      final prData = PullRequestCardDataModel.fromGraphQL(pr);
+      // Create unified PR data model using timeline constructor
+      // Cast to fragment interface (node implements GpullInfoTimeline)
+      final prData = PullRequestCardDataModel.fromGraphQLTimeline(
+        pr as GpullInfoTimeline,
+      );
 
       events.add(
         ActivityTimelineEvent(
@@ -155,8 +161,11 @@ class ActivityTimelineConverter {
       final name = issue.repository.name;
       final url = issue.repository.url.toString();
 
-      // Create unified issue data model
-      final issueData = IssueCardDataModel.fromGraphQL(issue);
+      // Create unified issue data model using timeline constructor
+      // Cast to fragment interface (node implements GissueInfoTimeline)
+      final issueData = IssueCardDataModel.fromGraphQLTimeline(
+        issue as GissueInfoTimeline,
+      );
 
       events.add(
         ActivityTimelineEvent(

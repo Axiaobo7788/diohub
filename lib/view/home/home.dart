@@ -12,12 +12,14 @@ import 'package:diohub/common/misc/floating_toolbar_wrapper.dart';
 import 'package:diohub/common/misc/ink_pot.dart';
 import 'package:diohub/common/misc/profile_banner.dart';
 import 'package:diohub/common/misc/shimmer_widget.dart';
+import 'package:diohub/common/search_overlay/search_bar.dart';
 import 'package:diohub/common/search_overlay/search_overlay.dart';
 import 'package:diohub/common/wrappers/dynamic_tabs_parent.dart';
 import 'package:diohub/common/wrappers/infinite_scroll_wrapper.dart';
 import 'package:diohub/common/wrappers/search_scroll_wrapper.dart';
 import 'package:diohub/graphql/queries/viewer/__generated__/viewer.query.data.gql.dart';
 import 'package:diohub/providers/base_provider.dart';
+import 'package:diohub/providers/search_data_provider.dart';
 import 'package:diohub/providers/users/current_user_provider.dart';
 import 'package:diohub/routes/router.gr.dart';
 import 'package:diohub/services/users/user_info_service.dart';
@@ -67,9 +69,9 @@ class HomeScreenState extends State<HomeScreen>
   List<DynamicTab> _buildTabs() => <DynamicTab>[
         DynamicTab(
           identifier: 'Events',
+          tab: TabBarItem(label: 'Feed'),
           isDismissible: false,
-          tabViewBuilder: (final BuildContext context) =>
-              const Events(isTimeline: false),
+          tabViewBuilder: (final BuildContext context) => const Events(),
         ),
         DynamicTab(
           identifier: 'Issues',
@@ -525,12 +527,7 @@ class HomeScreenState extends State<HomeScreen>
                 defaultPadding: const EdgeInsets.only(bottom: 8),
                 topSpacing: 0,
               ),
-              expandedWidget: Padding(
-                padding: const EdgeInsets.only(top: 16),
-                child: Column(
-                  children: <Widget>[buildProfileCard(context)],
-                ),
-              ),
+              expandedWidget: buildProfileCard(context),
               body: tabView,
             ),
           ),
@@ -539,52 +536,68 @@ class HomeScreenState extends State<HomeScreen>
     );
   }
 
-  Row buildProfileCard(final BuildContext context) => Row(
-        mainAxisAlignment: MainAxisAlignment.spaceAround,
-        children: <Widget>[
+  Widget buildProfileCard(final BuildContext context) {
+    final user = context.provider<CurrentUserProvider>().data;
+    final searchProvider = context.provider<SearchDataProvider>();
+    final name = user.name?.trim().isNotEmpty == true ? user.name! : user.login;
+    final subtitle = user.name?.trim().isNotEmpty == true ? user.login : null;
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 20, 16, 16),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
           Row(
-            children: <Widget>[
+            children: [
               ProfileTile.avatar(
-                // fullName: context.provider<CurrentUserProvider>().data.name,
-                avatarUrl: context
-                    .provider<CurrentUserProvider>()
-                    .data
-                    .avatarUrl
-                    .toString(),
-                userLogin: context.provider<CurrentUserProvider>().data.login,
-                padding: const EdgeInsets.all(16),
-                size: 32,
+                avatarUrl: user.avatarUrl.toString(),
+                userLogin: user.login,
+                padding: EdgeInsets.zero,
+                size: 56,
               ),
-              Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: <Widget>[
-                  Text(
-                    context.provider<CurrentUserProvider>().data.name!,
-                    style: context.textTheme.titleMedium?.asBold(),
-                  ),
-                  Text(context.provider<CurrentUserProvider>().data.login),
-                ],
-              ),
-            ],
-          ),
-          Row(
-            children: <Widget>[
-              ElevatedButton(
-                onPressed: () {},
-                child: const Icon(Icons.notifications_rounded),
-              ),
-              const SizedBox(width: 8),
-              ElevatedButton(
-                onPressed: () {
-                  AutoRouter.of(context).push(const SearchRoute());
-                },
-                child: const Icon(Icons.search_rounded),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      name,
+                      style: context.textTheme.titleLarge?.asBold(),
+                    ),
+                    if (subtitle != null) ...[
+                      const SizedBox(height: 4),
+                      Text(
+                        '@$subtitle',
+                        style: context.textTheme.bodyMedium?.copyWith(
+                          color: context.colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
               ),
             ],
           ),
+          const SizedBox(height: 16),
+          AppSearchBar(
+            heroTag: 'homeSearchBar',
+            prompt: 'Search GitHub',
+            searchData: searchProvider.searchData,
+            onSubmit: (final SearchData data) {
+              searchProvider.updateSearchData(data);
+              if (data.isActive) {
+                AutoRouter.of(context).push(const SearchRoute());
+              }
+            },
+          ),
+                    const SizedBox(height: 16),
+
         ],
-      );
+      ),
+    );
+  }
 
   Row buildCollapsedAppBar(final BuildContext context) => Row(
         mainAxisAlignment: MainAxisAlignment.center,

@@ -1,13 +1,11 @@
-import 'package:diohub/utils/get_date.dart';
-import 'package:diohub/utils/utils.dart';
+import 'package:diohub/common/timeline/unified_timeline_item.dart';
+import 'package:diohub/common/timeline_content/timeline_commit_content.dart';
+import 'package:diohub/common/timeline_content/timeline_issue_content.dart';
+import 'package:diohub/common/timeline_content/timeline_pull_request_content.dart';
+import 'package:diohub/common/timeline_content/timeline_repository_content.dart';
 import 'package:diohub/view/profile/about/widgets/activity_timeline_event.dart';
-import 'package:diohub/view/profile/about/widgets/timeline_commit_content.dart';
-import 'package:diohub/view/profile/about/widgets/timeline_issue_content.dart';
-import 'package:diohub/view/profile/about/widgets/timeline_pull_request_content.dart';
-import 'package:diohub/view/profile/about/widgets/timeline_repository_content.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_vector_icons/flutter_vector_icons.dart';
-import 'package:timeline_tile/timeline_tile.dart';
 
 /// Widget that displays a single activity timeline event using unified card widgets
 /// Includes TimelineTile for visual timeline with icons and connecting lines
@@ -32,6 +30,8 @@ class ActivityTimelineItem extends StatelessWidget {
     Widget card;
     String actionText;
     DateTime? eventDate;
+    IconData? iconData;
+    Color? iconColor;
 
     switch (event.type) {
       case ActivityEventType.commit:
@@ -39,12 +39,12 @@ class ActivityTimelineItem extends StatelessWidget {
           card = TimelineCommitContent(
             commitData: event.commitData!,
             userLogin: userLogin,
-            // TODO: Get user email from user profile if available
             userEmail: null,
           );
           eventDate = event.commitData!.date;
-          // Build action text for commits
           actionText = 'pushed';
+          iconData = Octicons.git_commit;
+          iconColor = const Color(0xFF2196F3); // Blue
         } else {
           return const SizedBox.shrink();
         }
@@ -55,22 +55,28 @@ class ActivityTimelineItem extends StatelessWidget {
             issueData: event.issueData!,
           );
           eventDate = event.issueData!.createdAt;
-          // Build action text for issues
           final state =
               event.issueData!.state == 'CLOSED' ? 'closed' : 'opened';
-          actionText = '$state an issue';
+          actionText = state;
+          iconData = Octicons.issue_opened;
+          iconColor = const Color(0xFF4CAF50); // Green
         } else {
           return const SizedBox.shrink();
         }
         break;
       case ActivityEventType.pullRequest:
         if (event.pullRequestData != null) {
+          // Note: from/to refs not available in pullInfoTimeline fragment
+          // Only available in REST API events, not GraphQL activity timeline
           card = TimelinePullRequestContent(
-            prData: event.pullRequestData!,
+            prUrl: event.pullRequestData!.url,
+            from: null,
+            to: null,
           );
           eventDate = event.pullRequestData!.createdAt;
-          // Build action text for pull requests
-          actionText = '${event.pullRequestData!.action} a pull request';
+          actionText = event.pullRequestData!.action;
+          iconData = Octicons.git_pull_request;
+          iconColor = const Color(0xFF9C27B0); // Purple
         } else {
           return const SizedBox.shrink();
         }
@@ -81,149 +87,23 @@ class ActivityTimelineItem extends StatelessWidget {
             repoData: event.repositoryData!,
           );
           eventDate = event.date;
-          // Build action text for repository creation
-          actionText = 'created ${event.repositoryData!.name}';
+          actionText = 'created';
+          iconData = Octicons.repo;
+          iconColor = const Color(0xFF009688); // Teal
         } else {
           return const SizedBox.shrink();
         }
         break;
     }
 
-    // Wrap with TimelineTile for visual timeline
-    final iconData = _getEventIcon(event.type);
-    final iconColor = _getEventIconColor(context, event.type);
-
-    return TimelineTile(
+    return UnifiedTimelineItem(
+      eventIcon: iconData,
+      eventIconColor: iconColor,
+      actionText: actionText,
+      date: eventDate,
       isFirst: isFirst,
       isLast: isLast,
-      indicatorStyle: IndicatorStyle(
-        width: 24,
-        height: 24,
-        // indicatorXY: 0.5,
-        drawGap: true,
-        indicator: Container(
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            color: context.colorScheme.surface,
-            border: Border.all(
-              color: iconColor.withOpacity(0.3),
-              width: 2,
-            ),
-          ),
-          child: Icon(
-            iconData,
-            size: 12,
-            color: iconColor,
-          ),
-        ),
-      ),
-      beforeLineStyle: LineStyle(
-        thickness: 1,
-        color: context.colorScheme.outlineVariant.withOpacity(0.3),
-      ),
-      afterLineStyle: LineStyle(
-        thickness: 1,
-        color: context.colorScheme.outlineVariant.withOpacity(0.3),
-      ),
-      endChild: Padding(
-        padding: const EdgeInsets.fromLTRB(12, 0, 0, 0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            // Action text and timestamp outside the card
-            Padding(
-              padding: const EdgeInsets.only(top: 16, bottom: 8),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Expanded(
-                    child: _buildActionText(context, actionText),
-                  ),
-                  if (eventDate != null) ...[
-                    const SizedBox(width: 8),
-                    Text(
-                      eventDate.toRelativeDate(),
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: context.colorScheme.onSurfaceVariant
-                                .withOpacity(0.7),
-                            fontSize: 10,
-                          ),
-                    ),
-                  ],
-                ],
-              ),
-            ),
-            // Card content
-            card,
-          ],
-        ),
-      ),
-    );
-  }
-
-  IconData _getEventIcon(ActivityEventType type) {
-    switch (type) {
-      case ActivityEventType.commit:
-        return Octicons.git_commit;
-      case ActivityEventType.pullRequest:
-        return Octicons.git_pull_request;
-      case ActivityEventType.issue:
-        return Octicons.issue_opened;
-      case ActivityEventType.repositoryCreated:
-        return Octicons.repo;
-    }
-  }
-
-  Color _getEventIconColor(BuildContext context, ActivityEventType type) {
-    switch (type) {
-      case ActivityEventType.commit:
-        return const Color(0xFF2196F3); // Blue
-      case ActivityEventType.pullRequest:
-        return const Color(0xFF9C27B0); // Purple
-      case ActivityEventType.issue:
-        return const Color(0xFF4CAF50); // Green
-      case ActivityEventType.repositoryCreated:
-        return const Color(0xFF009688); // Teal
-    }
-  }
-
-  /// Build action text with proper formatting (action verb + bold name)
-  Widget _buildActionText(BuildContext context, String? actionText) {
-    if (actionText == null) {
-      return const SizedBox.shrink();
-    }
-    final theme = Theme.of(context);
-
-    // Format: "action verb name" (e.g., "created repository-name", "pushed")
-    final words = actionText.split(' ');
-    if (words.length >= 2) {
-      final action = words[0];
-      final name = words.sublist(1).join(' ');
-      return Text.rich(
-        TextSpan(
-          style: theme.textTheme.bodySmall?.copyWith(
-            color: context.colorScheme.onSurface.withOpacity(0.6),
-            fontSize: 12,
-          ),
-          children: [
-            TextSpan(text: '$action '),
-            TextSpan(
-              text: name,
-              style: const TextStyle(fontWeight: FontWeight.w600),
-            ),
-          ],
-        ),
-      );
-    }
-
-    // Fallback: plain text
-    return Text(
-      actionText,
-      style: theme.textTheme.bodySmall?.copyWith(
-        color: context.colorScheme.onSurface.withOpacity(0.6),
-        fontSize: 12,
-      ),
+      child: card,
     );
   }
 }
