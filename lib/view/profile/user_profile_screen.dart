@@ -1,5 +1,6 @@
 import 'package:auto_route/annotations.dart';
 import 'package:auto_route/auto_route.dart';
+import 'package:diohub/common/events/events.dart';
 import 'package:diohub/common/misc/collapsible_app_bar.dart';
 import 'package:diohub/common/misc/collapsible_action_buttons.dart';
 import 'package:diohub/common/misc/collapsible_detail_tiles.dart';
@@ -827,6 +828,7 @@ class UserProfileScreenState extends State<UserProfileScreen>
             : ActionButtonVisibilityState.both,
         onTap: () => tabController?.openTab('Stars'),
       ),
+     
       MinorActionButton(
         icon: Octicons.code_square,
         label: 'Gists',
@@ -952,6 +954,15 @@ class UserProfileScreenState extends State<UserProfileScreen>
             ? ActionButtonVisibilityState.none
             : ActionButtonVisibilityState.expandedOnly,
         onTap: () => tabController?.openTab('Sponsors'),
+      ), MinorActionButton(
+        icon: Octicons.history,
+        label: 'Feed',
+        category: 'Primary',
+        actionType: ActionButtonActionType.tab,
+        visibilityState: currentTab == 'Activity Feed'
+            ? ActionButtonVisibilityState.none
+            : ActionButtonVisibilityState.both,
+        onTap: () => tabController?.openTab('Activity Feed'),
       ),
     ];
   }
@@ -1350,6 +1361,13 @@ class _UserProfileTabsContentState extends State<_UserProfileTabsContent>
           useCustomRange: widget.useCustomRange,
           onYearChanged: widget.onYearChanged,
           onCustomRangeChanged: widget.onCustomRangeChanged,
+        ),
+      ),
+      DynamicTab(
+        identifier: 'Activity Feed',
+        tabViewBuilder: (context) => Events(
+          privateEvents: false,
+          specificUser: userData.login,
         ),
       ),
       DynamicTab(

@@ -91,11 +91,17 @@ class ActivityTimelineSection extends ConsumerWidget {
         }
         return const SliverToBoxAdapter(child: SizedBox.shrink());
       },
-      loading: () => const SliverToBoxAdapter(
-        child: TimelineShimmerList(
-          itemCount: 5,
-          showAvatar: false,
-          padding: EdgeInsets.symmetric(horizontal: 8),
+      loading: () => const SliverPadding(
+        padding: EdgeInsets.symmetric(
+          vertical: 8,
+          horizontal: 8,
+        ),
+        sliver: SliverToBoxAdapter(
+          child: TimelineShimmerList(
+            itemCount: 5,
+            showAvatar: false,
+            padding: EdgeInsets.zero,
+          ),
         ),
       ),
       error: (error, stackTrace) {
