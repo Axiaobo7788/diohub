@@ -1,4 +1,5 @@
 import 'package:diohub/common/misc/bordered_container.dart';
+import 'package:diohub/common/timeline/timeline_container.dart';
 import 'package:diohub/style/border_radiuses.dart';
 import 'package:diohub/utils/get_date.dart';
 import 'package:diohub/utils/utils.dart';
@@ -104,11 +105,11 @@ class UnifiedTimelineItem extends StatelessWidget {
                       child: child,
                     ),
                   )
-                : BorderedContainer(
-                    borderColor: eventIconColor,
-                    borderRadius: 8.0,
+                : TimelineContainer(
+                    // borderColor: eventIconColor,
+                    // borderRadius: 8.0,
                     child: Padding(
-                      padding: const EdgeInsets.all(12),
+                      padding: const EdgeInsets.symmetric(horizontal: 8),
                       child: child,
                     ),
                   ),

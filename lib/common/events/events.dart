@@ -32,6 +32,10 @@ class Events extends StatelessWidget {
   final bool privateEvents;
   final String? specificUser;
 
+  // Spacing constants for consistent user group separation
+  static const double itemSpacing = 12.0; // Between items from same user
+  static const double groupSpacing = 24.0; // Between user groups
+
   @override
   Widget build(final BuildContext context) {
     final CurrentUserProvider user = Provider.of<CurrentUserProvider>(context);
@@ -126,9 +130,14 @@ class Events extends StatelessWidget {
                 item.actor,
                 isFirst: data.index == 0,
               ),
-            // Timeline event
+            // Timeline event with spacing
             Padding(
-              padding: EdgeInsets.symmetric(horizontal: 16),
+              padding: EdgeInsets.only(
+                left: 16,
+                right: 16,
+                top: isFirstInUserGroup ? itemSpacing : 0,
+                bottom: 0,
+              ),
               child: buildTimelineEvent(
                 item,
                 data,
@@ -302,10 +311,10 @@ class Events extends StatelessWidget {
       eventIconColor: _getEventIconColor(context, eventType),
       actionText: actionText,
       date: date,
-      highlighted: true,
+      // highlighted: true,
       isFirst: isFirstInUserGroup,
       isLast: isLastInUserGroup,
-      actionHeaderTopPadding: isFirstInUserGroup ? 4.0 : 16.0,
+      actionHeaderTopPadding: isFirstInUserGroup ? 0.0 : 16.0,
       child: content,
     );
   }
@@ -374,36 +383,46 @@ class Events extends StatelessWidget {
       return const SizedBox.shrink();
     }
 
-    return InkWell(
-      onTap: () {
-        navigateToProfile(
-          context: context,
-          login: actor.login!,
-        );
-      },
-      child: Container(
-        padding: EdgeInsets.fromLTRB(
-          16,
-          isFirst ? 8 : 32, // More space from previous group
-          16,
-          4, // Less space to own group
+    return Container(
+      margin: EdgeInsets.only(
+        top: isFirst ? 8 : groupSpacing,
+        bottom: 0,
+      ),
+      decoration: BoxDecoration(
+        color: context.colorScheme.surfaceVariant.withOpacity(0.3),
+        border: Border(
+          bottom: BorderSide(
+            color: context.colorScheme.outlineVariant.withOpacity(0.2),
+            width: 1,
+          ),
         ),
-        child: Row(
-          children: [
-            UserAvatar(
-              avatarUrl: actor.avatarUrl,
-              size: 32,
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Text(
-                actor.login!,
-                style: context.textTheme.titleSmall?.copyWith(
-                  fontWeight: FontWeight.w600,
+      ),
+      child: InkWell(
+        onTap: () {
+          navigateToProfile(
+            context: context,
+            login: actor.login!,
+          );
+        },
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          child: Row(
+            children: [
+              UserAvatar(
+                avatarUrl: actor.avatarUrl,
+                size: 32,
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  actor.login!,
+                  style: context.textTheme.titleSmall?.copyWith(
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );

@@ -19,6 +19,7 @@ class BorderedContainer extends StatelessWidget {
     this.borderSide = BorderSideType.bottom,
     this.borderWidth = 2.0,
     this.borderRadius = 12.0,
+    this.backgroundColor,
     super.key,
   });
 
@@ -36,6 +37,9 @@ class BorderedContainer extends StatelessWidget {
 
   /// Border radius for rounded corners
   final double borderRadius;
+
+  /// Background color of the container. If null, uses surfaceVariant from theme.
+  final Color? backgroundColor;
 
   @override
   Widget build(BuildContext context) {
@@ -90,6 +94,8 @@ class BorderedContainer extends StatelessWidget {
       borderRadius: clipRadius,
       child: Container(
         decoration: BoxDecoration(
+          color: backgroundColor ??
+              Theme.of(context).colorScheme.surfaceVariant.withOpacity(0.3),
           borderRadius: BorderRadius.circular(borderRadius),
           border: border,
         ),
