@@ -155,9 +155,10 @@ class SimplePullCard extends StatelessWidget {
             ),
             // From and To refs
             if (from != null || to != null)
-              Row(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.center,
+              Wrap(
+                spacing: 4,
+                runSpacing: 4,
+                crossAxisAlignment: WrapCrossAlignment.center,
                 children: <Widget>[
                   if (from != null) ...[
                     Container(
@@ -174,8 +175,26 @@ class SimplePullCard extends StatelessWidget {
                         mainAxisSize: MainAxisSize.min,
                         children: <Widget>[
                           if (_fromDifferentRepo) ...[
-                            Text(
-                              '$fromRepoName:',
+                            Flexible(
+                              child: Text(
+                                '$fromRepoName:',
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .bodySmall
+                                    ?.copyWith(
+                                      color: context.colorScheme.onSurfaceVariant
+                                          .withOpacity(0.8),
+                                      fontFamily: 'monospace',
+                                      fontSize: 11,
+                                    ),
+                              ),
+                            ),
+                            const SizedBox(width: 3),
+                          ],
+                          Flexible(
+                            child: Text(
+                              from!,
+                              overflow: TextOverflow.ellipsis,
                               style: Theme.of(context)
                                   .textTheme
                                   .bodySmall
@@ -186,19 +205,6 @@ class SimplePullCard extends StatelessWidget {
                                     fontSize: 11,
                                   ),
                             ),
-                            const SizedBox(width: 3),
-                          ],
-                          Text(
-                            from!,
-                            style: Theme.of(context)
-                                .textTheme
-                                .bodySmall
-                                ?.copyWith(
-                                  color: context.colorScheme.onSurfaceVariant
-                                      .withOpacity(0.8),
-                                  fontFamily: 'monospace',
-                                  fontSize: 11,
-                                ),
                           ),
                         ],
                       ),
