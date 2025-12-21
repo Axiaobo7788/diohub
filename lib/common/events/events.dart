@@ -56,15 +56,15 @@ class Events extends StatelessWidget {
         top: 16,
         bottom: 16 + bottomPadding, // Add SafeArea bottom padding
       ),
-      firstPageLoadingBuilder: (final BuildContext context) => _KeepAlive(
-        child: TimelineShimmerList(
-          itemCount: 5,
-          showAvatar: false,
-          showUserHeaders: true,
-          padding: EdgeInsets.only(
-            top: 16,
-            bottom: 16 + bottomPadding,
-          ),
+      firstPageLoadingBuilder: (final BuildContext context) =>
+          TimelineShimmerList(
+        itemCount: 5,
+        showAvatar: true,
+        padding: EdgeInsets.only(
+          top: 16,
+          bottom: 16 + bottomPadding,
+          left: 16,
+          right: 16,
         ),
       ),
       filterFn: (final List<EventsModel> items) {
@@ -196,27 +196,33 @@ class Events extends StatelessWidget {
         final branchName = item.payload?.ref?.split('/').last;
         // Pass commit SHA (head) as ref - this is the latest commit SHA
         final commitSha = item.payload?.head;
-        content = TimelineCommitContent(
-          commitData: commitData,
-          branchName: branchName,
-          ref: commitSha, // Commit SHA, not branch ref
+        content = _KeepAlive(
+          child: TimelineCommitContent(
+            commitData: commitData,
+            branchName: branchName,
+            ref: commitSha, // Commit SHA, not branch ref
+          ),
         );
 
       case EventsType.WatchEvent:
         actionText = 'starred repository';
-        content = TimelineWatchContent(
-          repoName: item.repo?.name ?? '',
-          repoUrl: item.repo?.url ?? '',
+        content = _KeepAlive(
+          child: TimelineWatchContent(
+            repoName: item.repo?.name ?? '',
+            repoUrl: item.repo?.url ?? '',
+          ),
         );
 
       case EventsType.ForkEvent:
         final forkee = item.payload?.forkee;
         actionText = 'forked repository';
-        content = TimelineForkContent(
-          sourceRepoName: item.repo?.name ?? '',
-          sourceRepoUrl: item.repo?.url ?? '',
-          forkRepoName: forkee?.fullName ?? forkee?.name ?? '',
-          forkRepoUrl: forkee?.url ?? '',
+        content = _KeepAlive(
+          child: TimelineForkContent(
+            sourceRepoName: item.repo?.name ?? '',
+            sourceRepoUrl: item.repo?.url ?? '',
+            forkRepoName: forkee?.fullName ?? forkee?.name ?? '',
+            forkRepoUrl: forkee?.url ?? '',
+          ),
         );
 
       case EventsType.CreateEvent:
@@ -225,27 +231,33 @@ class Events extends StatelessWidget {
 
         if (refType == RefType.REPOSITORY) {
           actionText = 'created a repository';
-          content = TimelineCreateContent(
-            refType: 'repository',
-            repoName: item.repo?.name ?? '',
-            repoUrl: item.repo?.url ?? '',
+          content = _KeepAlive(
+            child: TimelineCreateContent(
+              refType: 'repository',
+              repoName: item.repo?.name ?? '',
+              repoUrl: item.repo?.url ?? '',
+            ),
           );
         } else if (refType == RefType.BRANCH) {
           actionText = 'created a branch';
-          content = TimelineCreateContent(
-            refType: 'branch',
-            repoName: item.repo?.name ?? '',
-            repoUrl: item.repo?.url ?? '',
-            refName: ref,
+          content = _KeepAlive(
+            child: TimelineCreateContent(
+              refType: 'branch',
+              repoName: item.repo?.name ?? '',
+              repoUrl: item.repo?.url ?? '',
+              refName: ref,
+            ),
           );
         } else {
           final refTypeName = refTypeValues.reverse![refType] ?? 'tag';
           actionText = 'created a $refTypeName';
-          content = TimelineCreateContent(
-            refType: refTypeName,
-            repoName: item.repo?.name ?? '',
-            repoUrl: item.repo?.url ?? '',
-            refName: ref,
+          content = _KeepAlive(
+            child: TimelineCreateContent(
+              refType: refTypeName,
+              repoName: item.repo?.name ?? '',
+              repoUrl: item.repo?.url ?? '',
+              refName: ref,
+            ),
           );
         }
 
@@ -257,29 +269,35 @@ class Events extends StatelessWidget {
 
         actionText = 'deleted a $refTypeName';
 
-        content = TimelineDeleteContent(
-          refType: refTypeName,
-          refName: refName,
-          repoName: item.repo?.name ?? '',
-          repoUrl: item.repo?.url ?? '',
+        content = _KeepAlive(
+          child: TimelineDeleteContent(
+            refType: refTypeName,
+            refName: refName,
+            repoName: item.repo?.name ?? '',
+            repoUrl: item.repo?.url ?? '',
+          ),
         );
 
       case EventsType.PublicEvent:
         actionText = 'made repository public';
-        content = TimelinePublicContent(
-          repoName: item.repo?.name ?? '',
-          repoUrl: item.repo?.url ?? '',
+        content = _KeepAlive(
+          child: TimelinePublicContent(
+            repoName: item.repo?.name ?? '',
+            repoUrl: item.repo?.url ?? '',
+          ),
         );
 
       case EventsType.MemberEvent:
         final member = item.payload?.member;
         final action = item.payload?.action ?? 'added';
         actionText = '$action a member';
-        content = TimelineMemberContent(
-          member: member!,
-          action: action,
-          repoName: item.repo?.name ?? '',
-          repoUrl: item.repo?.url ?? '',
+        content = _KeepAlive(
+          child: TimelineMemberContent(
+            member: member!,
+            action: action,
+            repoName: item.repo?.name ?? '',
+            repoUrl: item.repo?.url ?? '',
+          ),
         );
 
       case EventsType.IssuesEvent:
@@ -319,10 +337,12 @@ class Events extends StatelessWidget {
         final toRef = pr?.base?.ref; // Target/base branch
         // Use PR URL to fetch full data via SimplePullLoadingCard
         final prUrl = pr?.htmlUrl ?? pr?.url ?? '';
-        content = TimelinePullRequestContent(
-          prUrl: prUrl,
-          from: fromRef,
-          to: toRef,
+        content = _KeepAlive(
+          child: TimelinePullRequestContent(
+            prUrl: prUrl,
+            from: fromRef,
+            to: toRef,
+          ),
         );
 
       default:
@@ -336,8 +356,8 @@ class Events extends StatelessWidget {
     }
 
     return UnifiedTimelineItem(
-      eventIcon: _getEventIcon(eventType, item),
-      eventIconColor: _getEventIconColor(context, eventType, item),
+      eventIcon: _getEventIcon(eventType, item, actionText),
+      eventIconColor: _getEventIconColor(context, eventType, item, actionText),
       actionText: actionText,
       date: date,
       highlighted: true,
@@ -348,31 +368,27 @@ class Events extends StatelessWidget {
     );
   }
 
-  IconData _getEventIcon(EventsType? type, EventsModel item) {
+  IconData _getEventIcon(
+      EventsType? type, EventsModel item, String actionText) {
     switch (type) {
       case EventsType.PushEvent:
         return Octicons.git_commit;
       case EventsType.PullRequestEvent:
-        final pr = item.payload?.pullRequest;
-        final action = item.payload?.action;
-        // State-aware icon for PRs
-        final bool isMergedAction =
-            action?.toLowerCase().contains('merged') ?? false;
-        final bool isClosedAction =
-            action?.toLowerCase().contains('closed') ?? false;
-        if (isMergedAction || pr?.merged == true || pr?.mergedAt != null) {
+        final actionLower = actionText.toLowerCase();
+        // Icon based on action text only (not current state)
+        if (actionLower.contains('merged')) {
           return Octicons.git_merge;
-        } else if (pr?.draft == true) {
-          return Octicons.git_pull_request_draft;
-        } else if (isClosedAction || pr?.state == IssueState.CLOSED) {
+        } else if (actionLower.contains('closed')) {
           return Octicons.git_pull_request_closed;
+        } else if (actionLower.contains('draft')) {
+          return Octicons.git_pull_request_draft;
         } else {
           return Octicons.git_pull_request;
         }
       case EventsType.IssuesEvent:
-        final issue = item.payload?.issue;
-        // State-aware icon for issues
-        if (issue?.state == IssueState.CLOSED) {
+        final actionLower = actionText.toLowerCase();
+        // Icon based on action text only (not current state)
+        if (actionLower.contains('closed')) {
           return Octicons.issue_closed;
         } else {
           return Octicons.issue_opened;
@@ -396,33 +412,28 @@ class Events extends StatelessWidget {
     }
   }
 
-  Color _getEventIconColor(
-      BuildContext context, EventsType? type, EventsModel item) {
+  Color _getEventIconColor(BuildContext context, EventsType? type,
+      EventsModel item, String actionText) {
     final colorScheme = context.colorScheme;
     switch (type) {
       case EventsType.PushEvent:
         return const Color(0xFF2196F3); // Blue
       case EventsType.PullRequestEvent:
-        final pr = item.payload?.pullRequest;
-        final action = item.payload?.action;
-        // State-aware color for PRs
-        final bool isMergedAction =
-            action?.toLowerCase().contains('merged') ?? false;
-        final bool isClosedAction =
-            action?.toLowerCase().contains('closed') ?? false;
-        if (isMergedAction || pr?.merged == true || pr?.mergedAt != null) {
+        final actionLower = actionText.toLowerCase();
+        // Color based on action text only (not current state)
+        if (actionLower.contains('merged')) {
           return Colors.deepPurple; // Purple for merged
-        } else if (pr?.draft == true) {
-          return Colors.grey; // Grey for draft
-        } else if (isClosedAction || pr?.state == IssueState.CLOSED) {
+        } else if (actionLower.contains('closed')) {
           return Colors.red; // Red for closed
+        } else if (actionLower.contains('draft')) {
+          return Colors.grey; // Grey for draft
         } else {
           return Colors.green; // Green for open
         }
       case EventsType.IssuesEvent:
-        final issue = item.payload?.issue;
-        // State-aware color for issues
-        if (issue?.state == IssueState.CLOSED) {
+        final actionLower = actionText.toLowerCase();
+        // Color based on action text only (not current state)
+        if (actionLower.contains('closed')) {
           return Colors.red; // Red for closed
         } else {
           return Colors.green; // Green for open

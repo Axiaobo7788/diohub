@@ -225,17 +225,18 @@ class RepositoryCard extends StatelessWidget {
           // Footer: Language, Stars, Contributions
           Builder(
             builder: (context) {
-              final hasLanguage = repo?.language != null && repo!.language!.isNotEmpty;
+              final hasLanguage =
+                  repo?.language != null && repo!.language!.isNotEmpty;
               final starCount = repo?.stargazersCount ?? 0;
               final hasStars = starCount > 0;
               final count = contributionCount ?? repo?.contributionCount ?? 0;
               final hasContributions = count > 0;
-              
+
               // Only show footer if at least one item exists
               if (!hasLanguage && !hasStars && !hasContributions) {
                 return const SizedBox.shrink();
               }
-              
+
               return Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -254,12 +255,16 @@ class RepositoryCard extends StatelessWidget {
                             Icon(
                               Octicons.star_fill,
                               size: 12,
-                              color: context.colorScheme.onSurface.withOpacity(0.7),
+                              color: context.colorScheme.onSurface
+                                  .withOpacity(0.7),
                             ),
                             const SizedBox(width: 4),
                             Text(
                               starCount.toShortenedStr(),
-                              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .bodySmall
+                                  ?.copyWith(
                                     color: context.colorScheme.onSurface
                                         .withOpacity(0.7),
                                   ),
@@ -268,8 +273,8 @@ class RepositoryCard extends StatelessWidget {
                         ),
                       if (hasContributions)
                         Container(
-                          padding:
-                              const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 8, vertical: 4),
                           decoration: BoxDecoration(
                             color: const Color(0xFF2196F3).withOpacity(0.1),
                             borderRadius: BorderRadius.circular(8),
@@ -289,19 +294,20 @@ class RepositoryCard extends StatelessWidget {
                               const SizedBox(width: 4),
                               Text(
                                 '$count ${count == 1 ? 'commit' : 'commits'}',
-                                style:
-                                    Theme.of(context).textTheme.bodySmall?.copyWith(
-                                          fontWeight: FontWeight.w600,
-                                          color: const Color(0xFF2196F3),
-                                        ),
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .bodySmall
+                                    ?.copyWith(
+                                      fontWeight: FontWeight.w600,
+                                      color: const Color(0xFF2196F3),
+                                    ),
                               ),
                             ],
                           ),
                         ),
                     ],
-                  ),                
+                  ),
                   const SizedBox(height: 4),
-
                 ],
               );
             },
