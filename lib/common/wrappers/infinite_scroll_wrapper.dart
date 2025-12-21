@@ -163,11 +163,16 @@ class InfiniteScrollWrapperState<T> extends State<InfiniteScrollWrapper<T>> {
 
   @override
   Widget build(final BuildContext context) {
+    // Fetch overlap handle from NestedScrollView if available
+    final overlapHandle = NestedScrollView.sliverOverlapAbsorberHandleFor(context);
+    
     Widget scrollView(final ScrollViewProperties? properties) {
       final ScrollPhysics physics = widget.disableScroll
           ? const NeverScrollableScrollPhysics()
           : const BouncingScrollPhysics();
-      final List<MultiSliver> slivers = <MultiSliver>[
+      final List<Widget> slivers = <Widget>[
+        // Inject overlap if we're inside a NestedScrollView
+        SliverOverlapInjector(handle: overlapHandle),
         MultiSliver(
           children: <Widget>[
             if (widget.header != null)

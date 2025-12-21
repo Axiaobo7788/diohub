@@ -2,9 +2,9 @@ import 'package:diohub/common/animations/size_expanded_widget.dart';
 import 'package:diohub/common/misc/action_card_builder.dart';
 import 'package:diohub/common/misc/collapsible_action_buttons.dart';
 import 'package:diohub/common/misc/floating_expandable_widget.dart' as base;
+import 'package:diohub/common/misc/liquid_glass_wrapper.dart';
 import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/material.dart';
-import 'package:liquid_glass_renderer/liquid_glass_renderer.dart';
 
 // Re-export shared utilities for convenience
 export 'package:diohub/common/misc/action_card_builder.dart'
@@ -122,36 +122,17 @@ Widget buildToolbarContent({
       final double blurAmount =
           15 + (expandAnimation.value * 12.0); // 8-20 range
 
-      return LiquidGlassLayer(
-        settings: LiquidGlassSettings(
-          blur: blurAmount,
-          glassColor: Theme.of(context)
-              .colorScheme
-              .surfaceContainerHighest
-              .withOpacity(0.2),
-          thickness: 2,
-          // refractiveIndex: 1.5,
-        ),
-        child: child!,
-      );
-    },
-    child: LiquidGlass(
-      shape: LiquidRoundedRectangle(
+      return LiquidGlassWrapper.withShape(
         borderRadius: 28,
-      ),
-      child: Container(
-        constraints:
-            maxHeight != null ? BoxConstraints(maxHeight: maxHeight) : null,
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(28),
-          border: Border.all(
-            color: Theme.of(context).colorScheme.outline.withOpacity(0.15),
-            width: 0.5,
-          ),
-        ),
-        child: Material(
-          color: Colors.transparent,
-          child: LayoutBuilder(
+        blur: blurAmount,
+        glassColorOpacity: 0.2,
+        thickness: 2,
+        child: Container(
+          constraints:
+              maxHeight != null ? BoxConstraints(maxHeight: maxHeight) : null,
+          child: Material(
+            color: Colors.transparent,
+            child: LayoutBuilder(
             builder: (context, constraints) {
               final screenWidth = MediaQuery.of(context).size.width;
               final expandedWidth = screenWidth * 0.9;
@@ -517,8 +498,9 @@ Widget buildToolbarContent({
           ),
         ),
       ),
-    ),
-  );
+    );
+  },
+);
 }
 
 /// Build draggable indicator
