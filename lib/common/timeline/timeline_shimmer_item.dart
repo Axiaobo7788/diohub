@@ -197,7 +197,7 @@ class TimelineShimmerList extends StatelessWidget {
     if (showUserHeaders) {
       return _buildWithUserHeaders(context);
     }
-    
+
     // Use Column to stack timeline items without SizedBox height constraint
     return Padding(
       padding: padding,
