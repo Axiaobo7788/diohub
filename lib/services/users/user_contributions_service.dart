@@ -55,7 +55,7 @@ class UserContributionsService {
       }
 
       // Fetch all years in parallel
-      final results = await Future.wait(yearQueries,eagerError: true);
+      final results = await Future.wait(yearQueries, eagerError: true);
 
       // Combine results into unified view model
       return _combineMultiYearResults(results);

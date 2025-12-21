@@ -16,7 +16,17 @@ query userContributions($user: String!, $from: DateTime, $to: DateTime) {
             totalRepositoriesWithContributedCommits
             totalRepositoriesWithContributedIssues
             totalRepositoriesWithContributedPullRequests
+            totalRepositoriesWithContributedPullRequestReviews
             restrictedContributionsCount
+            doesEndInCurrentMonth
+            hasActivityInThePast
+            hasAnyContributions
+            hasAnyRestrictedContributions
+            isSingleDay
+            startedAt
+            endedAt
+            earliestRestrictedContributionDate
+            latestRestrictedContributionDate
             contributionCalendar {
                 totalContributions
                 colors
@@ -36,6 +46,107 @@ query userContributions($user: String!, $from: DateTime, $to: DateTime) {
                     firstDay
                     totalWeeks
                 }
+            }
+            firstIssueContribution {
+                __typename
+                ... on CreatedIssueContribution {
+                    issue {
+                        id
+                        number
+                        title
+                        url
+                        createdAt
+                        repository {
+                            name
+                            owner {
+                                login
+                            }
+                        }
+                    }
+                }
+                ... on RestrictedContribution {
+                    occurredAt
+                }
+            }
+            firstPullRequestContribution {
+                __typename
+                ... on CreatedPullRequestContribution {
+                    pullRequest {
+                        id
+                        number
+                        title
+                        url
+                        createdAt
+                        repository {
+                            name
+                            owner {
+                                login
+                            }
+                        }
+                    }
+                }
+                ... on RestrictedContribution {
+                    occurredAt
+                }
+            }
+            firstRepositoryContribution {
+                __typename
+                ... on CreatedRepositoryContribution {
+                    repository {
+                        id
+                        name
+                        description
+                        url
+                        createdAt
+                        owner {
+                            login
+                        }
+                        stargazerCount
+                        isPrivate
+                    }
+                }
+                ... on RestrictedContribution {
+                    occurredAt
+                }
+            }
+            popularIssueContribution {
+                issue {
+                    id
+                    number
+                    title
+                    url
+                    createdAt
+                    repository {
+                        name
+                        owner {
+                            login
+                        }
+                    }
+                    comments {
+                        totalCount
+                    }
+                }
+            }
+            popularPullRequestContribution {
+                pullRequest {
+                    id
+                    number
+                    title
+                    url
+                    createdAt
+                    repository {
+                        name
+                        owner {
+                            login
+                        }
+                    }
+                    comments {
+                        totalCount
+                    }
+                }
+            }
+            joinedGitHubContribution {
+                occurredAt
             }
             commitContributionsByRepository(maxRepositories: 50) {
                 repository {
