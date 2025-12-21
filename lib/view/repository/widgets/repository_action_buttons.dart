@@ -659,9 +659,7 @@ Widget buildActionButtons(
   BuildContext context,
   GrepositoryInfoData_repository repo,
   TabState tabState,
-  DynamicTabsController tabController, {
-  AnimationController? expandAnimationController,
-}) {
+  DynamicTabsController tabController,) {
   final primaryActions = <ActionButtonData>[
     MinorActionButton(
       icon: Octicons.file_code,
@@ -728,15 +726,7 @@ Widget buildActionButtons(
       padding: const EdgeInsets.all(10),
     ),
     visibilityConfig: const ActionButtonsVisibilityConfig(),
-    onExpandChanged: expandAnimationController != null
-        ? (isExpanded) {
-            if (isExpanded) {
-              expandAnimationController.forward();
-            } else {
-              expandAnimationController.reverse();
-            }
-          }
-        : null,
+  
   );
 }
 

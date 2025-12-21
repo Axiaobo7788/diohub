@@ -103,11 +103,7 @@ class IssuePullInfoTemplateState extends State<IssuePullInfoTemplate>
   late EditingController<List<Glabel?>> labelsEditingController;
 
   late EditingController<String> titleEditingController;
-  late final AnimationController _expandAnimationController =
-      AnimationController(
-    duration: const Duration(milliseconds: 300),
-    vsync: this,
-  );
+ 
 
   @override
   void initState() {
@@ -127,12 +123,7 @@ class IssuePullInfoTemplateState extends State<IssuePullInfoTemplate>
     super.initState();
   }
 
-  @override
-  void dispose() {
-    _expandAnimationController.dispose();
-    super.dispose();
-  }
-
+  
   @override
   Widget build(final BuildContext context) => ThemeFromImage(
         builder: (
@@ -311,11 +302,7 @@ class IssuePullInfoTemplateState extends State<IssuePullInfoTemplate>
             2, // Show 2 tiles by default (Assignee, Participants)
       ),
       onExpandChanged: (isExpanded) {
-        if (isExpanded) {
-          _expandAnimationController.forward();
-        } else {
-          _expandAnimationController.reverse();
-        }
+       
       },
     );
   }
@@ -705,11 +692,7 @@ class IssuePullInfoTemplateState extends State<IssuePullInfoTemplate>
             2, // Show 2 actions by default (Close/Reopen, Edit)
       ),
       onExpandChanged: (isExpanded) {
-        if (isExpanded) {
-          _expandAnimationController.forward();
-        } else {
-          _expandAnimationController.reverse();
-        }
+      
       },
     );
   }
@@ -742,10 +725,9 @@ class IssuePullInfoTemplateState extends State<IssuePullInfoTemplate>
               onRefresh: widget.onRefresh,
               triggerMode: RefreshIndicatorTriggerMode.anywhere,
               child: DynamicScroll(
-                animationController: _expandAnimationController,
                 collapsedWidget: _buildCollapsedHeader(context),
                 expandedWidget: _buildExpandedHeader(context),
-                pinnedWidget: _buildConversationButton(context),
+                // pinnedWidget: _buildConversationButton(context),
                 bottom: AnimatedTabBar(
                   showTabBar: dynamicTabsController.activeLength > 1,
                   tabBar: buildTabsView(tabBar),

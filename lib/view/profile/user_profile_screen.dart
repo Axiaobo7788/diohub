@@ -43,11 +43,6 @@ class UserProfileScreen extends StatefulWidget {
 class UserProfileScreenState extends State<UserProfileScreen>
     with TickerProviderStateMixin {
   GuserInfoData_user? data;
-  late final AnimationController _expandAnimationController =
-      AnimationController(
-    duration: const Duration(milliseconds: 300),
-    vsync: this,
-  );
 
   // Date range state for Activity tab (contribution graph)
   int? _selectedYear; // null means last year (default)
@@ -140,12 +135,6 @@ class UserProfileScreenState extends State<UserProfileScreen>
       getProviderKey: _getContributionProviderKey,
       onCollapse: onCollapse,
     );
-  }
-
-  @override
-  void dispose() {
-    _expandAnimationController.dispose();
-    super.dispose();
   }
 
   Widget _buildCollapsedHeader(
@@ -400,13 +389,7 @@ class UserProfileScreenState extends State<UserProfileScreen>
       visibilityConfig: DetailTilesVisibilityConfig.fixedCount(
         defaultVisibleCount: alwaysVisibleTiles.length.clamp(0, 3),
       ),
-      onExpandChanged: (isExpanded) {
-        if (isExpanded) {
-          _expandAnimationController.forward();
-        } else {
-          _expandAnimationController.reverse();
-        }
-      },
+      onExpandChanged: (isExpanded) {},
     );
   }
 
@@ -487,13 +470,7 @@ class UserProfileScreenState extends State<UserProfileScreen>
       visibilityConfig: DetailTilesVisibilityConfig.fixedCount(
         defaultVisibleCount: alwaysVisibleTiles.length.clamp(0, 3),
       ),
-      onExpandChanged: (isExpanded) {
-        if (isExpanded) {
-          _expandAnimationController.forward();
-        } else {
-          _expandAnimationController.reverse();
-        }
-      },
+      onExpandChanged: (isExpanded) {},
     );
   }
 
@@ -595,13 +572,7 @@ class UserProfileScreenState extends State<UserProfileScreen>
         minPerRow: 2,
         maxPerRow: 4,
       ),
-      onExpandChanged: (isExpanded) {
-        if (isExpanded) {
-          _expandAnimationController.forward();
-        } else {
-          _expandAnimationController.reverse();
-        }
-      },
+      onExpandChanged: (isExpanded) {},
     );
   }
 
@@ -986,7 +957,6 @@ class UserProfileScreenState extends State<UserProfileScreen>
                 return _UserProfileTabsContent(
                   userData: value.data,
                   parentState: this,
-                  expandAnimationController: _expandAnimationController,
                   buildCollapsedHeader: _buildCollapsedHeader,
                   buildExpandedHeader: _buildExpandedHeader,
                   buildToolbarActions: _buildToolbarActions,
@@ -1099,14 +1069,14 @@ class _DateRangeExpandedContent extends ConsumerWidget {
     // Get available years from the last year provider (which always has all years)
     // Fall back to current provider if last year provider is not available
     final availableYears = lastYearAsync.when(
-      data: (viewModel) => viewModel.contributionYears,
+      data: (result) => result.viewModel.contributionYears,
       loading: () => contributionsAsync.when(
-        data: (viewModel) => viewModel.contributionYears,
+        data: (result) => result.viewModel.contributionYears,
         loading: () => <int>[],
         error: (_, __) => <int>[],
       ),
       error: (_, __) => contributionsAsync.when(
-        data: (viewModel) => viewModel.contributionYears,
+        data: (result) => result.viewModel.contributionYears,
         loading: () => <int>[],
         error: (_, __) => <int>[],
       ),
@@ -1292,7 +1262,6 @@ class _UserProfileTabsContent extends StatefulWidget {
   const _UserProfileTabsContent({
     required this.userData,
     required this.parentState,
-    required this.expandAnimationController,
     required this.buildCollapsedHeader,
     required this.buildExpandedHeader,
     required this.buildToolbarActions,
@@ -1307,7 +1276,6 @@ class _UserProfileTabsContent extends StatefulWidget {
 
   final GuserInfoData_user userData;
   final TickerProvider parentState;
-  final AnimationController expandAnimationController;
   final Widget Function(BuildContext, GuserInfoData_user) buildCollapsedHeader;
   final Widget Function(
     BuildContext,
@@ -1463,13 +1431,7 @@ class _UserProfileTabsContentState extends State<_UserProfileTabsContent>
               subtitle:
                   widget.userData.name != null ? widget.userData.login : null,
               scrollNotificationNotifier: scrollNotificationNotifier,
-              onExpandChanged: (isExpanded) {
-                if (isExpanded) {
-                  widget.expandAnimationController.forward();
-                } else {
-                  widget.expandAnimationController.reverse();
-                }
-              },
+              onExpandChanged: (isExpanded) {},
             );
           },
         );
@@ -1478,7 +1440,6 @@ class _UserProfileTabsContentState extends State<_UserProfileTabsContent>
           ? DynamicTabsParent(
               controller: tabController!,
               builder: (context, tabBar, tabView) => DynamicScroll(
-                animationController: widget.expandAnimationController,
                 collapsedWidget: widget.buildCollapsedHeader(
                   context,
                   widget.userData,

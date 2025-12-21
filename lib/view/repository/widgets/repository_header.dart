@@ -62,7 +62,6 @@ Widget buildExpandedHeader(
   GrepositoryInfoData_repository repo,
   ValueNotifier<String> activeTabNotifier,
   DynamicTabsController tabController,
-  AnimationController expandAnimationController,
 ) {
   const double leadingWidth =
       56.0; // Standard Material Design back button width
@@ -93,7 +92,6 @@ Widget buildExpandedHeader(
               context,
               repo,
               tabController,
-              expandAnimationController,
             ),
             const SizedBox(height: 16),
             // Description and Stats section
@@ -105,7 +103,6 @@ Widget buildExpandedHeader(
               repo,
               tabState,
               tabController,
-              expandAnimationController: expandAnimationController,
             ),
           ],
         ),
