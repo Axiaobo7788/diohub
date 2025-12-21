@@ -317,7 +317,8 @@ abstract class BaseAPIHandler {
     final Dio dio = Dio();
     // Log the request in the console if `apiLogSettings` is not null.
     final APILoggingSettings? logSettings =
-        apiLogSettings ?? defaultAPILogSettings;
+        // apiLogSettings ??
+         defaultAPILogSettings;
     dio.interceptors.add(
       ChuckerDioInterceptor(),
     );
