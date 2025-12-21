@@ -828,7 +828,7 @@ class UserProfileScreenState extends State<UserProfileScreen>
             : ActionButtonVisibilityState.both,
         onTap: () => tabController?.openTab('Stars'),
       ),
-     
+
       MinorActionButton(
         icon: Octicons.code_square,
         label: 'Gists',
@@ -954,7 +954,8 @@ class UserProfileScreenState extends State<UserProfileScreen>
             ? ActionButtonVisibilityState.none
             : ActionButtonVisibilityState.expandedOnly,
         onTap: () => tabController?.openTab('Sponsors'),
-      ), MinorActionButton(
+      ),
+      MinorActionButton(
         icon: Octicons.history,
         label: 'Feed',
         category: 'Primary',
@@ -1365,6 +1366,7 @@ class _UserProfileTabsContentState extends State<_UserProfileTabsContent>
       ),
       DynamicTab(
         identifier: 'Activity Feed',
+        tab: TabBarItem(label: 'Feed'),
         tabViewBuilder: (context) => Events(
           privateEvents: false,
           specificUser: userData.login,
