@@ -74,9 +74,12 @@ class _UserAboutScreenState extends ConsumerState<UserAboutScreen> {
     );
 
     // Build contribution slivers based on async state
-    // Always receive unified ContributionViewModel - no runtime type checking needed
+    // Always receive unified ContributionCollectionResult - no runtime type checking needed
     final contributionSlivers = contributionsAsync.when(
-      data: (viewModel) {
+      data: (result) {
+        // Extract viewModel for backward compatibility with existing UI
+        final viewModel = result.viewModel;
+        
         return <Widget>[
           SliverToBoxAdapter(
             child: SizedBox(
