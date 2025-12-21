@@ -17,7 +17,7 @@ class BorderedContainer extends StatelessWidget {
     required this.child,
     required this.borderColor,
     this.borderSide = BorderSideType.bottom,
-    this.borderWidth = 2.0,
+    this.borderWidth = 1.2,
     this.borderRadius = 12.0,
     this.backgroundColor,
     super.key,

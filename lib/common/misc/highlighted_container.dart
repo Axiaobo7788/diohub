@@ -30,7 +30,7 @@ class HighlightedContainer extends StatelessWidget {
     required this.highlightColor,
     this.backgroundColor,
     this.borderSide = BorderSideType.bottom,
-    this.borderWidth = 1.0,
+    this.borderWidth = 0.5,
     this.borderRadius = 12.0,
     super.key,
   });
@@ -109,10 +109,11 @@ class HighlightedContainer extends StatelessWidget {
             left: borderSideValue,
           );
           // Clip right corners (opposite side) for consistent rounded borders
-          clipRadius = BorderRadius.only(
+          final BorderRadius borderRadius2 = BorderRadius.only(
             topRight: Radius.circular(borderRadius),
             bottomRight: Radius.circular(borderRadius),
           );
+          clipRadius = borderRadius2;
           break;
         case BorderSideType.right:
           border = Border(

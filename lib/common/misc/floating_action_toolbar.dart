@@ -1,12 +1,12 @@
 import 'package:diohub/common/misc/collapsible_action_buttons.dart';
 import 'package:diohub/common/misc/floating_action_toolbar_content.dart';
 import 'package:diohub/common/misc/floating_expandable_widget.dart';
+import 'package:diohub/common/misc/liquid_glass_wrapper.dart';
 import 'package:diohub/common/misc/scroll_based_minimize_controller.dart';
 import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_vector_icons/flutter_vector_icons.dart';
-import 'package:liquid_glass_renderer/liquid_glass_renderer.dart';
 
 // Export enums for convenience
 export 'package:diohub/common/misc/floating_expandable_widget.dart'
@@ -597,43 +597,24 @@ class _FloatingActionToolbarState extends State<FloatingActionToolbar>
         padding: positionAndPadding.padding,
         child: Container(
           key: _buttonKey, // GlobalKey for position measurement
-          child: LiquidGlassLayer(
-            settings: LiquidGlassSettings(
-              blur: 12,
-              glassColor: Theme.of(context)
-                  .colorScheme
-                  .surfaceContainerHighest
-                  .withOpacity(0.25),
-              thickness: 2.5,
-              refractiveIndex: 1.5,
-            ),
+          child: LiquidGlassWrapper.withShape(
+            borderRadius: 28,
+            blur: 12,
+            glassColorOpacity: 0.25,
+            thickness: 2.5,
+            refractiveIndex: 1.5,
             child: Material(
               color: Colors.transparent,
               child: InkWell(
                 onTap: () => _restoreFromMinimized(),
                 borderRadius: BorderRadius.circular(28),
-                child: LiquidGlass(
-                  shape: LiquidRoundedRectangle(
-                    borderRadius: 28,
-                  ),
-                  child: Container(
-                    width: 56,
-                    height: 56,
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(28),
-                      border: Border.all(
-                        color: Theme.of(context)
-                            .colorScheme
-                            .outline
-                            .withOpacity(0.15),
-                        width: 0.5,
-                      ),
-                    ),
-                    child: Icon(
-                      Octicons.kebab_horizontal,
-                      color: Theme.of(context).colorScheme.onSurfaceVariant,
-                      size: 20,
-                    ),
+                child: Container(
+                  width: 56,
+                  height: 56,
+                  child: Icon(
+                    Octicons.kebab_horizontal,
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    size: 20,
                   ),
                 ),
               ),
