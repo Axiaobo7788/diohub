@@ -1,5 +1,4 @@
 import 'package:diohub/common/misc/bordered_container.dart';
-import 'package:diohub/common/misc/highlighted_container.dart';
 import 'package:diohub/common/timeline/timeline_container.dart';
 import 'package:diohub/utils/get_date.dart';
 import 'package:diohub/utils/utils.dart';
@@ -9,8 +8,24 @@ import 'package:timeline_tile/timeline_tile.dart';
 /// Unified timeline item that works for both Events and Activity timelines
 /// Uses icon-only indicator for timeline visualization
 class UnifiedTimelineItem extends StatelessWidget {
-  const UnifiedTimelineItem({
-    required this.child,
+  UnifiedTimelineItem({
+    required Widget child,
+    required this.actionText,
+    required this.date,
+    required this.eventIcon,
+    required this.eventIconColor,
+    // Timeline positioning
+    this.isFirst = false,
+    this.isLast = false,
+    // Highlighting
+    this.highlighted = false,
+    // Action header padding
+    this.actionHeaderTopPadding = 16.0,
+    super.key,
+  }) : children = [child];
+
+  const UnifiedTimelineItem.children({
+    required this.children,
     required this.actionText,
     required this.date,
     required this.eventIcon,
@@ -25,7 +40,7 @@ class UnifiedTimelineItem extends StatelessWidget {
     super.key,
   });
 
-  final Widget child;
+  final List<Widget> children;
   final String actionText;
   final DateTime? date;
   final IconData eventIcon;
@@ -88,26 +103,31 @@ class UnifiedTimelineItem extends StatelessWidget {
                 ],
               ),
             ),
-            // Content (wrapped in Card if highlighted, otherwise in BorderedContainer)
-            if (highlighted)
-              BorderedContainer(
-                borderColor: eventIconColor,
-                // borderSide: BorderSideType.bottom,
-                child: Padding(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                  child: child,
-                ),
-              )
-            else
-              TimelineContainer(
-                // borderColor: eventIconColor,
-                // borderRadius: 8.0,
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 8),
-                  child: child,
-                ),
-              ),
+            // Content (each child wrapped in its own container)
+            ...children.map((child) {
+              if (highlighted) {
+                return BorderedContainer(
+                  borderColor: eventIconColor,
+                  // borderSide: BorderSideType.bottom,
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 8,
+                    ),
+                    child: child,
+                  ),
+                );
+              } else {
+                return TimelineContainer(
+                  // borderColor: eventIconColor,
+                  // borderRadius: 8.0,
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 8),
+                    child: child,
+                  ),
+                );
+              }
+            }),
           ],
         ),
       ),
