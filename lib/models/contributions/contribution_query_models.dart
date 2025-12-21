@@ -145,3 +145,82 @@ class ContributionViewModel {
   final List<ContributedRepository> commitContributionsByRepository;
   final List<int> contributionYears;
 }
+
+/// Per-year contribution highlights and metadata.
+/// Contains the fields that don't get flattened during multi-year merge.
+class YearlyContributionHighlights {
+  const YearlyContributionHighlights({
+    required this.year,
+    required this.fromDate,
+    required this.toDate,
+    required this.restrictedContributionsCount,
+    required this.totalRepositoriesWithContributedCommits,
+    required this.totalRepositoriesWithContributedIssues,
+    required this.totalRepositoriesWithContributedPullRequests,
+    required this.calendarMonths,
+  });
+
+  /// The year this data represents (for multi-year ranges)
+  final int year;
+
+  /// Start date of the range for this year chunk
+  final DateTime fromDate;
+
+  /// End date of the range for this year chunk
+  final DateTime toDate;
+
+  /// Count of contributions viewer can't see (private/restricted)
+  final int restrictedContributionsCount;
+
+  /// How many repos had commits
+  final int totalRepositoriesWithContributedCommits;
+
+  /// How many repos had issues
+  final int totalRepositoriesWithContributedIssues;
+
+  /// How many repos had PRs
+  final int totalRepositoriesWithContributedPullRequests;
+
+  /// Monthly breakdown for this year
+  final List<ContributionMonth> calendarMonths;
+}
+
+/// Month metadata from contribution calendar
+class ContributionMonth {
+  const ContributionMonth({
+    required this.name,
+    required this.year,
+    required this.firstDay,
+    required this.totalWeeks,
+  });
+
+  final String name;
+  final int year;
+  final DateTime firstDay;
+  final int totalWeeks;
+}
+
+/// Complete contribution collection result.
+/// Bundles the flattened calendar/totals with per-year highlights.
+class ContributionCollectionResult {
+  const ContributionCollectionResult({
+    required this.viewModel,
+    required this.yearlyHighlights,
+  });
+
+  /// Flattened/merged calendar data (weeks, totals, repos, colors)
+  final ContributionViewModel viewModel;
+
+  /// Per-year highlight data (restricted counts, repo counts, months, etc.)
+  final List<YearlyContributionHighlights> yearlyHighlights;
+
+  /// Utility: Check if any year has restricted contributions
+  bool get hasAnyRestrictedContributions =>
+      yearlyHighlights.any((h) => h.restrictedContributionsCount > 0);
+
+  /// Utility: Total restricted contributions across all years
+  int get totalRestrictedContributions => yearlyHighlights.fold(
+        0,
+        (sum, h) => sum + h.restrictedContributionsCount,
+      );
+}
