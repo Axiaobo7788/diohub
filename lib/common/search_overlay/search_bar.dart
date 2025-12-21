@@ -162,33 +162,30 @@ class AppSearchBarState extends State<AppSearchBar> {
               mainAxisSize: MainAxisSize.min,
               children: <Widget>[
                 // Inactive search state
-                SizeExpandedSection(
-                  expand: !hasActiveSearch,
-                  child: Hero(
-                    tag: widget.updateBarOnChange
-                        ? '${widget.heroTag}false'
-                        : widget.heroTag,
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 10,
-                      ),
-                      child: Row(
-                        children: <Widget>[
-                          Icon(
-                            Icons.search_rounded,
-                            size: 20,
-                            color: context.colorScheme.primary,
+                Hero(
+                  tag: widget.updateBarOnChange
+                      ? '${widget.heroTag}false'
+                      : widget.heroTag,
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 10,
+                    ),
+                    child: Row(
+                      children: <Widget>[
+                        Icon(
+                          Icons.search_rounded,
+                          size: 20,
+                          color: context.colorScheme.primary,
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Text(
+                            widget._prompt,
+                            style: context.textTheme.bodyMedium?.asHint(),
                           ),
-                          const SizedBox(width: 10),
-                          Expanded(
-                            child: Text(
-                              widget._prompt,
-                              style: context.textTheme.bodyMedium?.asHint(),
-                            ),
-                          ),
-                        ],
-                      ),
+                        ),
+                      ],
                     ),
                   ),
                 ),
