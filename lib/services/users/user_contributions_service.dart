@@ -9,14 +9,13 @@ import 'package:diohub/services/users/user_info_service.dart';
 import 'package:diohub/view/profile/about/widgets/activity_overview_section.dart';
 import 'package:diohub/view/profile/about/widgets/contribution_data_converter.dart';
 import 'package:flutter/foundation.dart';
-import 'package:flutter/material.dart';
 
 /// Service for fetching and aggregating user contribution data.
-/// Handles both single-year and multi-year queries, always returning a unified ContributionViewModel.
+/// Handles both single-year and multi-year queries, always returning a unified ContributionCollectionResult.
 class UserContributionsService {
   /// Fetch contributions for the given query key.
-  /// Returns a unified view model regardless of single or multi-year range.
-  static Future<ContributionViewModel> fetchContributions(
+  /// Returns a unified collection result with both flattened data and per-year highlights.
+  static Future<ContributionCollectionResult> fetchContributions(
     ContributionQueryKey key,
   ) async {
     try {
@@ -67,13 +66,14 @@ class UserContributionsService {
     }
   }
 
-  /// Convert single-year GraphQL data to unified view model
-  static ContributionViewModel _convertSingleYearToViewModel(
+  /// Convert single-year GraphQL data to unified collection result
+  static ContributionCollectionResult _convertSingleYearToViewModel(
     GuserContributionsData_user data,
   ) {
     final collection = data.contributionsCollection;
 
-    return ContributionViewModel(
+    // Build flattened view model
+    final viewModel = ContributionViewModel(
       weeks: ContributionDataConverter.convertWeeks(
         collection.contributionCalendar.weeks.toList(),
       ),
@@ -92,10 +92,50 @@ class UserContributionsService {
       ),
       contributionYears: collection.contributionYears.toList(),
     );
+
+    // Extract calendar months
+    final calendarMonths = collection.contributionCalendar.months
+        .map((month) => ContributionMonth(
+              name: month.name,
+              year: month.year,
+              firstDay: month.firstDay,
+              totalWeeks: month.totalWeeks,
+            ))
+        .toList();
+
+    // Determine year from the weeks
+    final weeks = collection.contributionCalendar.weeks.toList();
+    final firstWeek = weeks.isNotEmpty ? weeks.first : null;
+    final lastWeek = weeks.isNotEmpty ? weeks.last : null;
+    final fromDate = firstWeek?.firstDay ?? DateTime.now();
+    final toDate = lastWeek != null
+        ? lastWeek.firstDay.add(const Duration(days: 6))
+        : DateTime.now();
+    final year = fromDate.year;
+
+    // Build yearly highlights for single year
+    final highlights = YearlyContributionHighlights(
+      year: year,
+      fromDate: fromDate,
+      toDate: toDate,
+      restrictedContributionsCount: collection.restrictedContributionsCount,
+      totalRepositoriesWithContributedCommits:
+          collection.totalRepositoriesWithContributedCommits,
+      totalRepositoriesWithContributedIssues:
+          collection.totalRepositoriesWithContributedIssues,
+      totalRepositoriesWithContributedPullRequests:
+          collection.totalRepositoriesWithContributedPullRequests,
+      calendarMonths: calendarMonths,
+    );
+
+    return ContributionCollectionResult(
+      viewModel: viewModel,
+      yearlyHighlights: [highlights],
+    );
   }
 
-  /// Combine multiple year results into a single unified view model
-  static ContributionViewModel _combineMultiYearResults(
+  /// Combine multiple year results into a single unified collection result
+  static ContributionCollectionResult _combineMultiYearResults(
     List<GuserContributionsData_user> results,
   ) {
     if (results.isEmpty) {
@@ -114,10 +154,14 @@ class UserContributionsService {
     final weekFirstDaysSet = <String>{};
     final weekFirstDaysList = <String>[];
 
+    // Collect per-year highlights (no merging - keep them separate)
+    final yearlyHighlights = <YearlyContributionHighlights>[];
+
     // Collect all weeks and days from all year results
     for (int resultIndex = 0; resultIndex < results.length; resultIndex++) {
       final result = results[resultIndex];
-      final calendar = result.contributionsCollection.contributionCalendar;
+      final collection = result.contributionsCollection;
+      final calendar = collection.contributionCalendar;
       final weeks = calendar.weeks.whereType<
           GuserContributionsData_user_contributionsCollection_contributionCalendar_weeks>();
 
@@ -125,6 +169,38 @@ class UserContributionsService {
         log.d(
             '[_combineMultiYearResults] Result $resultIndex: Found ${weeks.length} weeks');
       }
+
+      // Extract per-year highlights (no merging)
+      final calendarMonths = calendar.months
+          .map((month) => ContributionMonth(
+                name: month.name,
+                year: month.year,
+                firstDay: month.firstDay,
+                totalWeeks: month.totalWeeks,
+              ))
+          .toList();
+
+      final firstWeek = weeks.isNotEmpty ? weeks.first : null;
+      final lastWeek = weeks.isNotEmpty ? weeks.lastOrNull : null;
+      final fromDate = firstWeek?.firstDay ?? DateTime.now();
+      final toDate = lastWeek != null
+          ? lastWeek.firstDay.add(const Duration(days: 6))
+          : DateTime.now();
+      final year = fromDate.year;
+
+      yearlyHighlights.add(YearlyContributionHighlights(
+        year: year,
+        fromDate: fromDate,
+        toDate: toDate,
+        restrictedContributionsCount: collection.restrictedContributionsCount,
+        totalRepositoriesWithContributedCommits:
+            collection.totalRepositoriesWithContributedCommits,
+        totalRepositoriesWithContributedIssues:
+            collection.totalRepositoriesWithContributedIssues,
+        totalRepositoriesWithContributedPullRequests:
+            collection.totalRepositoriesWithContributedPullRequests,
+        calendarMonths: calendarMonths,
+      ));
 
       for (int weekIndex = 0; weekIndex < weeks.length; weekIndex++) {
         final week = weeks.elementAt(weekIndex);
@@ -300,7 +376,8 @@ class UserContributionsService {
           .toList(),
     );
 
-    return ContributionViewModel(
+    // Build flattened view model
+    final viewModel = ContributionViewModel(
       weeks: allWeeks,
       colors: colors,
       totalContributions: totalContributions,
@@ -310,6 +387,12 @@ class UserContributionsService {
       totalPullRequestReviewContributions: totalReviews,
       commitContributionsByRepository: repositories,
       contributionYears: allYears.toList()..sort(),
+    );
+
+    // Return combined result with both flattened data and per-year highlights
+    return ContributionCollectionResult(
+      viewModel: viewModel,
+      yearlyHighlights: yearlyHighlights,
     );
   }
 }
