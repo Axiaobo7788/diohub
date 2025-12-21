@@ -13,7 +13,6 @@ Widget buildDetailTilesSection(
   BuildContext context,
   GrepositoryInfoData_repository repo,
   DynamicTabsController tabController,
-  AnimationController expandAnimationController,
 ) {
   // Always visible tiles (essential information)
   final List<Widget> alwaysVisibleTiles = [];
@@ -127,11 +126,7 @@ Widget buildDetailTilesSection(
           3, // Show 3 tiles by default (Owner, Language, Created)
     ),
     onExpandChanged: (isExpanded) {
-      if (isExpanded) {
-        expandAnimationController.forward();
-      } else {
-        expandAnimationController.reverse();
-      }
+    
     },
   );
 }

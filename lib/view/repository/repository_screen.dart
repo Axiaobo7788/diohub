@@ -67,11 +67,7 @@ class RepositoryScreenState extends DeepLinkWidgetState<RepositoryScreen>
 
   // final ScrollController scrollController = ScrollController();
   late String? initBranch;
-  late final AnimationController _expandAnimationController =
-      AnimationController(
-    duration: const Duration(milliseconds: 300),
-    vsync: this,
-  );
+ 
 
   @override
   void handleDeepLink(final PathData deepLinkData) {
@@ -102,11 +98,6 @@ class RepositoryScreenState extends DeepLinkWidgetState<RepositoryScreen>
     _setupProviders();
   }
 
-  @override
-  void dispose() {
-    _expandAnimationController.dispose();
-    super.dispose();
-  }
 
   /// Helper method to centralize tab state information
   TabState _getTabState(String currentTab) {
@@ -240,11 +231,7 @@ class RepositoryScreenState extends DeepLinkWidgetState<RepositoryScreen>
                                 scrollNotificationNotifier:
                                     scrollNotificationNotifier,
                                 onExpandChanged: (isExpanded) {
-                                  if (isExpanded) {
-                                    _expandAnimationController.forward();
-                                  } else {
-                                    _expandAnimationController.reverse();
-                                  }
+                                  
                                 },
                               );
                             },
@@ -259,7 +246,6 @@ class RepositoryScreenState extends DeepLinkWidgetState<RepositoryScreen>
                               final Widget tabView,
                             ) =>
                                 DynamicScroll(
-                              animationController: _expandAnimationController,
                               collapsedWidget:
                                   buildCollapsedHeader(context, repo),
                               expandedWidget: buildExpandedHeader(
@@ -267,7 +253,6 @@ class RepositoryScreenState extends DeepLinkWidgetState<RepositoryScreen>
                                 repo,
                                 tabController.activeIdentifierNotifier,
                                 tabController,
-                                _expandAnimationController,
                               ),
                               pinnedWidget: null,
                               actions: <Widget>[

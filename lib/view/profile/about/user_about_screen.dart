@@ -1,10 +1,7 @@
-import 'package:diohub/common/misc/nested_card_with_header.dart';
 import 'package:diohub/graphql/queries/users/__generated__/user_info.data.gql.dart';
 import 'package:diohub/models/contributions/contribution_query_models.dart';
 import 'package:diohub/providers/users/user_contributions_provider.dart';
-import 'package:diohub/view/profile/about/widgets/activity_overview_section.dart';
-import 'package:diohub/view/profile/about/widgets/activity_timeline_section.dart';
-import 'package:diohub/view/profile/about/widgets/contribution_calendar_section.dart';
+import 'package:diohub/view/profile/about/widgets/tabbed_contribution_section.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -73,191 +70,63 @@ class _UserAboutScreenState extends ConsumerState<UserAboutScreen> {
       userContributionsProvider(providerKey),
     );
 
-    // Build contribution slivers based on async state
-    // Always receive unified ContributionCollectionResult - no runtime type checking needed
-    final contributionSlivers = contributionsAsync.when(
+    return contributionsAsync.when(
       data: (result) {
-        // Extract viewModel for backward compatibility with existing UI
-        final viewModel = result.viewModel;
-        
-        return <Widget>[
-          SliverToBoxAdapter(
-            child: SizedBox(
-              height: 16,
-            ),
-          ),
-          // Animated calendar section with fade-in
-          SliverToBoxAdapter(
-            child: _DelayedFadeAnimation(
-              delay: const Duration(milliseconds: 0),
-              duration: const Duration(milliseconds: 400),
-              child: ContributionCalendarSection(
-                weeks: viewModel.weeks,
-                totalContributions: viewModel.totalContributions,
-                colors: viewModel.colors,
-                availableYears: viewModel.contributionYears,
-                selectedYear: widget.selectedYear,
-                customFromDate: widget.customFromDate,
-                customToDate: widget.customToDate,
-                useCustomRange: widget.useCustomRange,
-                createdAt: widget.userData.createdAt,
-                commits: viewModel.totalCommitContributions,
-                pullRequests: viewModel.totalPullRequestContributions,
-                issues: viewModel.totalIssueContributions,
-                reviews: viewModel.totalPullRequestReviewContributions,
-              ),
-            ),
-          ),
-          // Animated activity overview with more delay
-          SliverToBoxAdapter(
-            child: _DelayedFadeAnimation(
-              delay: const Duration(milliseconds: 200),
-              duration: const Duration(milliseconds: 400),
-              child: ActivityOverviewSection(
-                repositories: viewModel.commitContributionsByRepository,
-                commits: viewModel.totalCommitContributions,
-                issues: viewModel.totalIssueContributions,
-                pullRequests: viewModel.totalPullRequestContributions,
-                reviews: viewModel.totalPullRequestReviewContributions,
-              ),
-            ),
-          ),
-          // Activity timeline section (now returns slivers with staggered animations)
-          ActivityTimelineSection(
-            userName: widget.userData.login,
-            selectedYear: widget.selectedYear,
-            customFromDate: widget.customFromDate,
-            customToDate: widget.customToDate,
-            useCustomRange: widget.useCustomRange,
-          ),
-          SliverToBoxAdapter(
-              child:
-                  SizedBox(height: MediaQuery.of(context).size.height * 0.15)),
-        ];
+        return TabbedContributionSection(
+          contributionResult: result,
+          userName: widget.userData.login,
+          selectedYear: widget.selectedYear,
+          customFromDate: widget.customFromDate,
+          customToDate: widget.customToDate,
+          useCustomRange: widget.useCustomRange,
+          createdAt: widget.userData.createdAt,
+        );
       },
-      loading: () => [
-        const SliverToBoxAdapter(child: ContributionCalendarSectionLoading()),
-        const SliverToBoxAdapter(child: ActivityOverviewSectionLoading()),
-      ],
+      loading: () => const Center(
+        child: CircularProgressIndicator(),
+      ),
       error: (error, stackTrace) {
         if (kDebugMode) {
           debugPrint('Error loading contribution data: $error');
           debugPrint('Stack trace: $stackTrace');
         }
 
-        return [
-          SliverToBoxAdapter(
-            child: NestedCardWithHeader(
-              header: Text(
-                'Contribution Graph',
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.w600,
-                    ),
-              ),
-              child: Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Unable to load contribution data',
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            color: Theme.of(context).colorScheme.error,
-                          ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      'Error: ${error.toString()}',
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: Theme.of(context)
-                                .colorScheme
-                                .error
-                                .withOpacity(0.7),
-                          ),
-                    ),
-                  ],
+        return Center(
+          child: Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  Icons.error_outline,
+                  size: 48,
+                  color: Theme.of(context).colorScheme.error,
                 ),
-              ),
+                const SizedBox(height: 16),
+                Text(
+                  'Unable to load contribution data',
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        color: Theme.of(context).colorScheme.error,
+                        fontWeight: FontWeight.w600,
+                      ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  error.toString(),
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: Theme.of(context)
+                            .colorScheme
+                            .onSurfaceVariant
+                            .withOpacity(0.7),
+                      ),
+                  textAlign: TextAlign.center,
+                ),
+              ],
             ),
           ),
-        ];
+        );
       },
     );
-
-    final List<Widget> slivers = [
-      ...contributionSlivers,
-    ];
-
-    if (slivers.isEmpty) {
-      return const Center(
-        child: Padding(
-          padding: EdgeInsets.all(16.0),
-          child: Text('No content available.'),
-        ),
-      );
-    }
-
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 8),
-      child: CustomScrollView(
-        slivers: slivers,
-      ),
-    );
   }
 }
 
-/// Widget that provides a delayed fade-in animation
-class _DelayedFadeAnimation extends StatefulWidget {
-  const _DelayedFadeAnimation({
-    required this.delay,
-    required this.duration,
-    required this.child,
-  });
-
-  final Duration delay;
-  final Duration duration;
-  final Widget child;
-
-  @override
-  State<_DelayedFadeAnimation> createState() => _DelayedFadeAnimationState();
-}
-
-class _DelayedFadeAnimationState extends State<_DelayedFadeAnimation>
-    with SingleTickerProviderStateMixin {
-  late AnimationController _controller;
-  late Animation<double> _fadeAnimation;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = AnimationController(
-      duration: widget.duration,
-      vsync: this,
-    );
-    _fadeAnimation = CurvedAnimation(
-      parent: _controller,
-      curve: Curves.easeOut,
-    );
-
-    // Start animation after delay
-    Future.delayed(widget.delay, () {
-      if (mounted) {
-        _controller.forward();
-      }
-    });
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return FadeTransition(
-      opacity: _fadeAnimation,
-      child: widget.child,
-    );
-  }
-}

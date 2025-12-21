@@ -38,18 +38,9 @@ class CommitInfoScreenState extends State<CommitInfoScreen>
     with TickerProviderStateMixin {
   late DynamicTabsController dynamicTabsController;
 
-  late final AnimationController _expandAnimationController =
-      AnimationController(
-    duration: const Duration(milliseconds: 300),
-    vsync: this,
-  );
+  
 
-  @override
-  void dispose() {
-    dynamicTabsController.dispose();
-    _expandAnimationController.dispose();
-    super.dispose();
-  }
+  
 
   @override
   Widget build(final BuildContext context) =>
@@ -94,7 +85,6 @@ class CommitInfoScreenState extends State<CommitInfoScreen>
           },
           triggerMode: RefreshIndicatorTriggerMode.anywhere,
           child: DynamicScroll(
-            animationController: _expandAnimationController,
             collapsedWidget: _buildCollapsedHeader(commit),
             expandedWidget: _buildExpandedHeader(commit, provider),
             bottom: SizeExpandedSection(
@@ -466,11 +456,7 @@ class CommitInfoScreenState extends State<CommitInfoScreen>
         defaultVisibleCount: 2, // Show 2 tiles by default
       ),
       onExpandChanged: (isExpanded) {
-        if (isExpanded) {
-          _expandAnimationController.forward();
-        } else {
-          _expandAnimationController.reverse();
-        }
+        
       },
     );
   }
@@ -526,11 +512,7 @@ class CommitInfoScreenState extends State<CommitInfoScreen>
             2, // Show 2 actions by default (Browse Files, View on GitHub)
       ),
       onExpandChanged: (isExpanded) {
-        if (isExpanded) {
-          _expandAnimationController.forward();
-        } else {
-          _expandAnimationController.reverse();
-        }
+        
       },
     );
   }
