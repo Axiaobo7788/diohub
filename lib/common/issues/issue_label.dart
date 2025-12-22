@@ -1,6 +1,6 @@
 import 'package:diohub/graphql/queries/issues_pulls/__generated__/timeline.data.gql.dart';
 import 'package:diohub/models/issues/issue_model.dart';
-import 'package:diohub/style/border_radiuses.dart';
+import 'package:diohub/style/surface_style_theme.dart';
 import 'package:diohub/utils/utils.dart';
 import 'package:flutter/material.dart';
 
@@ -21,10 +21,7 @@ class IssueLabel extends StatelessWidget {
         children: <Widget>[
           DecoratedBox(
             decoration: BoxDecoration(
-              borderRadius: context.themeData
-                      .extension<BorderRadiusTheme>()
-                      ?.smallBorderRadius ??
-                  BorderRadius.circular(4),
+              borderRadius: Theme.of(context).surfaceStyle.borderRadiusSmall(),
               color: Color(int.tryParse('0xFF$color') ?? 0xFFFFFFFF)
                   .withOpacity(0.3),
               border: Border.all(

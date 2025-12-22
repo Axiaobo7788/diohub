@@ -5,6 +5,7 @@ import 'package:diohub/common/misc/nested_card_with_header.dart';
 import 'package:diohub/common/misc/ink_pot.dart';
 import 'package:diohub/models/issues/issue_model.dart';
 import 'package:diohub/models/pull_requests/pull_request_model.dart';
+import 'package:diohub/style/surface_style_theme.dart';
 import 'package:diohub/utils/get_date.dart';
 import 'package:diohub/utils/utils.dart';
 import 'package:diohub/view/issues_pulls/issue_pull_screen.dart';
@@ -69,7 +70,7 @@ class PullListCard extends StatelessWidget {
               decoration: BoxDecoration(
                 color: _getPullIconColor(context, item.state, item.mergedAt)
                     .withOpacity(0.12),
-                borderRadius: BorderRadius.circular(4),
+                borderRadius: Theme.of(context).surfaceStyle.borderRadiusSmall(),
               ),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
@@ -217,7 +218,7 @@ class PullListCard extends StatelessWidget {
                       decoration: BoxDecoration(
                         color: context.colorScheme.surfaceVariant
                             .withOpacity(0.4),
-                        borderRadius: BorderRadius.circular(3),
+                        borderRadius: Theme.of(context).surfaceStyle.borderRadiusSoft(),
                       ),
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
@@ -270,7 +271,7 @@ class PullListCard extends StatelessWidget {
                       decoration: BoxDecoration(
                         color: context.colorScheme.surfaceVariant
                             .withOpacity(0.4),
-                        borderRadius: BorderRadius.circular(3),
+                        borderRadius: Theme.of(context).surfaceStyle.borderRadiusSoft(),
                       ),
                       child: Text(
                         to!,

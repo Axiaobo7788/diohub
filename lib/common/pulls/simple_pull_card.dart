@@ -9,6 +9,7 @@ import 'package:diohub/models/pull_requests/pull_request_card_data_model.dart';
 import 'package:diohub/models/pull_requests/pull_request_model.dart';
 import 'package:diohub/models/users/user_info_model.dart';
 import 'package:diohub/services/pulls/pulls_service.dart';
+import 'package:diohub/style/surface_style_theme.dart';
 import 'package:diohub/utils/utils.dart';
 import 'package:diohub/view/issues_pulls/issue_pull_screen.dart';
 import 'package:flutter/material.dart';
@@ -169,7 +170,7 @@ class SimplePullCard extends StatelessWidget {
                       decoration: BoxDecoration(
                         color:
                             context.colorScheme.surfaceVariant.withOpacity(0.4),
-                        borderRadius: BorderRadius.circular(3),
+                        borderRadius: Theme.of(context).surfaceStyle.borderRadiusSoft(),
                       ),
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
@@ -230,7 +231,7 @@ class SimplePullCard extends StatelessWidget {
                       decoration: BoxDecoration(
                         color:
                             context.colorScheme.surfaceVariant.withOpacity(0.4),
-                        borderRadius: BorderRadius.circular(3),
+                        borderRadius: Theme.of(context).surfaceStyle.borderRadiusSoft(),
                       ),
                       child: Text(
                         to!,
@@ -275,7 +276,7 @@ class SimplePullCard extends StatelessWidget {
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
               color: context.colorScheme.surfaceVariant.withOpacity(0.3),
-              borderRadius: BorderRadius.circular(8),
+              borderRadius: Theme.of(context).surfaceStyle.borderRadiusMedium(),
               border: Border.all(
                 color: context.colorScheme.outlineVariant.withOpacity(0.3),
                 width: 1,
