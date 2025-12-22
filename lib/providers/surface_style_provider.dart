@@ -8,24 +8,33 @@ import 'package:flutter/material.dart';
 class SurfaceStyleProvider extends ChangeNotifier {
   SurfaceStyleProvider({
     BorderShapeType? initialShapeType,
+    double? initialSoftRadius,
     double? initialSmallRadius,
     double? initialMediumRadius,
     double? initialLargeRadius,
+    double? initialVeryLargeRadius,
     double? initialCornerSmoothing,
   })  : _shapeType = initialShapeType ?? BorderShapeType.rounded,
-        _smallRadius = initialSmallRadius ?? 8,
-        _mediumRadius = initialMediumRadius ?? 12,
-        _largeRadius = initialLargeRadius ?? 16,
+        _softRadius = initialSoftRadius ?? 4,
+        _smallRadius = initialSmallRadius ?? 10,
+        _mediumRadius = initialMediumRadius ?? 14,
+        _largeRadius = initialLargeRadius ?? 18,
+        _veryLargeRadius = initialVeryLargeRadius ?? 28,
         _cornerSmoothing = initialCornerSmoothing ?? 0.5;
 
   BorderShapeType _shapeType;
+  double _softRadius;
   double _smallRadius;
   double _mediumRadius;
   double _largeRadius;
+  double _veryLargeRadius;
   double _cornerSmoothing;
 
   /// Current shape type (rounded or squircle)
   BorderShapeType get shapeType => _shapeType;
+
+  /// Current soft radius value
+  double get softRadius => _softRadius;
 
   /// Current small radius value
   double get smallRadius => _smallRadius;
@@ -36,15 +45,20 @@ class SurfaceStyleProvider extends ChangeNotifier {
   /// Current large radius value
   double get largeRadius => _largeRadius;
 
+  /// Current very large radius value
+  double get veryLargeRadius => _veryLargeRadius;
+
   /// Current corner smoothing value (for squircle)
   double get cornerSmoothing => _cornerSmoothing;
 
   /// Get the current surface style theme
   SurfaceStyleTheme get theme => SurfaceStyleTheme(
         shapeType: _shapeType,
+        softRadius: _softRadius,
         smallRadius: _smallRadius,
         mediumRadius: _mediumRadius,
         largeRadius: _largeRadius,
+        veryLargeRadius: _veryLargeRadius,
         cornerSmoothing: _cornerSmoothing,
       );
 
@@ -58,11 +72,17 @@ class SurfaceStyleProvider extends ChangeNotifier {
 
   /// Update all radii at once
   void setRadii({
+    double? soft,
     double? small,
     double? medium,
     double? large,
+    double? veryLarge,
   }) {
     bool changed = false;
+    if (soft != null && _softRadius != soft) {
+      _softRadius = soft;
+      changed = true;
+    }
     if (small != null && _smallRadius != small) {
       _smallRadius = small;
       changed = true;
@@ -73,6 +93,10 @@ class SurfaceStyleProvider extends ChangeNotifier {
     }
     if (large != null && _largeRadius != large) {
       _largeRadius = large;
+      changed = true;
+    }
+    if (veryLarge != null && _veryLargeRadius != veryLarge) {
+      _veryLargeRadius = veryLarge;
       changed = true;
     }
     if (changed) {
@@ -91,9 +115,11 @@ class SurfaceStyleProvider extends ChangeNotifier {
   /// Reset to defaults
   void reset() {
     _shapeType = BorderShapeType.rounded;
-    _smallRadius = 8;
-    _mediumRadius = 12;
-    _largeRadius = 16;
+    _softRadius = 4;
+    _smallRadius = 10;
+    _mediumRadius = 14;
+    _largeRadius = 18;
+    _veryLargeRadius = 28;
     _cornerSmoothing = 0.5;
     notifyListeners();
   }

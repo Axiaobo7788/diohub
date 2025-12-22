@@ -3,9 +3,11 @@ import 'package:figma_squircle/figma_squircle.dart';
 
 /// Standard border radius sizes used throughout the app
 enum BorderRadiusSize {
+  soft,
   small,
   medium,
   large,
+  veryLarge,
 }
 
 /// Enum to specify which side the border should be on
@@ -46,10 +48,12 @@ enum BorderShapeType {
 /// corner smoothing, and default decorations.
 class SurfaceStyleTheme extends ThemeExtension<SurfaceStyleTheme> {
   const SurfaceStyleTheme({
-    this.shapeType = BorderShapeType.rounded,
+    this.shapeType = BorderShapeType.squircle,
+    this.softRadius = 4,
     this.smallRadius = 10,
     this.mediumRadius = 14,
     this.largeRadius = 18,
+    this.veryLargeRadius = 28,
     this.cornerSmoothing = 0.5,
     this.borderWidth = 0,
     this.borderColor,
@@ -59,9 +63,11 @@ class SurfaceStyleTheme extends ThemeExtension<SurfaceStyleTheme> {
   });
 
   final BorderShapeType shapeType;
+  final double softRadius;
   final double smallRadius;
   final double mediumRadius;
   final double largeRadius;
+  final double veryLargeRadius;
   final double cornerSmoothing;
   final double borderWidth;
   final Color? borderColor;
@@ -72,12 +78,16 @@ class SurfaceStyleTheme extends ThemeExtension<SurfaceStyleTheme> {
   /// Get radius value for a given size
   double radius(BorderRadiusSize size) {
     switch (size) {
+      case BorderRadiusSize.soft:
+        return softRadius;
       case BorderRadiusSize.small:
         return smallRadius;
       case BorderRadiusSize.medium:
         return mediumRadius;
       case BorderRadiusSize.large:
         return largeRadius;
+      case BorderRadiusSize.veryLarge:
+        return veryLargeRadius;
     }
   }
 
@@ -186,12 +196,34 @@ class SurfaceStyleTheme extends ThemeExtension<SurfaceStyleTheme> {
     );
   }
 
+  /// Helper method: Get BorderRadius with soft size (4px default)
+  BorderRadius borderRadiusSoft({List<CornerSide>? corners}) =>
+      borderRadius(size: BorderRadiusSize.soft, corners: corners);
+
+  /// Helper method: Get BorderRadius with small size (10px default)
+  BorderRadius borderRadiusSmall({List<CornerSide>? corners}) =>
+      borderRadius(size: BorderRadiusSize.small, corners: corners);
+
+  /// Helper method: Get BorderRadius with medium size (14px default)
+  BorderRadius borderRadiusMedium({List<CornerSide>? corners}) =>
+      borderRadius(size: BorderRadiusSize.medium, corners: corners);
+
+  /// Helper method: Get BorderRadius with large size (18px default)
+  BorderRadius borderRadiusLarge({List<CornerSide>? corners}) =>
+      borderRadius(size: BorderRadiusSize.large, corners: corners);
+
+  /// Helper method: Get BorderRadius with very large size (28px default)
+  BorderRadius borderRadiusVeryLarge({List<CornerSide>? corners}) =>
+      borderRadius(size: BorderRadiusSize.veryLarge, corners: corners);
+
   @override
   SurfaceStyleTheme copyWith({
     BorderShapeType? shapeType,
+    double? softRadius,
     double? smallRadius,
     double? mediumRadius,
     double? largeRadius,
+    double? veryLargeRadius,
     double? cornerSmoothing,
     double? borderWidth,
     Color? borderColor,
@@ -201,9 +233,11 @@ class SurfaceStyleTheme extends ThemeExtension<SurfaceStyleTheme> {
   }) {
     return SurfaceStyleTheme(
       shapeType: shapeType ?? this.shapeType,
+      softRadius: softRadius ?? this.softRadius,
       smallRadius: smallRadius ?? this.smallRadius,
       mediumRadius: mediumRadius ?? this.mediumRadius,
       largeRadius: largeRadius ?? this.largeRadius,
+      veryLargeRadius: veryLargeRadius ?? this.veryLargeRadius,
       cornerSmoothing: cornerSmoothing ?? this.cornerSmoothing,
       borderWidth: borderWidth ?? this.borderWidth,
       borderColor: borderColor ?? this.borderColor,
@@ -221,9 +255,12 @@ class SurfaceStyleTheme extends ThemeExtension<SurfaceStyleTheme> {
     if (other is! SurfaceStyleTheme) return this;
     return SurfaceStyleTheme(
       shapeType: t < 0.5 ? shapeType : other.shapeType,
+      softRadius: softRadius + (other.softRadius - softRadius) * t,
       smallRadius: smallRadius + (other.smallRadius - smallRadius) * t,
       mediumRadius: mediumRadius + (other.mediumRadius - mediumRadius) * t,
       largeRadius: largeRadius + (other.largeRadius - largeRadius) * t,
+      veryLargeRadius:
+          veryLargeRadius + (other.veryLargeRadius - veryLargeRadius) * t,
       cornerSmoothing:
           cornerSmoothing + (other.cornerSmoothing - cornerSmoothing) * t,
       borderWidth: borderWidth + (other.borderWidth - borderWidth) * t,
