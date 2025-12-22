@@ -85,21 +85,6 @@ class DynamicScroll extends StatefulWidget {
 class _DynamicScrollState extends State<DynamicScroll> {
   final ScrollController _scrollController = ScrollController();
 
-  @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (_scrollController.hasClients) {
-        _scrollController.jumpTo(1000);
-      }
-    });
-  }
-
-  @override
-  void dispose() {
-    _scrollController.dispose();
-    super.dispose();
-  }
 
   @override
   Widget build(final BuildContext context) => NestedScrollView(

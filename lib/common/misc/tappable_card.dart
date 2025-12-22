@@ -1,6 +1,5 @@
 import 'package:diohub/common/misc/ink_pot.dart';
-import 'package:diohub/style/border_radiuses.dart';
-import 'package:diohub/utils/utils.dart';
+import 'package:diohub/style/surface_style_theme.dart';
 import 'package:flutter/material.dart';
 
 enum CardLinkType {
@@ -135,20 +134,21 @@ class BasicCard extends StatelessWidget {
   static BorderRadius getLinkedBorder(
     final BuildContext context, {
     required final CardLinkType cardLinkType,
-  }) =>
-      switch (cardLinkType) {
-        CardLinkType.atTop => context
-            .themeData.borderRadiusTheme!.medBorderRadius
-            .copyWith(topLeft: Radius.zero, topRight: Radius.zero),
-        CardLinkType.atBottom =>
-          context.themeData.borderRadiusTheme!.medBorderRadius.copyWith(
-            bottomLeft: Radius.zero,
-            bottomRight: Radius.zero,
-          ),
-        CardLinkType.both => BorderRadius.zero,
-        CardLinkType.none =>
-          context.themeData.borderRadiusTheme!.medBorderRadius,
-      };
+  }) {
+    final medRadius = Theme.of(context).surfaceStyle.borderRadiusMedium();
+    return switch (cardLinkType) {
+      CardLinkType.atTop => medRadius.copyWith(
+          topLeft: Radius.zero,
+          topRight: Radius.zero,
+        ),
+      CardLinkType.atBottom => medRadius.copyWith(
+          bottomLeft: Radius.zero,
+          bottomRight: Radius.zero,
+        ),
+      CardLinkType.both => BorderRadius.zero,
+      CardLinkType.none => medRadius,
+    };
+  }
 
   @override
   Widget build(final BuildContext context) => Card(
