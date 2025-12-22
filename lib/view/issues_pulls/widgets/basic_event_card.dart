@@ -6,6 +6,7 @@ import 'package:diohub/graphql/queries/issues_pulls/__generated__/timeline.data.
 import 'package:diohub/models/events/events_model.dart' hide Key;
 import 'package:diohub/models/issues/issue_timeline_event_model.dart';
 import 'package:diohub/models/users/user_info_model.dart';
+import 'package:diohub/style/surface_style_theme.dart';
 import 'package:diohub/utils/get_date.dart';
 import 'package:diohub/utils/utils.dart';
 import 'package:flutter/material.dart';
@@ -42,7 +43,7 @@ class BasicEventCard extends StatelessWidget {
           height: 22,
           decoration: BoxDecoration(
             color: effectiveIconColor.withOpacity(0.12),
-            borderRadius: BorderRadius.circular(6),
+            borderRadius: Theme.of(context).surfaceStyle.borderRadiusSmall(),
           ),
           child: Icon(
             leading,

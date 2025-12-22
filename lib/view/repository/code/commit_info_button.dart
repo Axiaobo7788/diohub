@@ -1,5 +1,6 @@
 import 'package:diohub/common/misc/profile_banner.dart';
 import 'package:diohub/providers/repository/code_provider.dart';
+import 'package:diohub/style/surface_style_theme.dart';
 import 'package:diohub/utils/get_date.dart';
 import 'package:diohub/utils/utils.dart';
 import 'package:flutter/material.dart';
@@ -84,7 +85,7 @@ class CommitInfoButton extends StatelessWidget {
                 ),
                 decoration: BoxDecoration(
                   color: context.colorScheme.surfaceContainerHighest,
-                  borderRadius: BorderRadius.circular(8),
+                  borderRadius: Theme.of(context).surfaceStyle.borderRadiusMedium(),
                 ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,

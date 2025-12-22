@@ -3,9 +3,11 @@ import 'package:diohub/common/bottom_sheet/bottom_sheets.dart';
 import 'package:diohub/common/charts/radar_chart_widget.dart';
 import 'package:diohub/common/misc/repository_card.dart';
 import 'package:diohub/common/misc/shimmer_widget.dart';
+import 'package:diohub/common/misc/surface_shape_resolver.dart';
 import 'package:diohub/common/utils/contribution_utils.dart';
 import 'package:diohub/models/repositories/repo_card_data_model.dart';
 import 'package:diohub/routes/router.gr.dart';
+import 'package:diohub/style/surface_style_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_vector_icons/flutter_vector_icons.dart';
 
@@ -77,7 +79,7 @@ class ActivityOverviewSection extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
       child: Material(
         color: colorScheme.surfaceContainerLow,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: Theme.of(context).surfaceStyle.borderRadiusMedium(),
         child: Padding(
           padding: const EdgeInsets.all(12),
           child: LayoutBuilder(
@@ -151,7 +153,9 @@ class ActivityOverviewSection extends StatelessWidget {
         if (remainingCount > 0)
           InkWell(
             onTap: () => _showAllRepositoriesSheet(context),
-            borderRadius: BorderRadius.circular(4),
+            borderRadius: Theme.of(context)
+                .surfaceStyle
+                .borderRadius(size: BorderRadiusSize.small),
             child: Padding(
               padding: const EdgeInsets.only(top: 4),
               child: Row(
@@ -193,7 +197,9 @@ class ActivityOverviewSection extends StatelessWidget {
                 RepositoryRoute(repositoryURL: repo.url),
               );
             },
-      borderRadius: BorderRadius.circular(6),
+      borderRadius: Theme.of(context)
+          .surfaceStyle
+          .borderRadius(size: BorderRadiusSize.small),
       child: Padding(
         padding: EdgeInsets.symmetric(
             vertical: showCount ? 12 : 6, horizontal: showCount ? 4 : 0),
@@ -203,9 +209,10 @@ class ActivityOverviewSection extends StatelessWidget {
             // Repository icon with container
             Container(
               padding: const EdgeInsets.all(6),
-              decoration: BoxDecoration(
+              decoration: SurfaceShapeResolver.boxDecoration(
+                context,
+                size: BorderRadiusSize.small,
                 color: colorScheme.surfaceContainerHighest.withOpacity(0.5),
-                borderRadius: BorderRadius.circular(6),
               ),
               child: Icon(
                 Octicons.repo,
@@ -414,26 +421,21 @@ class ActivityOverviewSection extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 12),
-        Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: colorScheme.surfaceContainerHighest.withOpacity(0.3),
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: Padding(
-            padding: const EdgeInsets.all(8),
-            child: SizedBox(
-              height: 150,
-              child: ContributionRadarChart(
-                commits: commits,
-                issues: issues,
-                pullRequests: pullRequests,
-                reviews: reviews,
-                color: const Color(0xFF40C463), // GitHub green color
-              ),
+        Padding(
+          padding: const EdgeInsets.all(8),
+          child: SizedBox(
+            height: 150,
+            child: ContributionRadarChart(
+              commits: commits,
+              issues: issues,
+              pullRequests: pullRequests,
+              reviews: reviews,
+              color: const Color(0xFF40C463), // GitHub green color
             ),
           ),
         ),
+                const SizedBox(height: 12),
+
       ],
     );
   }
@@ -501,7 +503,9 @@ class ActivityOverviewSectionLoading extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
       child: Material(
         color: colorScheme.surfaceContainerLow,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: Theme.of(context)
+            .surfaceStyle
+            .borderRadius(size: BorderRadiusSize.medium),
         child: Padding(
           padding: const EdgeInsets.all(12),
           child: LayoutBuilder(
@@ -517,7 +521,9 @@ class ActivityOverviewSectionLoading extends StatelessWidget {
                         ShimmerWidget.container(
                           height: 16,
                           width: 120,
-                          borderRadius: BorderRadius.circular(4),
+                          borderRadius: Theme.of(context)
+                              .surfaceStyle
+                              .borderRadius(size: BorderRadiusSize.small),
                         ),
                         const SizedBox(height: 8),
                         ...List.generate(
@@ -529,13 +535,17 @@ class ActivityOverviewSectionLoading extends StatelessWidget {
                                       ShimmerWidget.container(
                                         height: 14,
                                         width: 14,
-                                        borderRadius: BorderRadius.circular(2),
+                                        borderRadius: Theme.of(context)
+                                            .surfaceStyle
+                                            .borderRadius(size: BorderRadiusSize.small),
                                       ),
                                       const SizedBox(width: 6),
                                       ShimmerWidget.container(
                                         height: 14,
                                         width: 150,
-                                        borderRadius: BorderRadius.circular(4),
+                                        borderRadius: Theme.of(context)
+                                            .surfaceStyle
+                                            .borderRadius(size: BorderRadiusSize.small),
                                       ),
                                     ],
                                   ),
@@ -550,12 +560,16 @@ class ActivityOverviewSectionLoading extends StatelessWidget {
                         ShimmerWidget.container(
                           height: 16,
                           width: 100,
-                          borderRadius: BorderRadius.circular(4),
+                          borderRadius: Theme.of(context)
+                              .surfaceStyle
+                              .borderRadius(size: BorderRadiusSize.small),
                         ),
                         const SizedBox(height: 12),
                         ShimmerWidget.container(
                           height: 150,
-                          borderRadius: BorderRadius.circular(8),
+                          borderRadius: Theme.of(context)
+                              .surfaceStyle
+                              .borderRadius(size: BorderRadiusSize.small),
                         ),
                       ],
                     ),
@@ -572,7 +586,7 @@ class ActivityOverviewSectionLoading extends StatelessWidget {
                         ShimmerWidget.container(
                           height: 16,
                           width: 120,
-                          borderRadius: BorderRadius.circular(4),
+                          borderRadius: Theme.of(context).surfaceStyle.borderRadiusSmall(),
                         ),
                         const SizedBox(height: 8),
                         ...List.generate(
@@ -584,13 +598,17 @@ class ActivityOverviewSectionLoading extends StatelessWidget {
                                       ShimmerWidget.container(
                                         height: 14,
                                         width: 14,
-                                        borderRadius: BorderRadius.circular(2),
+                                        borderRadius: Theme.of(context)
+                                            .surfaceStyle
+                                            .borderRadius(size: BorderRadiusSize.small),
                                       ),
                                       const SizedBox(width: 6),
                                       ShimmerWidget.container(
                                         height: 14,
                                         width: 150,
-                                        borderRadius: BorderRadius.circular(4),
+                                        borderRadius: Theme.of(context)
+                                            .surfaceStyle
+                                            .borderRadius(size: BorderRadiusSize.small),
                                       ),
                                     ],
                                   ),
@@ -606,12 +624,16 @@ class ActivityOverviewSectionLoading extends StatelessWidget {
                         ShimmerWidget.container(
                           height: 16,
                           width: 100,
-                          borderRadius: BorderRadius.circular(4),
+                          borderRadius: Theme.of(context)
+                              .surfaceStyle
+                              .borderRadius(size: BorderRadiusSize.small),
                         ),
                         const SizedBox(height: 12),
                         ShimmerWidget.container(
                           height: 150,
-                          borderRadius: BorderRadius.circular(8),
+                          borderRadius: Theme.of(context)
+                              .surfaceStyle
+                              .borderRadius(size: BorderRadiusSize.small),
                         ),
                       ],
                     ),

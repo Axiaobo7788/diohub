@@ -1,5 +1,6 @@
 import 'package:diohub/common/charts/stat_card_widget.dart';
 import 'package:diohub/common/misc/shimmer_widget.dart';
+import 'package:diohub/style/surface_style_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_vector_icons/flutter_vector_icons.dart';
 
@@ -73,7 +74,9 @@ class ContributionStatisticsSection extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
       child: Material(
         color: colorScheme.surfaceContainerLow,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: Theme.of(context)
+            .surfaceStyle
+            .borderRadius(size: BorderRadiusSize.medium),
         child: Padding(
           padding: const EdgeInsets.all(12),
           child: Row(
@@ -131,7 +134,9 @@ class ContributionStatisticsSectionLoading extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
       child: Material(
         color: colorScheme.surfaceContainerLow,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: Theme.of(context)
+            .surfaceStyle
+            .borderRadius(size: BorderRadiusSize.medium),
         child: Padding(
           padding: const EdgeInsets.all(12),
           child: Row(
@@ -150,7 +155,9 @@ class ContributionStatisticsSectionLoading extends StatelessWidget {
                     Expanded(
                       child: ShimmerWidget.container(
                         height: 40,
-                        borderRadius: BorderRadius.circular(8),
+                        borderRadius: Theme.of(context)
+                            .surfaceStyle
+                            .borderRadius(size: BorderRadiusSize.small),
                       ),
                     ),
                   ],

@@ -8,6 +8,7 @@ import 'package:diohub/graphql/queries/repositories/__generated__/repo_info.data
 import 'package:diohub/providers/repository/branch_provider.dart';
 import 'package:diohub/providers/repository/repository_provider.dart';
 import 'package:diohub/services/repositories/repo_services.dart';
+import 'package:diohub/style/surface_style_theme.dart';
 import 'package:diohub/utils/utils.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_vector_icons/flutter_vector_icons.dart';
@@ -32,7 +33,7 @@ class BranchButton extends StatelessWidget {
           highlightColor: context.colorScheme.primary,
           child: Material(
             color: context.colorScheme.surfaceContainerHighest,
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: Theme.of(context).surfaceStyle.borderRadiusMedium(),
             child: InkWell(
               onTap: () async {
                 try {
@@ -103,7 +104,7 @@ class BranchButton extends StatelessWidget {
                   rethrow;
                 }
               },
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: Theme.of(context).surfaceStyle.borderRadiusMedium(),
               child: Padding(
                 padding:
                     const EdgeInsets.symmetric(horizontal: 12, vertical: 10),

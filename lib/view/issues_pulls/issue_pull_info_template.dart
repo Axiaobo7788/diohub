@@ -189,7 +189,7 @@ class IssuePullInfoTemplateState extends State<IssuePullInfoTemplate>
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
             decoration: BoxDecoration(
               color: widget.state.color.withOpacity(0.12),
-              borderRadius: BorderRadius.circular(6),
+              borderRadius: Theme.of(context).surfaceStyle.borderRadiusSmall(),
               border: Border.all(
                 color: widget.state.color.withOpacity(0.3),
                 width: 1,
@@ -879,7 +879,7 @@ class _ConversationButtonWidgetState extends State<_ConversationButtonWidget> {
           size: BorderRadiusSize.medium,
           child: Material(
             color: context.colorScheme.primaryContainer,
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: Theme.of(context).surfaceStyle.borderRadiusMedium(),
             child: InkWell(
               onTap: () {
                 try {
@@ -888,7 +888,7 @@ class _ConversationButtonWidgetState extends State<_ConversationButtonWidget> {
                   log(e.toString(), stackTrace: s);
                 }
               },
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: Theme.of(context).surfaceStyle.borderRadiusMedium(),
               child: Padding(
                 padding: const EdgeInsets.all(12),
                 child: Row(
@@ -898,7 +898,7 @@ class _ConversationButtonWidgetState extends State<_ConversationButtonWidget> {
                       decoration: BoxDecoration(
                         color: context.colorScheme.onPrimaryContainer
                             .withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(6),
+                        borderRadius: Theme.of(context).surfaceStyle.borderRadiusSmall(),
                       ),
                       child: Icon(
                         Octicons.comment_discussion,

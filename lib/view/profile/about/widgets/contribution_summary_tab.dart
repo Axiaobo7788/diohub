@@ -3,7 +3,6 @@ import 'package:diohub/models/contributions/contribution_query_models.dart';
 import 'package:diohub/view/profile/about/widgets/activity_overview_section.dart';
 import 'package:diohub/view/profile/about/widgets/contribution_calendar_section.dart';
 import 'package:diohub/view/profile/about/widgets/contribution_highlights_section.dart';
-import 'package:diohub/view/profile/about/widgets/contribution_meta_chips.dart';
 import 'package:flutter/material.dart';
 
 /// Summary tab showing calendar, radar chart, badges, chips, and per-year highlights
@@ -56,6 +55,7 @@ class ContributionSummaryTab extends StatelessWidget {
                 pullRequests: viewModel.totalPullRequestContributions,
                 issues: viewModel.totalIssueContributions,
                 reviews: viewModel.totalPullRequestReviewContributions,
+                contributionResult: contributionResult,
               ),
             ),
           ),
@@ -82,15 +82,6 @@ class ContributionSummaryTab extends StatelessWidget {
 
         const SliverToBoxAdapter(child: SizedBox(height: 8)),
 
-        // Meta chips (private/restricted badge + repo counts)
-        SliverToBoxAdapter(
-          child: ContributionMetaChips(
-            contributionResult: contributionResult,
-          ),
-        ),
-
-        const SliverToBoxAdapter(child: SizedBox(height: 16)),
-
         // Per-year highlights section
         if (highlights.isNotEmpty)
           SliverToBoxAdapter(
@@ -107,4 +98,3 @@ class ContributionSummaryTab extends StatelessWidget {
     );
   }
 }
-

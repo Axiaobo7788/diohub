@@ -1,7 +1,9 @@
+import 'package:diohub/common/misc/surface_shape_resolver.dart';
+import 'package:diohub/style/surface_style_theme.dart';
 import 'package:flutter/material.dart';
 
 /// A reusable widget for selecting contribution date ranges
-/// 
+///
 /// Supports:
 /// - Last year (default)
 /// - Specific years
@@ -87,9 +89,10 @@ class DateRangeSelectorWidget extends StatelessWidget {
       },
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-        decoration: BoxDecoration(
+        decoration: SurfaceShapeResolver.boxDecoration(
+          context,
+          size: BorderRadiusSize.small,
           color: colorScheme.surfaceContainerHighest,
-          borderRadius: BorderRadius.circular(6),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
@@ -186,4 +189,3 @@ class DateRangeSelectorWidget extends StatelessWidget {
     }
   }
 }
-

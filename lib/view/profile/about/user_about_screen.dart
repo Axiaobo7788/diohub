@@ -2,6 +2,7 @@ import 'package:diohub/common/misc/shimmer_widget.dart';
 import 'package:diohub/graphql/queries/users/__generated__/user_info.data.gql.dart';
 import 'package:diohub/models/contributions/contribution_query_models.dart';
 import 'package:diohub/providers/users/user_contributions_provider.dart';
+import 'package:diohub/style/surface_style_theme.dart';
 import 'package:diohub/view/profile/about/widgets/tabbed_contribution_section.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -149,7 +150,9 @@ class _ContributionLoadingSkeleton extends StatelessWidget {
                 decoration: BoxDecoration(
                   color: theme.colorScheme.surfaceContainerHighest
                       .withOpacity(0.3),
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: theme.surfaceStyle.borderRadius(
+                    size: BorderRadiusSize.medium,
+                  ),
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -201,7 +204,9 @@ class _ContributionLoadingSkeleton extends StatelessWidget {
                 decoration: BoxDecoration(
                   color: theme.colorScheme.surfaceContainerHighest
                       .withOpacity(0.3),
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: theme.surfaceStyle.borderRadius(
+                    size: BorderRadiusSize.medium,
+                  ),
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -316,7 +321,9 @@ class _ContributionLoadingSkeleton extends StatelessWidget {
                       decoration: BoxDecoration(
                         color: theme.colorScheme.surfaceContainerHighest
                             .withOpacity(0.3),
-                        borderRadius: BorderRadius.circular(8),
+                        borderRadius: theme.surfaceStyle.borderRadius(
+                          size: BorderRadiusSize.small,
+                        ),
                       ),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
