@@ -92,9 +92,7 @@ Future<T?> showActionsSheet<T>(
                     Navigator.of(context).pop();
                   }
                 },
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
+               
               ),
             )
             .toList(),
