@@ -283,6 +283,9 @@ class ContributionHighlightItem {
     this.state, // OPEN or CLOSED for issues/PRs
     this.body, // Description for issues/PRs
     this.mergedAt, // For PRs
+    this.graphQLIssue, // GraphQL issue type (from issueInfoTimeline fragment)
+    this.graphQLPullRequest, // GraphQL pull request type (from pullInfoTimeline fragment)
+    this.graphQLRepository, // GraphQL repository type (from repositoryFields fragment)
   });
 
   final String title;
@@ -299,6 +302,12 @@ class ContributionHighlightItem {
   final String? state; // OPEN, CLOSED for issues/PRs
   final String? body; // Description body
   final DateTime? mergedAt; // For merged PRs
+  final dynamic
+      graphQLIssue; // GraphQL issue type (from issueInfoTimeline fragment)
+  final dynamic
+      graphQLPullRequest; // GraphQL pull request type (from pullInfoTimeline fragment)
+  final dynamic
+      graphQLRepository; // GraphQL repository type (from repositoryFields fragment)
 
   String get repositoryFullName => '$repositoryOwner/$repositoryName';
   String get repositoryUrl => 'https://github.com/$repositoryFullName';

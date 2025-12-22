@@ -22,9 +22,13 @@ class UserContributionsService {
       final (from, to) = key.dateRange.dates;
 
       // Check if this is a multi-year range
-      final yearsDiff = (to.year - from.year) + 1;
+      // Use actual day difference instead of year subtraction to correctly handle
+      // "last year" queries that span two calendar years but are only 365 days
+      final daysDiff = to.difference(from).inDays;
 
-      if (yearsDiff <= 1) {
+      // If the range is 366 days or less, treat it as single-year
+      // (366 accounts for leap years; most years are 365 days)
+      if (daysDiff <= 366) {
         // Single year - fetch and convert to view model
         final result = await UserInfoService.getUserContributions(
           key.userName,
@@ -98,8 +102,16 @@ class UserContributionsService {
     final reviewRepos = ContributionDataConverter.convertReviewRepositories(
       collection.pullRequestReviewContributionsByRepository.toList(),
     );
+    final issueRepos = ContributionDataConverter.convertIssueRepositories(
+      collection.issueContributionsByRepository.toList(),
+    );
+    final pullRequestRepos =
+        ContributionDataConverter.convertPullRequestRepositories(
+      collection.pullRequestContributionsByRepository.toList(),
+    );
 
-    // Merge repositories by URL, tracking commit and review counts separately
+    // Merge repositories by URL, tracking commit, review, issue, and PR counts separately
+    // Preserve GraphQL repository objects to avoid data loss
     final repoMap = <String, ContributedRepository>{};
     for (final repo in commitRepos) {
       repoMap[repo.url] = repo;
@@ -108,19 +120,46 @@ class UserContributionsService {
       if (repoMap.containsKey(repo.url)) {
         final existing = repoMap[repo.url]!;
         repoMap[repo.url] = ContributedRepository(
-          name: existing.name,
-          owner: existing.owner,
-          url: existing.url,
+          graphQLRepository: existing.graphQLRepository,
           contributionCount:
               existing.contributionCount + repo.contributionCount,
-          description: existing.description,
-          language: existing.language,
-          languageColor: existing.languageColor,
-          stargazersCount: existing.stargazersCount,
-          isPrivate: existing.isPrivate,
-          isFork: existing.isFork,
           commitCount: existing.commitCount ?? existing.contributionCount,
           reviewCount: repo.reviewCount ?? repo.contributionCount,
+          issueCount: existing.issueCount,
+          pullRequestCount: existing.pullRequestCount,
+        );
+      } else {
+        repoMap[repo.url] = repo;
+      }
+    }
+    for (final repo in issueRepos) {
+      if (repoMap.containsKey(repo.url)) {
+        final existing = repoMap[repo.url]!;
+        repoMap[repo.url] = ContributedRepository(
+          graphQLRepository: existing.graphQLRepository,
+          contributionCount:
+              existing.contributionCount + repo.contributionCount,
+          commitCount: existing.commitCount,
+          reviewCount: existing.reviewCount,
+          issueCount: (existing.issueCount ?? 0) + (repo.issueCount ?? 0),
+          pullRequestCount: existing.pullRequestCount,
+        );
+      } else {
+        repoMap[repo.url] = repo;
+      }
+    }
+    for (final repo in pullRequestRepos) {
+      if (repoMap.containsKey(repo.url)) {
+        final existing = repoMap[repo.url]!;
+        repoMap[repo.url] = ContributedRepository(
+          graphQLRepository: existing.graphQLRepository,
+          contributionCount:
+              existing.contributionCount + repo.contributionCount,
+          commitCount: existing.commitCount,
+          reviewCount: existing.reviewCount,
+          issueCount: existing.issueCount,
+          pullRequestCount:
+              (existing.pullRequestCount ?? 0) + (repo.pullRequestCount ?? 0),
         );
       } else {
         repoMap[repo.url] = repo;
@@ -545,108 +584,107 @@ class UserContributionsService {
     }
 
     // Combine repositories (merge by repository URL, sum contributions)
+    // Use converter methods to preserve GraphQL objects
     final repoMap = <String, ContributedRepository>{};
 
+    // Convert and merge commit repositories
     for (final result in results) {
-      final repos = result
-          .contributionsCollection.commitContributionsByRepository
-          .whereType<
-              GuserContributionsData_user_contributionsCollection_commitContributionsByRepository>();
-
-      for (final repo in repos) {
-        final repoData = repo.repository;
-        final url = repoData.url.toString();
-        final owner = repoData.owner.login;
-        final primaryLang = repoData.primaryLanguage;
-
+      final commitRepos = ContributionDataConverter.convertRepositories(
+        result.contributionsCollection.commitContributionsByRepository.toList(),
+      );
+      for (final repo in commitRepos) {
+        final url = repo.url;
         if (repoMap.containsKey(url)) {
-          // Sum contributions for existing repo
           final existing = repoMap[url]!;
           repoMap[url] = ContributedRepository(
-            name: existing.name,
-            owner: existing.owner,
-            url: existing.url,
+            graphQLRepository: existing.graphQLRepository,
             contributionCount:
-                existing.contributionCount + repo.contributions.totalCount,
-            description: existing.description,
-            language: existing.language,
-            languageColor: existing.languageColor,
-            stargazersCount: existing.stargazersCount,
-            isPrivate: existing.isPrivate,
-            isFork: existing.isFork,
+                existing.contributionCount + repo.contributionCount,
             commitCount: (existing.commitCount ?? existing.contributionCount) +
-                repo.contributions.totalCount,
+                repo.contributionCount,
             reviewCount: existing.reviewCount,
+            issueCount: existing.issueCount,
+            pullRequestCount: existing.pullRequestCount,
           );
         } else {
-          // Add new repo (from commits)
-          repoMap[url] = ContributedRepository(
-            name: repoData.name,
-            owner: owner,
-            url: url,
-            contributionCount: repo.contributions.totalCount,
-            description: repoData.description,
-            language: primaryLang?.name,
-            languageColor: primaryLang?.color,
-            stargazersCount: repoData.stargazerCount,
-            isPrivate: repoData.isPrivate,
-            isFork: repoData.isFork,
-            commitCount: repo.contributions.totalCount,
-            reviewCount: null,
-          );
+          repoMap[url] = repo;
         }
       }
     }
 
-    // Merge PR review repositories into the repository list
+    // Convert and merge PR review repositories
     for (final result in results) {
-      final reviewRepos = result
-          .contributionsCollection.pullRequestReviewContributionsByRepository
-          .whereType<
-              GuserContributionsData_user_contributionsCollection_pullRequestReviewContributionsByRepository>();
-
+      final reviewRepos = ContributionDataConverter.convertReviewRepositories(
+        result
+            .contributionsCollection.pullRequestReviewContributionsByRepository
+            .toList(),
+      );
       for (final repo in reviewRepos) {
-        final repoData = repo.repository;
-        final url = repoData.url.toString();
-        final owner = repoData.owner.login;
-        // primaryLanguage may not be available in pullRequestReviewContributionsByRepository
-        // Try to access it, but use null if not available
-        final primaryLang = (repoData as dynamic).primaryLanguage;
-
+        final url = repo.url;
         if (repoMap.containsKey(url)) {
           final existing = repoMap[url]!;
           repoMap[url] = ContributedRepository(
-            name: existing.name,
-            owner: existing.owner,
-            url: existing.url,
+            graphQLRepository: existing.graphQLRepository,
             contributionCount:
-                existing.contributionCount + repo.contributions.totalCount,
-            description: existing.description,
-            language: existing.language,
-            languageColor: existing.languageColor,
-            stargazersCount: existing.stargazersCount,
-            isPrivate: existing.isPrivate,
-            isFork: existing.isFork,
+                existing.contributionCount + repo.contributionCount,
             commitCount: existing.commitCount,
-            reviewCount:
-                (existing.reviewCount ?? 0) + repo.contributions.totalCount,
+            reviewCount: (existing.reviewCount ?? 0) + (repo.reviewCount ?? 0),
+            issueCount: existing.issueCount,
+            pullRequestCount: existing.pullRequestCount,
           );
         } else {
-          // Add new repo (from reviews)
+          repoMap[url] = repo;
+        }
+      }
+    }
+
+    // Convert and merge issue repositories
+    for (final result in results) {
+      final issueRepos = ContributionDataConverter.convertIssueRepositories(
+        result.contributionsCollection.issueContributionsByRepository.toList(),
+      );
+      for (final repo in issueRepos) {
+        final url = repo.url;
+        if (repoMap.containsKey(url)) {
+          final existing = repoMap[url]!;
           repoMap[url] = ContributedRepository(
-            name: repoData.name,
-            owner: owner,
-            url: url,
-            contributionCount: repo.contributions.totalCount,
-            description: repoData.description,
-            language: primaryLang?.name as String?,
-            languageColor: primaryLang?.color as String?,
-            stargazersCount: repoData.stargazerCount,
-            isPrivate: repoData.isPrivate,
-            isFork: repoData.isFork,
-            commitCount: null,
-            reviewCount: repo.contributions.totalCount,
+            graphQLRepository: existing.graphQLRepository,
+            contributionCount:
+                existing.contributionCount + repo.contributionCount,
+            commitCount: existing.commitCount,
+            reviewCount: existing.reviewCount,
+            issueCount: (existing.issueCount ?? 0) + (repo.issueCount ?? 0),
+            pullRequestCount: existing.pullRequestCount,
           );
+        } else {
+          repoMap[url] = repo;
+        }
+      }
+    }
+
+    // Convert and merge pull request repositories
+    for (final result in results) {
+      final pullRequestRepos =
+          ContributionDataConverter.convertPullRequestRepositories(
+        result.contributionsCollection.pullRequestContributionsByRepository
+            .toList(),
+      );
+      for (final repo in pullRequestRepos) {
+        final url = repo.url;
+        if (repoMap.containsKey(url)) {
+          final existing = repoMap[url]!;
+          repoMap[url] = ContributedRepository(
+            graphQLRepository: existing.graphQLRepository,
+            contributionCount:
+                existing.contributionCount + repo.contributionCount,
+            commitCount: existing.commitCount,
+            reviewCount: existing.reviewCount,
+            issueCount: existing.issueCount,
+            pullRequestCount:
+                (existing.pullRequestCount ?? 0) + (repo.pullRequestCount ?? 0),
+          );
+        } else {
+          repoMap[url] = repo;
         }
       }
     }
@@ -708,88 +746,111 @@ class UserContributionsService {
     if (contribution == null) return null;
 
     try {
-      // Check for restricted contribution
-      final typename = contribution.G__typename;
-      if (typename == 'RestrictedContribution') {
-        return ContributionHighlightItem(
-          title: 'Private contribution',
-          url: '',
-          createdAt: contribution.occurredAt ?? DateTime.now(),
-          repositoryName: '',
-          repositoryOwner: '',
-          type: ContributionHighlightType.restricted,
-          isRestricted: true,
-        );
-      }
-
-      // Extract based on type
-      if (type == 'issue') {
-        final issue = contribution.issue;
-        if (issue == null) {
+      // Use when() method for type-safe pattern matching on union types
+      return contribution.when(
+        createdIssueContribution: (created) {
+          if (type != 'issue') return null;
+          final issue = created.issue;
+          if (issue == null) {
+            if (kDebugMode) {
+              log.d(
+                  '[UserContributionsService] _extractHighlightItem: issue is null for CreatedIssueContribution');
+            }
+            return null;
+          }
+          // Use occurredAt from contribution wrapper, fallback to issue.createdAt
+          final createdAt = created.occurredAt ?? issue.createdAt;
+          final item = ContributionHighlightItem(
+            title: issue.title ?? '',
+            url: created.url.toString(),
+            createdAt: createdAt,
+            repositoryName: issue.repository?.name ?? '',
+            repositoryOwner: issue.repository?.owner?.login ?? '',
+            type: ContributionHighlightType.issue,
+            number: issue.number,
+            commentCount: issue.comments?.totalCount,
+            state: issue.state?.name ?? 'OPEN',
+            body: issue.body,
+            isRestricted: created.isRestricted,
+            graphQLIssue: issue,
+          );
           if (kDebugMode) {
             log.d(
-                '[UserContributionsService] _extractHighlightItem: issue is null for type=$type, typename=${contribution.G__typename}');
+                '[UserContributionsService] _extractHighlightItem: Extracted issue "${item.title}" with ${item.commentCount ?? 0} comments, isRestricted: ${item.isRestricted}');
           }
-          return null;
-        }
-        final item = ContributionHighlightItem(
-          title: issue.title ?? '',
-          url: issue.url?.toString() ?? '',
-          createdAt: issue.createdAt,
-          repositoryName: issue.repository?.name ?? '',
-          repositoryOwner: issue.repository?.owner?.login ?? '',
-          type: ContributionHighlightType.issue,
-          number: issue.number,
-          commentCount: issue.comments?.totalCount,
-          state: issue.state?.name ?? 'OPEN',
-          body: issue.body,
-        );
-        if (kDebugMode) {
-          log.d(
-              '[UserContributionsService] _extractHighlightItem: Extracted issue "${item.title}" with ${item.commentCount ?? 0} comments');
-        }
-        return item;
-      } else if (type == 'pullRequest') {
-        final pr = contribution.pullRequest;
-        if (pr == null) {
+          return item;
+        },
+        createdPullRequestContribution: (created) {
+          if (type != 'pullRequest') return null;
+          final pr = created.pullRequest;
+          if (pr == null) {
+            if (kDebugMode) {
+              log.d(
+                  '[UserContributionsService] _extractHighlightItem: pullRequest is null for CreatedPullRequestContribution');
+            }
+            return null;
+          }
+          // Use occurredAt from contribution wrapper, fallback to pr.createdAt
+          final createdAt = created.occurredAt ?? pr.createdAt;
+          final item = ContributionHighlightItem(
+            title: pr.title ?? '',
+            url: created.url.toString(),
+            createdAt: createdAt,
+            repositoryName: pr.repository?.name ?? '',
+            repositoryOwner: pr.repository?.owner?.login ?? '',
+            type: ContributionHighlightType.pullRequest,
+            number: pr.number,
+            commentCount: pr.comments?.totalCount,
+            state: pr.state?.name ?? 'OPEN',
+            body: pr.body,
+            mergedAt: pr.mergedAt,
+            isRestricted: created.isRestricted,
+            graphQLPullRequest: pr,
+          );
           if (kDebugMode) {
             log.d(
-                '[UserContributionsService] _extractHighlightItem: pullRequest is null for type=$type, typename=${contribution.G__typename}');
+                '[UserContributionsService] _extractHighlightItem: Extracted PR "${item.title}" with ${item.commentCount ?? 0} comments, isRestricted: ${item.isRestricted}');
+          }
+          return item;
+        },
+        createdRepositoryContribution: (created) {
+          if (type != 'repository') return null;
+          final repo = created.repository;
+          if (repo == null) return null;
+          // Use occurredAt from contribution wrapper, fallback to repo.createdAt
+          final createdAt = created.occurredAt ?? repo.createdAt;
+          return ContributionHighlightItem(
+            title: repo.name,
+            url: created.url.toString(),
+            createdAt: createdAt,
+            repositoryName: repo.name,
+            repositoryOwner: repo.owner?.login ?? '',
+            type: ContributionHighlightType.repository,
+            stargazerCount: repo.stargazerCount,
+            isPrivate: repo.isPrivate ?? false,
+            isRestricted: created.isRestricted,
+            graphQLRepository: repo,
+          );
+        },
+        restrictedContribution: (restricted) {
+          return ContributionHighlightItem(
+            title: 'Private contribution',
+            url: '',
+            createdAt: restricted.occurredAt ?? DateTime.now(),
+            repositoryName: '',
+            repositoryOwner: '',
+            type: ContributionHighlightType.restricted,
+            isRestricted: true,
+          );
+        },
+        orElse: () {
+          if (kDebugMode) {
+            log.w(
+                '[UserContributionsService] _extractHighlightItem: Unknown contribution type: ${contribution.G__typename}');
           }
           return null;
-        }
-        final item = ContributionHighlightItem(
-          title: pr.title ?? '',
-          url: pr.url?.toString() ?? '',
-          createdAt: pr.createdAt,
-          repositoryName: pr.repository?.name ?? '',
-          repositoryOwner: pr.repository?.owner?.login ?? '',
-          type: ContributionHighlightType.pullRequest,
-          number: pr.number,
-          commentCount: pr.comments?.totalCount,
-          state: pr.state?.name ?? 'OPEN',
-          body: pr.body,
-          mergedAt: pr.mergedAt,
-        );
-        if (kDebugMode) {
-          log.d(
-              '[UserContributionsService] _extractHighlightItem: Extracted PR "${item.title}" with ${item.commentCount ?? 0} comments');
-        }
-        return item;
-      } else if (type == 'repository') {
-        final repo = contribution.repository;
-        if (repo == null) return null;
-        return ContributionHighlightItem(
-          title: repo.name,
-          url: repo.url?.toString() ?? '',
-          createdAt: repo.createdAt,
-          repositoryName: repo.name,
-          repositoryOwner: repo.owner?.login ?? '',
-          type: ContributionHighlightType.repository,
-          stargazerCount: repo.stargazerCount,
-          isPrivate: repo.isPrivate ?? false,
-        );
-      }
+        },
+      );
     } catch (e) {
       if (kDebugMode) {
         log.e('Error extracting highlight item', error: e);
