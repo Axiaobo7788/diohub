@@ -3,6 +3,7 @@ import 'package:diohub/common/misc/action_card_builder.dart';
 import 'package:diohub/common/misc/collapsible_action_buttons.dart';
 import 'package:diohub/common/misc/floating_expandable_widget.dart' as base;
 import 'package:diohub/common/misc/liquid_glass_wrapper.dart';
+import 'package:diohub/style/surface_style_theme.dart';
 import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/material.dart';
 
@@ -123,7 +124,7 @@ Widget buildToolbarContent({
           15 + (expandAnimation.value * 12.0); // 8-20 range
 
       return LiquidGlassWrapper.withShape(
-        borderRadius: 28,
+        size: BorderRadiusSize.veryLarge,
         blur: blurAmount,
         glassColorOpacity: 0.2,
         thickness: 2,
@@ -514,7 +515,7 @@ Widget buildDraggableIndicator(BuildContext context) {
         decoration: BoxDecoration(
           color:
               Theme.of(context).colorScheme.onSurfaceVariant.withOpacity(0.08),
-          borderRadius: BorderRadius.circular(2),
+          borderRadius: Theme.of(context).surfaceStyle.borderRadiusSoft(),
         ),
       ),
     ],
@@ -555,7 +556,7 @@ Widget buildExpandCollapseButton(
     color: Colors.transparent,
     child: InkWell(
       onTap: callbacks.toggle,
-      borderRadius: BorderRadius.circular(8),
+      borderRadius: Theme.of(context).surfaceStyle.borderRadiusMedium(),
       child: Container(
         width: double.infinity,
         padding: const EdgeInsets.symmetric(
@@ -621,7 +622,7 @@ Widget buildCompactProminentButton(
               }
             }
           : null,
-      borderRadius: BorderRadius.circular(12),
+      borderRadius: Theme.of(context).surfaceStyle.borderRadiusMedium(),
       child: AnimatedContainer(
         key: ValueKey('checkbox_${action.label}'),
         duration: const Duration(milliseconds: 200),
@@ -636,7 +637,7 @@ Widget buildCompactProminentButton(
         },
         decoration: BoxDecoration(
           color: colors.backgroundColor,
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: Theme.of(context).surfaceStyle.borderRadiusMedium(),
           border: Border.all(
             color: Theme.of(context).colorScheme.outline.withOpacity(0.1),
             width: 0.5,
@@ -698,7 +699,7 @@ Widget buildCompactIconButton(
               }
             }
           : null,
-      borderRadius: BorderRadius.circular(8),
+      borderRadius: Theme.of(context).surfaceStyle.borderRadiusMedium(),
       child: Tooltip(
         message: action.label,
         child: Padding(
@@ -718,7 +719,7 @@ Widget buildCompactIconButton(
                       const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                   decoration: BoxDecoration(
                     color: iconColor.withOpacity(0.15),
-                    borderRadius: BorderRadius.circular(8),
+                    borderRadius: Theme.of(context).surfaceStyle.borderRadiusMedium(),
                   ),
                   child: Text(
                     badgeText,
@@ -769,12 +770,12 @@ Widget buildExpandedActionWithLabel(
                 }
               }
             : null,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: Theme.of(context).surfaceStyle.borderRadiusMedium(),
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
           decoration: BoxDecoration(
             color: colors.backgroundColor,
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: Theme.of(context).surfaceStyle.borderRadiusMedium(),
             border: Border.all(
               color: Theme.of(context).colorScheme.outline.withOpacity(0.08),
               width: 0.5,
@@ -815,7 +816,7 @@ Widget buildExpandedActionWithLabel(
                       const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
                   decoration: BoxDecoration(
                     color: iconColor.withOpacity(0.15),
-                    borderRadius: BorderRadius.circular(8),
+                    borderRadius: Theme.of(context).surfaceStyle.borderRadiusMedium(),
                   ),
                   child: Text(
                     badgeText,
