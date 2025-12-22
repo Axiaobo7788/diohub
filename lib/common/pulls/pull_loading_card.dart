@@ -8,6 +8,7 @@ import 'package:diohub/common/wrappers/api_wrapper_widget.dart';
 import 'package:diohub/models/issues/issue_model.dart';
 import 'package:diohub/models/pull_requests/pull_request_model.dart';
 import 'package:diohub/services/pulls/pulls_service.dart';
+import 'package:diohub/style/surface_style_theme.dart';
 import 'package:diohub/utils/get_date.dart';
 import 'package:diohub/utils/utils.dart';
 import 'package:diohub/view/issues_pulls/issue_pull_screen.dart';
@@ -76,7 +77,7 @@ class PullLoadingCard extends StatelessWidget {
                         color:
                             _getPullIconColor(context, issueModel!.state, null)
                                 .withOpacity(0.12),
-                        borderRadius: BorderRadius.circular(4),
+                        borderRadius: Theme.of(context).surfaceStyle.borderRadiusSmall(),
                       ),
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
@@ -269,7 +270,7 @@ class PullLoadingCard extends StatelessWidget {
                 ShimmerWidget.container(
                   width: 60,
                   height: 24,
-                  borderRadius: BorderRadius.circular(4),
+                  borderRadius: Theme.of(context).surfaceStyle.borderRadiusSmall(),
                 ),
                 const SizedBox(width: 3),
                 // Shimmer for repo name

@@ -9,6 +9,7 @@ import 'package:diohub/models/issues/issue_card_data_model.dart';
 import 'package:diohub/models/issues/issue_model.dart';
 import 'package:diohub/models/users/user_info_model.dart';
 import 'package:diohub/services/issues/issues_service.dart';
+import 'package:diohub/style/surface_style_theme.dart';
 import 'package:diohub/utils/utils.dart';
 import 'package:diohub/view/issues_pulls/issue_pull_screen.dart';
 import 'package:flutter/material.dart' hide State;
@@ -171,7 +172,7 @@ class IssueListCard extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
             decoration: BoxDecoration(
               color: context.colorScheme.surfaceVariant.withOpacity(0.3),
-              borderRadius: BorderRadius.circular(8),
+              borderRadius: Theme.of(context).surfaceStyle.borderRadiusMedium(),
             ),
             child: TrimmableMarkdownContent(
               text: _body,

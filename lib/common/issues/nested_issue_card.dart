@@ -5,6 +5,7 @@ import 'package:diohub/common/misc/nested_card_with_header.dart';
 import 'package:diohub/common/misc/ink_pot.dart';
 import 'package:diohub/common/pulls/pull_loading_card.dart';
 import 'package:diohub/models/issues/issue_model.dart';
+import 'package:diohub/style/surface_style_theme.dart';
 import 'package:diohub/utils/get_date.dart';
 import 'package:diohub/utils/utils.dart';
 import 'package:diohub/view/issues_pulls/issue_pull_screen.dart';
@@ -66,7 +67,7 @@ class NestedIssueCard extends StatelessWidget {
               decoration: BoxDecoration(
                 color:
                     _getIssueIconColor(context, item.state!).withOpacity(0.12),
-                borderRadius: BorderRadius.circular(4),
+                borderRadius: Theme.of(context).surfaceStyle.borderRadiusSmall(),
               ),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
