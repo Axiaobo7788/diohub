@@ -158,6 +158,12 @@ class YearlyContributionHighlights {
     required this.totalRepositoriesWithContributedIssues,
     required this.totalRepositoriesWithContributedPullRequests,
     required this.calendarMonths,
+    this.firstIssue,
+    this.firstPullRequest,
+    this.firstRepository,
+    this.popularIssue,
+    this.popularPullRequest,
+    this.joinedGitHub,
   });
 
   /// The year this data represents (for multi-year ranges)
@@ -183,6 +189,71 @@ class YearlyContributionHighlights {
 
   /// Monthly breakdown for this year
   final List<ContributionMonth> calendarMonths;
+
+  /// First issue opened in this range
+  final ContributionHighlightItem? firstIssue;
+
+  /// First pull request opened in this range
+  final ContributionHighlightItem? firstPullRequest;
+
+  /// First repository created in this range
+  final ContributionHighlightItem? firstRepository;
+
+  /// Most commented issue in this range
+  final ContributionHighlightItem? popularIssue;
+
+  /// Most commented pull request in this range
+  final ContributionHighlightItem? popularPullRequest;
+
+  /// GitHub account join date (if in this range)
+  final DateTime? joinedGitHub;
+}
+
+/// Type of contribution highlight
+enum ContributionHighlightType {
+  issue,
+  pullRequest,
+  repository,
+  restricted,
+  joined,
+}
+
+/// Represents a highlight contribution (issue, PR, or repo)
+class ContributionHighlightItem {
+  const ContributionHighlightItem({
+    required this.title,
+    required this.url,
+    required this.createdAt,
+    required this.repositoryName,
+    required this.repositoryOwner,
+    required this.type,
+    this.number,
+    this.commentCount,
+    this.stargazerCount,
+    this.isPrivate = false,
+    this.isRestricted = false,
+    this.state, // OPEN or CLOSED for issues/PRs
+    this.body, // Description for issues/PRs
+    this.mergedAt, // For PRs
+  });
+
+  final String title;
+  final String url;
+  final DateTime createdAt;
+  final String repositoryName;
+  final String repositoryOwner;
+  final ContributionHighlightType type;
+  final int? number; // For issues/PRs
+  final int? commentCount; // For popular items
+  final int? stargazerCount; // For repos
+  final bool isPrivate;
+  final bool isRestricted;
+  final String? state; // OPEN, CLOSED for issues/PRs
+  final String? body; // Description body
+  final DateTime? mergedAt; // For merged PRs
+
+  String get repositoryFullName => '$repositoryOwner/$repositoryName';
+  String get repositoryUrl => 'https://github.com/$repositoryFullName';
 }
 
 /// Month metadata from contribution calendar
