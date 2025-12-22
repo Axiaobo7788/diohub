@@ -2,6 +2,7 @@ import 'package:diohub/common/misc/ink_pot.dart';
 import 'package:diohub/common/misc/menu_button.dart';
 import 'package:diohub/common/misc/nested_card_with_header.dart';
 import 'package:diohub/common/misc/tappable_card.dart';
+import 'package:diohub/style/surface_style_theme.dart';
 import 'package:diohub/utils/utils.dart';
 import 'package:flex_list/flex_list.dart';
 import 'package:flutter/material.dart';
@@ -114,7 +115,7 @@ class InfoCard extends StatelessWidget {
         child: Material(
           elevation: elevation ?? 0,
           color: context.colorScheme.surfaceContainerLow,
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: Theme.of(context).surfaceStyle.borderRadiusMedium(),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: <Widget>[
@@ -289,7 +290,7 @@ class MenuInfoCard extends StatelessWidget {
             trailing: button,
             child: InkPot(
               onTap: onTap,
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: Theme.of(context).surfaceStyle.borderRadiusMedium(),
               child: child,
             ),
           ),
@@ -300,7 +301,7 @@ class MenuInfoCard extends StatelessWidget {
       header: _buildHeader(context),
       child: InkPot(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: Theme.of(context).surfaceStyle.borderRadiusMedium(),
         child: child,
       ),
     );

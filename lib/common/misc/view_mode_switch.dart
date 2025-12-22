@@ -1,3 +1,4 @@
+import 'package:diohub/style/surface_style_theme.dart';
 import 'package:diohub/utils/utils.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_vector_icons/flutter_vector_icons.dart';
@@ -27,7 +28,7 @@ class ViewModeSwitch extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 3, vertical: 1),
       decoration: BoxDecoration(
         color: context.colorScheme.surfaceContainerHighest.withOpacity(0.5),
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: Theme.of(context).surfaceStyle.borderRadiusLarge(),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -87,7 +88,7 @@ class _IconButton extends StatelessWidget {
       color: Colors.transparent,
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(6),
+        borderRadius: Theme.of(context).surfaceStyle.borderRadiusSmall(),
         child: Padding(
           padding: const EdgeInsets.all(3),
           child: Icon(

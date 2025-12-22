@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:liquid_glass_renderer/liquid_glass_renderer.dart';
+import 'package:diohub/style/surface_style_theme.dart';
+import 'package:diohub/common/misc/surface_shape_resolver.dart';
 
 /// A reusable wrapper for liquid glass effects with sensible defaults.
 ///
@@ -22,7 +24,7 @@ import 'package:liquid_glass_renderer/liquid_glass_renderer.dart';
 ///
 /// // With shape (for rounded corners)
 /// LiquidGlassWrapper.withShape(
-///   borderRadius: 28,
+///   size: BorderRadiusSize.large,
 ///   child: YourWidget(),
 /// )
 /// ```
@@ -34,19 +36,20 @@ class LiquidGlassWrapper extends StatelessWidget {
     this.glassColorOpacity,
     this.thickness,
     this.refractiveIndex,
-    this.borderRadius,
+    this.size,
     this.borderColor,
     this.borderWidth,
     super.key,
   });
 
-  /// Creates a liquid glass wrapper with a rounded rectangle shape.
+  /// Creates a liquid glass wrapper with a shape (rounded or squircle).
   ///
   /// This is useful for buttons, cards, or other widgets that need
-  /// rounded corners with the glass effect.
+  /// rounded corners with the glass effect. The shape type (rounded or squircle)
+  /// is determined by the app's theme settings.
   LiquidGlassWrapper.withShape({
     required this.child,
-    this.borderRadius = 28,
+    this.size = BorderRadiusSize.medium,
     this.blur,
     this.glassColor,
     this.glassColorOpacity,
@@ -74,8 +77,8 @@ class LiquidGlassWrapper extends StatelessWidget {
   /// Refractive index for the glass effect. Defaults to 1.5.
   final double? refractiveIndex;
 
-  /// Border radius for the shape variant. Only used with [withShape] constructor.
-  final double? borderRadius;
+  /// Border radius size for the shape variant. Only used with [withShape] constructor.
+  final BorderRadiusSize? size;
 
   /// Border color for the shape variant. Defaults to outline color with 0.15 opacity.
   final Color? borderColor;
@@ -84,7 +87,7 @@ class LiquidGlassWrapper extends StatelessWidget {
   final double? borderWidth;
 
   /// Whether this wrapper uses a shape (from [withShape] constructor).
-  bool get _hasShape => borderRadius != null;
+  bool get _hasShape => size != null;
 
   @override
   Widget build(BuildContext context) {
@@ -107,9 +110,13 @@ class LiquidGlassWrapper extends StatelessWidget {
       ),
       child: _hasShape
           ? LiquidGlass(
-              shape: LiquidRoundedRectangle(
-                borderRadius: borderRadius!,
-              ),
+              shape: theme.surfaceStyle.shapeType == BorderShapeType.squircle
+                  ? LiquidRoundedSuperellipse(
+                      borderRadius: theme.surfaceStyle.radius(size!),
+                    )
+                  : LiquidRoundedRectangle(
+                      borderRadius: theme.surfaceStyle.radius(size!),
+                    ),
               child: _buildShapedChild(context, colorScheme),
             )
           : child,
@@ -124,8 +131,9 @@ class LiquidGlassWrapper extends StatelessWidget {
     final effectiveBorderWidth = borderWidth ?? 0.5;
 
     return Container(
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(borderRadius!),
+      decoration: SurfaceShapeResolver.boxDecoration(
+        context,
+        size: size!,
         border: Border.all(
           color: effectiveBorderColor,
           width: effectiveBorderWidth,

@@ -1,5 +1,6 @@
 import 'package:diohub/common/misc/collapsible_action_buttons.dart';
 import 'package:diohub/common/misc/highlighted_container.dart';
+import 'package:diohub/common/misc/surface_shape_resolver.dart';
 import 'package:diohub/utils/utils.dart';
 import 'package:diohub/style/surface_style_theme.dart';
 import 'package:flutter/material.dart';
@@ -58,9 +59,10 @@ Widget buildActionButtonTrailingCount(BuildContext context, int count) {
 Widget buildModernCountBadge(BuildContext context, int count) {
   return Container(
     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-    decoration: BoxDecoration(
+    decoration: SurfaceShapeResolver.boxDecoration(
+      context,
+      size: BorderRadiusSize.medium,
       color: context.colorScheme.surfaceContainerHighest.withOpacity(0.8),
-      borderRadius: BorderRadius.circular(12),
       border: Border.all(
         color: context.colorScheme.outline.withOpacity(0.1),
         width: 0.5,
@@ -382,9 +384,10 @@ Widget buildProminentActionCard(
                 Container(
                   padding:
                       const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                  decoration: BoxDecoration(
+                  decoration: SurfaceShapeResolver.boxDecoration(
+                    context,
+                    size: BorderRadiusSize.small,
                     color: colors.badgeColor,
-                    borderRadius: BorderRadius.circular(10),
                     border: Border.all(
                       color: Theme.of(context).scaffoldBackgroundColor,
                       width: 1.5,
@@ -632,9 +635,10 @@ class _ExpandableProminentActionCardState
                           Container(
                             padding: const EdgeInsets.symmetric(
                                 horizontal: 6, vertical: 2),
-                            decoration: BoxDecoration(
+                            decoration: SurfaceShapeResolver.boxDecoration(
+                              context,
+                              size: BorderRadiusSize.small,
                               color: colors.badgeColor,
-                              borderRadius: BorderRadius.circular(10),
                               border: Border.all(
                                 color:
                                     Theme.of(context).scaffoldBackgroundColor,
