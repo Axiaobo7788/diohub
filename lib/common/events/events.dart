@@ -15,7 +15,6 @@ import 'package:diohub/common/wrappers/infinite_scroll_wrapper.dart';
 import 'package:diohub/models/commits/commit_card_data_model.dart';
 import 'package:diohub/models/events/events_model.dart' hide Key, State;
 import 'package:diohub/models/issues/issue_card_data_model.dart';
-import 'package:diohub/models/issues/issue_model.dart';
 import 'package:diohub/providers/users/current_user_provider.dart';
 import 'package:diohub/services/activity/events_service.dart';
 import 'package:diohub/utils/utils.dart';
@@ -56,15 +55,15 @@ class Events extends StatelessWidget {
         top: 16,
         bottom: 16 + bottomPadding, // Add SafeArea bottom padding
       ),
-      firstPageLoadingBuilder: (final BuildContext context) =>
-          TimelineShimmerList(
-        itemCount: 5,
-        showAvatar: true,
-        padding: EdgeInsets.only(
-          top: 16,
-          bottom: 16 + bottomPadding,
-          left: 16,
-          right: 16,
+      firstPageLoadingBuilder: (final BuildContext context) => _KeepAlive(
+        child: TimelineShimmerList(
+          itemCount: 5,
+          showAvatar: false,
+          showUserHeaders: true,
+          padding: EdgeInsets.only(
+            top: 16,
+            bottom: 16 + bottomPadding,
+          ),
         ),
       ),
       filterFn: (final List<EventsModel> items) {
