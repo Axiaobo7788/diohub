@@ -8,7 +8,7 @@ import 'package:diohub/common/misc/overlay_menu_widget.dart';
 import 'package:diohub/common/misc/user_search_dropdown.dart';
 import 'package:diohub/common/search_overlay/filters.dart';
 import 'package:diohub/common/search_overlay/range_picker.dart';
-import 'package:diohub/style/border_radiuses.dart';
+import 'package:diohub/style/surface_style_theme.dart';
 import 'package:diohub/style/text_field_themes.dart';
 import 'package:diohub/utils/string_compare.dart';
 import 'package:diohub/utils/utils.dart';
@@ -524,9 +524,8 @@ class _SearchBarState extends State<_SearchBar> {
               controller: suggestionsOverlayController,
               overlay: overlayWidget,
               child: Hero(
-                tag: widget.multiHero
-                    ? '${widget.heroTag}true'
-                    : widget.heroTag,
+                tag:
+                    widget.multiHero ? '${widget.heroTag}true' : widget.heroTag,
                 child: Material(
                   color: Colors.transparent,
                   child: ExtendedTextField(
@@ -1182,7 +1181,7 @@ class _ValidQuery extends SpecialText {
   InlineSpan finishText() => ExtendedWidgetSpan(
         alignment: PlaceholderAlignment.middle,
         child: Material(
-          borderRadius: context.themeData.borderRadiusTheme?.medBorderRadius,
+          borderRadius: Theme.of(context).surfaceStyle.borderRadiusMedium(),
           color: toString().startsWith('-')
               ? context.colorScheme.error
               : context.colorScheme.primary,
