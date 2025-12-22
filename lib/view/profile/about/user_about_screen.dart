@@ -133,6 +133,27 @@ class _UserAboutScreenState extends ConsumerState<UserAboutScreen> {
 class _ContributionLoadingSkeleton extends StatelessWidget {
   const _ContributionLoadingSkeleton();
 
+  /// Builds a styled divider matching the actual divider style
+  Widget _buildStyledDivider(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 16),
+      child: Container(
+        height: 1,
+        margin: const EdgeInsets.symmetric(horizontal: 16),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: [
+              Colors.transparent,
+              colorScheme.outlineVariant.withOpacity(0.3),
+              Colors.transparent,
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -183,12 +204,12 @@ class _ContributionLoadingSkeleton extends StatelessWidget {
               ),
             ),
 
-            const SizedBox(height: 8),
+            const SizedBox(height: 16),
 
             // Divider between calendar and activity overview
-            Divider(),
+            _buildStyledDivider(context),
 
-            const SizedBox(height: 8),
+            const SizedBox(height: 16),
 
             // Activity overview skeleton (radar chart section)
             Padding(
@@ -196,6 +217,15 @@ class _ContributionLoadingSkeleton extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  // Section header skeleton
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(8, 0, 8, 12),
+                    child: ShimmerWidget.container(
+                      height: 24,
+                      width: 180,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
                   ShimmerWidget.container(
                     height: 18,
                     width: 120,
@@ -265,10 +295,10 @@ class _ContributionLoadingSkeleton extends StatelessWidget {
               ),
             ),
 
-            const SizedBox(height: 8),
+            const SizedBox(height: 16),
 
             // Divider before tabs
-            Divider(),
+            _buildStyledDivider(context),
 
             // Tabs skeleton
             Container(

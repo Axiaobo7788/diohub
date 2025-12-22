@@ -54,41 +54,54 @@ class _TabbedContributionSectionState extends State<TabbedContributionSection>
 
     return Column(
       children: [
-        TabBar(
-          controller: _tabController,
-          // Color-only design: No indicator, just color change
-          indicator: const BoxDecoration(),
-          indicatorSize: TabBarIndicatorSize.label,
-          indicatorPadding: EdgeInsets.zero,
-          dividerColor: Colors.transparent,
-          tabAlignment: TabAlignment.center,
-          labelStyle: theme.textTheme.labelLarge?.copyWith(
-            fontWeight: FontWeight.w700,
-            fontSize: 13,
-            letterSpacing: 0.2,
+        // Enhanced tab bar with subtle border
+        Container(
+          decoration: BoxDecoration(
+            border: Border(
+              bottom: BorderSide(
+                color: colorScheme.outlineVariant.withOpacity(0.2),
+                width: 1,
+              ),
+            ),
           ),
-          unselectedLabelStyle: theme.textTheme.labelLarge?.copyWith(
-            fontWeight: FontWeight.w500,
-            fontSize: 13,
-            letterSpacing: 0.1,
+          child: TabBar(
+            controller: _tabController,
+            // Color-only design: No indicator, just color change
+            indicator: const BoxDecoration(),
+            indicatorSize: TabBarIndicatorSize.label,
+            indicatorPadding: EdgeInsets.zero,
+            dividerColor: Colors.transparent,
+            tabAlignment: TabAlignment.center,
+            labelStyle: theme.textTheme.labelLarge?.copyWith(
+              fontWeight: FontWeight.w700,
+              fontSize: 13,
+              letterSpacing: 0.2,
+            ),
+            unselectedLabelStyle: theme.textTheme.labelLarge?.copyWith(
+              fontWeight: FontWeight.w500,
+              fontSize: 13,
+              letterSpacing: 0.1,
+            ),
+            labelColor: colorScheme.primary,
+            unselectedLabelColor: colorScheme.onSurfaceVariant.withOpacity(0.6),
+            labelPadding:
+                const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+            padding: const EdgeInsets.symmetric(horizontal: 8),
+            tabs: const [
+              Tab(
+                height: 40,
+                text: 'Summary',
+              ),
+              Tab(
+                height: 40,
+                text: 'Contributions',
+              ),
+              Tab(
+                height: 40,
+                text: 'Activity',
+              ),
+            ],
           ),
-          labelColor: colorScheme.primary,
-          unselectedLabelColor: colorScheme.onSurfaceVariant.withOpacity(0.6),
-          labelPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-          tabs: const [
-            Tab(
-              height: 40,
-              text: 'Summary',
-            ),
-            Tab(
-              height: 40,
-              text: 'Contributions',
-            ),
-            Tab(
-              height: 40,
-              text: 'Activity',
-            ),
-          ],
         ),
         Expanded(
           child: TabBarView(

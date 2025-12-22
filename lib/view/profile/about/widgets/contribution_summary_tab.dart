@@ -26,6 +26,42 @@ class ContributionSummaryTab extends StatelessWidget {
   final bool useCustomRange;
   final DateTime? createdAt;
 
+  /// Builds a styled section divider with gradient effect
+  Widget _buildSectionDivider(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 16),
+      child: Container(
+        height: 1,
+        margin: const EdgeInsets.symmetric(horizontal: 16),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: [
+              Colors.transparent,
+              colorScheme.outlineVariant.withOpacity(0.3),
+              Colors.transparent,
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// Builds a consistent section header
+  Widget _buildSectionHeader(BuildContext context, String title) {
+    final theme = Theme.of(context);
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 20, 16, 12),
+      child: Text(
+        title,
+        style: theme.textTheme.titleLarge?.copyWith(
+          fontWeight: FontWeight.w700,
+          letterSpacing: -0.5,
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final viewModel = contributionResult.viewModel;
@@ -33,7 +69,7 @@ class ContributionSummaryTab extends StatelessWidget {
 
     return CustomScrollView(
       slivers: [
-        const SliverToBoxAdapter(child: SizedBox(height: 8)),
+        const SliverToBoxAdapter(child: SizedBox(height: 16)),
 
         // Calendar section
         SliverToBoxAdapter(
@@ -61,16 +97,15 @@ class ContributionSummaryTab extends StatelessWidget {
           ),
         ),
 
-        const SliverToBoxAdapter(child: SizedBox(height: 8)),
-
-        // Divider between calendar and activity overview
+        // Activity Overview section with header
         SliverToBoxAdapter(
-          child: Divider(),
+          child: _buildSectionDivider(context),
         ),
 
-        const SliverToBoxAdapter(child: SizedBox(height: 8)),
+        SliverToBoxAdapter(
+          child: _buildSectionHeader(context, 'Activity Overview'),
+        ),
 
-        // Activity overview (radar chart) section
         SliverToBoxAdapter(
           child: FadeAnimationSection(
             duration: const Duration(milliseconds: 400),
@@ -87,26 +122,21 @@ class ContributionSummaryTab extends StatelessWidget {
           ),
         ),
 
-        // Divider between activity overview and highlights
+        // Highlights section
         if (highlights.isNotEmpty) ...[
-          const SliverToBoxAdapter(child: SizedBox(height: 8)),
           SliverToBoxAdapter(
-            child: Divider(),
+            child: _buildSectionDivider(context),
           ),
-          const SliverToBoxAdapter(child: SizedBox(height: 8)),
-        ],
-
-        // Per-year highlights section
-        if (highlights.isNotEmpty)
           SliverToBoxAdapter(
             child: ContributionHighlightsSection(
               yearlyHighlights: highlights,
               userName: userName,
             ),
           ),
+        ],
 
         const SliverToBoxAdapter(
-          child: SizedBox(height: 24),
+          child: SizedBox(height: 32),
         ),
       ],
     );
