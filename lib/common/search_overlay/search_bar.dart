@@ -3,6 +3,7 @@ import 'package:diohub/common/animations/size_expanded_widget.dart';
 import 'package:diohub/common/misc/ink_pot.dart';
 import 'package:diohub/common/search_overlay/search_overlay.dart';
 import 'package:diohub/routes/router.gr.dart';
+import 'package:diohub/style/surface_style_theme.dart';
 import 'package:diohub/utils/string_compare.dart';
 import 'package:diohub/utils/utils.dart';
 import 'package:flutter/material.dart';
@@ -134,7 +135,7 @@ class AppSearchBarState extends State<AppSearchBar> {
               widget.backgroundColor == context.colorScheme.background
           ? context.colorScheme.surfaceContainerLow
           : (widget.backgroundColor ?? context.colorScheme.surfaceContainerLow),
-      borderRadius: BorderRadius.circular(12),
+      borderRadius: Theme.of(context).surfaceStyle.borderRadiusMedium(),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: <Widget>[
@@ -358,12 +359,12 @@ class AppSearchBarState extends State<AppSearchBar> {
   }) =>
       InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: Theme.of(context).surfaceStyle.borderRadiusMedium(),
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
           decoration: BoxDecoration(
             color: isActive ? context.colorScheme.primary : Colors.transparent,
-            borderRadius: BorderRadius.circular(8),
+            borderRadius: Theme.of(context).surfaceStyle.borderRadiusMedium(),
             border: isActive
                 ? null
                 : Border.all(
@@ -411,7 +412,7 @@ class AppSearchBarState extends State<AppSearchBar> {
 
   Widget _buildSortOptions(final BuildContext context) => Material(
         color: context.colorScheme.surfaceContainerHigh,
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: Theme.of(context).surfaceStyle.borderRadiusMedium(),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: <Widget>[
@@ -424,9 +425,6 @@ class AppSearchBarState extends State<AppSearchBar> {
                 dense: true,
                 contentPadding:
                     const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(6),
-                ),
                 selected: isSelected,
                 selectedTileColor: context.colorScheme.primary,
                 title: Text(
@@ -460,7 +458,7 @@ class AppSearchBarState extends State<AppSearchBar> {
 
   Widget _buildQuickFilterOptions(final BuildContext context) => Material(
         color: context.colorScheme.surfaceContainerHigh,
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: Theme.of(context).surfaceStyle.borderRadiusMedium(),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: <Widget>[
@@ -475,9 +473,7 @@ class AppSearchBarState extends State<AppSearchBar> {
                   dense: true,
                   contentPadding:
                       const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(6),
-                  ),
+                 
                   selected: true,
                   selectedTileColor: context.colorScheme.primary,
                   title: Text(
@@ -506,9 +502,7 @@ class AppSearchBarState extends State<AppSearchBar> {
                 dense: true,
                 contentPadding:
                     const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(6),
-                ),
+               
                 selected: false,
                 title: Text(
                   entry.value,
@@ -532,7 +526,7 @@ class AppSearchBarState extends State<AppSearchBar> {
 
   Widget _buildQuickOptions(final BuildContext context) => Material(
         color: context.colorScheme.surfaceContainerHigh,
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: Theme.of(context).surfaceStyle.borderRadiusMedium(),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: <Widget>[
@@ -543,9 +537,7 @@ class AppSearchBarState extends State<AppSearchBar> {
                 dense: true,
                 contentPadding:
                     const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(6),
-                ),
+               
                 selected: isSelected,
                 selectedTileColor: isSelected
                     ? context.colorScheme.primary.withOpacity(0.1)

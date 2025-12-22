@@ -1,4 +1,5 @@
 import 'package:diohub/common/misc/menu_button.dart';
+import 'package:diohub/style/surface_style_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_dynamic_tabs/flutter_dynamic_tabs.dart';
 import 'package:pull_down_button/pull_down_button.dart';
@@ -89,7 +90,7 @@ Tab _buildDynamicTabMenuButton({
                         Material(
                   color: Colors.transparent,
                   child: InkWell(
-                    borderRadius: BorderRadius.circular(8),
+                    borderRadius: Theme.of(context).surfaceStyle.borderRadiusMedium(),
                     onTap: showMenu,
                     child: Padding(
                       padding: const EdgeInsets.all(2),
