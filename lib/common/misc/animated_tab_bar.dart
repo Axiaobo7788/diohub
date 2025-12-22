@@ -17,8 +17,6 @@ class AnimatedTabBar extends StatelessWidget {
   const AnimatedTabBar({
     required this.showTabBar,
     required this.tabBar,
-    this.defaultPadding = const EdgeInsets.only(bottom: 8),
-    this.topSpacing = 4.0,
     super.key,
   });
 
@@ -29,14 +27,11 @@ class AnimatedTabBar extends StatelessWidget {
   final Widget tabBar;
 
   /// Default padding to show when tab bar is hidden
-  final EdgeInsets defaultPadding;
+  // final EdgeInsets defaultPadding;
 
-  /// Spacing above the tab bar when visible
-  final double topSpacing;
 
   @override
-  Widget build(BuildContext context) {
-    return AnimatedSwitcher(
+  Widget build(BuildContext context) => AnimatedSwitcher(
       duration: const Duration(milliseconds: 300),
       transitionBuilder: (Widget child, Animation<double> animation) {
         return SizeTransition(
@@ -45,23 +40,16 @@ class AnimatedTabBar extends StatelessWidget {
         );
       },
       child: showTabBar
-          ? Column(
+          ? SizedBox(
               key: const ValueKey('tabBar'),
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                SizedBox(height: topSpacing),
+              child: 
                 SizedBox(
                   width: double.infinity,
                   child: tabBar,
                 ),
-              ],
+              
             )
-          : Padding(
-              key: const ValueKey('padding'),
-              padding: defaultPadding,
-              child: const SizedBox.shrink(),
-            ),
+          : const SizedBox.shrink(),
     );
-  }
 }
 

@@ -465,6 +465,8 @@ class _ExpandableProminentActionCardState
   bool _isExpanded = false;
 
   void _toggleExpanded() {
+    print(
+        '[buildExpandableProminentActionCard] Toggling expanded state: ${!_isExpanded} for ${widget.action.label}');
     setState(() {
       _isExpanded = !_isExpanded;
     });
@@ -494,6 +496,8 @@ class _ExpandableProminentActionCardState
       _ => throw ArgumentError(
           'buildExpandableProminentActionCard requires ExpandableActionButton'),
     };
+    print(
+        '[buildExpandableProminentActionCard] Building expandable button: ${action.label}, expandableWidgetBuilder is not null');
 
     // Calculate colors using shared function
     final colors = calculateActionButtonColors(
@@ -526,6 +530,8 @@ class _ExpandableProminentActionCardState
           color: Colors.transparent,
           child: InkWell(
             onTap: () {
+              print(
+                  '[buildExpandableProminentActionCard] Button tapped: ${action.label}, enabled: ${action.enabled}');
               if (action.enabled != false) {
                 _toggleExpanded();
               }
@@ -666,6 +672,9 @@ class _ExpandableProminentActionCardState
         // Expanded options list
         Builder(
           builder: (context) {
+            print(
+                '[buildExpandableProminentActionCard] Rendering SizeExpandedSection, _isExpanded: $_isExpanded, expandableWidgetBuilder is not null');
+
             final screenHeight = MediaQuery.of(context).size.height;
             final maxHeight = screenHeight * 0.6;
             final screenWidth = MediaQuery.of(context).size.width;
