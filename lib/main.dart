@@ -196,7 +196,8 @@ class _RootAppState extends State<RootApp> {
             (lightScheme, darkScheme) =
                 _generateDynamicColourSchemes(lightDynamic, darkDynamic);
           } else {
-            // logic to set standard static themes here
+            lightScheme = _defaultLightColorScheme;
+            darkScheme = _defaultDarkColorScheme;
           }
           return riverpod.ProviderScope(
             child: MaterialApp.router(
@@ -245,7 +246,7 @@ ThemeData getTheme(
   // cs= cs.copyWith(surfaceTint: Colors.transparent);
   final BorderRadiusTheme borderRadiusTheme = BorderRadiusTheme();
   return ThemeData(
-    // useMaterial3: true,
+    useMaterial3: true,
     brightness: brightness,
     // tabBarTheme: TabBarTheme(
     //   labelPadding: EdgeInsets.all(8),
@@ -334,68 +335,16 @@ ThemeData getTheme(
   );
 }
 
-const ColorScheme _defaultLightColorScheme = ColorScheme(
-  primary: Color(0xff0343ff),
-  primaryContainer: Color(0xffdee1ff),
-  onPrimaryContainer: Color(0xff001159),
-  secondary: Color(0xff5f5a7d),
-  onSecondary: Color(0xffffffff),
-  secondaryContainer: Color(0xffe5deff),
-  onSecondaryContainer: Color(0xff1c1736),
-  tertiary: Color(0xff6b5585),
-  onTertiary: Color(0xffffffff),
-  tertiaryContainer: Color(0xffeedbff),
-  onTertiaryContainer: Color(0xff25113e),
-  error: Color(0xffba1a1a),
-  errorContainer: Color(0xffffdad6),
-  onErrorContainer: Color(0xff410002),
-  background: Color(0xfffefbff),
-  onBackground: Color(0xff191b25),
-  surface: Color(0xfffefbff),
-  onSurface: Color(0xff191b25),
-  surfaceVariant: Color(0xffe1e1f3),
-  onSurfaceVariant: Color(0xff444654),
-  outline: Color(0xff747584),
-  outlineVariant: Color(0xffc5c5d6),
-  inverseSurface: Color(0xff2e303a),
-  onInverseSurface: Color(0xfff0effe),
-  inversePrimary: Color(0xffbac3ff),
-  surfaceTint: Color(0xff0343ff),
+const Color _seedColor = Color(0xff2563eb);
+
+final ColorScheme _defaultLightColorScheme = ColorScheme.fromSeed(
+  seedColor: _seedColor,
   brightness: Brightness.light,
-  onPrimary: Color(0xff191b25),
-  onError: Color(0xffffdad6),
 );
 
-const ColorScheme _defaultDarkColorScheme = ColorScheme(
+final ColorScheme _defaultDarkColorScheme = ColorScheme.fromSeed(
+  seedColor: _seedColor,
   brightness: Brightness.dark,
-  primary: Color(0xffbac3ff),
-  onPrimary: Color(0xff00218d),
-  primaryContainer: Color(0xff0031c5),
-  onPrimaryContainer: Color(0xffdee1ff),
-  secondary: Color(0xffc9c1ea),
-  onSecondary: Color(0xff312c4c),
-  secondaryContainer: Color(0xff484364),
-  onSecondaryContainer: Color(0xffe5deff),
-  tertiary: Color(0xffd6bcf3),
-  onTertiary: Color(0xff3b2754),
-  tertiaryContainer: Color(0xff523d6c),
-  onTertiaryContainer: Color(0xffeedbff),
-  error: Color(0xffffb4ab),
-  onError: Color(0xff690005),
-  errorContainer: Color(0xff93000a),
-  onErrorContainer: Color(0xffffb4ab),
-  background: Color(0xff191b25),
-  onBackground: Color(0xffe2e1ef),
-  surface: Color(0xff191b25),
-  onSurface: Color(0xffe2e1ef),
-  surfaceVariant: Color(0xff444654),
-  onSurfaceVariant: Color(0xffc5c5d6),
-  outline: Color(0xff8f909f),
-  outlineVariant: Color(0xff444654),
-  inverseSurface: Color(0xffe2e1ef),
-  onInverseSurface: Color(0xff2e303a),
-  inversePrimary: Color(0xff0343ff),
-  surfaceTint: Color(0xffbac3ff),
 );
 
 // Nice dark cs.
