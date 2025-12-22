@@ -1,4 +1,4 @@
-import 'package:diohub/style/border_radiuses.dart';
+import 'package:diohub/style/surface_style_theme.dart';
 import 'package:diohub/utils/utils.dart';
 import 'package:flutter/material.dart';
 
@@ -13,7 +13,7 @@ class BranchLabel extends StatelessWidget {
         child: DecoratedBox(
           decoration: BoxDecoration(
             color: context.colorScheme.primaryContainer,
-            borderRadius: context.themeData.borderRadiusTheme?.medBorderRadius,
+            borderRadius: Theme.of(context).surfaceStyle.borderRadiusMedium(),
           ),
           child: Padding(
             padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
