@@ -1,4 +1,5 @@
 import 'package:diohub/common/misc/highlighted_container.dart';
+import 'package:diohub/style/surface_style_theme.dart';
 import 'package:diohub/utils/utils.dart';
 import 'package:flutter/material.dart';
 
@@ -150,7 +151,7 @@ class _CollapsibleDetailTilesState extends State<CollapsibleDetailTiles> {
           highlightColor: context.colorScheme.primary.withOpacity(0.4),
           borderSide: BorderSideType.bottom,
           borderWidth: 2.0,
-          borderRadius: 12.0,
+          size: BorderRadiusSize.medium,
           child: Card(
           color: Color.lerp(
             context.colorScheme.surfaceContainer,

@@ -1,6 +1,7 @@
 import 'package:diohub/common/misc/collapsible_action_buttons.dart';
 import 'package:diohub/common/misc/highlighted_container.dart';
 import 'package:diohub/utils/utils.dart';
+import 'package:diohub/style/surface_style_theme.dart';
 import 'package:flutter/material.dart';
 
 // Re-export ActionButtonColors for backward compatibility
@@ -98,7 +99,7 @@ Widget buildStandardActionCard(
   BuildContext context,
   ActionButtonData action, {
   double iconSize = 20,
-  double borderRadius = 14,
+  BorderRadiusSize size = BorderRadiusSize.medium,
   EdgeInsets padding = const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
 }) {
   final colors = calculateActionButtonColors(context, action);
@@ -140,7 +141,7 @@ Widget buildStandardActionCard(
                 _ => null,
               }
             : null,
-        borderRadius: BorderRadius.circular(borderRadius),
+        borderRadius: Theme.of(context).surfaceStyle.borderRadius(size: size),
         child: Padding(
           padding: padding,
           child: Column(
@@ -237,7 +238,7 @@ Widget buildProminentActionCard(
   BuildContext context,
   ActionButtonData action, {
   double iconSize = 20,
-  double borderRadius = 14,
+  BorderRadiusSize size = BorderRadiusSize.medium,
   EdgeInsets? padding,
   Color? seedColor,
 }) {
@@ -291,7 +292,7 @@ Widget buildProminentActionCard(
       absorbing: !action.enabled,
       child: InkWell(
         onTap: action.enabled ? onTap : null,
-        borderRadius: BorderRadius.circular(borderRadius),
+        borderRadius: Theme.of(context).surfaceStyle.borderRadius(size: size),
         child: AnimatedContainer(
           key: ValueKey('checkbox_${action.label}'),
           duration: const Duration(milliseconds: 600),
@@ -306,7 +307,8 @@ Widget buildProminentActionCard(
           },
           decoration: BoxDecoration(
             color: colors.backgroundColor,
-            borderRadius: BorderRadius.circular(borderRadius),
+            borderRadius:
+                Theme.of(context).surfaceStyle.borderRadius(size: size),
             border: Border.all(
               color: context.colorScheme.outline.withOpacity(0.1),
               width: 0.5,
@@ -424,7 +426,7 @@ Widget buildExpandableProminentActionCard(
   BuildContext context,
   ActionButtonData action, {
   double iconSize = 16,
-  double borderRadius = 14,
+  BorderRadiusSize size = BorderRadiusSize.medium,
   EdgeInsets? padding,
   VoidCallback? onOptionSelected,
 }) {
@@ -433,7 +435,7 @@ Widget buildExpandableProminentActionCard(
   return _ExpandableProminentActionCard(
     action: action,
     iconSize: iconSize,
-    borderRadius: borderRadius,
+    size: size,
     padding: effectivePadding,
     onOptionSelected: onOptionSelected,
   );
@@ -444,14 +446,14 @@ class _ExpandableProminentActionCard extends StatefulWidget {
   const _ExpandableProminentActionCard({
     required this.action,
     required this.iconSize,
-    required this.borderRadius,
+    required this.size,
     required this.padding,
     this.onOptionSelected,
   });
 
   final ActionButtonData action;
   final double iconSize;
-  final double borderRadius;
+  final BorderRadiusSize size;
   final EdgeInsets padding;
   final VoidCallback? onOptionSelected;
 
@@ -536,7 +538,8 @@ class _ExpandableProminentActionCardState
                 _toggleExpanded();
               }
             },
-            borderRadius: BorderRadius.circular(widget.borderRadius),
+            borderRadius:
+                Theme.of(context).surfaceStyle.borderRadius(size: widget.size),
             child: AnimatedContainer(
               duration: const Duration(milliseconds: 200),
               curve: Curves.easeInOut,
@@ -547,7 +550,9 @@ class _ExpandableProminentActionCardState
                     ? (effectiveSeedColor ?? context.colorScheme.primary)
                         .withOpacity(0.15)
                     : colors.backgroundColor,
-                borderRadius: BorderRadius.circular(widget.borderRadius),
+                borderRadius: Theme.of(context)
+                    .surfaceStyle
+                    .borderRadius(size: widget.size),
                 border: Border.all(
                   color: _isExpanded
                       ? (effectiveSeedColor ?? context.colorScheme.primary)
@@ -694,8 +699,9 @@ class _ExpandableProminentActionCardState
                         decoration: BoxDecoration(
                           color: context.colorScheme.surfaceContainerHighest
                               .withOpacity(0.2),
-                          borderRadius:
-                              BorderRadius.circular(widget.borderRadius),
+                          borderRadius: Theme.of(context)
+                              .surfaceStyle
+                              .borderRadius(size: widget.size),
                           border: Border.all(
                             color: context.colorScheme.outline.withOpacity(0.1),
                             width: 0.5,
@@ -721,7 +727,7 @@ Widget buildAppBarActionCard(
   BuildContext context,
   ActionButtonData action, {
   double iconSize = 18,
-  double borderRadius = 12,
+  BorderRadiusSize size = BorderRadiusSize.medium,
   EdgeInsets padding = const EdgeInsets.all(12),
 }) {
   // Calculate base colors
@@ -775,10 +781,10 @@ Widget buildAppBarActionCard(
 
   return HighlightedContainer(
     highlightColor: iconColor,
-    borderRadius: borderRadius,
+    size: size,
     child: Material(
       color: finalBackgroundColor,
-      borderRadius: BorderRadius.circular(borderRadius),
+      borderRadius: Theme.of(context).surfaceStyle.borderRadius(size: size),
       child: AbsorbPointer(
         absorbing: !action.enabled,
         child: InkWell(
@@ -788,7 +794,7 @@ Widget buildAppBarActionCard(
                   _ => null,
                 }
               : null,
-          borderRadius: BorderRadius.circular(borderRadius),
+          borderRadius: Theme.of(context).surfaceStyle.borderRadius(size: size),
           child: Padding(
             padding: padding,
             child: Column(
@@ -854,7 +860,7 @@ Widget buildCompactActionCard(
   BuildContext context,
   ActionButtonData action, {
   double iconSize = 18,
-  double borderRadius = 10,
+  BorderRadiusSize size = BorderRadiusSize.small,
   EdgeInsets padding = const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
 }) {
   // Calculate base colors
@@ -908,11 +914,11 @@ Widget buildCompactActionCard(
 
   return HighlightedContainer(
     highlightColor: iconColor,
-    borderRadius: borderRadius,
+    size: size,
     // elevation: 4,
     child: Material(
       color: finalBackgroundColor,
-      borderRadius: BorderRadius.circular(borderRadius),
+      borderRadius: Theme.of(context).surfaceStyle.borderRadius(size: size),
       child: AbsorbPointer(
         absorbing: !action.enabled,
         child: InkWell(
@@ -922,7 +928,7 @@ Widget buildCompactActionCard(
                   _ => null,
                 }
               : null,
-          borderRadius: BorderRadius.circular(borderRadius),
+          borderRadius: Theme.of(context).surfaceStyle.borderRadius(size: size),
           child: Padding(
             padding: padding,
             child: Column(

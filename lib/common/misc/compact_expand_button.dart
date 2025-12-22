@@ -1,4 +1,5 @@
 import 'package:diohub/common/misc/highlighted_container.dart';
+import 'package:diohub/style/surface_style_theme.dart';
 import 'package:flutter/material.dart';
 
 /// A compact button that shows only a chevron icon for expanding/collapsing content.
@@ -23,13 +24,17 @@ class CompactExpandButton extends StatelessWidget {
       highlightColor: colorScheme.primary.withOpacity(0.4),
       borderSide: BorderSideType.bottom,
       borderWidth: 2.0,
-      borderRadius: 12.0,
+      size: BorderRadiusSize.medium,
       child: Material(
         color: colorScheme.surfaceContainerHighest.withOpacity(0.5),
-      borderRadius: BorderRadius.circular(12),
+      borderRadius: Theme.of(context).surfaceStyle.borderRadius(
+        size: BorderRadiusSize.medium,
+      ),
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: Theme.of(context).surfaceStyle.borderRadius(
+        size: BorderRadiusSize.medium,
+      ),
         child: Padding(
           padding: const EdgeInsets.symmetric(
             horizontal: 12,

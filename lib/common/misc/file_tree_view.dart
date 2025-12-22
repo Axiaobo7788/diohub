@@ -2,6 +2,7 @@ import 'package:diohub/models/commits/commit_model.dart';
 import 'package:diohub/utils/utils.dart';
 import 'package:diohub/common/misc/highlighted_container.dart';
 import 'package:diohub/common/misc/file_tree_view_provider.dart';
+import 'package:diohub/style/surface_style_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_sticky_header/flutter_sticky_header.dart';
@@ -256,7 +257,7 @@ class FileTreeView extends ConsumerWidget {
       ),
       child: HighlightedContainer(
         highlightColor: context.colorScheme.primary,
-        borderRadius: 6,
+        size: BorderRadiusSize.small,
         child: Material(
           color: context.colorScheme.surfaceContainerHighest,
           borderRadius: BorderRadius.circular(6),
@@ -410,7 +411,7 @@ class FileTreeView extends ConsumerWidget {
 
     return HighlightedContainer(
       highlightColor: statusColor,
-      borderRadius: 8,
+      size: BorderRadiusSize.small,
       child: Material(
         color: Color.lerp(
           context.colorScheme.surfaceContainer,
@@ -641,7 +642,7 @@ class _ExpandableToolbarState extends State<_ExpandableToolbar>
   Widget build(BuildContext context) {
     return HighlightedContainer(
       highlightColor: context.colorScheme.primary,
-      borderRadius: 8,
+      size: BorderRadiusSize.small,
       child: AnimatedBuilder(
         animation: _controller,
         builder: (context, child) {
