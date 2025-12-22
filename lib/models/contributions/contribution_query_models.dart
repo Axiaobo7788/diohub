@@ -153,16 +153,28 @@ class YearlyContributionHighlights {
     required this.year,
     required this.fromDate,
     required this.toDate,
+    required this.startedAt,
+    required this.endedAt,
     required this.restrictedContributionsCount,
+    required this.totalCommitContributions,
+    required this.totalIssueContributions,
+    required this.totalPullRequestContributions,
+    required this.totalPullRequestReviewContributions,
+    required this.totalRepositoryContributions,
+    required this.totalContributions,
     required this.totalRepositoriesWithContributedCommits,
     required this.totalRepositoriesWithContributedIssues,
     required this.totalRepositoriesWithContributedPullRequests,
+    required this.totalRepositoriesWithContributedPullRequestReviews,
     required this.calendarMonths,
+    this.earliestRestrictedContributionDate,
+    this.latestRestrictedContributionDate,
     this.firstIssue,
     this.firstPullRequest,
     this.firstRepository,
     this.popularIssue,
     this.popularPullRequest,
+    this.mostReviewedRepository,
     this.joinedGitHub,
   });
 
@@ -175,8 +187,38 @@ class YearlyContributionHighlights {
   /// End date of the range for this year chunk
   final DateTime toDate;
 
+  /// Exact start timestamp from API (more accurate than fromDate)
+  final DateTime startedAt;
+
+  /// Exact end timestamp from API (more accurate than toDate)
+  final DateTime endedAt;
+
   /// Count of contributions viewer can't see (private/restricted)
   final int restrictedContributionsCount;
+
+  /// Date of earliest restricted contribution (if any)
+  final DateTime? earliestRestrictedContributionDate;
+
+  /// Date of latest restricted contribution (if any)
+  final DateTime? latestRestrictedContributionDate;
+
+  /// Total commits in this year
+  final int totalCommitContributions;
+
+  /// Total issues in this year
+  final int totalIssueContributions;
+
+  /// Total pull requests in this year
+  final int totalPullRequestContributions;
+
+  /// Total pull request reviews in this year
+  final int totalPullRequestReviewContributions;
+
+  /// Total repositories created in this year
+  final int totalRepositoryContributions;
+
+  /// Total contributions (from calendar) in this year
+  final int totalContributions;
 
   /// How many repos had commits
   final int totalRepositoriesWithContributedCommits;
@@ -186,6 +228,9 @@ class YearlyContributionHighlights {
 
   /// How many repos had PRs
   final int totalRepositoriesWithContributedPullRequests;
+
+  /// How many repos had pull request reviews
+  final int totalRepositoriesWithContributedPullRequestReviews;
 
   /// Monthly breakdown for this year
   final List<ContributionMonth> calendarMonths;
@@ -204,6 +249,9 @@ class YearlyContributionHighlights {
 
   /// Most commented pull request in this range
   final ContributionHighlightItem? popularPullRequest;
+
+  /// Repository with most PR reviews in this range
+  final ContributionHighlightItem? mostReviewedRepository;
 
   /// GitHub account join date (if in this range)
   final DateTime? joinedGitHub;
