@@ -193,13 +193,13 @@ class _RootAppState extends State<RootApp> {
           print('hjbs jhbf s');
           print(lightDynamic);
           print(darkDynamic);
-          if (lightDynamic != null && darkDynamic != null) {
-            (lightScheme, darkScheme) =
-                _generateDynamicColourSchemes(lightDynamic, darkDynamic);
-          } else {
-            lightScheme = _defaultLightColorScheme;
-            darkScheme = _defaultDarkColorScheme;
-          }
+          // if (lightDynamic != null && darkDynamic != null) {
+          //   (lightScheme, darkScheme) =
+          //       _generateDynamicColourSchemes(lightDynamic, darkDynamic);
+          // } else {
+          //   lightScheme = _defaultLightColorScheme;
+          //   darkScheme = _defaultDarkColorScheme;
+          // }
           return riverpod.ProviderScope(
             child: MaterialApp.router(
               theme: getTheme(
@@ -252,24 +252,17 @@ ThemeData getTheme(
     fontFamily: Provider.of<FontSettings>(context).currentSetting,
     // Card shapes
     cardTheme: CardThemeData(
-      shape: SurfaceShapeResolver.shape(
-        context,
-        size: BorderRadiusSize.medium,
-      ),
+      shape: SurfaceShapeResolver.medium(context),
     ),
     // Dialog shapes
     dialogTheme: DialogThemeData(
-      shape: SurfaceShapeResolver.shape(
-        context,
-        size: BorderRadiusSize.large,
-      ),
+      shape: SurfaceShapeResolver.large(context),
     ),
     // Bottom sheet with top corners only
     bottomSheetTheme: BottomSheetThemeData(
       surfaceTintColor: Colors.transparent,
-      shape: SurfaceShapeResolver.shape(
+      shape: SurfaceShapeResolver.large(
         context,
-        size: BorderRadiusSize.large,
         corners: const [CornerSide.top],
       ),
     ),
