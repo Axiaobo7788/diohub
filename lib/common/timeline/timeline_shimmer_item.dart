@@ -1,4 +1,5 @@
 import 'package:diohub/common/misc/shimmer_widget.dart';
+import 'package:diohub/style/surface_style_theme.dart';
 import 'package:diohub/utils/utils.dart';
 import 'package:flutter/material.dart';
 
@@ -84,7 +85,7 @@ class TimelineShimmerItem extends StatelessWidget {
                         ShimmerWidget.container(
                           height: 12,
                           width: 30,
-                          borderRadius: BorderRadius.circular(4),
+                          borderRadius: Theme.of(context).surfaceStyle.borderRadiusSmall(),
                         ),
                       ],
                     ),
@@ -140,13 +141,13 @@ class TimelineShimmerItem extends StatelessWidget {
           ShimmerWidget.container(
             height: 14,
             width: 80,
-            borderRadius: BorderRadius.circular(4),
+            borderRadius: Theme.of(context).surfaceStyle.borderRadiusSmall(),
           ),
           const SizedBox(width: 4),
           ShimmerWidget.container(
             height: 14,
             width: 60,
-            borderRadius: BorderRadius.circular(4),
+            borderRadius: Theme.of(context).surfaceStyle.borderRadiusSmall(),
           ),
         ],
       );
@@ -155,7 +156,7 @@ class TimelineShimmerItem extends StatelessWidget {
       return ShimmerWidget.container(
         height: 14,
         width: 100,
-        borderRadius: BorderRadius.circular(4),
+        borderRadius: Theme.of(context).surfaceStyle.borderRadiusSmall(),
       );
     }
   }
@@ -169,7 +170,7 @@ class TimelineShimmerItem extends StatelessWidget {
         // Main content card shimmer
         ShimmerWidget.container(
           height: 80,
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: Theme.of(context).surfaceStyle.borderRadiusMedium(),
           highlightColor: context.colorScheme.surfaceVariant.withOpacity(0.5),
         ),
       ],
@@ -284,7 +285,7 @@ class TimelineShimmerList extends StatelessWidget {
         ShimmerWidget.container(
           height: 24,
           width: 24,
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: Theme.of(context).surfaceStyle.borderRadiusMedium(),
         ),
         const SizedBox(width: 8),
         // Username shimmer
@@ -293,7 +294,7 @@ class TimelineShimmerList extends StatelessWidget {
           child: ShimmerWidget.container(
             height: 14,
             width: 100,
-            borderRadius: BorderRadius.circular(4),
+            borderRadius: Theme.of(context).surfaceStyle.borderRadiusSmall(),
           ),
         ),
       ],

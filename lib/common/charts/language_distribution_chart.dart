@@ -1,3 +1,4 @@
+import 'package:diohub/style/surface_style_theme.dart';
 import 'package:flutter/material.dart';
 
 /// Data for a language in the distribution chart
@@ -141,7 +142,7 @@ class LanguageDistributionChart extends StatelessWidget {
       child: Container(
         height: barHeight,
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(4),
+          borderRadius: Theme.of(context).surfaceStyle.borderRadiusSmall(),
         ),
         child: Stack(
           children: [
@@ -151,7 +152,7 @@ class LanguageDistributionChart extends StatelessWidget {
               child: Container(
                 decoration: BoxDecoration(
                   color: color,
-                  borderRadius: BorderRadius.circular(4),
+                  borderRadius: Theme.of(context).surfaceStyle.borderRadiusSmall(),
                 ),
               ),
             ),
