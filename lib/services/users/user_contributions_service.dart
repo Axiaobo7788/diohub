@@ -113,6 +113,43 @@ class UserContributionsService {
         : DateTime.now();
     final year = fromDate.year;
 
+    // Extract highlights (requires generated types from build_runner)
+    ContributionHighlightItem? firstIssue;
+    ContributionHighlightItem? firstPR;
+    ContributionHighlightItem? firstRepo;
+    ContributionHighlightItem? popularIssue;
+    ContributionHighlightItem? popularPR;
+    DateTime? joinedGitHub;
+
+    try {
+      firstIssue = _extractHighlightItem(
+        contribution: collection.firstIssueContribution,
+        type: 'issue',
+      );
+      firstPR = _extractHighlightItem(
+        contribution: collection.firstPullRequestContribution,
+        type: 'pullRequest',
+      );
+      firstRepo = _extractHighlightItem(
+        contribution: collection.firstRepositoryContribution,
+        type: 'repository',
+      );
+      popularIssue = _extractHighlightItem(
+        contribution: collection.popularIssueContribution,
+        type: 'issue',
+      );
+      popularPR = _extractHighlightItem(
+        contribution: collection.popularPullRequestContribution,
+        type: 'pullRequest',
+      );
+      joinedGitHub = collection.joinedGitHubContribution?.occurredAt;
+    } catch (e) {
+      if (kDebugMode) {
+        log.w('Error extracting highlights (run build_runner if types missing)',
+            error: e);
+      }
+    }
+
     // Build yearly highlights for single year
     final highlights = YearlyContributionHighlights(
       year: year,
@@ -126,6 +163,12 @@ class UserContributionsService {
       totalRepositoriesWithContributedPullRequests:
           collection.totalRepositoriesWithContributedPullRequests,
       calendarMonths: calendarMonths,
+      firstIssue: firstIssue,
+      firstPullRequest: firstPR,
+      firstRepository: firstRepo,
+      popularIssue: popularIssue,
+      popularPullRequest: popularPR,
+      joinedGitHub: joinedGitHub,
     );
 
     return ContributionCollectionResult(
@@ -188,6 +231,44 @@ class UserContributionsService {
           : DateTime.now();
       final year = fromDate.year;
 
+      // Extract highlights (requires generated types from build_runner)
+      ContributionHighlightItem? firstIssue;
+      ContributionHighlightItem? firstPR;
+      ContributionHighlightItem? firstRepo;
+      ContributionHighlightItem? popularIssue;
+      ContributionHighlightItem? popularPR;
+      DateTime? joinedGitHub;
+
+      try {
+        firstIssue = _extractHighlightItem(
+          contribution: collection.firstIssueContribution,
+          type: 'issue',
+        );
+        firstPR = _extractHighlightItem(
+          contribution: collection.firstPullRequestContribution,
+          type: 'pullRequest',
+        );
+        firstRepo = _extractHighlightItem(
+          contribution: collection.firstRepositoryContribution,
+          type: 'repository',
+        );
+        popularIssue = _extractHighlightItem(
+          contribution: collection.popularIssueContribution,
+          type: 'issue',
+        );
+        popularPR = _extractHighlightItem(
+          contribution: collection.popularPullRequestContribution,
+          type: 'pullRequest',
+        );
+        joinedGitHub = collection.joinedGitHubContribution?.occurredAt;
+      } catch (e) {
+        if (kDebugMode) {
+          log.w(
+              'Error extracting highlights (run build_runner if types missing)',
+              error: e);
+        }
+      }
+
       yearlyHighlights.add(YearlyContributionHighlights(
         year: year,
         fromDate: fromDate,
@@ -200,6 +281,12 @@ class UserContributionsService {
         totalRepositoriesWithContributedPullRequests:
             collection.totalRepositoriesWithContributedPullRequests,
         calendarMonths: calendarMonths,
+        firstIssue: firstIssue,
+        firstPullRequest: firstPR,
+        firstRepository: firstRepo,
+        popularIssue: popularIssue,
+        popularPullRequest: popularPR,
+        joinedGitHub: joinedGitHub,
       ));
 
       for (int weekIndex = 0; weekIndex < weeks.length; weekIndex++) {
@@ -394,5 +481,83 @@ class UserContributionsService {
       viewModel: viewModel,
       yearlyHighlights: yearlyHighlights,
     );
+  }
+
+  /// Extract highlight contribution from GraphQL union type
+  /// NOTE: Requires running `flutter pub run build_runner build` after adding highlight fields to query
+  static ContributionHighlightItem? _extractHighlightItem({
+    required dynamic contribution,
+    required String type,
+  }) {
+    if (contribution == null) return null;
+
+    try {
+      // Check for restricted contribution
+      final typename = contribution.G__typename;
+      if (typename == 'RestrictedContribution') {
+        return ContributionHighlightItem(
+          title: 'Private contribution',
+          url: '',
+          createdAt: contribution.occurredAt ?? DateTime.now(),
+          repositoryName: '',
+          repositoryOwner: '',
+          type: ContributionHighlightType.restricted,
+          isRestricted: true,
+        );
+      }
+
+      // Extract based on type
+      if (type == 'issue') {
+        final issue = contribution.issue;
+        if (issue == null) return null;
+        return ContributionHighlightItem(
+          title: issue.title ?? '',
+          url: issue.url?.toString() ?? '',
+          createdAt: issue.createdAt,
+          repositoryName: issue.repository?.name ?? '',
+          repositoryOwner: issue.repository?.owner?.login ?? '',
+          type: ContributionHighlightType.issue,
+          number: issue.number,
+          commentCount: issue.comments?.totalCount,
+          state: issue.state?.name ?? 'OPEN',
+          body: issue.body,
+        );
+      } else if (type == 'pullRequest') {
+        final pr = contribution.pullRequest;
+        if (pr == null) return null;
+        return ContributionHighlightItem(
+          title: pr.title ?? '',
+          url: pr.url?.toString() ?? '',
+          createdAt: pr.createdAt,
+          repositoryName: pr.repository?.name ?? '',
+          repositoryOwner: pr.repository?.owner?.login ?? '',
+          type: ContributionHighlightType.pullRequest,
+          number: pr.number,
+          commentCount: pr.comments?.totalCount,
+          state: pr.state?.name ?? 'OPEN',
+          body: pr.body,
+          mergedAt: pr.mergedAt,
+        );
+      } else if (type == 'repository') {
+        final repo = contribution.repository;
+        if (repo == null) return null;
+        return ContributionHighlightItem(
+          title: repo.name,
+          url: repo.url?.toString() ?? '',
+          createdAt: repo.createdAt,
+          repositoryName: repo.name,
+          repositoryOwner: repo.owner?.login ?? '',
+          type: ContributionHighlightType.repository,
+          stargazerCount: repo.stargazerCount,
+          isPrivate: repo.isPrivate ?? false,
+        );
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        log.e('Error extracting highlight item', error: e);
+      }
+    }
+
+    return null;
   }
 }
