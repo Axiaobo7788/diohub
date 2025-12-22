@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:diohub/common/animations/size_expanded_widget.dart';
 import 'package:diohub/common/bottom_sheet/bottom_sheets.dart';
 import 'package:diohub/common/misc/highlighted_container.dart';
+import 'package:diohub/style/surface_style_theme.dart';
 import 'package:diohub/common/misc/loading_indicator.dart';
 import 'package:diohub/common/wrappers/provider_loading_progress_wrapper.dart';
 import 'package:diohub/providers/base_provider.dart';
@@ -104,7 +105,7 @@ class CodeBrowserState extends State<CodeBrowser>
                         padding: const EdgeInsets.symmetric(horizontal: 16),
                         child: HighlightedContainer(
                           highlightColor: context.colorScheme.primary,
-                          borderRadius: 12,
+                          size: BorderRadiusSize.medium,
                           child: Container(
                             height: 40,
                             decoration: BoxDecoration(
@@ -191,7 +192,7 @@ class CodeBrowserState extends State<CodeBrowser>
                     padding: const EdgeInsets.symmetric(horizontal: 16),
                     child: HighlightedContainer(
                       highlightColor: context.colorScheme.primary,
-                      borderRadius: 16,
+                      size: BorderRadiusSize.large,
                       child: Container(
                         decoration: BoxDecoration(
                           color: context.colorScheme.surfaceContainerHigh,
@@ -240,7 +241,7 @@ class CodeBrowserState extends State<CodeBrowser>
   ) {
     return HighlightedContainer(
       highlightColor: context.colorScheme.primary,
-      borderRadius: 12,
+      // borderRadius: 12,
       child: Material(
         color: context.colorScheme.surfaceContainerHigh,
         borderRadius: BorderRadius.circular(12),
@@ -270,7 +271,7 @@ class CodeBrowserState extends State<CodeBrowser>
           padding: const EdgeInsets.symmetric(horizontal: 16),
           child: HighlightedContainer(
             highlightColor: context.colorScheme.primary,
-            borderRadius: 12,
+            size: BorderRadiusSize.medium,
             child: Material(
               color: context.colorScheme.surfaceContainerHigh,
               borderRadius: BorderRadius.circular(12),

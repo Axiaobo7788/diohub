@@ -7,6 +7,7 @@ import 'package:diohub/common/misc/action_card_builder.dart';
 import 'package:diohub/common/misc/detail_tile.dart';
 import 'package:diohub/common/misc/detail_tile_content.dart';
 import 'package:diohub/common/misc/highlighted_container.dart';
+import 'package:diohub/style/surface_style_theme.dart';
 import 'package:diohub/common/misc/theme_from_image.dart';
 import 'package:diohub/common/wrappers/dynamic_tabs_parent.dart';
 import 'package:diohub/common/wrappers/editing_wrapper.dart';
@@ -875,7 +876,7 @@ class _ConversationButtonWidgetState extends State<_ConversationButtonWidget> {
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
         child: HighlightedContainer(
           highlightColor: context.colorScheme.primary,
-          borderRadius: 12,
+          size: BorderRadiusSize.medium,
           child: Material(
             color: context.colorScheme.primaryContainer,
             borderRadius: BorderRadius.circular(12),

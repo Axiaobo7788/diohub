@@ -1,6 +1,8 @@
 import 'package:diohub/common/misc/expandable_info_card.dart';
 import 'package:diohub/common/misc/highlighted_container.dart';
+import 'package:diohub/common/misc/surface_shape_resolver.dart';
 import 'package:diohub/graphql/queries/repositories/__generated__/repo_info.data.gql.dart';
+import 'package:diohub/style/surface_style_theme.dart';
 import 'package:diohub/utils/utils.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_vector_icons/flutter_vector_icons.dart';
@@ -21,7 +23,7 @@ Widget buildDescriptionAndStats(
           padding: const EdgeInsets.only(bottom: 8),
           child: HighlightedContainer(
             highlightColor: Theme.of(context).colorScheme.primary,
-            borderRadius: 12,
+            size: BorderRadiusSize.medium,
             child: ExpandableInfoCard(
               title: 'Description',
               expandedContent: Text(description),
@@ -47,14 +49,16 @@ Widget buildRepositoryStats(
 
   return HighlightedContainer(
     highlightColor: Theme.of(context).colorScheme.primary,
-    borderRadius: 12,
+    size: BorderRadiusSize.medium,
     child: Material(
       color: Color.lerp(
         Theme.of(context).colorScheme.surfaceContainer,
         Colors.black,
         0.1,
       ),
-      borderRadius: BorderRadius.circular(12),
+      borderRadius: Theme.of(context).surfaceStyle.borderRadius(
+        size: BorderRadiusSize.medium,
+      ),
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -177,10 +181,14 @@ Widget _buildStatItem(
   return Material(
     color:
         Theme.of(context).colorScheme.surfaceContainerHighest.withOpacity(0.2),
-    borderRadius: BorderRadius.circular(8),
+    borderRadius: Theme.of(context).surfaceStyle.borderRadius(
+      size: BorderRadiusSize.small,
+    ),
     child: InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(8),
+      borderRadius: Theme.of(context).surfaceStyle.borderRadius(
+        size: BorderRadiusSize.small,
+      ),
       child: Padding(
         padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 6),
         child: Column(
