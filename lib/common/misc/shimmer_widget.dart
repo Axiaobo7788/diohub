@@ -43,8 +43,8 @@ class ShimmerWidget extends StatelessWidget {
             context.themeData.borderRadiusTheme?.medBorderRadius ??
             BorderRadius.circular(4),
         child: Shimmer.fromColors(
-          baseColor: baseColor ?? context.colorScheme.surfaceVariant.asHint(),
-          highlightColor: highlightColor ?? context.colorScheme.surfaceVariant,
+          baseColor: baseColor ?? context.colorScheme.onSurface.withOpacity(0.06),
+          highlightColor: highlightColor ?? context.colorScheme.onSurface.withOpacity(0.12),
           child: child ?? Container(),
         ),
       );

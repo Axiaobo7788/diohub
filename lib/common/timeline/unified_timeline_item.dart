@@ -3,6 +3,7 @@ import 'package:diohub/common/timeline/timeline_container.dart';
 import 'package:diohub/utils/get_date.dart';
 import 'package:diohub/utils/utils.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_bounceable/flutter_bounceable.dart';
 import 'package:timeline_tile/timeline_tile.dart';
 
 /// Unified timeline item that works for both Events and Activity timelines
@@ -106,15 +107,18 @@ class UnifiedTimelineItem extends StatelessWidget {
             // Content (each child wrapped in its own container)
             ...children.map((child) {
               if (highlighted) {
-                return BorderedContainer(
-                  borderColor: eventIconColor,
-                  // borderSide: BorderSideType.bottom,
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 8,
+                return Bounceable(
+                  onTap: () {},
+                  child: BorderedContainer(
+                    borderColor: eventIconColor,
+                    // borderSide: BorderSideType.bottom,
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 8,
+                      ),
+                      child: child,
                     ),
-                    child: child,
                   ),
                 );
               } else {
