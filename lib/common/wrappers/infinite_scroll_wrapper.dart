@@ -2,6 +2,7 @@ import 'package:dio/dio.dart';
 import 'package:diohub/app/global.dart';
 import 'package:diohub/common/misc/button.dart';
 import 'package:diohub/common/misc/loading_indicator.dart';
+import 'package:diohub/common/wrappers/liquid_pull_to_refresh_wrapper.dart';
 import 'package:diohub/common/wrappers/scroll_to_top_wrapper.dart';
 import 'package:diohub/utils/utils.dart';
 import 'package:flutter/material.dart';
@@ -164,7 +165,7 @@ class InfiniteScrollWrapperState<T> extends State<InfiniteScrollWrapper<T>> {
   @override
   Widget build(final BuildContext context) {
     // Fetch overlap handle from NestedScrollView if available
-    final overlapHandle = NestedScrollView.sliverOverlapAbsorberHandleFor(context);
+    final SliverOverlapAbsorberHandle overlapHandle = NestedScrollView.sliverOverlapAbsorberHandleFor(context);
     
     Widget scrollView(final ScrollViewProperties? properties) {
       final ScrollPhysics physics = widget.disableScroll
@@ -215,7 +216,7 @@ class InfiniteScrollWrapperState<T> extends State<InfiniteScrollWrapper<T>> {
 
     Widget refreshIndicator({final ScrollViewProperties? properties}) {
       if (!widget.disableRefresh) {
-        return RefreshIndicator(
+        return PullToRefreshWrapper(
           // color:
           //     Provider.of<PaletteSettings>(context).currentSetting.baseElements,
           onRefresh: () => Future<void>.sync(() async {
@@ -259,12 +260,7 @@ class _InfinitePagination<T> extends StatefulWidget {
     required this.filterFn,
     required this.controller,
     required this.firstPageLoadingBuilder,
-    this.emptyBuilder,
-    required this.pageNumber,
-    required this.pageSize,
-    required this.padding,
-    required this.separatorBuilder,
-    required this.listEndIndicator,
+    required this.pageNumber, required this.pageSize, required this.padding, required this.separatorBuilder, required this.listEndIndicator, this.emptyBuilder,
     super.key,
   });
 
@@ -328,7 +324,7 @@ class _InfinitePaginationState<T> extends State<_InfinitePagination<T>> {
     pageNumber = widget.pageNumber;
     _pagingController = PagingController<int, _ListItem<T>>(
       value: PagingState<int, _ListItem<T>>(
-        hasNextPage: true, // Initially we have pages to load
+        
       ),
       fetchPage: _fetchPage,
       getNextPageKey: (final PagingState<int, _ListItem<T>> state) {
@@ -422,7 +418,7 @@ class _InfinitePaginationState<T> extends State<_InfinitePagination<T>> {
   Widget build(final BuildContext context) =>
       ValueListenableBuilder<PagingState<int, _ListItem<T>>>(
         valueListenable: _pagingController,
-        builder: (context, state, _) =>
+        builder: (final BuildContext context, final PagingState<int, _ListItem<T>> state, final _) =>
             PagedSliverList<int, _ListItem<T>>.separated(
           state: state,
           fetchNextPage: _pagingController.fetchNextPage,
@@ -446,7 +442,7 @@ class _InfinitePaginationState<T> extends State<_InfinitePagination<T>> {
               // Check if we're still in initial load phase (no items animated yet OR all animated items are first page)
               final bool isInitialLoadPhase = _animatedItems.isEmpty ||
                   (_animatedItems.isNotEmpty &&
-                      _animatedItems.every((i) => i < widget.pageSize));
+                      _animatedItems.every((final int i) => i < widget.pageSize));
 
               // Animate if: not already animated AND (is refresh OR is first page in initial load phase)
               final bool shouldAnimate = !_animatedItems.contains(index) &&
@@ -461,10 +457,10 @@ class _InfinitePaginationState<T> extends State<_InfinitePagination<T>> {
               }
 
               // Get adjacent items from state
-              final items = state.items;
-              final previousItem =
+              final List<_ListItem<T>>? items = state.items;
+              final T? previousItem =
                   index > 0 && items != null ? items[index - 1].item : null;
-              final nextItem = index < (items?.length ?? 0) - 1 && items != null
+              final T? nextItem = index < (items?.length ?? 0) - 1 && items != null
                   ? items[index + 1].item
                   : null;
 
@@ -599,7 +595,6 @@ class _FirstPageExceptionIndicator extends StatelessWidget {
     required this.title,
     this.message,
     this.onTryAgain,
-    super.key,
   });
 
   final String title;
@@ -629,10 +624,7 @@ class _FirstPageExceptionIndicator extends StatelessWidget {
 /// Widget that animates items in with a staggered delay
 class _StaggeredAnimatedItem extends StatefulWidget {
   const _StaggeredAnimatedItem({
-    super.key,
-    required this.index,
-    required this.shouldAnimate,
-    required this.child,
+    required this.index, required this.shouldAnimate, required this.child, super.key,
   });
 
   final int index;
@@ -658,8 +650,8 @@ class _StaggeredAnimatedItemState extends State<_StaggeredAnimatedItem>
     );
 
     _fadeAnimation = Tween<double>(
-      begin: 0.0,
-      end: 1.0,
+      begin: 0,
+      end: 1,
     ).animate(
       CurvedAnimation(
         parent: _controller,
@@ -668,7 +660,7 @@ class _StaggeredAnimatedItemState extends State<_StaggeredAnimatedItem>
     );
 
     _slideAnimation = Tween<Offset>(
-      begin: const Offset(0.0, 0.3),
+      begin: const Offset(0, 0.3),
       end: Offset.zero,
     ).animate(
       CurvedAnimation(
@@ -683,7 +675,7 @@ class _StaggeredAnimatedItemState extends State<_StaggeredAnimatedItem>
       // Start animation with a delay based on index for staggered effect
       final int delay = (widget.index * 50).clamp(0, 300);
       // Use addPostFrameCallback to ensure widget is fully built before animating
-      WidgetsBinding.instance.addPostFrameCallback((_) {
+      WidgetsBinding.instance.addPostFrameCallback((final _) {
         Future<void>.delayed(Duration(milliseconds: delay), () {
           if (mounted && _controller.status == AnimationStatus.dismissed) {
             _controller.forward();
@@ -703,13 +695,11 @@ class _StaggeredAnimatedItemState extends State<_StaggeredAnimatedItem>
   }
 
   @override
-  Widget build(final BuildContext context) {
-    return FadeTransition(
+  Widget build(final BuildContext context) => FadeTransition(
       opacity: _fadeAnimation,
       child: SlideTransition(
         position: _slideAnimation,
         child: widget.child,
       ),
     );
-  }
 }

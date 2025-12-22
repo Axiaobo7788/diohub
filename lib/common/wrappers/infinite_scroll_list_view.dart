@@ -3,6 +3,7 @@ import 'package:diohub/app/global.dart';
 import 'package:diohub/common/misc/button.dart';
 import 'package:diohub/common/misc/loading_indicator.dart';
 import 'package:diohub/common/wrappers/infinite_scroll_wrapper.dart';
+import 'package:diohub/common/wrappers/liquid_pull_to_refresh_wrapper.dart';
 import 'package:diohub/utils/utils.dart';
 import 'package:flutter/material.dart';
 import 'package:infinite_scroll_pagination/infinite_scroll_pagination.dart';
@@ -115,7 +116,7 @@ class InfiniteScrollListViewState<T> extends State<InfiniteScrollListView<T>> {
 
     Widget refreshIndicator() {
       if (!widget.disableRefresh) {
-        return RefreshIndicator(
+        return PullToRefreshWrapper(
           onRefresh: () => Future<void>.sync(() async {
             controller.refresh();
           }),
@@ -258,7 +259,6 @@ class _InfinitePaginationListViewState<T>
         builder: (context, state, _) =>
             PagedListView<int, _ListItem<T>>.separated(
           state: state,
-          
           fetchNextPage: _pagingController.fetchNextPage,
           scrollController: widget.scrollController,
           shrinkWrap: widget.shrinkWrap,
@@ -273,9 +273,8 @@ class _InfinitePaginationListViewState<T>
             ) {
               // Get adjacent items from state
               final items = state.items;
-              final previousItem = index > 0 && items != null
-                  ? items[index - 1].item
-                  : null;
+              final previousItem =
+                  index > 0 && items != null ? items[index - 1].item : null;
               final nextItem = index < (items?.length ?? 0) - 1 && items != null
                   ? items[index + 1].item
                   : null;
