@@ -1,3 +1,4 @@
+import 'package:diohub/style/surface_style_theme.dart';
 import 'package:flutter/material.dart';
 
 /// A generic card widget that implements the common layout pattern:
@@ -58,7 +59,9 @@ class HeaderCard extends StatelessWidget {
     return Card(
       elevation: 1,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: Theme.of(context).surfaceStyle.borderRadius(
+              size: BorderRadiusSize.medium,
+            ),
       ),
       margin: margin,
       color: color,
