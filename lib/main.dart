@@ -11,7 +11,8 @@ import 'package:diohub/providers/search_data_provider.dart';
 import 'package:diohub/providers/users/current_user_provider.dart';
 import 'package:diohub/routes/router.gr.dart';
 import 'package:diohub/services/authentication/auth_service.dart';
-import 'package:diohub/style/border_radiuses.dart';
+import 'package:diohub/style/surface_style_theme.dart';
+import 'package:diohub/common/misc/surface_shape_resolver.dart';
 import 'package:diohub/utils/device_display_mode.dart';
 import 'package:dynamic_color/dynamic_color.dart';
 import 'package:flutter/cupertino.dart';
@@ -244,93 +245,54 @@ ThemeData getTheme(
 }) {
   final ColorScheme? cs = colorScheme;
   // cs= cs.copyWith(surfaceTint: Colors.transparent);
-  final BorderRadiusTheme borderRadiusTheme = BorderRadiusTheme();
+  const SurfaceStyleTheme surfaceStyle = SurfaceStyleTheme();
   return ThemeData(
     useMaterial3: true,
     brightness: brightness,
-    // tabBarTheme: TabBarTheme(
-    //   labelPadding: EdgeInsets.all(8),
-    // indicator: BoxDecoration(
-    //   color: context.colorScheme.primary,
-    //   borderRadius: bigBorderRadius,
-    // ),
-    // labelStyle: TextStyle(color: context.colorScheme.onPrimary)
-    //     .merge(context.textTheme.titleSmall),
-    // ),
-    // visualDensity: VisualDensity.compact,
-    // unselectedWidgetColor: palette.faded1,
-    // cardColor: palette.primary,
-    // pageTransitionsTheme: const PageTransitionsTheme(
-    //   builders: <TargetPlatform, PageTransitionsBuilder>{
-    //     // TargetPlatform.android: CupertinoPageTransitionsBuilder(),
-    //     TargetPlatform.iOS: CupertinoPageTransitionsBuilder(),
-    //   },
-    // ),
-    // appBarTheme: const AppBarTheme(elevation: 0),
-    // tabBarTheme: TabBarTheme(
-    //   indicator: BoxDecoration(
-    //     borderRadius: bigBorderRadius,
-    //   ),
-    //   unselectedLabelStyle: Theme.of(context)
-    //       .textTheme
-    //       .titleLarge!
-    //       .copyWith( 14, fontWeight: FontWeight.w600),
-    //   labelStyle: Theme.of(context)
-    //       .textTheme
-    //       .titleLarge!
-    //       .copyWith( 20, fontWeight: FontWeight.bold),
-    //   labelPadding: const EdgeInsets.only(left: 8, right: 8, bottom: 8),
-    // ),
-
-    // bottomSheetTheme: BottomSheetThemeData(
-    //   shape: const RoundedRectangleBorder(
-    //     borderRadius: BorderRadius.only(
-    //       topRight: Radius.circular(20),
-    //       topLeft: Radius.circular(20),
-    //     ),
-    //   ),
-    // ),
-
-    // scrollbarTheme: ScrollbarThemeData(
-    //   thumbColor: MaterialStateProperty.all<Color>(grey),
-    // ),
-    // dialogTheme: DialogTheme(
-    //   shape: RoundedRectangleBorder(borderRadius: medBorderRadius),
-    // ),
-    // listTileTheme: ListTileThemeData(iconColor: context.palette.baseElements),
-    // dividerColor: grey.withOpacity(0.7),
-    // buttonTheme: ButtonThemeData(
-    //   textTheme: ButtonTextTheme.primary,
-    //   padding: EdgeInsets.zero,
-    //   colorScheme: const ColorScheme.dark(),
-    //   shape: RoundedRectangleBorder(borderRadius: medBorderRadius),
-    // ),
     fontFamily: Provider.of<FontSettings>(context).currentSetting,
-    // cardTheme: CardTheme(
-    //   // color: palette.secondary,
-    //   shape: RoundedRectangleBorder(borderRadius: medBorderRadius),
-    // ),
+    // Card shapes
+    cardTheme: CardThemeData(
+      shape: SurfaceShapeResolver.shape(
+        context,
+        size: BorderRadiusSize.medium,
+      ),
+    ),
+    // Dialog shapes
+    dialogTheme: DialogThemeData(
+      shape: SurfaceShapeResolver.shape(
+        context,
+        size: BorderRadiusSize.large,
+      ),
+    ),
+    // Bottom sheet with top corners only
     bottomSheetTheme: BottomSheetThemeData(
       surfaceTintColor: Colors.transparent,
+      shape: SurfaceShapeResolver.shape(
+        context,
+        size: BorderRadiusSize.large,
+        corners: const [CornerSide.top],
+      ),
     ),
+    // Input fields
     inputDecorationTheme: InputDecorationTheme(
-      // contentPadding: const EdgeInsets.all(16),
-      // hintStyle: TextStyle( 12),
       filled: true,
-      enabledBorder: OutlineInputBorder(
+      enabledBorder: SurfaceShapeResolver.inputBorder(
+        context,
+        size: BorderRadiusSize.medium,
         borderSide: const BorderSide(color: Colors.transparent),
-        borderRadius: borderRadiusTheme.medBorderRadius,
       ),
-      focusedBorder: OutlineInputBorder(
-        borderRadius: borderRadiusTheme.medBorderRadius,
+      focusedBorder: SurfaceShapeResolver.inputBorder(
+        context,
+        size: BorderRadiusSize.medium,
       ),
-      border: OutlineInputBorder(
-        borderRadius: borderRadiusTheme.medBorderRadius,
+      border: SurfaceShapeResolver.inputBorder(
+        context,
+        size: BorderRadiusSize.medium,
       ),
     ),
     colorScheme: cs,
     extensions: <ThemeExtension<dynamic>>[
-      borderRadiusTheme,
+      surfaceStyle,
     ],
   );
 }
