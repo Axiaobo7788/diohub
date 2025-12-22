@@ -27,6 +27,7 @@ dependencies:
   dynamic_color: ^1.7.0
   equatable: ^2.0.7
   expand_widget: ^3.1.1
+  figma_squircle: ^0.6.3
 
   # Modified to remove the current typing word indicator.
   extended_text_field:
