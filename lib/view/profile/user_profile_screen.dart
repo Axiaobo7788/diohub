@@ -200,12 +200,12 @@ class UserProfileScreenState extends State<UserProfileScreen>
               ],
             ),
           ),
-          const SizedBox(height: 16),
-          // Detail tiles section
-          _buildDetailTilesSection(context, userData),
-          const SizedBox(height: 16),
-          // Action buttons
-          _buildActionButtons(context, userData, tabController),
+        //   const SizedBox(height: 16),
+        //   // Detail tiles section
+        //   _buildDetailTilesSection(context, userData),
+        //   const SizedBox(height: 16),
+        //   // Action buttons
+        //   _buildActionButtons(context, userData, tabController),
         ],
       ),
     );

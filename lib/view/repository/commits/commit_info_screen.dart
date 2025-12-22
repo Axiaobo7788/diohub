@@ -9,6 +9,7 @@ import 'package:diohub/common/misc/detail_tile.dart';
 import 'package:diohub/common/misc/detail_tile_content.dart';
 import 'package:diohub/common/misc/file_tree_view.dart';
 import 'package:diohub/common/wrappers/dynamic_tabs_parent.dart';
+import 'package:diohub/common/wrappers/liquid_pull_to_refresh_wrapper.dart';
 import 'package:diohub/common/wrappers/provider_loading_progress_wrapper.dart';
 import 'package:diohub/graphql/__generated__/schema.schema.gql.dart';
 import 'package:diohub/graphql/queries/repositories/__generated__/commit_info.data.gql.dart';
@@ -79,11 +80,11 @@ class CommitInfoScreenState extends State<CommitInfoScreen>
         final Widget tabView,
       ) =>
           Scaffold(
-        body: RefreshIndicator(
+        body: PullToRefreshWrapper(
           onRefresh: () async {
             await provider.loadData();
           },
-          triggerMode: RefreshIndicatorTriggerMode.anywhere,
+          // triggerMode: RefreshIndicatorTriggerMode.anywhere,
           child: DynamicScroll(
             collapsedWidget: _buildCollapsedHeader(commit),
             expandedWidget: _buildExpandedHeader(commit, provider),

@@ -488,8 +488,7 @@ class HomeScreenState extends State<HomeScreen>
               bottom: AnimatedTabBar(
                 showTabBar: tabsController.activeLength > 1,
                 tabBar: tabBar,
-                defaultPadding: const EdgeInsets.only(bottom: 8),
-                topSpacing: 0,
+                // defaultPadding: const EdgeInsets.only(bottom: 8),
               ),
               expandedWidget: buildProfileCard(context),
               body: tabView,
