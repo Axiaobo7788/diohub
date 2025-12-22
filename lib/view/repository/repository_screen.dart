@@ -254,16 +254,13 @@ class RepositoryScreenState extends DeepLinkWidgetState<RepositoryScreen>
                                 tabController.activeIdentifierNotifier,
                                 tabController,
                               ),
-                              pinnedWidget: null,
                               actions: <Widget>[
                                 ShareButton(repo.url.toString())
                               ],
                               bottom: AnimatedTabBar(
                                 showTabBar: tabController.activeLength > 1,
                                 tabBar: tabs,
-                                defaultPadding:
-                                    const EdgeInsets.only(bottom: 8),
-                                topSpacing: 4.0,
+                             
                               ),
                               body: loading
                                   ? const Center(

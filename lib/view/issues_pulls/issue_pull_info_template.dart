@@ -15,6 +15,7 @@ import 'package:diohub/common/bottom_sheet/bottom_sheets.dart';
 import 'package:diohub/common/misc/info_card.dart';
 import 'package:diohub/common/misc/profile_banner.dart';
 import 'package:diohub/common/wrappers/infinite_scroll_wrapper.dart';
+import 'package:diohub/common/wrappers/liquid_pull_to_refresh_wrapper.dart';
 import 'package:diohub/graphql/__generated__/schema.schema.gql.dart';
 import 'package:diohub/graphql/queries/issues_pulls/__generated__/issue_pull_info.data.gql.dart';
 import 'package:diohub/graphql/queries/issues_pulls/__generated__/timeline.data.gql.dart';
@@ -721,9 +722,9 @@ class IssuePullInfoTemplateState extends State<IssuePullInfoTemplate>
             assigneeEditingController,
           ],
           builder: (final BuildContext context) => Scaffold(
-            body: RefreshIndicator(
+            body: PullToRefreshWrapper(
               onRefresh: widget.onRefresh,
-              triggerMode: RefreshIndicatorTriggerMode.anywhere,
+              // triggerMode: RefreshIndicatorTriggerMode.anywhere,
               child: DynamicScroll(
                 collapsedWidget: _buildCollapsedHeader(context),
                 expandedWidget: _buildExpandedHeader(context),
@@ -731,8 +732,6 @@ class IssuePullInfoTemplateState extends State<IssuePullInfoTemplate>
                 bottom: AnimatedTabBar(
                   showTabBar: dynamicTabsController.activeLength > 1,
                   tabBar: buildTabsView(tabBar),
-                  defaultPadding: const EdgeInsets.only(bottom: 8),
-                  topSpacing: 0,
                 ),
                 body: tabView,
               ),

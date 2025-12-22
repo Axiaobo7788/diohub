@@ -5,6 +5,7 @@ import 'package:diohub/view/profile/about/widgets/contribution_summary_tab.dart'
 import 'package:flutter/material.dart';
 
 /// Tabbed section showing Summary, Contributions timeline, and Activity feed
+/// Appears below the contribution calendar
 class TabbedContributionSection extends StatefulWidget {
   const TabbedContributionSection({
     required this.contributionResult,
@@ -23,7 +24,7 @@ class TabbedContributionSection extends StatefulWidget {
   final DateTime? customFromDate;
   final DateTime? customToDate;
   final bool useCustomRange;
-  final DateTime createdAt;
+  final DateTime? createdAt;
 
   @override
   State<TabbedContributionSection> createState() =>
@@ -49,30 +50,45 @@ class _TabbedContributionSectionState extends State<TabbedContributionSection>
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
 
     return Column(
       children: [
-        Container(
-          decoration: BoxDecoration(
-            border: Border(
-              bottom: BorderSide(
-                color: theme.colorScheme.outlineVariant.withOpacity(0.5),
-                width: 1,
-              ),
+        TabBar(
+          controller: _tabController,
+          // Color-only design: No indicator, just color change
+          indicator: const BoxDecoration(),
+          indicatorSize: TabBarIndicatorSize.label,
+          indicatorPadding: EdgeInsets.zero,
+          dividerColor: Colors.transparent,
+          tabAlignment: TabAlignment.center,
+          labelStyle: theme.textTheme.labelLarge?.copyWith(
+            fontWeight: FontWeight.w700,
+            fontSize: 13,
+            letterSpacing: 0.2,
+          ),
+          unselectedLabelStyle: theme.textTheme.labelLarge?.copyWith(
+            fontWeight: FontWeight.w500,
+            fontSize: 13,
+            letterSpacing: 0.1,
+          ),
+          labelColor: colorScheme.primary,
+          unselectedLabelColor: colorScheme.onSurfaceVariant.withOpacity(0.6),
+          labelPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+          tabs: const [
+            Tab(
+              height: 40,
+              text: 'Summary',
             ),
-          ),
-          child: TabBar(
-            controller: _tabController,
-            labelColor: theme.colorScheme.primary,
-            unselectedLabelColor: theme.colorScheme.onSurfaceVariant,
-            indicatorColor: theme.colorScheme.primary,
-            indicatorWeight: 2,
-            tabs: const [
-              Tab(text: 'Summary'),
-              Tab(text: 'Contributions'),
-              Tab(text: 'Activity'),
-            ],
-          ),
+            Tab(
+              height: 40,
+              text: 'Contributions',
+            ),
+            Tab(
+              height: 40,
+              text: 'Activity',
+            ),
+          ],
         ),
         Expanded(
           child: TabBarView(
@@ -81,6 +97,7 @@ class _TabbedContributionSectionState extends State<TabbedContributionSection>
               // Summary tab
               ContributionSummaryTab(
                 contributionResult: widget.contributionResult,
+                userName: widget.userName,
                 selectedYear: widget.selectedYear,
                 customFromDate: widget.customFromDate,
                 customToDate: widget.customToDate,
@@ -111,4 +128,3 @@ class _TabbedContributionSectionState extends State<TabbedContributionSection>
     );
   }
 }
-

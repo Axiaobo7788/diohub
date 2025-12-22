@@ -1,3 +1,4 @@
+import 'package:diohub/common/misc/shimmer_widget.dart';
 import 'package:diohub/graphql/queries/users/__generated__/user_info.data.gql.dart';
 import 'package:diohub/models/contributions/contribution_query_models.dart';
 import 'package:diohub/providers/users/user_contributions_provider.dart';
@@ -82,9 +83,7 @@ class _UserAboutScreenState extends ConsumerState<UserAboutScreen> {
           createdAt: widget.userData.createdAt,
         );
       },
-      loading: () => const Center(
-        child: CircularProgressIndicator(),
-      ),
+      loading: () => const _ContributionLoadingSkeleton(),
       error: (error, stackTrace) {
         if (kDebugMode) {
           debugPrint('Error loading contribution data: $error');
@@ -130,3 +129,222 @@ class _UserAboutScreenState extends ConsumerState<UserAboutScreen> {
   }
 }
 
+/// Loading skeleton that mimics the contribution section layout
+class _ContributionLoadingSkeleton extends StatelessWidget {
+  const _ContributionLoadingSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        return Column(
+          children: [
+            // Calendar skeleton
+            Padding(
+              padding: const EdgeInsets.all(8.0),
+              child: Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: theme.colorScheme.surfaceContainerHighest
+                      .withOpacity(0.3),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Title and stats row
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        ShimmerWidget.container(
+                          height: 20,
+                          width: 150,
+                        ),
+                        ShimmerWidget.container(
+                          height: 20,
+                          width: 100,
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    // Calendar grid
+                    ShimmerWidget.container(
+                      height: 120,
+                      width: double.infinity,
+                    ),
+                    const SizedBox(height: 12),
+                    // Stats chips
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: [
+                        ShimmerWidget.container(height: 28, width: 80),
+                        ShimmerWidget.container(height: 28, width: 70),
+                        ShimmerWidget.container(height: 28, width: 75),
+                        ShimmerWidget.container(height: 28, width: 65),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
+
+            const SizedBox(height: 8),
+
+            // Activity overview skeleton (radar chart section)
+            Padding(
+              padding: const EdgeInsets.all(8.0),
+              child: Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: theme.colorScheme.surfaceContainerHighest
+                      .withOpacity(0.3),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    ShimmerWidget.container(
+                      height: 18,
+                      width: 120,
+                    ),
+                    const SizedBox(height: 16),
+                    Row(
+                      children: [
+                        // Repositories list
+                        Expanded(
+                          flex: 3,
+                          child: Column(
+                            children: List.generate(
+                              3,
+                              (index) => Padding(
+                                padding: const EdgeInsets.only(bottom: 12),
+                                child: Row(
+                                  children: [
+                                    ShimmerWidget.container(
+                                      height: 16,
+                                      width: 16,
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          ShimmerWidget.container(
+                                            height: 14,
+                                            width: double.infinity,
+                                          ),
+                                          const SizedBox(height: 4),
+                                          ShimmerWidget.container(
+                                            height: 12,
+                                            width: 80,
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        // Radar chart
+                        Expanded(
+                          flex: 2,
+                          child: Column(
+                            children: [
+                              ShimmerWidget.container(
+                                height: 14,
+                                width: 80,
+                              ),
+                              const SizedBox(height: 12),
+                              ShimmerWidget.container(
+                                height: 150,
+                                width: 150,
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
+
+            const SizedBox(height: 8),
+
+            // Tabs skeleton
+            Container(
+              decoration: BoxDecoration(
+                border: Border(
+                  bottom: BorderSide(
+                    color: theme.colorScheme.outlineVariant.withOpacity(0.5),
+                    width: 1,
+                  ),
+                ),
+              ),
+              child: Padding(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                child: Row(
+                  children: [
+                    ShimmerWidget.container(height: 16, width: 70),
+                    const SizedBox(width: 24),
+                    ShimmerWidget.container(height: 16, width: 90),
+                    const SizedBox(width: 24),
+                    ShimmerWidget.container(height: 16, width: 60),
+                  ],
+                ),
+              ),
+            ),
+
+            // Tab content skeleton - takes remaining space
+            Expanded(
+              child: ListView(
+                padding: const EdgeInsets.all(16),
+                children: List.generate(
+                  3,
+                  (index) => Padding(
+                    padding: const EdgeInsets.only(bottom: 16),
+                    child: Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: theme.colorScheme.surfaceContainerHighest
+                            .withOpacity(0.3),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          ShimmerWidget.container(
+                            height: 16,
+                            width: double.infinity,
+                          ),
+                          const SizedBox(height: 8),
+                          ShimmerWidget.container(
+                            height: 14,
+                            width: 150,
+                          ),
+                          const SizedBox(height: 4),
+                          ShimmerWidget.container(
+                            height: 14,
+                            width: 100,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+}
