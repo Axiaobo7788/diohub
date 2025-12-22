@@ -1,3 +1,4 @@
+import 'package:diohub/utils/utils.dart';
 import 'package:flutter/material.dart';
 import 'package:diohub/style/surface_style_theme.dart';
 import 'package:diohub/common/misc/surface_shape_resolver.dart';
@@ -9,7 +10,7 @@ import 'package:diohub/common/misc/surface_shape_resolver.dart';
 class BorderedContainer extends StatelessWidget {
   const BorderedContainer({
     required this.child,
-    required this.borderColor,
+     this.borderColor,
     this.borderSide = BorderSideType.bottom,
     this.borderWidth = 1.2,
     this.size = BorderRadiusSize.medium,
@@ -21,7 +22,7 @@ class BorderedContainer extends StatelessWidget {
   final Widget child;
 
   /// Color of the border
-  final Color borderColor;
+  final Color? borderColor;
 
   /// Which side to show the border on
   final BorderSideType borderSide;
@@ -44,11 +45,11 @@ class BorderedContainer extends StatelessWidget {
     // Create border with only the specified side visible
     final Border border;
     final BorderRadius clipRadius;
-
+final BorderSide borderSideValue = BorderSide(color: borderColor?.withOpacity(0.8)??context.colorScheme.primary.withOpacity(0.5), width: borderWidth);
     switch (borderSide) {
       case BorderSideType.top:
         border = Border(
-          top: BorderSide(color: borderColor, width: borderWidth),
+          top: borderSideValue,
         );
         // Clip bottom corners (opposite side) for consistent rounded borders
         clipRadius = BorderRadius.only(
@@ -58,7 +59,7 @@ class BorderedContainer extends StatelessWidget {
         break;
       case BorderSideType.bottom:
         border = Border(
-          bottom: BorderSide(color: borderColor, width: borderWidth),
+          bottom: borderSideValue,
         );
         // Clip top corners (opposite side) for consistent rounded borders
         clipRadius = BorderRadius.only(
@@ -68,7 +69,7 @@ class BorderedContainer extends StatelessWidget {
         break;
       case BorderSideType.left:
         border = Border(
-          left: BorderSide(color: borderColor, width: borderWidth),
+          left: borderSideValue,
         );
         // Clip right corners (opposite side) for consistent rounded borders
         clipRadius = BorderRadius.only(
@@ -78,7 +79,7 @@ class BorderedContainer extends StatelessWidget {
         break;
       case BorderSideType.right:
         border = Border(
-          right: BorderSide(color: borderColor, width: borderWidth),
+          right: borderSideValue,
         );
         // Clip left corners (opposite side) for consistent rounded borders
         clipRadius = BorderRadius.only(

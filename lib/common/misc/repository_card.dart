@@ -33,6 +33,7 @@ class RepositoryCard extends StatelessWidget {
     this.commitSha,
     this.commitShaUrl,
     this.contributionCount,
+    this.reviewCount,
     this.withBackground = false,
     this.branchColor,
     this.branchStrikethrough = false,
@@ -47,6 +48,7 @@ class RepositoryCard extends StatelessWidget {
   final String? commitSha;
   final String? commitShaUrl;
   final int? contributionCount;
+  final int? reviewCount;
   final bool withBackground;
   final Color?
       branchColor; // Optional color for branch indicator (e.g., green for created, red for deleted)
@@ -95,7 +97,8 @@ class RepositoryCard extends StatelessWidget {
                       const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                   decoration: BoxDecoration(
                     color: context.colorScheme.surfaceVariant.withOpacity(0.5),
-                    borderRadius: Theme.of(context).surfaceStyle.borderRadiusSmall(),
+                    borderRadius:
+                        Theme.of(context).surfaceStyle.borderRadiusSmall(),
                   ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
@@ -133,7 +136,8 @@ class RepositoryCard extends StatelessWidget {
                     color: branchColor != null
                         ? branchColor!.withOpacity(0.12)
                         : context.colorScheme.surfaceVariant.withOpacity(0.5),
-                    borderRadius: Theme.of(context).surfaceStyle.borderRadiusSmall(),
+                    borderRadius:
+                        Theme.of(context).surfaceStyle.borderRadiusSmall(),
                     border: branchColor != null
                         ? Border.all(
                             color: branchColor!.withOpacity(0.25),
@@ -230,12 +234,21 @@ class RepositoryCard extends StatelessWidget {
                   repo?.language != null && repo!.language!.isNotEmpty;
               final starCount = repo?.stargazersCount ?? 0;
               final hasStars = starCount > 0;
-              final count = contributionCount ?? repo?.contributionCount ?? 0;
-              final hasContributions = count > 0;
+              // Use contributionCount (which should be commit count) if provided, otherwise fallback to repo's contributionCount
+              final commitCountValue =
+                  contributionCount ?? repo?.contributionCount ?? 0;
+              final hasContributions = commitCountValue > 0;
+              final reviewCountValue = reviewCount ?? 0;
+              final hasReviews = reviewCountValue > 0;
 
               // Only show footer if at least one item exists
-              if (!hasLanguage && !hasStars && !hasContributions) {
-                return const SizedBox(height: 4,);
+              if (!hasLanguage &&
+                  !hasStars &&
+                  !hasContributions &&
+                  !hasReviews) {
+                return const SizedBox(
+                  height: 4,
+                );
               }
 
               return Column(
@@ -278,7 +291,9 @@ class RepositoryCard extends StatelessWidget {
                               horizontal: 8, vertical: 4),
                           decoration: BoxDecoration(
                             color: const Color(0xFF2196F3).withOpacity(0.1),
-                            borderRadius: Theme.of(context).surfaceStyle.borderRadiusMedium(),
+                            borderRadius: Theme.of(context)
+                                .surfaceStyle
+                                .borderRadiusMedium(),
                             border: Border.all(
                               color: const Color(0xFF2196F3).withOpacity(0.3),
                               width: 1,
@@ -294,13 +309,49 @@ class RepositoryCard extends StatelessWidget {
                               ),
                               const SizedBox(width: 4),
                               Text(
-                                '$count ${count == 1 ? 'commit' : 'commits'}',
+                                '$commitCountValue ${commitCountValue == 1 ? 'commit' : 'commits'}',
                                 style: Theme.of(context)
                                     .textTheme
                                     .bodySmall
                                     ?.copyWith(
                                       fontWeight: FontWeight.w600,
                                       color: const Color(0xFF2196F3),
+                                    ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      if (hasReviews)
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFFF9800).withOpacity(0.1),
+                            borderRadius: Theme.of(context)
+                                .surfaceStyle
+                                .borderRadiusMedium(),
+                            border: Border.all(
+                              color: const Color(0xFFFF9800).withOpacity(0.3),
+                              width: 1,
+                            ),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: <Widget>[
+                              Icon(
+                                Octicons.check,
+                                size: 12,
+                                color: const Color(0xFFFF9800),
+                              ),
+                              const SizedBox(width: 4),
+                              Text(
+                                '$reviewCountValue ${reviewCountValue == 1 ? 'review' : 'reviews'}',
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .bodySmall
+                                    ?.copyWith(
+                                      fontWeight: FontWeight.w600,
+                                      color: const Color(0xFFFF9800),
                                     ),
                               ),
                             ],
