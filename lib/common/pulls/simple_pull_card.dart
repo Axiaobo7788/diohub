@@ -38,12 +38,11 @@ class SimplePullCard extends StatelessWidget {
   String get _title => item.title;
   String? get _url => item.url;
   IssueState get _state {
-    if (item.merged == true) return IssueState.OPEN; // Merged shows as open
     return item.state == 'OPEN' ? IssueState.OPEN : IssueState.CLOSED;
   }
 
   int get _number => item.number;
-  int get _comments => 0; // Comments not in card model
+  int get _comments => item.commentCount;
   String? get _body => item.body;
   String? get _bodyHtml => item.bodyHtml;
   UserInfoModel? get _user => item.author;
@@ -307,7 +306,8 @@ class SimplePullCard extends StatelessWidget {
   }
 
   Widget _getPullIcon(IssueState? state, DateTime? mergedAt) {
-    if (state == IssueState.CLOSED && mergedAt != null) {
+    // Check merged state directly from item, not from IssueState
+    if (item.merged == true) {
       return const Icon(
         Octicons.git_merge,
         size: 14,
@@ -315,7 +315,7 @@ class SimplePullCard extends StatelessWidget {
       );
     } else if (state == IssueState.CLOSED) {
       return const Icon(
-        Octicons.git_pull_request,
+        Octicons.git_pull_request_closed,
         size: 14,
         color: Color(0xFFF44336), // Red for closed
       );
