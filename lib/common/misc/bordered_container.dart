@@ -1,24 +1,18 @@
 import 'package:flutter/material.dart';
-
-/// Enum to specify which side the border should be on
-enum BorderSideType {
-  top,
-  bottom,
-  left,
-  right,
-}
+import 'package:diohub/style/surface_style_theme.dart';
+import 'package:diohub/common/misc/surface_shape_resolver.dart';
 
 /// A widget that wraps a child with a colored border on one side with rounded corners.
 ///
 /// This creates a 3D effect by adding a colored border on a specified side.
-/// The border respects the borderRadius without using ClipRRect.
+/// Uses standardized border radius sizes and supports squircle shapes.
 class BorderedContainer extends StatelessWidget {
   const BorderedContainer({
     required this.child,
     required this.borderColor,
     this.borderSide = BorderSideType.bottom,
     this.borderWidth = 1.2,
-    this.borderRadius = 12.0,
+    this.size = BorderRadiusSize.medium,
     this.backgroundColor,
     super.key,
   });
@@ -35,14 +29,18 @@ class BorderedContainer extends StatelessWidget {
   /// Width of the border
   final double borderWidth;
 
-  /// Border radius for rounded corners
-  final double borderRadius;
+  /// Border radius size (standardized)
+  final BorderRadiusSize size;
 
   /// Background color of the container. If null, uses surfaceVariant from theme.
   final Color? backgroundColor;
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final surfaceStyle = theme.surfaceStyle;
+    final borderRadius = surfaceStyle.borderRadius(size: size);
+
     // Create border with only the specified side visible
     final Border border;
     final BorderRadius clipRadius;
@@ -54,8 +52,8 @@ class BorderedContainer extends StatelessWidget {
         );
         // Clip bottom corners (opposite side) for consistent rounded borders
         clipRadius = BorderRadius.only(
-          bottomLeft: Radius.circular(borderRadius),
-          bottomRight: Radius.circular(borderRadius),
+          bottomLeft: borderRadius.bottomLeft,
+          bottomRight: borderRadius.bottomRight,
         );
         break;
       case BorderSideType.bottom:
@@ -64,8 +62,8 @@ class BorderedContainer extends StatelessWidget {
         );
         // Clip top corners (opposite side) for consistent rounded borders
         clipRadius = BorderRadius.only(
-          topLeft: Radius.circular(borderRadius),
-          topRight: Radius.circular(borderRadius),
+          topLeft: borderRadius.topLeft,
+          topRight: borderRadius.topRight,
         );
         break;
       case BorderSideType.left:
@@ -74,8 +72,8 @@ class BorderedContainer extends StatelessWidget {
         );
         // Clip right corners (opposite side) for consistent rounded borders
         clipRadius = BorderRadius.only(
-          topRight: Radius.circular(borderRadius),
-          bottomRight: Radius.circular(borderRadius),
+          topRight: borderRadius.topRight,
+          bottomRight: borderRadius.bottomRight,
         );
         break;
       case BorderSideType.right:
@@ -84,21 +82,44 @@ class BorderedContainer extends StatelessWidget {
         );
         // Clip left corners (opposite side) for consistent rounded borders
         clipRadius = BorderRadius.only(
-          topLeft: Radius.circular(borderRadius),
-          bottomLeft: Radius.circular(borderRadius),
+          topLeft: borderRadius.topLeft,
+          bottomLeft: borderRadius.bottomLeft,
         );
         break;
+    }
+
+    // Get base decoration from theme API, then override with single-side border
+    final baseDecoration = SurfaceShapeResolver.boxDecoration(
+      context,
+      size: size,
+      color: backgroundColor ??
+          Theme.of(context).colorScheme.surfaceContainerHighest.withValues(
+                alpha: 0.3,
+              ),
+      border: border, // Pass the single-side border
+    );
+
+    // For single-side borders, we need BoxDecoration (not ShapeDecoration)
+    // So extract the values and create a BoxDecoration
+    final BoxDecoration decoration;
+    if (baseDecoration is BoxDecoration) {
+      decoration = baseDecoration.copyWith(border: border);
+    } else {
+      // Fallback if it's a ShapeDecoration (shouldn't happen for rounded)
+      decoration = BoxDecoration(
+        color: backgroundColor ??
+            Theme.of(context).colorScheme.surfaceContainerHighest.withValues(
+                  alpha: 0.3,
+                ),
+        borderRadius: borderRadius,
+        border: border,
+      );
     }
 
     return ClipRRect(
       borderRadius: clipRadius,
       child: Container(
-        decoration: BoxDecoration(
-          color: backgroundColor ??
-              Theme.of(context).colorScheme.surfaceVariant.withOpacity(0.3),
-          borderRadius: BorderRadius.circular(borderRadius),
-          border: border,
-        ),
+        decoration: decoration,
         child: child,
       ),
     );

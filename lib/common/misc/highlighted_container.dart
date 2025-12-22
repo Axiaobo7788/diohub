@@ -1,13 +1,7 @@
 import 'package:diohub/utils/utils.dart';
 import 'package:flutter/material.dart';
-
-/// Enum to specify which side the border should be on (for border mode)
-enum BorderSideType {
-  top,
-  bottom,
-  left,
-  right,
-}
+import 'package:diohub/style/surface_style_theme.dart';
+import 'package:diohub/common/misc/surface_shape_resolver.dart';
 
 /// Enum to specify the highlight style
 enum HighlightStyle {
@@ -21,7 +15,7 @@ enum HighlightStyle {
 /// A widget that wraps a child with a highlight effect.
 ///
 /// Can use either elevation shadow or a colored border on one side.
-/// The border respects the borderRadius with ClipRRect on opposite corners.
+/// Uses standardized border radius sizes and supports squircle shapes.
 ///
 /// The highlight style is hardcoded and will be made configurable via app settings later.
 class HighlightedContainer extends StatelessWidget {
@@ -31,7 +25,7 @@ class HighlightedContainer extends StatelessWidget {
     this.backgroundColor,
     this.borderSide = BorderSideType.bottom,
     this.borderWidth = 0.5,
-    this.borderRadius = 12.0,
+    this.size = BorderRadiusSize.medium,
     super.key,
   });
 
@@ -50,92 +44,76 @@ class HighlightedContainer extends StatelessWidget {
   /// Width of the border (only used in border mode)
   final double borderWidth;
 
-  /// Border radius for rounded corners
-  final double borderRadius;
-
-  /// Elevation for shadow (only used in elevation mode)
-  // final double elevation;
+  /// Border radius size (standardized)
+  final BorderRadiusSize size;
 
   // TODO: Fetch from app settings
   static const HighlightStyle _style = HighlightStyle.elevation;
 
+  /// Convert BorderSideType to CornerSide list for opposite corners
+  List<CornerSide> _getOppositeCorners(BorderSideType side) {
+    switch (side) {
+      case BorderSideType.top:
+        return const [CornerSide.bottom];
+      case BorderSideType.bottom:
+        return const [CornerSide.top];
+      case BorderSideType.left:
+        return const [CornerSide.right];
+      case BorderSideType.right:
+        return const [CornerSide.left];
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     if (_style == HighlightStyle.elevation) {
-      // Elevation mode: use Material with elevation
+      // Elevation mode: use Material with elevation and squircle shape
+      final shape = SurfaceShapeResolver.shape(
+        context,
+        size: size,
+      );
+
       return Material(
         color: backgroundColor ?? context.colorScheme.onSurface,
-        borderRadius: BorderRadius.circular(borderRadius),
+        shape: shape,
         elevation: 1,
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(borderRadius),
-          child: child,
-        ),
+        child: child,
       );
     } else {
-      // Border mode: use colored border on one side with theme colors
-      // final borderColor = context.colorScheme.outlineVariant.withOpacity(0.3);
-      final Border border;
-      final BorderRadius clipRadius;
+      // Border mode: use colored border on one side with squircle support
+      final clipCorners = _getOppositeCorners(borderSide);
 
-      // Create a single BorderSide instance to avoid code duplication
       final borderSideValue = BorderSide(
-        color: highlightColor.withOpacity(0.7),
+        color: highlightColor.withValues(alpha: 0.7),
         width: borderWidth,
       );
+
+      final Border border;
       switch (borderSide) {
         case BorderSideType.top:
-          border = Border(
-            top: borderSideValue,
-          );
-          // Clip bottom corners (opposite side) for consistent rounded borders
-          clipRadius = BorderRadius.only(
-            bottomLeft: Radius.circular(borderRadius),
-            bottomRight: Radius.circular(borderRadius),
-          );
+          border = Border(top: borderSideValue);
           break;
         case BorderSideType.bottom:
-          border = Border(
-            bottom: borderSideValue,
-          );
-          // Clip top corners (opposite side) for consistent rounded borders
-          clipRadius = BorderRadius.only(
-            topLeft: Radius.circular(borderRadius),
-            topRight: Radius.circular(borderRadius),
-          );
+          border = Border(bottom: borderSideValue);
           break;
         case BorderSideType.left:
-          border = Border(
-            left: borderSideValue,
-          );
-          // Clip right corners (opposite side) for consistent rounded borders
-          final BorderRadius borderRadius2 = BorderRadius.only(
-            topRight: Radius.circular(borderRadius),
-            bottomRight: Radius.circular(borderRadius),
-          );
-          clipRadius = borderRadius2;
+          border = Border(left: borderSideValue);
           break;
         case BorderSideType.right:
-          border = Border(
-            right: borderSideValue,
-          );
-          // Clip left corners (opposite side) for consistent rounded borders
-          clipRadius = BorderRadius.only(
-            topLeft: Radius.circular(borderRadius),
-            bottomLeft: Radius.circular(borderRadius),
-          );
+          border = Border(right: borderSideValue);
           break;
       }
 
-      return ClipRRect(
-        borderRadius: clipRadius,
-        child: Container(
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(borderRadius),
-            border: border,
-          ),
-          child: child,
-        ),
+      final decoration = SurfaceShapeResolver.boxDecoration(
+        context,
+        size: size,
+        corners: clipCorners,
+        border: border,
+      );
+
+      return DecoratedBox(
+        decoration: decoration,
+        child: child,
       );
     }
   }
