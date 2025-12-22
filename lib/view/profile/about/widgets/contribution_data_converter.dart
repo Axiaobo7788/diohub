@@ -78,6 +78,7 @@ class ContributionDataConverter {
 
   /// Converts contributed repositories from GraphQL
   /// Uses repositoryFields fragment, so repository implements GrepositoryFields
+  /// Stores full GraphQL object to avoid data loss
   static List<ContributedRepository> convertRepositories(
     List<GuserContributionsData_user_contributionsCollection_commitContributionsByRepository?>?
         repositories,
@@ -90,48 +91,11 @@ class ContributionDataConverter {
         .whereType<
             GuserContributionsData_user_contributionsCollection_commitContributionsByRepository>()
         .map((repo) {
-          final repository = repo.repository;
-          // Cast to GrepositoryFields to access fragment fields
-          final repoFields = repository as GrepositoryFields;
-
-          // Owner has a direct login property (not a union type)
-          final owner = repository.owner.login;
-
-          // Get primary language - try primaryLanguage first (added separately in query)
-          String? language;
-          String? languageColor;
-
-          // Access primaryLanguage directly from repository (added separately, not in fragment)
-          final primaryLang = repository.primaryLanguage;
-          if (primaryLang != null) {
-            language = primaryLang.name;
-            languageColor = primaryLang.color;
-          }
-
-          // Fallback to languages from fragment if primaryLanguage not available
-          if (language == null) {
-            final edges = repoFields.languages?.edges;
-            if (edges != null) {
-              for (final edge in edges) {
-                if (edge != null) {
-                  language = edge.node.name;
-                  break;
-                }
-              }
-            }
-          }
-
+          final repository = repo.repository as GrepositoryFields;
           return ContributedRepository(
-            name: repoFields.name,
-            owner: owner,
-            url: repoFields.url.toString(),
+            graphQLRepository: repository,
             contributionCount: repo.contributions.totalCount,
-            description: repoFields.description,
-            language: language,
-            languageColor: languageColor,
-            stargazersCount: repoFields.stargazerCount,
-            isPrivate: repoFields.isPrivate,
-            isFork: repoFields.isFork,
+            commitCount: repo.contributions.totalCount,
           );
         })
         .whereType<ContributedRepository>()
@@ -139,6 +103,7 @@ class ContributionDataConverter {
   }
 
   /// Converts PR review contributed repositories from GraphQL
+  /// Stores full GraphQL object to avoid data loss
   static List<ContributedRepository> convertReviewRepositories(
     List<GuserContributionsData_user_contributionsCollection_pullRequestReviewContributionsByRepository?>?
         repositories,
@@ -151,43 +116,61 @@ class ContributionDataConverter {
         .whereType<
             GuserContributionsData_user_contributionsCollection_pullRequestReviewContributionsByRepository>()
         .map((repo) {
-          final repository = repo.repository;
-          final repoFields = repository as GrepositoryFields;
-          final owner = repository.owner.login;
-
-          String? language;
-          String? languageColor;
-          // primaryLanguage may not be available in pullRequestReviewContributionsByRepository
-          // Try to access it, but use null if not available
-          final primaryLang = (repository as dynamic).primaryLanguage;
-          if (primaryLang != null) {
-            language = primaryLang.name as String?;
-            languageColor = primaryLang.color as String?;
-          }
-
-          if (language == null) {
-            final edges = repoFields.languages?.edges;
-            if (edges != null) {
-              for (final edge in edges) {
-                if (edge != null) {
-                  language = edge.node.name;
-                  break;
-                }
-              }
-            }
-          }
-
+          final repository = repo.repository as GrepositoryFields;
           return ContributedRepository(
-            name: repoFields.name,
-            owner: owner,
-            url: repoFields.url.toString(),
+            graphQLRepository: repository,
             contributionCount: repo.contributions.totalCount,
-            description: repoFields.description,
-            language: language,
-            languageColor: languageColor,
-            stargazersCount: repoFields.stargazerCount,
-            isPrivate: repoFields.isPrivate,
-            isFork: repoFields.isFork,
+            reviewCount: repo.contributions.totalCount,
+          );
+        })
+        .whereType<ContributedRepository>()
+        .toList();
+  }
+
+  /// Converts issue contributed repositories from GraphQL
+  /// Stores full GraphQL object to avoid data loss
+  static List<ContributedRepository> convertIssueRepositories(
+    List<GuserContributionsData_user_contributionsCollection_issueContributionsByRepository?>?
+        repositories,
+  ) {
+    if (repositories == null || repositories.isEmpty) {
+      return [];
+    }
+
+    return repositories
+        .whereType<
+            GuserContributionsData_user_contributionsCollection_issueContributionsByRepository>()
+        .map((repo) {
+          final repository = repo.repository as GrepositoryFields;
+          return ContributedRepository(
+            graphQLRepository: repository,
+            contributionCount: repo.contributions.totalCount,
+            issueCount: repo.contributions.totalCount,
+          );
+        })
+        .whereType<ContributedRepository>()
+        .toList();
+  }
+
+  /// Converts pull request contributed repositories from GraphQL
+  /// Stores full GraphQL object to avoid data loss
+  static List<ContributedRepository> convertPullRequestRepositories(
+    List<GuserContributionsData_user_contributionsCollection_pullRequestContributionsByRepository?>?
+        repositories,
+  ) {
+    if (repositories == null || repositories.isEmpty) {
+      return [];
+    }
+
+    return repositories
+        .whereType<
+            GuserContributionsData_user_contributionsCollection_pullRequestContributionsByRepository>()
+        .map((repo) {
+          final repository = repo.repository as GrepositoryFields;
+          return ContributedRepository(
+            graphQLRepository: repository,
+            contributionCount: repo.contributions.totalCount,
+            pullRequestCount: repo.contributions.totalCount,
           );
         })
         .whereType<ContributedRepository>()

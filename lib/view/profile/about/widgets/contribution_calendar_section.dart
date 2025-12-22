@@ -269,7 +269,7 @@ class ContributionCalendarSection extends StatelessWidget {
     }
     if (reviews != null && reviews! > 0) {
       chips.add(ContributionInfoChip(
-        icon: Octicons.check,
+        icon: Octicons.code_review,
         count: reviews!,
         label: reposWithReviews > 0
             ? 'reviews in $reposWithReviews ${reposWithReviews == 1 ? 'repo' : 'repos'}'
