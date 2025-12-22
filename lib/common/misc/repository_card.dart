@@ -234,7 +234,7 @@ class RepositoryCard extends StatelessWidget {
 
               // Only show footer if at least one item exists
               if (!hasLanguage && !hasStars && !hasContributions) {
-                return const SizedBox.shrink();
+                return const SizedBox(height: 4,);
               }
 
               return Column(
