@@ -34,6 +34,8 @@ class RepositoryCard extends StatelessWidget {
     this.commitShaUrl,
     this.contributionCount,
     this.reviewCount,
+    this.issueCount,
+    this.pullRequestCount,
     this.withBackground = false,
     this.branchColor,
     this.branchStrikethrough = false,
@@ -49,6 +51,8 @@ class RepositoryCard extends StatelessWidget {
   final String? commitShaUrl;
   final int? contributionCount;
   final int? reviewCount;
+  final int? issueCount;
+  final int? pullRequestCount;
   final bool withBackground;
   final Color?
       branchColor; // Optional color for branch indicator (e.g., green for created, red for deleted)
@@ -240,12 +244,18 @@ class RepositoryCard extends StatelessWidget {
               final hasContributions = commitCountValue > 0;
               final reviewCountValue = reviewCount ?? 0;
               final hasReviews = reviewCountValue > 0;
+              final issueCountValue = issueCount ?? 0;
+              final hasIssues = issueCountValue > 0;
+              final pullRequestCountValue = pullRequestCount ?? 0;
+              final hasPullRequests = pullRequestCountValue > 0;
 
               // Only show footer if at least one item exists
               if (!hasLanguage &&
                   !hasStars &&
                   !hasContributions &&
-                  !hasReviews) {
+                  !hasReviews &&
+                  !hasIssues &&
+                  !hasPullRequests) {
                 return const SizedBox(
                   height: 4,
                 );
@@ -255,11 +265,9 @@ class RepositoryCard extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const SizedBox(height: 8),
-                  Wrap(
-                    spacing: 12,
-                    crossAxisAlignment: WrapCrossAlignment.center,
-                    children: <Widget>[
-                      LanguageIndicator(
+                  Row(
+                    children: [
+                       LanguageIndicator(
                         repo!.language,
                       ),
                       if (hasStars)
@@ -285,6 +293,14 @@ class RepositoryCard extends StatelessWidget {
                             ),
                           ],
                         ),
+                    ],
+                  ),
+                  SizedBox(height: 4),
+                  Wrap(
+                    spacing: 12,runSpacing: 4,
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    children: <Widget>[
+      
                       if (hasContributions)
                         Container(
                           padding: const EdgeInsets.symmetric(
@@ -339,7 +355,7 @@ class RepositoryCard extends StatelessWidget {
                             mainAxisSize: MainAxisSize.min,
                             children: <Widget>[
                               Icon(
-                                Octicons.check,
+                                Octicons.code_review,
                                 size: 12,
                                 color: const Color(0xFFFF9800),
                               ),
@@ -352,6 +368,78 @@ class RepositoryCard extends StatelessWidget {
                                     ?.copyWith(
                                       fontWeight: FontWeight.w600,
                                       color: const Color(0xFFFF9800),
+                                    ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      if (hasIssues)
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF4CAF50).withOpacity(0.1),
+                            borderRadius: Theme.of(context)
+                                .surfaceStyle
+                                .borderRadiusMedium(),
+                            border: Border.all(
+                              color: const Color(0xFF4CAF50).withOpacity(0.3),
+                              width: 1,
+                            ),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: <Widget>[
+                              Icon(
+                                Octicons.issue_opened,
+                                size: 12,
+                                color: const Color(0xFF4CAF50),
+                              ),
+                              const SizedBox(width: 4),
+                              Text(
+                                '$issueCountValue ${issueCountValue == 1 ? 'issue' : 'issues'}',
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .bodySmall
+                                    ?.copyWith(
+                                      fontWeight: FontWeight.w600,
+                                      color: const Color(0xFF4CAF50),
+                                    ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      if (hasPullRequests)
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF9C27B0).withOpacity(0.1),
+                            borderRadius: Theme.of(context)
+                                .surfaceStyle
+                                .borderRadiusMedium(),
+                            border: Border.all(
+                              color: const Color(0xFF9C27B0).withOpacity(0.3),
+                              width: 1,
+                            ),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: <Widget>[
+                              Icon(
+                                Octicons.git_pull_request,
+                                size: 12,
+                                color: const Color(0xFF9C27B0),
+                              ),
+                              const SizedBox(width: 4),
+                              Text(
+                                '$pullRequestCountValue ${pullRequestCountValue == 1 ? 'PR' : 'PRs'}',
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .bodySmall
+                                    ?.copyWith(
+                                      fontWeight: FontWeight.w600,
+                                      color: const Color(0xFF9C27B0),
                                     ),
                               ),
                             ],
