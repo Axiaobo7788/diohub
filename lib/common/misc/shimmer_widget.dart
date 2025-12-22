@@ -1,5 +1,6 @@
 import 'package:diohub/style/border_radiuses.dart';
 import 'package:diohub/utils/utils.dart';
+import 'package:diohub/style/surface_style_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:shimmer/shimmer.dart';
 
@@ -41,7 +42,9 @@ class ShimmerWidget extends StatelessWidget {
   Widget build(final BuildContext context) => ClipRRect(
         borderRadius: borderRadius ??
             context.themeData.borderRadiusTheme?.medBorderRadius ??
-            BorderRadius.circular(4),
+            Theme.of(context).surfaceStyle.borderRadius(
+              size: BorderRadiusSize.small,
+            ),
         child: Shimmer.fromColors(
           baseColor: baseColor ?? context.colorScheme.onSurface.withOpacity(0.06),
           highlightColor: highlightColor ?? context.colorScheme.onSurface.withOpacity(0.12),
