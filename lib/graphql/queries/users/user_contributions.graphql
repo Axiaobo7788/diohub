@@ -2,6 +2,7 @@
 # This allows independent updates of contribution data without refetching all user info
 
 # import './user_info.graphql'
+# import './user_activity_timeline_full.graphql'
 
 query userContributions($user: String!, $from: DateTime, $to: DateTime) {
     user(login: $user) {
@@ -51,18 +52,12 @@ query userContributions($user: String!, $from: DateTime, $to: DateTime) {
             firstIssueContribution {
                 __typename
                 ... on CreatedIssueContribution {
+                    isRestricted
+                    occurredAt
+                    url
+                    resourcePath
                     issue {
-                        id
-                        number
-                        title
-                        url
-                        createdAt
-                        repository {
-                            name
-                            owner {
-                                login
-                            }
-                        }
+                        ...issueInfoTimeline
                     }
                 }
                 ... on RestrictedContribution {
@@ -72,18 +67,12 @@ query userContributions($user: String!, $from: DateTime, $to: DateTime) {
             firstPullRequestContribution {
                 __typename
                 ... on CreatedPullRequestContribution {
+                    isRestricted
+                    occurredAt
+                    url
+                    resourcePath
                     pullRequest {
-                        id
-                        number
-                        title
-                        url
-                        createdAt
-                        repository {
-                            name
-                            owner {
-                                login
-                            }
-                        }
+                        ...pullInfoTimeline
                     }
                 }
                 ... on RestrictedContribution {
@@ -93,17 +82,14 @@ query userContributions($user: String!, $from: DateTime, $to: DateTime) {
             firstRepositoryContribution {
                 __typename
                 ... on CreatedRepositoryContribution {
+                    isRestricted
+                    occurredAt
+                    url
+                    resourcePath
                     repository {
+                        ...repositoryFields
                         id
-                        name
-                        description
-                        url
                         createdAt
-                        owner {
-                            login
-                        }
-                        stargazerCount
-                        isPrivate
                     }
                 }
                 ... on RestrictedContribution {
@@ -113,72 +99,29 @@ query userContributions($user: String!, $from: DateTime, $to: DateTime) {
             popularIssueContribution {
                 __typename
                 ... on CreatedIssueContribution {
-                    issue {
-                        id
-                        number
-                        title
-                        url
-                        createdAt
-                        body
-                        state
-                        repository {
-                            name
-                            owner {
-                                login
-                            }
-                        }
-                        comments {
-                            totalCount
-                        }
-                    }
-                }
-                ... on RestrictedContribution {
+                    isRestricted
                     occurredAt
+                    issue {
+                        ...issueInfoTimeline
+                        state
+                    }
                 }
             }
             popularPullRequestContribution {
                 __typename
                 ... on CreatedPullRequestContribution {
-                    pullRequest {
-                        id
-                        number
-                        title
-                        url
-                        createdAt
-                        body
-                        state
-                        mergedAt
-                        repository {
-                            name
-                            owner {
-                                login
-                            }
-                        }
-                        comments {
-                            totalCount
-                        }
-                    }
-                }
-                ... on RestrictedContribution {
+                    isRestricted
                     occurredAt
+                    pullRequest {
+                        ...pullInfoTimeline
+                        state
+                    }
                 }
             }
             joinedGitHubContribution {
                 occurredAt
             }
-            commitContributionsByRepository(maxRepositories: 50) {
-                repository {
-                    ...repositoryFields
-                    primaryLanguage {
-                        name
-                        color
-                    }
-                }
-                contributions {
-                    totalCount
-                }
-            }
-            issueContributionsByRepository(maxRepositories: 25) {
+            commitContributionsByRepository(maxRepositories: 100) {
                 repository {
                     ...repositoryFields
                 }
@@ -186,7 +129,7 @@ query userContributions($user: String!, $from: DateTime, $to: DateTime) {
                     totalCount
                 }
             }
-            pullRequestContributionsByRepository(maxRepositories: 25) {
+            issueContributionsByRepository(maxRepositories: 100) {
                 repository {
                     ...repositoryFields
                 }
@@ -194,7 +137,15 @@ query userContributions($user: String!, $from: DateTime, $to: DateTime) {
                     totalCount
                 }
             }
-            pullRequestReviewContributionsByRepository(maxRepositories: 25) {
+            pullRequestContributionsByRepository(maxRepositories: 100) {
+                repository {
+                    ...repositoryFields
+                }
+                contributions {
+                    totalCount
+                }
+            }
+            pullRequestReviewContributionsByRepository(maxRepositories: 100) {
                 repository {
                     ...repositoryFields
                 }

@@ -198,6 +198,11 @@ fragment repositoryFields on Repository {
     isFork
     owner{
         login
+        avatarUrl
+    }
+    primaryLanguage {
+        name
+        color
     }
     languages(orderBy: {direction:DESC, field: SIZE}, first:1) {
         edges {

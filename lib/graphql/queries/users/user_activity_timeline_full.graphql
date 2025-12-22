@@ -115,6 +115,9 @@ query userActivityTimelineFull(
 fragment issueInfoTimeline on Issue {
     title
     number
+    author{
+        ...actor
+    }
     state
     url
     body
@@ -136,10 +139,16 @@ fragment pullInfoTimeline on PullRequest {
     number
     state
     url
+     author{
+        ...actor
+    }
     body
     createdAt
     merged
     mergedAt
+    comments {
+        totalCount
+    }
     repository {
         name
         url
