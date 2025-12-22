@@ -4,7 +4,9 @@ import 'package:diohub/app/global.dart';
 import 'package:diohub/common/charts/contribution_calendar_widget.dart';
 import 'package:diohub/common/utils/contribution_utils.dart';
 import 'package:diohub/graphql/queries/users/__generated__/user_contributions.data.gql.dart';
+import 'package:diohub/graphql/queries/users/__generated__/user_info.data.gql.dart';
 import 'package:diohub/models/contributions/contribution_query_models.dart';
+import 'package:diohub/models/repositories/repo_card_data_model.dart';
 import 'package:diohub/services/users/user_info_service.dart';
 import 'package:diohub/view/profile/about/widgets/activity_overview_section.dart';
 import 'package:diohub/view/profile/about/widgets/contribution_data_converter.dart';
@@ -271,18 +273,21 @@ class UserContributionsService {
       if (reviewRepos.isNotEmpty) {
         final topRepo = reviewRepos.reduce((a, b) =>
             a.contributions.totalCount > b.contributions.totalCount ? a : b);
-        final repoData = topRepo.repository;
+        final repoData = topRepo.repository as GrepositoryFields;
+        // Use RepoCardDataModel.fromGraphQL to extract all fields properly
+        final cardData = RepoCardDataModel.fromGraphQL(repoData);
         mostReviewedRepo = ContributionHighlightItem(
-          title: repoData.name,
-          url: repoData.url.toString(),
+          title: cardData.name,
+          url: cardData.url,
           createdAt:
-              startedAt, // Use startedAt as fallback since createdAt may not be available
-          repositoryName: repoData.name,
+              startedAt, // repositoryFields fragment doesn't include createdAt
+          repositoryName: cardData.name,
           repositoryOwner: repoData.owner.login,
           type: ContributionHighlightType.repository,
-          stargazerCount: repoData.stargazerCount,
-          isPrivate: repoData.isPrivate,
+          stargazerCount: cardData.stargazersCount,
+          isPrivate: cardData.private,
           commentCount: topRepo.contributions.totalCount,
+          graphQLRepository: repoData,
         );
       }
     } catch (e) {
@@ -446,6 +451,38 @@ class UserContributionsService {
         if (kDebugMode) {
           log.w(
               'Error extracting highlights (run build_runner if types missing)',
+              error: e);
+        }
+      }
+
+      // Find most reviewed repository for this year
+      try {
+        final reviewRepos =
+            collection.pullRequestReviewContributionsByRepository.whereType<
+                GuserContributionsData_user_contributionsCollection_pullRequestReviewContributionsByRepository>();
+        if (reviewRepos.isNotEmpty) {
+          final topRepo = reviewRepos.reduce((a, b) =>
+              a.contributions.totalCount > b.contributions.totalCount ? a : b);
+          final repoData = topRepo.repository as GrepositoryFields;
+          // Use RepoCardDataModel.fromGraphQL to extract all fields properly
+          final cardData = RepoCardDataModel.fromGraphQL(repoData);
+          mostReviewedRepo = ContributionHighlightItem(
+            title: cardData.name,
+            url: cardData.url,
+            createdAt:
+                startedAt, // repositoryFields fragment doesn't include createdAt
+            repositoryName: cardData.name,
+            repositoryOwner: repoData.owner.login,
+            type: ContributionHighlightType.repository,
+            stargazerCount: cardData.stargazersCount,
+            isPrivate: cardData.private,
+            commentCount: topRepo.contributions.totalCount,
+            graphQLRepository: repoData,
+          );
+        }
+      } catch (e) {
+        if (kDebugMode) {
+          log.w('Error extracting most reviewed repository for year $year',
               error: e);
         }
       }
