@@ -7,35 +7,52 @@ import 'package:diohub/models/repositories/repo_card_data_model.dart';
 import 'package:diohub/style/surface_style_theme.dart';
 import 'package:flutter/material.dart';
 
+import 'package:diohub/graphql/queries/users/__generated__/user_info.data.gql.dart';
+
 /// Data for a repository in the "Contributed to" section
+/// Stores the full GraphQL repository object to avoid data loss
 class ContributedRepository {
   const ContributedRepository({
-    required this.name,
-    required this.owner,
-    required this.url,
+    required this.graphQLRepository,
     required this.contributionCount,
-    this.description,
-    this.language,
-    this.languageColor,
-    this.stargazersCount,
-    this.isPrivate,
-    this.isFork,
     this.commitCount,
     this.reviewCount,
+    this.issueCount,
+    this.pullRequestCount,
   });
 
-  final String name;
-  final String owner;
-  final String url;
+  /// Full GraphQL repository object (uses repositoryFields fragment)
+  final GrepositoryFields graphQLRepository;
+
+  /// Total contribution count (sum of all contribution types)
   final int contributionCount;
-  final String? description;
-  final String? language;
-  final String? languageColor;
-  final int? stargazersCount;
-  final bool? isPrivate;
-  final bool? isFork;
+
+  /// Number of commits contributed
   final int? commitCount;
+
+  /// Number of PR reviews contributed
   final int? reviewCount;
+
+  /// Number of issues contributed
+  final int? issueCount;
+
+  /// Number of pull requests contributed
+  final int? pullRequestCount;
+
+  // Convenience getters for commonly used fields
+  String get name => graphQLRepository.name;
+  String get owner => graphQLRepository.owner.login;
+  String get url => graphQLRepository.url.toString();
+  String? get description => graphQLRepository.description;
+  int? get stargazersCount => graphQLRepository.stargazerCount;
+  bool? get isPrivate => graphQLRepository.isPrivate;
+  bool? get isFork => graphQLRepository.isFork;
+
+  /// Get primary language name
+  String? get language => graphQLRepository.primaryLanguage?.name;
+
+  /// Get primary language color
+  String? get languageColor => graphQLRepository.primaryLanguage?.color;
 }
 
 /// A section widget that displays activity overview with repositories and radar chart.
@@ -143,16 +160,7 @@ class ActivityOverviewSection extends StatelessWidget {
         ),
         const SizedBox(height: 8),
         ...displayRepos.map((repo) {
-          final repoCardData = RepoCardDataModel(
-            name: repo.name,
-            url: repo.url,
-            description: repo.description,
-            language: repo.language,
-            stargazersCount: repo.stargazersCount ?? 0,
-            private: repo.isPrivate ?? false,
-            fork: repo.isFork ?? false,
-            contributionCount: repo.contributionCount,
-          );
+          final repoCardData = RepoCardDataModel.fromGraphQL(repo.graphQLRepository);
           return Padding(
             padding: const EdgeInsets.only(bottom: 12),
             child: BorderedContainer(
@@ -165,6 +173,8 @@ class ActivityOverviewSection extends StatelessWidget {
                   repoCardData,
                   contributionCount: repo.commitCount,
                   reviewCount: repo.reviewCount,
+                  issueCount: repo.issueCount,
+                  pullRequestCount: repo.pullRequestCount,
                 ),
               ),
             ),
@@ -258,16 +268,7 @@ class ActivityOverviewSection extends StatelessWidget {
         itemCount: repositories.length,
         itemBuilder: (context, index) {
           final repo = repositories[index];
-          final repoCardData = RepoCardDataModel(
-            name: repo.name,
-            url: repo.url,
-            description: repo.description,
-            language: repo.language,
-            stargazersCount: repo.stargazersCount ?? 0,
-            private: repo.isPrivate ?? false,
-            fork: repo.isFork ?? false,
-            contributionCount: repo.contributionCount,
-          );
+          final repoCardData = RepoCardDataModel.fromGraphQL(repo.graphQLRepository);
           return Padding(
             padding: EdgeInsets.only(
               bottom: index < repositories.length - 1 ? 12 : 0,
@@ -279,11 +280,13 @@ class ActivityOverviewSection extends StatelessWidget {
               size: BorderRadiusSize.small,
               child: Padding(
                 padding: const EdgeInsets.all(12),
-            child: RepositoryCard(
-              repoCardData,
-              contributionCount: repo.commitCount,
-              reviewCount: repo.reviewCount,
-            ),
+                child: RepositoryCard(
+                  repoCardData,
+                  contributionCount: repo.commitCount,
+                  reviewCount: repo.reviewCount,
+                  issueCount: repo.issueCount,
+                  pullRequestCount: repo.pullRequestCount,
+                ),
               ),
             ),
           );

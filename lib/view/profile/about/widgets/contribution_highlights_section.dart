@@ -1,12 +1,13 @@
 import 'package:diohub/common/issues/issue_list_card.dart';
+import 'package:diohub/common/misc/bordered_container.dart';
 import 'package:diohub/common/misc/contribution_info_chip.dart';
+import 'package:diohub/common/misc/repository_card.dart';
 import 'package:diohub/common/misc/surface_shape_resolver.dart';
-import 'package:diohub/common/pulls/pull_list_card.dart';
+import 'package:diohub/common/pulls/simple_pull_card.dart';
 import 'package:diohub/common/timeline/left_right_timeline_item.dart';
 import 'package:diohub/models/contributions/contribution_query_models.dart';
 import 'package:diohub/models/issues/issue_card_data_model.dart';
-import 'package:diohub/models/issues/issue_model.dart';
-import 'package:diohub/models/pull_requests/pull_request_model.dart';
+import 'package:diohub/models/pull_requests/pull_request_card_data_model.dart';
 import 'package:diohub/models/repositories/repo_card_data_model.dart';
 import 'package:diohub/style/surface_style_theme.dart';
 import 'package:flutter/foundation.dart';
@@ -120,114 +121,131 @@ class _YearHighlightItem extends StatelessWidget {
           ),
           const SizedBox(height: 12),
 
-          // Per-year chips
-          Wrap(
-            spacing: 12,
-            runSpacing: 8,
-            crossAxisAlignment: WrapCrossAlignment.center,
-            children: [
-              // Commits with repo count
-              if (highlight.totalCommitContributions > 0)
-                ContributionInfoChip(
-                  icon: Octicons.git_commit,
-                  count: highlight.totalCommitContributions,
-                  label: highlight.totalRepositoriesWithContributedCommits > 0
-                      ? 'in ${highlight.totalRepositoriesWithContributedCommits} ${highlight.totalRepositoriesWithContributedCommits == 1 ? 'repo' : 'repos'}'
-                      : null,
-                  color: const Color(0xFF2196F3),
-                ),
+          // Show "No activity" for empty years
+          if (highlight.totalContributions == 0 &&
+              highlight.firstIssue == null &&
+              highlight.firstPullRequest == null &&
+              highlight.firstRepository == null &&
+              highlight.popularIssue == null &&
+              highlight.popularPullRequest == null &&
+              highlight.mostReviewedRepository == null &&
+              highlight.joinedGitHub == null &&
+              highlight.restrictedContributionsCount == 0)
+            Text(
+              'No activity',
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant.withOpacity(0.6),
+                fontStyle: FontStyle.italic,
+              ),
+            )
+          else ...[
+            // Per-year chips
+            Wrap(
+              spacing: 12,
+              runSpacing: 8,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              children: [
+                // Commits with repo count
+                if (highlight.totalCommitContributions > 0)
+                  ContributionInfoChip(
+                    icon: Octicons.git_commit,
+                    count: highlight.totalCommitContributions,
+                    label: highlight.totalRepositoriesWithContributedCommits > 0
+                        ? 'in ${highlight.totalRepositoriesWithContributedCommits} ${highlight.totalRepositoriesWithContributedCommits == 1 ? 'repo' : 'repos'}'
+                        : null,
+                    color: const Color(0xFF2196F3),
+                  ),
 
-              // Issues with repo count
-              if (highlight.totalIssueContributions > 0)
-                ContributionInfoChip(
-                  icon: Octicons.issue_opened,
-                  count: highlight.totalIssueContributions,
-                  label: highlight.totalRepositoriesWithContributedIssues > 0
-                      ? 'in ${highlight.totalRepositoriesWithContributedIssues} ${highlight.totalRepositoriesWithContributedIssues == 1 ? 'repo' : 'repos'}'
-                      : null,
-                  color: const Color(0xFF4CAF50),
-                ),
+                // Issues with repo count
+                if (highlight.totalIssueContributions > 0)
+                  ContributionInfoChip(
+                    icon: Octicons.issue_opened,
+                    count: highlight.totalIssueContributions,
+                    label: highlight.totalRepositoriesWithContributedIssues > 0
+                        ? 'in ${highlight.totalRepositoriesWithContributedIssues} ${highlight.totalRepositoriesWithContributedIssues == 1 ? 'repo' : 'repos'}'
+                        : null,
+                    color: const Color(0xFF4CAF50),
+                  ),
 
-              // Pull requests with repo count
-              if (highlight.totalPullRequestContributions > 0)
-                ContributionInfoChip(
-                  icon: Octicons.git_pull_request,
-                  count: highlight.totalPullRequestContributions,
-                  label: highlight
-                              .totalRepositoriesWithContributedPullRequests >
-                          0
-                      ? 'in ${highlight.totalRepositoriesWithContributedPullRequests} ${highlight.totalRepositoriesWithContributedPullRequests == 1 ? 'repo' : 'repos'}'
-                      : null,
-                  color: const Color(0xFF9C27B0),
-                ),
+                // Pull requests with repo count
+                if (highlight.totalPullRequestContributions > 0)
+                  ContributionInfoChip(
+                    icon: Octicons.git_pull_request,
+                    count: highlight.totalPullRequestContributions,
+                    label: highlight
+                                .totalRepositoriesWithContributedPullRequests >
+                            0
+                        ? 'in ${highlight.totalRepositoriesWithContributedPullRequests} ${highlight.totalRepositoriesWithContributedPullRequests == 1 ? 'repo' : 'repos'}'
+                        : null,
+                    color: const Color(0xFF9C27B0),
+                  ),
 
-              // Reviews with repo count
-              if (highlight.totalPullRequestReviewContributions > 0)
-                ContributionInfoChip(
-                  icon: Octicons.check,
-                  count: highlight.totalPullRequestReviewContributions,
-                  label: highlight
-                              .totalRepositoriesWithContributedPullRequestReviews >
-                          0
-                      ? 'reviews in ${highlight.totalRepositoriesWithContributedPullRequestReviews} ${highlight.totalRepositoriesWithContributedPullRequestReviews == 1 ? 'repo' : 'repos'}'
-                      : 'reviews',
-                  color: const Color(0xFFFF9800),
-                ),
+                // Reviews with repo count
+                if (highlight.totalPullRequestReviewContributions > 0)
+                  ContributionInfoChip(
+                    icon: Octicons.code_review,
+                    count: highlight.totalPullRequestReviewContributions,
+                    label: highlight
+                                .totalRepositoriesWithContributedPullRequestReviews >
+                            0
+                        ? 'reviews in ${highlight.totalRepositoriesWithContributedPullRequestReviews} ${highlight.totalRepositoriesWithContributedPullRequestReviews == 1 ? 'repo' : 'repos'}'
+                        : 'reviews',
+                    color: const Color(0xFFFF9800),
+                  ),
 
-              // Repository contributions
-              if (highlight.totalRepositoryContributions > 0)
-                ContributionInfoChip(
-                  icon: Octicons.repo,
-                  count: highlight.totalRepositoryContributions,
-                  label: highlight.totalRepositoryContributions == 1
-                      ? 'repo created'
-                      : 'repos created',
-                  color: const Color(0xFF795548),
-                ),
+                // Repository contributions
+                if (highlight.totalRepositoryContributions > 0)
+                  ContributionInfoChip(
+                    icon: Octicons.repo,
+                    count: highlight.totalRepositoryContributions,
+                    label: highlight.totalRepositoryContributions == 1
+                        ? 'repo created'
+                        : 'repos created',
+                    color: const Color(0xFF795548),
+                  ),
 
-              // Restricted contributions
-              if (highlight.restrictedContributionsCount > 0)
-                ContributionInfoChip(
-                  icon: Octicons.lock,
-                  count: highlight.restrictedContributionsCount,
-                  label: 'private',
-                  color: theme.colorScheme.tertiary,
-                ),
-
-             
-            ],
-          ),
-
-          // Highlight cards (first/popular/joined)
-          if (highlight.firstIssue != null ||
-              highlight.firstPullRequest != null ||
-              highlight.firstRepository != null ||
-              highlight.popularIssue != null ||
-              highlight.popularPullRequest != null ||
-              highlight.mostReviewedRepository != null ||
-              highlight.joinedGitHub != null) ...[
-            const SizedBox(height: 12),
-            Builder(
-              builder: (context) {
-                if (kDebugMode) {
-                  debugPrint(
-                      '[ContributionHighlights] Year ${highlight.year}:');
-                  debugPrint(
-                      '  - firstIssue: ${highlight.firstIssue?.title ?? "null"}');
-                  debugPrint(
-                      '  - firstPullRequest: ${highlight.firstPullRequest?.title ?? "null"}');
-                  debugPrint(
-                      '  - firstRepository: ${highlight.firstRepository?.title ?? "null"}');
-                  debugPrint(
-                      '  - popularIssue: ${highlight.popularIssue?.title ?? "null"} (commentCount: ${highlight.popularIssue?.commentCount ?? "null"})');
-                  debugPrint(
-                      '  - popularPullRequest: ${highlight.popularPullRequest?.title ?? "null"} (commentCount: ${highlight.popularPullRequest?.commentCount ?? "null"})');
-                  debugPrint(
-                      '  - joinedGitHub: ${highlight.joinedGitHub ?? "null"}');
-                }
-                return _buildHighlightCards(context, highlight);
-              },
+                // Restricted contributions
+                if (highlight.restrictedContributionsCount > 0)
+                  ContributionInfoChip(
+                    icon: Octicons.lock,
+                    count: highlight.restrictedContributionsCount,
+                    label: 'private',
+                    color: theme.colorScheme.tertiary,
+                  ),
+              ],
             ),
+
+            // Highlight cards (first/popular/joined)
+            if (highlight.firstIssue != null ||
+                highlight.firstPullRequest != null ||
+                highlight.firstRepository != null ||
+                highlight.popularIssue != null ||
+                highlight.popularPullRequest != null ||
+                highlight.mostReviewedRepository != null ||
+                highlight.joinedGitHub != null) ...[
+              const SizedBox(height: 12),
+              Builder(
+                builder: (context) {
+                  if (kDebugMode) {
+                    debugPrint(
+                        '[ContributionHighlights] Year ${highlight.year}:');
+                    debugPrint(
+                        '  - firstIssue: ${highlight.firstIssue?.title ?? "null"}');
+                    debugPrint(
+                        '  - firstPullRequest: ${highlight.firstPullRequest?.title ?? "null"}');
+                    debugPrint(
+                        '  - firstRepository: ${highlight.firstRepository?.title ?? "null"}');
+                    debugPrint(
+                        '  - popularIssue: ${highlight.popularIssue?.title ?? "null"} (commentCount: ${highlight.popularIssue?.commentCount ?? "null"})');
+                    debugPrint(
+                        '  - popularPullRequest: ${highlight.popularPullRequest?.title ?? "null"} (commentCount: ${highlight.popularPullRequest?.commentCount ?? "null"})');
+                    debugPrint(
+                        '  - joinedGitHub: ${highlight.joinedGitHub ?? "null"}');
+                  }
+                  return _buildHighlightCards(context, highlight);
+                },
+              ),
+            ],
           ],
         ],
       ),
@@ -417,25 +435,51 @@ class _YearHighlightItem extends StatelessWidget {
   Widget _buildCard(ContributionHighlightItem item, BuildContext context) {
     switch (item.type) {
       case ContributionHighlightType.issue:
-        return IssueListCard(
-          _convertToIssueCardData(item),
-          showRepoName: true,
-          showDescription: false,
+        return BorderedContainer(
+          size: BorderRadiusSize.small,
+          child: Padding(
+            padding: const EdgeInsets.all(12),
+            child: IssueListCard(
+              _convertToIssueCardData(item),
+              showRepoName: true,
+              showDescription: true,
+            ),
+          ),
         );
       case ContributionHighlightType.pullRequest:
-        return PullListCard(
-          _convertToPullRequestModel(item),
-          showRepoName: true,
+        return BorderedContainer(
+          size: BorderRadiusSize.small,
+          child: Padding(
+            padding: const EdgeInsets.all(12),
+            child: SimplePullCard(
+              _convertToPullRequestCardData(item),
+              showRepoName: true,
+              showDescription: true,
+            ),
+          ),
         );
       case ContributionHighlightType.repository:
-        // For repositories, use a simple card (could use RepositoryCard later)
-        return _buildRepositoryCard(item, context);
+        return BorderedContainer(
+          size: BorderRadiusSize.small,
+          child: Padding(
+            padding: const EdgeInsets.all(12),
+            child: RepositoryCard(
+              _convertToRepoCardData(item),
+              reviewCount: item.commentCount,
+            ),
+          ),
+        );
       default:
         return const SizedBox.shrink();
     }
   }
 
   IssueCardDataModel _convertToIssueCardData(ContributionHighlightItem item) {
+    // Use GraphQL factory method if available
+    if (item.graphQLIssue != null) {
+      return IssueCardDataModel.fromGraphQLTimeline(item.graphQLIssue);
+    }
+    // Fallback to manual construction
     return IssueCardDataModel(
       title: item.title,
       number: item.number ?? 0,
@@ -462,102 +506,56 @@ class _YearHighlightItem extends StatelessWidget {
     );
   }
 
-  PullRequestModel _convertToPullRequestModel(ContributionHighlightItem item) {
-    return PullRequestModel(
+  PullRequestCardDataModel _convertToPullRequestCardData(
+      ContributionHighlightItem item) {
+    // Use GraphQL factory method if available
+    if (item.graphQLPullRequest != null) {
+      return PullRequestCardDataModel.fromGraphQLTimeline(
+        item.graphQLPullRequest,
+      );
+    }
+    // Fallback to manual construction
+    return PullRequestCardDataModel(
       title: item.title,
-      number: item.number,
-      state: item.state == 'OPEN' ? IssueState.OPEN : IssueState.CLOSED,
+      number: item.number ?? 0,
+      state: item.state ?? 'OPEN',
       url: item.url,
+      repositoryOwner: item.repositoryOwner,
+      repositoryName: item.repositoryName,
+      repositoryUrl: item.repositoryUrl,
       body: item.body,
-      createdAt: item.createdAt,
+      bodyHtml: null,
+      merged: item.mergedAt != null,
       mergedAt: item.mergedAt,
+      createdAt: item.createdAt,
+      updatedAt: null,
       closedAt: item.state == 'CLOSED' ? item.createdAt : null,
-      comments: item.commentCount,
+      author: null,
+      labels: null,
+      assignees: null,
+      repositoryData: RepoCardDataModel(
+        name: item.repositoryName,
+        url: item.repositoryUrl,
+        description: null,
+        language: null,
+      ),
     );
   }
 
-  Widget _buildRepositoryCard(
-      ContributionHighlightItem item, BuildContext context) {
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
-
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: SurfaceShapeResolver.boxDecoration(
-        context,
-        size: BorderRadiusSize.small,
-        color: const Color(0xFF2196F3).withOpacity(0.05),
-        border: Border.all(
-          color: const Color(0xFF2196F3).withOpacity(0.2),
-        ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(
-                Octicons.repo,
-                size: 16,
-                color: const Color(0xFF2196F3),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  item.repositoryFullName,
-                  style: theme.textTheme.titleSmall?.copyWith(
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-              if (item.stargazerCount != null && item.stargazerCount! > 0) ...[
-                Icon(
-                  Octicons.star,
-                  size: 14,
-                  color: colorScheme.onSurfaceVariant,
-                ),
-                const SizedBox(width: 4),
-                Text(
-                  '${item.stargazerCount}',
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    fontWeight: FontWeight.w600,
-                    color: colorScheme.onSurfaceVariant,
-                  ),
-                ),
-              ],
-              if (item.isPrivate)
-                Padding(
-                  padding: const EdgeInsets.only(left: 8),
-                  child: Icon(
-                    Octicons.lock,
-                    size: 14,
-                    color: colorScheme.tertiary,
-                  ),
-                ),
-            ],
-          ),
-          if (item.commentCount != null && item.commentCount! > 0) ...[
-            const SizedBox(height: 8),
-            Row(
-              children: [
-                Icon(
-                  Octicons.check,
-                  size: 14,
-                  color: const Color(0xFFFF9800),
-                ),
-                const SizedBox(width: 4),
-                Text(
-                  '${item.commentCount} ${item.commentCount == 1 ? 'review' : 'reviews'}',
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    color: colorScheme.onSurfaceVariant,
-                    fontSize: 12,
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ],
-      ),
+  RepoCardDataModel _convertToRepoCardData(ContributionHighlightItem item) {
+    // Use GraphQL factory method if available
+    if (item.graphQLRepository != null) {
+      return RepoCardDataModel.fromGraphQL(item.graphQLRepository);
+    }
+    // Fallback to manual construction
+    return RepoCardDataModel(
+      name: item.repositoryName,
+      url: item.repositoryUrl,
+      description: null,
+      language: null,
+      stargazersCount: item.stargazerCount ?? 0,
+      private: item.isPrivate,
+      fork: false,
     );
   }
 
