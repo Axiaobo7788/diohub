@@ -130,8 +130,9 @@ class ActivityOverviewSection extends StatelessWidget {
         children: [
           Text(
             'Contributed to',
-            style: theme.textTheme.titleSmall?.copyWith(
+            style: theme.textTheme.titleMedium?.copyWith(
               fontWeight: FontWeight.w600,
+              letterSpacing: -0.2,
             ),
           ),
           const SizedBox(height: 8),
@@ -154,8 +155,9 @@ class ActivityOverviewSection extends StatelessWidget {
       children: [
         Text(
           'Contributed to',
-          style: theme.textTheme.titleSmall?.copyWith(
+          style: theme.textTheme.titleMedium?.copyWith(
             fontWeight: FontWeight.w600,
+            letterSpacing: -0.2,
           ),
         ),
         const SizedBox(height: 8),
@@ -219,8 +221,9 @@ class ActivityOverviewSection extends StatelessWidget {
       children: [
         Text(
           'Code review',
-          style: theme.textTheme.titleSmall?.copyWith(
+          style: theme.textTheme.titleMedium?.copyWith(
             fontWeight: FontWeight.w600,
+            letterSpacing: -0.2,
           ),
         ),
         const SizedBox(height: 12),
