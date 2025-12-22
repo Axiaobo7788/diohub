@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:diohub/common/wrappers/infinite_scroll_wrapper.dart';
+import 'package:diohub/style/surface_style_theme.dart';
 import 'package:diohub/utils/extensions.dart';
 import 'package:diohub/utils/utils.dart';
 import 'package:flutter/cupertino.dart';
@@ -25,12 +26,6 @@ Future<T?> showDHBottomSheet<T>(
       isScrollControlled: isScrollControlled,
       useRootNavigator: useRootNavigator,
       context: context,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.only(
-          topLeft: Radius.circular(20),
-          topRight: Radius.circular(20),
-        ),
-      ),
       builder: builder,
     );
 
@@ -99,7 +94,7 @@ class DHBottomSheet extends StatelessWidget {
                     decoration: BoxDecoration(
                       color:
                           context.colorScheme.onSurfaceVariant.withOpacity(0.3),
-                      borderRadius: BorderRadius.circular(2),
+                      borderRadius: Theme.of(context).surfaceStyle.borderRadiusSoft(),
                     ),
                   ),
                 ),
