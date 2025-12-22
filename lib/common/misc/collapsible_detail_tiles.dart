@@ -1,4 +1,5 @@
 import 'package:diohub/common/misc/highlighted_container.dart';
+import 'package:diohub/common/misc/surface_shape_resolver.dart';
 import 'package:diohub/style/surface_style_theme.dart';
 import 'package:diohub/utils/utils.dart';
 import 'package:flutter/material.dart';
@@ -160,8 +161,9 @@ class _CollapsibleDetailTilesState extends State<CollapsibleDetailTiles> {
           ),
           elevation: 0,
           margin: EdgeInsets.zero,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
+          shape: SurfaceShapeResolver.shape(
+            context,
+            size: BorderRadiusSize.medium,
           ),
           child: AnimatedSize(
             duration: const Duration(milliseconds: 300),
@@ -200,7 +202,7 @@ class _CollapsibleDetailTilesState extends State<CollapsibleDetailTiles> {
                           Colors.black,
                           0.1,
                         ),
-                        borderRadius: BorderRadius.circular(12),
+                        borderRadius: Theme.of(context).surfaceStyle.borderRadiusMedium(),
                         child: InkWell(
                           onTap: () {
                             setState(() {
@@ -208,7 +210,7 @@ class _CollapsibleDetailTilesState extends State<CollapsibleDetailTiles> {
                             });
                             widget.onExpandChanged?.call(_showAllTiles);
                           },
-                          borderRadius: BorderRadius.circular(12),
+                          borderRadius: Theme.of(context).surfaceStyle.borderRadiusMedium(),
                           child: Padding(
                             padding: const EdgeInsets.symmetric(
                               horizontal: 12,

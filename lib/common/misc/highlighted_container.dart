@@ -77,7 +77,7 @@ class HighlightedContainer extends StatelessWidget {
         color: backgroundColor ?? context.colorScheme.onSurface,
         shape: shape,
         elevation: 1,
-        child: child,
+          child: child,
       );
     } else {
       // Border mode: use colored border on one side with squircle support
@@ -108,12 +108,12 @@ class HighlightedContainer extends StatelessWidget {
         context,
         size: size,
         corners: clipCorners,
-        border: border,
+            border: border,
       );
 
       return DecoratedBox(
         decoration: decoration,
-        child: child,
+          child: child,
       );
     }
   }

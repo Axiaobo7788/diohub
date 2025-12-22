@@ -1,3 +1,4 @@
+import 'package:diohub/common/misc/surface_shape_resolver.dart';
 import 'package:diohub/style/surface_style_theme.dart';
 import 'package:flutter/material.dart';
 
@@ -58,10 +59,9 @@ class HeaderCard extends StatelessWidget {
   Widget build(final BuildContext context) {
     return Card(
       elevation: 1,
-      shape: RoundedRectangleBorder(
-        borderRadius: Theme.of(context).surfaceStyle.borderRadius(
-              size: BorderRadiusSize.medium,
-            ),
+      shape: SurfaceShapeResolver.shape(
+        context,
+        size: BorderRadiusSize.medium,
       ),
       margin: margin,
       color: color,

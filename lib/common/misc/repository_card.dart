@@ -7,6 +7,7 @@ import 'package:diohub/models/repositories/repo_card_data_model.dart';
 import 'package:diohub/models/repositories/repository_model.dart';
 import 'package:diohub/routes/router.gr.dart';
 import 'package:diohub/services/repositories/repo_services.dart';
+import 'package:diohub/style/surface_style_theme.dart';
 import 'package:diohub/utils/utils.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_vector_icons/flutter_vector_icons.dart';
@@ -94,7 +95,7 @@ class RepositoryCard extends StatelessWidget {
                       const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                   decoration: BoxDecoration(
                     color: context.colorScheme.surfaceVariant.withOpacity(0.5),
-                    borderRadius: BorderRadius.circular(4),
+                    borderRadius: Theme.of(context).surfaceStyle.borderRadiusSmall(),
                   ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
@@ -132,7 +133,7 @@ class RepositoryCard extends StatelessWidget {
                     color: branchColor != null
                         ? branchColor!.withOpacity(0.12)
                         : context.colorScheme.surfaceVariant.withOpacity(0.5),
-                    borderRadius: BorderRadius.circular(4),
+                    borderRadius: Theme.of(context).surfaceStyle.borderRadiusSmall(),
                     border: branchColor != null
                         ? Border.all(
                             color: branchColor!.withOpacity(0.25),
@@ -277,7 +278,7 @@ class RepositoryCard extends StatelessWidget {
                               horizontal: 8, vertical: 4),
                           decoration: BoxDecoration(
                             color: const Color(0xFF2196F3).withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(8),
+                            borderRadius: Theme.of(context).surfaceStyle.borderRadiusMedium(),
                             border: Border.all(
                               color: const Color(0xFF2196F3).withOpacity(0.3),
                               width: 1,
