@@ -3,6 +3,7 @@ import 'package:diohub/common/misc/floating_action_toolbar_content.dart';
 import 'package:diohub/common/misc/floating_expandable_widget.dart';
 import 'package:diohub/common/misc/liquid_glass_wrapper.dart';
 import 'package:diohub/common/misc/scroll_based_minimize_controller.dart';
+import 'package:diohub/style/surface_style_theme.dart';
 import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
@@ -598,7 +599,7 @@ class _FloatingActionToolbarState extends State<FloatingActionToolbar>
         child: Container(
           key: _buttonKey, // GlobalKey for position measurement
           child: LiquidGlassWrapper.withShape(
-            borderRadius: 28,
+            size: BorderRadiusSize.veryLarge,
             blur: 12,
             glassColorOpacity: 0.25,
             thickness: 2.5,
@@ -607,7 +608,9 @@ class _FloatingActionToolbarState extends State<FloatingActionToolbar>
               color: Colors.transparent,
               child: InkWell(
                 onTap: () => _restoreFromMinimized(),
-                borderRadius: BorderRadius.circular(28),
+                borderRadius: Theme.of(context)
+                    .surfaceStyle
+                    .borderRadius(size: BorderRadiusSize.veryLarge),
                 child: Container(
                   width: 56,
                   height: 56,
