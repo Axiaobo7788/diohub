@@ -1,6 +1,7 @@
 import 'package:diohub/common/issues/issue_list_card.dart';
 import 'package:diohub/common/markdown_view/trimmable_markdown_content.dart';
 import 'package:diohub/models/issues/issue_card_data_model.dart';
+import 'package:diohub/style/surface_style_theme.dart';
 import 'package:flutter/material.dart';
 
 /// Simple card content for issue events in timeline
@@ -42,7 +43,7 @@ class TimelineIssueContent extends StatelessWidget {
                     .colorScheme
                     .surfaceVariant
                     .withOpacity(0.3),
-                borderRadius: BorderRadius.circular(8),
+                borderRadius: Theme.of(context).surfaceStyle.borderRadiusMedium(),
                 border: Border.all(
                   color: Theme.of(context)
                       .colorScheme
@@ -67,7 +68,7 @@ class TimelineIssueContent extends StatelessWidget {
                     .colorScheme
                     .surfaceVariant
                     .withOpacity(0.3),
-                borderRadius: BorderRadius.circular(8),
+                borderRadius: Theme.of(context).surfaceStyle.borderRadiusMedium(),
                 border: Border.all(
                   color: Theme.of(context)
                       .colorScheme

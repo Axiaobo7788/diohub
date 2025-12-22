@@ -1,4 +1,5 @@
 import 'package:contribution_heatmap/contribution_heatmap.dart';
+import 'package:diohub/style/surface_style_theme.dart';
 import 'package:diohub/utils/utils.dart';
 import 'package:flutter/material.dart';
 
@@ -270,7 +271,7 @@ class _ContributionCalendarWidgetState
           margin: const EdgeInsets.symmetric(horizontal: 1),
           decoration: BoxDecoration(
             color: color,
-            borderRadius: BorderRadius.circular(2),
+            borderRadius: Theme.of(context).surfaceStyle.borderRadiusSoft(),
           ),
         );
       }).toList();
