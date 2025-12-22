@@ -4,13 +4,12 @@ import 'package:flutter/material.dart';
 
 /// A reusable chip widget for displaying contribution information
 ///
-/// Displays: Icon | Count | separator | repo count (if provided)
-/// Or: Icon | Count (if no repo count)
+/// Displays: Icon | Count | label (if provided)
 class ContributionInfoChip extends StatelessWidget {
   const ContributionInfoChip({
     required this.icon,
     required this.count,
-    this.repoCount,
+    this.label,
     required this.color,
     super.key,
   });
@@ -21,8 +20,8 @@ class ContributionInfoChip extends StatelessWidget {
   /// Count value to display (formatted automatically)
   final int count;
 
-  /// Optional repository count (if provided, shows separator and repo count)
-  final int? repoCount;
+  /// Optional label text to display after count (e.g., "private", "in 5 repos", "reviews")
+  final String? label;
 
   /// Color for the icon and chip styling
   final Color color;
@@ -60,14 +59,14 @@ class ContributionInfoChip extends StatelessWidget {
               fontWeight: FontWeight.w600,
             ),
           ),
-          if (repoCount != null && repoCount! > 0) ...[
+          if (label != null) ...[
             const SizedBox(width: 4),
             Text(
-              'in $repoCount ${repoCount == 1 ? 'repo' : 'repos'}',
+              label!,
               style: theme.textTheme.bodySmall?.copyWith(
-                color: colorScheme.onSurfaceVariant,
-                fontSize: 12,
-                fontWeight: FontWeight.w500,
+                color: colorScheme.onSurfaceVariant.withOpacity(0.7),
+                fontSize: 11,
+                fontWeight: FontWeight.w400,
               ),
             ),
           ],
