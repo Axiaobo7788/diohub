@@ -138,4 +138,59 @@ class ContributionDataConverter {
         .toList();
   }
 
+  /// Converts PR review contributed repositories from GraphQL
+  static List<ContributedRepository> convertReviewRepositories(
+    List<GuserContributionsData_user_contributionsCollection_pullRequestReviewContributionsByRepository?>?
+        repositories,
+  ) {
+    if (repositories == null || repositories.isEmpty) {
+      return [];
+    }
+
+    return repositories
+        .whereType<
+            GuserContributionsData_user_contributionsCollection_pullRequestReviewContributionsByRepository>()
+        .map((repo) {
+          final repository = repo.repository;
+          final repoFields = repository as GrepositoryFields;
+          final owner = repository.owner.login;
+
+          String? language;
+          String? languageColor;
+          // primaryLanguage may not be available in pullRequestReviewContributionsByRepository
+          // Try to access it, but use null if not available
+          final primaryLang = (repository as dynamic).primaryLanguage;
+          if (primaryLang != null) {
+            language = primaryLang.name as String?;
+            languageColor = primaryLang.color as String?;
+          }
+
+          if (language == null) {
+            final edges = repoFields.languages?.edges;
+            if (edges != null) {
+              for (final edge in edges) {
+                if (edge != null) {
+                  language = edge.node.name;
+                  break;
+                }
+              }
+            }
+          }
+
+          return ContributedRepository(
+            name: repoFields.name,
+            owner: owner,
+            url: repoFields.url.toString(),
+            contributionCount: repo.contributions.totalCount,
+            description: repoFields.description,
+            language: language,
+            languageColor: languageColor,
+            stargazersCount: repoFields.stargazerCount,
+            isPrivate: repoFields.isPrivate,
+            isFork: repoFields.isFork,
+          );
+        })
+        .whereType<ContributedRepository>()
+        .toList();
+  }
 }
