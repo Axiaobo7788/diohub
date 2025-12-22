@@ -1,15 +1,11 @@
-import 'package:auto_route/auto_route.dart';
 import 'package:diohub/common/bottom_sheet/bottom_sheets.dart';
 import 'package:diohub/common/charts/radar_chart_widget.dart';
+import 'package:diohub/common/misc/bordered_container.dart';
 import 'package:diohub/common/misc/repository_card.dart';
 import 'package:diohub/common/misc/shimmer_widget.dart';
-import 'package:diohub/common/misc/surface_shape_resolver.dart';
-import 'package:diohub/common/utils/contribution_utils.dart';
 import 'package:diohub/models/repositories/repo_card_data_model.dart';
-import 'package:diohub/routes/router.gr.dart';
 import 'package:diohub/style/surface_style_theme.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_vector_icons/flutter_vector_icons.dart';
 
 /// Data for a repository in the "Contributed to" section
 class ContributedRepository {
@@ -24,6 +20,8 @@ class ContributedRepository {
     this.stargazersCount,
     this.isPrivate,
     this.isFork,
+    this.commitCount,
+    this.reviewCount,
   });
 
   final String name;
@@ -36,6 +34,8 @@ class ContributedRepository {
   final int? stargazersCount;
   final bool? isPrivate;
   final bool? isFork;
+  final int? commitCount;
+  final int? reviewCount;
 }
 
 /// A section widget that displays activity overview with repositories and radar chart.
@@ -74,39 +74,31 @@ class ActivityOverviewSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-      child: Material(
-        color: colorScheme.surfaceContainerLow,
-        borderRadius: Theme.of(context).surfaceStyle.borderRadiusMedium(),
-        child: Padding(
-          padding: const EdgeInsets.all(12),
-          child: LayoutBuilder(
-            builder: (context, constraints) {
-              // On smaller screens, stack vertically
-              if (constraints.maxWidth < 600) {
-                return Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _buildContributedTo(context),
-                    const SizedBox(height: 16),
-                    _buildCodeReviewChart(context),
-                  ],
-                );
-              }
-              // On larger screens, side by side
-              return Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Expanded(child: _buildContributedTo(context)),
-                  const SizedBox(width: 16),
-                  Expanded(child: _buildCodeReviewChart(context)),
-                ],
-              );
-            },
-          ),
-        ),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          // On smaller screens, stack vertically
+          if (constraints.maxWidth < 600) {
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _buildContributedTo(context),
+                const SizedBox(height: 16),
+                _buildCodeReviewChart(context),
+              ],
+            );
+          }
+          // On larger screens, side by side
+          return Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(child: _buildContributedTo(context)),
+              const SizedBox(width: 16),
+              Expanded(child: _buildCodeReviewChart(context)),
+            ],
+          );
+        },
       ),
     );
   }
@@ -136,7 +128,8 @@ class ActivityOverviewSection extends StatelessWidget {
       );
     }
 
-    final displayRepos = repositories.take(4).toList();
+    final hasMoreThanTwo = repositories.length > 2;
+    final displayRepos = repositories.take(2).toList();
     final remainingCount = repositories.length - displayRepos.length;
 
     return Column(
@@ -149,8 +142,35 @@ class ActivityOverviewSection extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 8),
-        ...displayRepos.map((repo) => _buildRepositoryItem(context, repo)),
-        if (remainingCount > 0)
+        ...displayRepos.map((repo) {
+          final repoCardData = RepoCardDataModel(
+            name: repo.name,
+            url: repo.url,
+            description: repo.description,
+            language: repo.language,
+            stargazersCount: repo.stargazersCount ?? 0,
+            private: repo.isPrivate ?? false,
+            fork: repo.isFork ?? false,
+            contributionCount: repo.contributionCount,
+          );
+          return Padding(
+            padding: const EdgeInsets.only(bottom: 12),
+            child: BorderedContainer(
+              // borderColor: Colors.blue,
+              borderSide: BorderSideType.bottom,
+              size: BorderRadiusSize.small,
+              child: Padding(
+                padding: const EdgeInsets.all(12),
+                child: RepositoryCard(
+                  repoCardData,
+                  contributionCount: repo.commitCount,
+                  reviewCount: repo.reviewCount,
+                ),
+              ),
+            ),
+          );
+        }),
+        if (hasMoreThanTwo)
           InkWell(
             onTap: () => _showAllRepositoriesSheet(context),
             borderRadius: Theme.of(context)
@@ -162,15 +182,15 @@ class ActivityOverviewSection extends StatelessWidget {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(
-                    '$remainingCount ${remainingCount == 1 ? 'other repository' : 'other repositories'}',
+                    'Show ${remainingCount} more ${remainingCount == 1 ? 'repository' : 'repositories'}',
                     style: theme.textTheme.bodySmall?.copyWith(
                       color: colorScheme.primary,
                     ),
                   ),
                   const SizedBox(width: 4),
                   Icon(
-                    Icons.chevron_right,
-                    size: 14,
+                    Icons.expand_more,
+                    size: 16,
                     color: colorScheme.primary,
                   ),
                 ],
@@ -181,235 +201,8 @@ class ActivityOverviewSection extends StatelessWidget {
     );
   }
 
-  Widget _buildRepositoryItem(
-    BuildContext context,
-    ContributedRepository repo, {
-    bool showCount = false,
-  }) {
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
-
-    return InkWell(
-      onTap: onRepositoryTap != null
-          ? () => onRepositoryTap!(repo)
-          : () async {
-              await AutoRouter.of(context).push(
-                RepositoryRoute(repositoryURL: repo.url),
-              );
-            },
-      borderRadius: Theme.of(context)
-          .surfaceStyle
-          .borderRadius(size: BorderRadiusSize.small),
-      child: Padding(
-        padding: EdgeInsets.symmetric(
-            vertical: showCount ? 12 : 6, horizontal: showCount ? 4 : 0),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Repository icon with container
-            Container(
-              padding: const EdgeInsets.all(6),
-              decoration: SurfaceShapeResolver.boxDecoration(
-                context,
-                size: BorderRadiusSize.small,
-                color: colorScheme.surfaceContainerHighest.withOpacity(0.5),
-              ),
-              child: Icon(
-                Octicons.repo,
-                size: showCount ? 18 : 14,
-                color: colorScheme.primary,
-              ),
-            ),
-            SizedBox(width: showCount ? 12 : 8),
-            Expanded(
-              child: showCount
-                  ? Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        // Repository name with badges
-                        Row(
-                          children: [
-                            Expanded(
-                              child: Text(
-                                '${repo.owner}/${repo.name}',
-                                style: theme.textTheme.bodyMedium?.copyWith(
-                                  color: colorScheme.primary,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ),
-                            if (repo.isPrivate == true)
-                              Padding(
-                                padding: const EdgeInsets.only(left: 6),
-                                child: Icon(
-                                  Octicons.lock,
-                                  size: 12,
-                                  color: colorScheme.onSurfaceVariant,
-                                ),
-                              ),
-                            if (repo.isFork == true)
-                              Padding(
-                                padding: const EdgeInsets.only(left: 4),
-                                child: Icon(
-                                  Octicons.repo_forked,
-                                  size: 12,
-                                  color: colorScheme.onSurfaceVariant,
-                                ),
-                              ),
-                          ],
-                        ),
-                        // Description if available
-                        if (repo.description != null &&
-                            repo.description!.isNotEmpty) ...[
-                          const SizedBox(height: 4),
-                          Text(
-                            repo.description!,
-                            style: theme.textTheme.bodySmall?.copyWith(
-                              color: colorScheme.onSurfaceVariant,
-                            ),
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ],
-                        const SizedBox(height: 8),
-                        // Stats row: language, stars, contributions
-                        Wrap(
-                          spacing: 12,
-                          crossAxisAlignment: WrapCrossAlignment.center,
-                          children: [
-                            if (repo.language != null)
-                              Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Container(
-                                    width: 12,
-                                    height: 12,
-                                    decoration: BoxDecoration(
-                                      color: repo.languageColor != null
-                                          ? parseContributionColor(
-                                              repo.languageColor!)
-                                          : colorScheme.primary,
-                                      shape: BoxShape.circle,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 4),
-                                  Text(
-                                    repo.language!,
-                                    style: theme.textTheme.bodySmall?.copyWith(
-                                      color: colorScheme.onSurfaceVariant,
-                                      fontSize: 12,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            if (repo.stargazersCount != null)
-                              Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Icon(
-                                    Octicons.star,
-                                    size: 12,
-                                    color: colorScheme.onSurfaceVariant,
-                                  ),
-                                  const SizedBox(width: 4),
-                                  Text(
-                                    _formatNumber(repo.stargazersCount!),
-                                    style: theme.textTheme.bodySmall?.copyWith(
-                                      color: colorScheme.onSurfaceVariant,
-                                      fontSize: 12,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(
-                                  Octicons.git_commit,
-                                  size: 12,
-                                  color: colorScheme.onSurfaceVariant,
-                                ),
-                                const SizedBox(width: 4),
-                                Text(
-                                  '${repo.contributionCount} ${repo.contributionCount == 1 ? 'contribution' : 'contributions'}',
-                                  style: theme.textTheme.bodySmall?.copyWith(
-                                    color: colorScheme.onSurfaceVariant,
-                                    fontSize: 12,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ],
-                        ),
-                      ],
-                    )
-                  : Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            '${repo.owner}/${repo.name}',
-                            style: theme.textTheme.bodySmall?.copyWith(
-                              color: colorScheme.primary,
-                            ),
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                        if (repo.language != null)
-                          Padding(
-                            padding: const EdgeInsets.only(left: 8),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Container(
-                                  width: 10,
-                                  height: 10,
-                                  decoration: BoxDecoration(
-                                    color: repo.languageColor != null
-                                        ? parseContributionColor(
-                                            repo.languageColor!)
-                                        : colorScheme.primary,
-                                    shape: BoxShape.circle,
-                                  ),
-                                ),
-                                const SizedBox(width: 4),
-                                Text(
-                                  repo.language!,
-                                  style: theme.textTheme.bodySmall?.copyWith(
-                                    color: colorScheme.onSurfaceVariant,
-                                    fontSize: 11,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                      ],
-                    ),
-            ),
-            if (showCount)
-              Padding(
-                padding: const EdgeInsets.only(left: 8),
-                child: Icon(
-                  Icons.chevron_right,
-                  size: 18,
-                  color: colorScheme.onSurfaceVariant,
-                ),
-              ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  String _formatNumber(int number) {
-    if (number < 1000) return number.toString();
-    if (number < 1000000) return '${(number / 1000).toStringAsFixed(1)}k';
-    return '${(number / 1000000).toStringAsFixed(1)}M';
-  }
-
   Widget _buildCodeReviewChart(BuildContext context) {
     final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -434,8 +227,7 @@ class ActivityOverviewSection extends StatelessWidget {
             ),
           ),
         ),
-                const SizedBox(height: 12),
-
+        const SizedBox(height: 12),
       ],
     );
   }
@@ -466,7 +258,6 @@ class ActivityOverviewSection extends StatelessWidget {
         itemCount: repositories.length,
         itemBuilder: (context, index) {
           final repo = repositories[index];
-          // Convert ContributedRepository to RepoCardDataModel
           final repoCardData = RepoCardDataModel(
             name: repo.name,
             url: repo.url,
@@ -481,9 +272,19 @@ class ActivityOverviewSection extends StatelessWidget {
             padding: EdgeInsets.only(
               bottom: index < repositories.length - 1 ? 12 : 0,
             ),
+            child: BorderedContainer(
+              borderColor:
+                  Theme.of(context).colorScheme.outlineVariant.withOpacity(0.5),
+              borderSide: BorderSideType.bottom,
+              size: BorderRadiusSize.small,
+              child: Padding(
+                padding: const EdgeInsets.all(12),
             child: RepositoryCard(
               repoCardData,
-              contributionCount: repo.contributionCount,
+              contributionCount: repo.commitCount,
+              reviewCount: repo.reviewCount,
+            ),
+              ),
             ),
           );
         },
@@ -497,153 +298,146 @@ class ActivityOverviewSectionLoading extends StatelessWidget {
   const ActivityOverviewSectionLoading({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    return Padding(
+  Widget build(BuildContext context) => Padding(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-      child: Material(
-        color: colorScheme.surfaceContainerLow,
-        borderRadius: Theme.of(context)
-            .surfaceStyle
-            .borderRadius(size: BorderRadiusSize.medium),
-        child: Padding(
-          padding: const EdgeInsets.all(12),
-          child: LayoutBuilder(
-            builder: (context, constraints) {
-              if (constraints.maxWidth < 600) {
-                return Column(
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          if (constraints.maxWidth < 600) {
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Contributed to section
+                Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Contributed to section
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        ShimmerWidget.container(
-                          height: 16,
-                          width: 120,
-                          borderRadius: Theme.of(context)
-                              .surfaceStyle
-                              .borderRadius(size: BorderRadiusSize.small),
-                        ),
-                        const SizedBox(height: 8),
-                        ...List.generate(
-                            4,
-                            (index) => Padding(
-                                  padding: const EdgeInsets.only(bottom: 8),
-                                  child: Row(
-                                    children: [
-                                      ShimmerWidget.container(
-                                        height: 14,
-                                        width: 14,
-                                        borderRadius: Theme.of(context)
-                                            .surfaceStyle
-                                            .borderRadius(size: BorderRadiusSize.small),
-                                      ),
-                                      const SizedBox(width: 6),
-                                      ShimmerWidget.container(
-                                        height: 14,
-                                        width: 150,
-                                        borderRadius: Theme.of(context)
-                                            .surfaceStyle
-                                            .borderRadius(size: BorderRadiusSize.small),
-                                      ),
-                                    ],
-                                  ),
-                                )),
-                      ],
+                    ShimmerWidget.container(
+                      height: 16,
+                      width: 120,
+                      borderRadius: Theme.of(context)
+                          .surfaceStyle
+                          .borderRadius(size: BorderRadiusSize.small),
                     ),
-                    const SizedBox(height: 16),
-                    // Radar chart shimmer
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        ShimmerWidget.container(
-                          height: 16,
-                          width: 100,
-                          borderRadius: Theme.of(context)
-                              .surfaceStyle
-                              .borderRadius(size: BorderRadiusSize.small),
-                        ),
-                        const SizedBox(height: 12),
-                        ShimmerWidget.container(
-                          height: 150,
-                          borderRadius: Theme.of(context)
-                              .surfaceStyle
-                              .borderRadius(size: BorderRadiusSize.small),
-                        ),
-                      ],
+                    const SizedBox(height: 8),
+                    ...List.generate(
+                        4,
+                        (index) => Padding(
+                              padding: const EdgeInsets.only(bottom: 8),
+                              child: Row(
+                                children: [
+                                  ShimmerWidget.container(
+                                    height: 14,
+                                    width: 14,
+                                    borderRadius: Theme.of(context)
+                                        .surfaceStyle
+                                        .borderRadius(
+                                            size: BorderRadiusSize.small,),
+                                  ),
+                                  const SizedBox(width: 6),
+                                  ShimmerWidget.container(
+                                    height: 14,
+                                    width: 150,
+                                    borderRadius: Theme.of(context)
+                                        .surfaceStyle
+                                        .borderRadius(
+                                            size: BorderRadiusSize.small,),
+                                  ),
+                                ],
+                              ),
+                            ),),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                // Radar chart shimmer
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    ShimmerWidget.container(
+                      height: 16,
+                      width: 100,
+                      borderRadius: Theme.of(context)
+                          .surfaceStyle
+                          .borderRadius(size: BorderRadiusSize.small),
+                    ),
+                    const SizedBox(height: 12),
+                    ShimmerWidget.container(
+                      height: 150,
+                      borderRadius: Theme.of(context)
+                          .surfaceStyle
+                          .borderRadius(size: BorderRadiusSize.small),
                     ),
                   ],
-                );
-              }
-              return Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        ShimmerWidget.container(
-                          height: 16,
-                          width: 120,
-                          borderRadius: Theme.of(context).surfaceStyle.borderRadiusSmall(),
-                        ),
-                        const SizedBox(height: 8),
-                        ...List.generate(
-                            4,
-                            (index) => Padding(
-                                  padding: const EdgeInsets.only(bottom: 8),
-                                  child: Row(
-                                    children: [
-                                      ShimmerWidget.container(
-                                        height: 14,
-                                        width: 14,
-                                        borderRadius: Theme.of(context)
-                                            .surfaceStyle
-                                            .borderRadius(size: BorderRadiusSize.small),
-                                      ),
-                                      const SizedBox(width: 6),
-                                      ShimmerWidget.container(
-                                        height: 14,
-                                        width: 150,
-                                        borderRadius: Theme.of(context)
-                                            .surfaceStyle
-                                            .borderRadius(size: BorderRadiusSize.small),
-                                      ),
-                                    ],
+                ),
+              ],
+            );
+          }
+          return Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    ShimmerWidget.container(
+                      height: 16,
+                      width: 120,
+                      borderRadius:
+                          Theme.of(context).surfaceStyle.borderRadiusSmall(),
+                    ),
+                    const SizedBox(height: 8),
+                    ...List.generate(
+                        4,
+                        (index) => Padding(
+                              padding: const EdgeInsets.only(bottom: 8),
+                              child: Row(
+                                children: [
+                                  ShimmerWidget.container(
+                                    height: 14,
+                                    width: 14,
+                                    borderRadius: Theme.of(context)
+                                        .surfaceStyle
+                                        .borderRadius(
+                                            size: BorderRadiusSize.small,),
                                   ),
-                                )),
-                      ],
+                                  const SizedBox(width: 6),
+                                  ShimmerWidget.container(
+                                    height: 14,
+                                    width: 150,
+                                    borderRadius: Theme.of(context)
+                                        .surfaceStyle
+                                        .borderRadius(
+                                            size: BorderRadiusSize.small,),
+                                  ),
+                                ],
+                              ),
+                            ),),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    ShimmerWidget.container(
+                      height: 16,
+                      width: 100,
+                      borderRadius: Theme.of(context)
+                          .surfaceStyle
+                          .borderRadius(size: BorderRadiusSize.small),
                     ),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        ShimmerWidget.container(
-                          height: 16,
-                          width: 100,
-                          borderRadius: Theme.of(context)
-                              .surfaceStyle
-                              .borderRadius(size: BorderRadiusSize.small),
-                        ),
-                        const SizedBox(height: 12),
-                        ShimmerWidget.container(
-                          height: 150,
-                          borderRadius: Theme.of(context)
-                              .surfaceStyle
-                              .borderRadius(size: BorderRadiusSize.small),
-                        ),
-                      ],
+                    const SizedBox(height: 12),
+                    ShimmerWidget.container(
+                      height: 150,
+                      borderRadius: Theme.of(context)
+                          .surfaceStyle
+                          .borderRadius(size: BorderRadiusSize.small),
                     ),
-                  ),
-                ],
-              );
-            },
-          ),
-        ),
+                  ],
+                ),
+              ),
+            ],
+          );
+        },
       ),
     );
-  }
 }

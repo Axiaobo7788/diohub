@@ -63,6 +63,13 @@ class ContributionSummaryTab extends StatelessWidget {
 
         const SliverToBoxAdapter(child: SizedBox(height: 8)),
 
+        // Divider between calendar and activity overview
+        SliverToBoxAdapter(
+          child: Divider(),
+        ),
+
+        const SliverToBoxAdapter(child: SizedBox(height: 8)),
+
         // Activity overview (radar chart) section
         SliverToBoxAdapter(
           child: FadeAnimationSection(
@@ -80,7 +87,14 @@ class ContributionSummaryTab extends StatelessWidget {
           ),
         ),
 
-        const SliverToBoxAdapter(child: SizedBox(height: 8)),
+        // Divider between activity overview and highlights
+        if (highlights.isNotEmpty) ...[
+          const SliverToBoxAdapter(child: SizedBox(height: 8)),
+          SliverToBoxAdapter(
+            child: Divider(),
+          ),
+          const SliverToBoxAdapter(child: SizedBox(height: 8)),
+        ],
 
         // Per-year highlights section
         if (highlights.isNotEmpty)

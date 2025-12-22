@@ -99,30 +99,23 @@ class ContributionCalendarSection extends StatelessWidget {
       // Return error state if somehow missing
       return Padding(
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-        child: Material(
-          color: theme.colorScheme.surfaceContainerLow,
-          borderRadius: theme.surfaceStyle.borderRadiusMedium(),
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Contribution Graph',
-                  style: theme.textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                const SizedBox(height: 12),
-                Text(
-                  'Unable to load contribution colors',
-                  style: theme.textTheme.bodyMedium?.copyWith(
-                    color: theme.colorScheme.error,
-                  ),
-                ),
-              ],
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Contribution Graph',
+              style: theme.textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.w600,
+              ),
             ),
-          ),
+            const SizedBox(height: 12),
+            Text(
+              'Unable to load contribution colors',
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: theme.colorScheme.error,
+              ),
+            ),
+          ],
         ),
       );
     }
@@ -159,74 +152,76 @@ class ContributionCalendarSection extends StatelessWidget {
     int reposWithCommits = 0;
     int reposWithIssues = 0;
     int reposWithPRs = 0;
+    int reposWithReviews = 0;
+    int totalRepositoriesCreated = 0;
     
     if (contributionResult != null) {
       for (final highlight in contributionResult!.yearlyHighlights) {
         reposWithCommits += highlight.totalRepositoriesWithContributedCommits;
         reposWithIssues += highlight.totalRepositoriesWithContributedIssues;
         reposWithPRs += highlight.totalRepositoriesWithContributedPullRequests;
+        reposWithReviews += highlight.totalRepositoriesWithContributedPullRequestReviews;
+        totalRepositoriesCreated += highlight.totalRepositoryContributions;
       }
     }
     
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-      child: Material(
-        color: theme.colorScheme.surfaceContainerLow,
-        borderRadius: theme.surfaceStyle.borderRadiusMedium(),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            crossAxisAlignment: CrossAxisAlignment.baseline,
+            textBaseline: TextBaseline.alphabetic,
             children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                crossAxisAlignment: CrossAxisAlignment.baseline,
-                textBaseline: TextBaseline.alphabetic,
-                children: [
-                  Text(
-                    '$totalContributions ${totalContributions == 1 ? 'contribution' : 'contributions'}',
-                    style: theme.textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  Text(
-                    subtitleText,
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: colorScheme.onSurfaceVariant,
-                    ),
-                  ),
-                ],
-              ),
-              if (commits != null ||
-                  pullRequests != null ||
-                  issues != null ||
-                  reviews != null) ...[
-                const SizedBox(height: 8),
-                _buildInfoChips(
-                  context,
-                  colorScheme,
-                  reposWithCommits: reposWithCommits,
-                  reposWithIssues: reposWithIssues,
-                  reposWithPRs: reposWithPRs,
+              Text(
+                '$totalContributions ${totalContributions == 1 ? 'contribution' : 'contributions'}',
+                style: theme.textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.w600,
                 ),
-              ],
-              const SizedBox(height: 12),
-              FadeAnimationSection(
-                duration: const Duration(milliseconds: 300),
-                child: ContributionCalendarWidget(
-                  weeks: weeks,
-                  colors: defaultColors,
-                  onDayTap: onDayTap,
-                  showMonthLabels: true,
-                  showDayLabels: false,
-                  cellSize: 11.0,
-                  cellSpacing: 2.0,
-                  shouldScroll: shouldScroll,
+              ),
+              Text(
+                subtitleText,
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: colorScheme.onSurfaceVariant,
                 ),
               ),
             ],
           ),
-        ),
+          const SizedBox(height: 12),
+          FadeAnimationSection(
+            duration: const Duration(milliseconds: 300),
+            child: ContributionCalendarWidget(
+              weeks: weeks,
+              colors: defaultColors,
+              onDayTap: onDayTap,
+              showMonthLabels: true,
+              showDayLabels: false,
+              cellSize: 11.0,
+              cellSpacing: 2.0,
+              shouldScroll: shouldScroll,
+            ),
+          ),
+          if (commits != null ||
+              pullRequests != null ||
+              issues != null ||
+              reviews != null ||
+              totalRepositoriesCreated > 0 ||
+              (contributionResult != null &&
+                  contributionResult!.totalRestrictedContributions > 0)) ...[
+            const SizedBox(height: 12),
+            _buildInfoChips(
+              context,
+              colorScheme,
+              reposWithCommits: reposWithCommits,
+              reposWithIssues: reposWithIssues,
+              reposWithPRs: reposWithPRs,
+              reposWithReviews: reposWithReviews,
+              totalRepositoriesCreated: totalRepositoriesCreated,
+            ),
+          ],
+        ],
       ),
     );
   }
@@ -237,6 +232,8 @@ class ContributionCalendarSection extends StatelessWidget {
     required int reposWithCommits,
     required int reposWithIssues,
     required int reposWithPRs,
+    required int reposWithReviews,
+    required int totalRepositoriesCreated,
   }) {
     final chips = <Widget>[];
 
@@ -244,7 +241,9 @@ class ContributionCalendarSection extends StatelessWidget {
       chips.add(ContributionInfoChip(
         icon: Octicons.git_commit,
         count: commits!,
-        repoCount: reposWithCommits > 0 ? reposWithCommits : null,
+        label: reposWithCommits > 0
+            ? 'in $reposWithCommits ${reposWithCommits == 1 ? 'repo' : 'repos'}'
+            : null,
         color: const Color(0xFF2196F3),
       ));
     }
@@ -252,7 +251,9 @@ class ContributionCalendarSection extends StatelessWidget {
       chips.add(ContributionInfoChip(
         icon: Octicons.git_pull_request,
         count: pullRequests!,
-        repoCount: reposWithPRs > 0 ? reposWithPRs : null,
+        label: reposWithPRs > 0
+            ? 'in $reposWithPRs ${reposWithPRs == 1 ? 'repo' : 'repos'}'
+            : null,
         color: const Color(0xFF9C27B0),
       ));
     }
@@ -260,7 +261,9 @@ class ContributionCalendarSection extends StatelessWidget {
       chips.add(ContributionInfoChip(
         icon: Octicons.issue_opened,
         count: issues!,
-        repoCount: reposWithIssues > 0 ? reposWithIssues : null,
+        label: reposWithIssues > 0
+            ? 'in $reposWithIssues ${reposWithIssues == 1 ? 'repo' : 'repos'}'
+            : null,
         color: const Color(0xFF4CAF50),
       ));
     }
@@ -268,8 +271,31 @@ class ContributionCalendarSection extends StatelessWidget {
       chips.add(ContributionInfoChip(
         icon: Octicons.check,
         count: reviews!,
-        repoCount: null, // Reviews don't have repo counts
+        label: reposWithReviews > 0
+            ? 'reviews in $reposWithReviews ${reposWithReviews == 1 ? 'repo' : 'repos'}'
+            : 'reviews',
         color: const Color(0xFFFF9800),
+      ));
+    }
+
+    // Add repository contributions chip if available
+    if (totalRepositoriesCreated > 0) {
+      chips.add(ContributionInfoChip(
+        icon: Octicons.repo,
+        count: totalRepositoriesCreated,
+        label: totalRepositoriesCreated == 1 ? 'repo created' : 'repos created',
+        color: const Color(0xFF795548), // Brown color for repositories
+      ));
+    }
+
+    // Add private contributions chip if available
+    if (contributionResult != null &&
+        contributionResult!.totalRestrictedContributions > 0) {
+      chips.add(ContributionInfoChip(
+        icon: Octicons.lock,
+        count: contributionResult!.totalRestrictedContributions,
+        label: 'private',
+        color: colorScheme.tertiary,
       ));
     }
 
@@ -295,31 +321,24 @@ class ContributionCalendarSectionLoading extends StatelessWidget {
     final theme = Theme.of(context);
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-      child: Material(
-        color: theme.colorScheme.surfaceContainerLow,
-        borderRadius: theme.surfaceStyle.borderRadiusMedium(),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              ShimmerWidget.container(
-                height: 20,
-                width: 200,
-                borderRadius: theme
-                    .surfaceStyle
-                    .borderRadius(size: BorderRadiusSize.small),
-              ),
-              const SizedBox(height: 12),
-              ShimmerWidget.container(
-                height: 120,
-                borderRadius: theme
-                    .surfaceStyle
-                    .borderRadius(size: BorderRadiusSize.small),
-              ),
-            ],
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          ShimmerWidget.container(
+            height: 20,
+            width: 200,
+            borderRadius: theme
+                .surfaceStyle
+                .borderRadius(size: BorderRadiusSize.small),
           ),
-        ),
+          const SizedBox(height: 12),
+          ShimmerWidget.container(
+            height: 120,
+            borderRadius: theme
+                .surfaceStyle
+                .borderRadius(size: BorderRadiusSize.small),
+          ),
+        ],
       ),
     );
   }
