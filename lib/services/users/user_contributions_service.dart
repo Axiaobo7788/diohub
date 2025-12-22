@@ -93,6 +93,57 @@ class UserContributionsService {
       contributionYears: collection.contributionYears.toList(),
     );
 
+    // Merge commit and PR review repositories for Activity Overview
+    final commitRepos = viewModel.commitContributionsByRepository;
+    final reviewRepos = ContributionDataConverter.convertReviewRepositories(
+      collection.pullRequestReviewContributionsByRepository.toList(),
+    );
+
+    // Merge repositories by URL, tracking commit and review counts separately
+    final repoMap = <String, ContributedRepository>{};
+    for (final repo in commitRepos) {
+      repoMap[repo.url] = repo;
+    }
+    for (final repo in reviewRepos) {
+      if (repoMap.containsKey(repo.url)) {
+        final existing = repoMap[repo.url]!;
+        repoMap[repo.url] = ContributedRepository(
+          name: existing.name,
+          owner: existing.owner,
+          url: existing.url,
+          contributionCount:
+              existing.contributionCount + repo.contributionCount,
+          description: existing.description,
+          language: existing.language,
+          languageColor: existing.languageColor,
+          stargazersCount: existing.stargazersCount,
+          isPrivate: existing.isPrivate,
+          isFork: existing.isFork,
+          commitCount: existing.commitCount ?? existing.contributionCount,
+          reviewCount: repo.reviewCount ?? repo.contributionCount,
+        );
+      } else {
+        repoMap[repo.url] = repo;
+      }
+    }
+
+    final mergedRepos = repoMap.values.toList()
+      ..sort((a, b) => b.contributionCount.compareTo(a.contributionCount));
+
+    // Update viewModel with merged repositories
+    final updatedViewModel = ContributionViewModel(
+      weeks: viewModel.weeks,
+      colors: viewModel.colors,
+      totalContributions: viewModel.totalContributions,
+      totalCommitContributions: viewModel.totalCommitContributions,
+      totalPullRequestContributions: viewModel.totalPullRequestContributions,
+      totalIssueContributions: viewModel.totalIssueContributions,
+      totalPullRequestReviewContributions:
+          viewModel.totalPullRequestReviewContributions,
+      commitContributionsByRepository: mergedRepos,
+      contributionYears: viewModel.contributionYears,
+    );
+
     // Extract calendar months
     final calendarMonths = collection.contributionCalendar.months
         .map((month) => ContributionMonth(
@@ -103,15 +154,21 @@ class UserContributionsService {
             ))
         .toList();
 
-    // Determine year from the weeks
+    // Use API dates for accuracy (fallback to week calculation if not available)
+    final startedAt = collection.startedAt;
+    final endedAt = collection.endedAt;
+
+    // Determine year from startedAt
+    final year = startedAt.year;
+
+    // Keep fromDate/toDate for backward compatibility (calculated from weeks)
     final weeks = collection.contributionCalendar.weeks.toList();
     final firstWeek = weeks.isNotEmpty ? weeks.first : null;
     final lastWeek = weeks.isNotEmpty ? weeks.last : null;
-    final fromDate = firstWeek?.firstDay ?? DateTime.now();
+    final fromDate = firstWeek?.firstDay ?? startedAt;
     final toDate = lastWeek != null
         ? lastWeek.firstDay.add(const Duration(days: 6))
-        : DateTime.now();
-    final year = fromDate.year;
+        : endedAt;
 
     // Extract highlights (requires generated types from build_runner)
     ContributionHighlightItem? firstIssue;
@@ -134,14 +191,30 @@ class UserContributionsService {
         contribution: collection.firstRepositoryContribution,
         type: 'repository',
       );
+      if (kDebugMode) {
+        log.d(
+            '[UserContributionsService] Extracting popularIssue from: ${collection.popularIssueContribution?.G__typename ?? "null"}');
+      }
       popularIssue = _extractHighlightItem(
         contribution: collection.popularIssueContribution,
         type: 'issue',
       );
+      if (kDebugMode) {
+        log.d(
+            '[UserContributionsService] Extracted popularIssue: ${popularIssue?.title ?? "null"} (commentCount: ${popularIssue?.commentCount ?? "null"})');
+      }
+      if (kDebugMode) {
+        log.d(
+            '[UserContributionsService] Extracting popularPullRequest from: ${collection.popularPullRequestContribution?.G__typename ?? "null"}');
+      }
       popularPR = _extractHighlightItem(
         contribution: collection.popularPullRequestContribution,
         type: 'pullRequest',
       );
+      if (kDebugMode) {
+        log.d(
+            '[UserContributionsService] Extracted popularPullRequest: ${popularPR?.title ?? "null"} (commentCount: ${popularPR?.commentCount ?? "null"})');
+      }
       joinedGitHub = collection.joinedGitHubContribution?.occurredAt;
     } catch (e) {
       if (kDebugMode) {
@@ -150,29 +223,74 @@ class UserContributionsService {
       }
     }
 
+    // Find most reviewed repository
+    ContributionHighlightItem? mostReviewedRepo;
+    try {
+      final reviewRepos = collection.pullRequestReviewContributionsByRepository
+          .whereType<
+              GuserContributionsData_user_contributionsCollection_pullRequestReviewContributionsByRepository>();
+      if (reviewRepos.isNotEmpty) {
+        final topRepo = reviewRepos.reduce((a, b) =>
+            a.contributions.totalCount > b.contributions.totalCount ? a : b);
+        final repoData = topRepo.repository;
+        mostReviewedRepo = ContributionHighlightItem(
+          title: repoData.name,
+          url: repoData.url.toString(),
+          createdAt:
+              startedAt, // Use startedAt as fallback since createdAt may not be available
+          repositoryName: repoData.name,
+          repositoryOwner: repoData.owner.login,
+          type: ContributionHighlightType.repository,
+          stargazerCount: repoData.stargazerCount,
+          isPrivate: repoData.isPrivate,
+          commentCount: topRepo.contributions.totalCount,
+        );
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        log.w('Error extracting most reviewed repository', error: e);
+      }
+    }
+
     // Build yearly highlights for single year
     final highlights = YearlyContributionHighlights(
       year: year,
       fromDate: fromDate,
       toDate: toDate,
+      startedAt: startedAt,
+      endedAt: endedAt,
       restrictedContributionsCount: collection.restrictedContributionsCount,
+      totalCommitContributions: collection.totalCommitContributions,
+      totalIssueContributions: collection.totalIssueContributions,
+      totalPullRequestContributions: collection.totalPullRequestContributions,
+      totalPullRequestReviewContributions:
+          collection.totalPullRequestReviewContributions,
+      totalRepositoryContributions: collection.totalRepositoryContributions,
+      totalContributions: collection.contributionCalendar.totalContributions,
       totalRepositoriesWithContributedCommits:
           collection.totalRepositoriesWithContributedCommits,
       totalRepositoriesWithContributedIssues:
           collection.totalRepositoriesWithContributedIssues,
       totalRepositoriesWithContributedPullRequests:
           collection.totalRepositoriesWithContributedPullRequests,
+      totalRepositoriesWithContributedPullRequestReviews:
+          collection.totalRepositoriesWithContributedPullRequestReviews,
       calendarMonths: calendarMonths,
+      earliestRestrictedContributionDate:
+          collection.earliestRestrictedContributionDate,
+      latestRestrictedContributionDate:
+          collection.latestRestrictedContributionDate,
       firstIssue: firstIssue,
       firstPullRequest: firstPR,
       firstRepository: firstRepo,
       popularIssue: popularIssue,
       popularPullRequest: popularPR,
+      mostReviewedRepository: mostReviewedRepo,
       joinedGitHub: joinedGitHub,
     );
 
     return ContributionCollectionResult(
-      viewModel: viewModel,
+      viewModel: updatedViewModel,
       yearlyHighlights: [highlights],
     );
   }
@@ -223,13 +341,20 @@ class UserContributionsService {
               ))
           .toList();
 
+      // Use API dates for accuracy (fallback to week calculation if not available)
+      final startedAt = collection.startedAt;
+      final endedAt = collection.endedAt;
+
+      // Determine year from startedAt
+      final year = startedAt.year;
+
+      // Keep fromDate/toDate for backward compatibility (calculated from weeks)
       final firstWeek = weeks.isNotEmpty ? weeks.first : null;
       final lastWeek = weeks.isNotEmpty ? weeks.lastOrNull : null;
-      final fromDate = firstWeek?.firstDay ?? DateTime.now();
+      final fromDate = firstWeek?.firstDay ?? startedAt;
       final toDate = lastWeek != null
           ? lastWeek.firstDay.add(const Duration(days: 6))
-          : DateTime.now();
-      final year = fromDate.year;
+          : endedAt;
 
       // Extract highlights (requires generated types from build_runner)
       ContributionHighlightItem? firstIssue;
@@ -237,6 +362,7 @@ class UserContributionsService {
       ContributionHighlightItem? firstRepo;
       ContributionHighlightItem? popularIssue;
       ContributionHighlightItem? popularPR;
+      ContributionHighlightItem? mostReviewedRepo;
       DateTime? joinedGitHub;
 
       try {
@@ -252,14 +378,30 @@ class UserContributionsService {
           contribution: collection.firstRepositoryContribution,
           type: 'repository',
         );
+        if (kDebugMode) {
+          log.d(
+              '[UserContributionsService] Year $year: Extracting popularIssue from: ${collection.popularIssueContribution?.G__typename ?? "null"}');
+        }
         popularIssue = _extractHighlightItem(
           contribution: collection.popularIssueContribution,
           type: 'issue',
         );
+        if (kDebugMode) {
+          log.d(
+              '[UserContributionsService] Year $year: Extracted popularIssue: ${popularIssue?.title ?? "null"} (commentCount: ${popularIssue?.commentCount ?? "null"})');
+        }
+        if (kDebugMode) {
+          log.d(
+              '[UserContributionsService] Year $year: Extracting popularPullRequest from: ${collection.popularPullRequestContribution?.G__typename ?? "null"}');
+        }
         popularPR = _extractHighlightItem(
           contribution: collection.popularPullRequestContribution,
           type: 'pullRequest',
         );
+        if (kDebugMode) {
+          log.d(
+              '[UserContributionsService] Year $year: Extracted popularPullRequest: ${popularPR?.title ?? "null"} (commentCount: ${popularPR?.commentCount ?? "null"})');
+        }
         joinedGitHub = collection.joinedGitHubContribution?.occurredAt;
       } catch (e) {
         if (kDebugMode) {
@@ -273,19 +415,35 @@ class UserContributionsService {
         year: year,
         fromDate: fromDate,
         toDate: toDate,
+        startedAt: startedAt,
+        endedAt: endedAt,
         restrictedContributionsCount: collection.restrictedContributionsCount,
+        totalCommitContributions: collection.totalCommitContributions,
+        totalIssueContributions: collection.totalIssueContributions,
+        totalPullRequestContributions: collection.totalPullRequestContributions,
+        totalPullRequestReviewContributions:
+            collection.totalPullRequestReviewContributions,
+        totalRepositoryContributions: collection.totalRepositoryContributions,
+        totalContributions: collection.contributionCalendar.totalContributions,
         totalRepositoriesWithContributedCommits:
             collection.totalRepositoriesWithContributedCommits,
         totalRepositoriesWithContributedIssues:
             collection.totalRepositoriesWithContributedIssues,
         totalRepositoriesWithContributedPullRequests:
             collection.totalRepositoriesWithContributedPullRequests,
+        totalRepositoriesWithContributedPullRequestReviews:
+            collection.totalRepositoriesWithContributedPullRequestReviews,
         calendarMonths: calendarMonths,
+        earliestRestrictedContributionDate:
+            collection.earliestRestrictedContributionDate,
+        latestRestrictedContributionDate:
+            collection.latestRestrictedContributionDate,
         firstIssue: firstIssue,
         firstPullRequest: firstPR,
         firstRepository: firstRepo,
         popularIssue: popularIssue,
         popularPullRequest: popularPR,
+        mostReviewedRepository: mostReviewedRepo,
         joinedGitHub: joinedGitHub,
       ));
 
@@ -416,9 +574,12 @@ class UserContributionsService {
             stargazersCount: existing.stargazersCount,
             isPrivate: existing.isPrivate,
             isFork: existing.isFork,
+            commitCount: (existing.commitCount ?? existing.contributionCount) +
+                repo.contributions.totalCount,
+            reviewCount: existing.reviewCount,
           );
         } else {
-          // Add new repo
+          // Add new repo (from commits)
           repoMap[url] = ContributedRepository(
             name: repoData.name,
             owner: owner,
@@ -430,6 +591,61 @@ class UserContributionsService {
             stargazersCount: repoData.stargazerCount,
             isPrivate: repoData.isPrivate,
             isFork: repoData.isFork,
+            commitCount: repo.contributions.totalCount,
+            reviewCount: null,
+          );
+        }
+      }
+    }
+
+    // Merge PR review repositories into the repository list
+    for (final result in results) {
+      final reviewRepos = result
+          .contributionsCollection.pullRequestReviewContributionsByRepository
+          .whereType<
+              GuserContributionsData_user_contributionsCollection_pullRequestReviewContributionsByRepository>();
+
+      for (final repo in reviewRepos) {
+        final repoData = repo.repository;
+        final url = repoData.url.toString();
+        final owner = repoData.owner.login;
+        // primaryLanguage may not be available in pullRequestReviewContributionsByRepository
+        // Try to access it, but use null if not available
+        final primaryLang = (repoData as dynamic).primaryLanguage;
+
+        if (repoMap.containsKey(url)) {
+          final existing = repoMap[url]!;
+          repoMap[url] = ContributedRepository(
+            name: existing.name,
+            owner: existing.owner,
+            url: existing.url,
+            contributionCount:
+                existing.contributionCount + repo.contributions.totalCount,
+            description: existing.description,
+            language: existing.language,
+            languageColor: existing.languageColor,
+            stargazersCount: existing.stargazersCount,
+            isPrivate: existing.isPrivate,
+            isFork: existing.isFork,
+            commitCount: existing.commitCount,
+            reviewCount:
+                (existing.reviewCount ?? 0) + repo.contributions.totalCount,
+          );
+        } else {
+          // Add new repo (from reviews)
+          repoMap[url] = ContributedRepository(
+            name: repoData.name,
+            owner: owner,
+            url: url,
+            contributionCount: repo.contributions.totalCount,
+            description: repoData.description,
+            language: primaryLang?.name as String?,
+            languageColor: primaryLang?.color as String?,
+            stargazersCount: repoData.stargazerCount,
+            isPrivate: repoData.isPrivate,
+            isFork: repoData.isFork,
+            commitCount: null,
+            reviewCount: repo.contributions.totalCount,
           );
         }
       }
@@ -509,8 +725,14 @@ class UserContributionsService {
       // Extract based on type
       if (type == 'issue') {
         final issue = contribution.issue;
-        if (issue == null) return null;
-        return ContributionHighlightItem(
+        if (issue == null) {
+          if (kDebugMode) {
+            log.d(
+                '[UserContributionsService] _extractHighlightItem: issue is null for type=$type, typename=${contribution.G__typename}');
+          }
+          return null;
+        }
+        final item = ContributionHighlightItem(
           title: issue.title ?? '',
           url: issue.url?.toString() ?? '',
           createdAt: issue.createdAt,
@@ -522,10 +744,21 @@ class UserContributionsService {
           state: issue.state?.name ?? 'OPEN',
           body: issue.body,
         );
+        if (kDebugMode) {
+          log.d(
+              '[UserContributionsService] _extractHighlightItem: Extracted issue "${item.title}" with ${item.commentCount ?? 0} comments');
+        }
+        return item;
       } else if (type == 'pullRequest') {
         final pr = contribution.pullRequest;
-        if (pr == null) return null;
-        return ContributionHighlightItem(
+        if (pr == null) {
+          if (kDebugMode) {
+            log.d(
+                '[UserContributionsService] _extractHighlightItem: pullRequest is null for type=$type, typename=${contribution.G__typename}');
+          }
+          return null;
+        }
+        final item = ContributionHighlightItem(
           title: pr.title ?? '',
           url: pr.url?.toString() ?? '',
           createdAt: pr.createdAt,
@@ -538,6 +771,11 @@ class UserContributionsService {
           body: pr.body,
           mergedAt: pr.mergedAt,
         );
+        if (kDebugMode) {
+          log.d(
+              '[UserContributionsService] _extractHighlightItem: Extracted PR "${item.title}" with ${item.commentCount ?? 0} comments');
+        }
+        return item;
       } else if (type == 'repository') {
         final repo = contribution.repository;
         if (repo == null) return null;

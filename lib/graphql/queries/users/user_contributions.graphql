@@ -17,6 +17,7 @@ query userContributions($user: String!, $from: DateTime, $to: DateTime) {
             totalRepositoriesWithContributedIssues
             totalRepositoriesWithContributedPullRequests
             totalRepositoriesWithContributedPullRequestReviews
+            totalRepositoryContributions
             restrictedContributionsCount
             doesEndInCurrentMonth
             hasActivityInThePast
@@ -110,39 +111,56 @@ query userContributions($user: String!, $from: DateTime, $to: DateTime) {
                 }
             }
             popularIssueContribution {
-                issue {
-                    id
-                    number
-                    title
-                    url
-                    createdAt
-                    repository {
-                        name
-                        owner {
-                            login
+                __typename
+                ... on CreatedIssueContribution {
+                    issue {
+                        id
+                        number
+                        title
+                        url
+                        createdAt
+                        body
+                        state
+                        repository {
+                            name
+                            owner {
+                                login
+                            }
+                        }
+                        comments {
+                            totalCount
                         }
                     }
-                    comments {
-                        totalCount
-                    }
+                }
+                ... on RestrictedContribution {
+                    occurredAt
                 }
             }
             popularPullRequestContribution {
-                pullRequest {
-                    id
-                    number
-                    title
-                    url
-                    createdAt
-                    repository {
-                        name
-                        owner {
-                            login
+                __typename
+                ... on CreatedPullRequestContribution {
+                    pullRequest {
+                        id
+                        number
+                        title
+                        url
+                        createdAt
+                        body
+                        state
+                        mergedAt
+                        repository {
+                            name
+                            owner {
+                                login
+                            }
+                        }
+                        comments {
+                            totalCount
                         }
                     }
-                    comments {
-                        totalCount
-                    }
+                }
+                ... on RestrictedContribution {
+                    occurredAt
                 }
             }
             joinedGitHubContribution {
@@ -155,6 +173,30 @@ query userContributions($user: String!, $from: DateTime, $to: DateTime) {
                         name
                         color
                     }
+                }
+                contributions {
+                    totalCount
+                }
+            }
+            issueContributionsByRepository(maxRepositories: 25) {
+                repository {
+                    ...repositoryFields
+                }
+                contributions {
+                    totalCount
+                }
+            }
+            pullRequestContributionsByRepository(maxRepositories: 25) {
+                repository {
+                    ...repositoryFields
+                }
+                contributions {
+                    totalCount
+                }
+            }
+            pullRequestReviewContributionsByRepository(maxRepositories: 25) {
+                repository {
+                    ...repositoryFields
                 }
                 contributions {
                     totalCount
