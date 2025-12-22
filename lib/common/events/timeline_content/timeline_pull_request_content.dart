@@ -1,6 +1,7 @@
 import 'package:diohub/common/markdown_view/trimmable_markdown_content.dart';
 import 'package:diohub/common/pulls/simple_pull_card.dart';
 import 'package:diohub/models/pull_requests/pull_request_card_data_model.dart';
+import 'package:diohub/style/surface_style_theme.dart';
 import 'package:flutter/material.dart';
 
 /// Unified content for pull request events in timeline
@@ -40,7 +41,7 @@ class TimelinePullRequestContent extends StatelessWidget {
                     .colorScheme
                     .surfaceVariant
                     .withOpacity(0.3),
-                borderRadius: BorderRadius.circular(8),
+                borderRadius: Theme.of(context).surfaceStyle.borderRadiusMedium(),
                 border: Border.all(
                   color: Theme.of(context)
                       .colorScheme
