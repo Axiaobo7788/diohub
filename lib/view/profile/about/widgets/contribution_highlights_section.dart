@@ -1,11 +1,13 @@
 import 'package:diohub/common/issues/issue_list_card.dart';
-import 'package:diohub/common/misc/nested_card_with_header.dart';
+import 'package:diohub/common/misc/contribution_info_chip.dart';
+import 'package:diohub/common/misc/surface_shape_resolver.dart';
 import 'package:diohub/common/pulls/pull_list_card.dart';
 import 'package:diohub/models/contributions/contribution_query_models.dart';
 import 'package:diohub/models/issues/issue_card_data_model.dart';
 import 'package:diohub/models/issues/issue_model.dart';
 import 'package:diohub/models/pull_requests/pull_request_model.dart';
 import 'package:diohub/models/repositories/repo_card_data_model.dart';
+import 'package:diohub/style/surface_style_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_vector_icons/flutter_vector_icons.dart';
 
@@ -27,25 +29,32 @@ class ContributionHighlightsSection extends StatelessWidget {
       return const SizedBox.shrink();
     }
 
+    final theme = Theme.of(context);
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 8),
-      child: NestedCardWithHeader(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-        header: Text(
-          'Highlights by year',
-          style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.w600,
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+      child: Material(
+        color: theme.colorScheme.surfaceContainerLow,
+        borderRadius: theme.surfaceStyle.borderRadiusMedium(),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Highlights by year',
+                style: theme.textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.w600,
+                ),
               ),
-        ),
-        childPadding: const EdgeInsets.all(0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: yearlyHighlights.asMap().entries.map((entry) {
-            return _YearHighlightItem(
-              highlight: entry.value,
-              isLast: entry.key == yearlyHighlights.length - 1,
-            );
-          }).toList(),
+              const SizedBox(height: 12),
+              ...yearlyHighlights.asMap().entries.map((entry) {
+                return _YearHighlightItem(
+                  highlight: entry.value,
+                  isLast: entry.key == yearlyHighlights.length - 1,
+                );
+              }).toList(),
+            ],
+          ),
         ),
       ),
     );
@@ -93,53 +102,50 @@ class _YearHighlightItem extends StatelessWidget {
 
           // Per-year chips
           Wrap(
-            spacing: 8,
-            runSpacing: 6,
+            spacing: 12,
+            runSpacing: 8,
+            crossAxisAlignment: WrapCrossAlignment.center,
             children: [
               // Restricted contributions
               if (highlight.restrictedContributionsCount > 0)
-                _buildSmallChip(
-                  context,
+                ContributionInfoChip(
                   icon: Octicons.lock,
-                  label: '${highlight.restrictedContributionsCount} private',
+                  count: highlight.restrictedContributionsCount,
+                  repoCount: null,
                   color: theme.colorScheme.tertiary,
                 ),
 
               // Repo counts
               if (highlight.totalRepositoriesWithContributedCommits > 0)
-                _buildSmallChip(
-                  context,
+                ContributionInfoChip(
                   icon: Octicons.git_commit,
-                  label:
-                      '${highlight.totalRepositoriesWithContributedCommits} repos',
+                  count: highlight.totalRepositoriesWithContributedCommits,
+                  repoCount: null,
                   color: const Color(0xFF2196F3),
                 ),
 
               if (highlight.totalRepositoriesWithContributedIssues > 0)
-                _buildSmallChip(
-                  context,
+                ContributionInfoChip(
                   icon: Octicons.issue_opened,
-                  label:
-                      '${highlight.totalRepositoriesWithContributedIssues} repos',
+                  count: highlight.totalRepositoriesWithContributedIssues,
+                  repoCount: null,
                   color: const Color(0xFF4CAF50),
                 ),
 
               if (highlight.totalRepositoriesWithContributedPullRequests > 0)
-                _buildSmallChip(
-                  context,
+                ContributionInfoChip(
                   icon: Octicons.git_pull_request,
-                  label:
-                      '${highlight.totalRepositoriesWithContributedPullRequests} repos',
+                  count: highlight.totalRepositoriesWithContributedPullRequests,
+                  repoCount: null,
                   color: const Color(0xFF9C27B0),
                 ),
 
               // Month count
               if (highlight.calendarMonths.isNotEmpty)
-                _buildSmallChip(
-                  context,
+                ContributionInfoChip(
                   icon: Octicons.calendar,
-                  label:
-                      '${highlight.calendarMonths.length} ${highlight.calendarMonths.length == 1 ? 'month' : 'months'}',
+                  count: highlight.calendarMonths.length,
+                  repoCount: null,
                   color: theme.colorScheme.secondary,
                 ),
             ],
@@ -260,9 +266,10 @@ class _YearHighlightItem extends StatelessWidget {
             const SizedBox(height: 4),
             Container(
               padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
+              decoration: SurfaceShapeResolver.boxDecoration(
+                context,
+                size: BorderRadiusSize.small,
                 color: theme.colorScheme.surfaceVariant.withOpacity(0.3),
-                borderRadius: BorderRadius.circular(8),
                 border: Border.all(
                   color: theme.colorScheme.outlineVariant.withOpacity(0.5),
                 ),
@@ -375,14 +382,16 @@ class _YearHighlightItem extends StatelessWidget {
     );
   }
 
-  Widget _buildRepositoryCard(ContributionHighlightItem item, BuildContext context) {
+  Widget _buildRepositoryCard(
+      ContributionHighlightItem item, BuildContext context) {
     final theme = Theme.of(context);
 
     return Container(
       padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
+      decoration: SurfaceShapeResolver.boxDecoration(
+        context,
+        size: BorderRadiusSize.small,
         color: const Color(0xFF2196F3).withOpacity(0.05),
-        borderRadius: BorderRadius.circular(8),
         border: Border.all(
           color: const Color(0xFF2196F3).withOpacity(0.2),
         ),
@@ -458,9 +467,10 @@ class _YearHighlightItem extends StatelessWidget {
       padding: const EdgeInsets.only(bottom: 8),
       child: Container(
         padding: const EdgeInsets.all(10),
-        decoration: BoxDecoration(
+        decoration: SurfaceShapeResolver.boxDecoration(
+          context,
+          size: BorderRadiusSize.small,
           color: theme.colorScheme.primaryContainer.withOpacity(0.3),
-          borderRadius: BorderRadius.circular(8),
           border: Border.all(
             color: theme.colorScheme.primary.withOpacity(0.3),
           ),
@@ -527,44 +537,4 @@ class _YearHighlightItem extends StatelessWidget {
     }
   }
 
-  Widget _buildSmallChip(
-    BuildContext context, {
-    required IconData icon,
-    required String label,
-    required Color color,
-  }) {
-    final theme = Theme.of(context);
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(
-        color: color.withOpacity(0.08),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: color.withOpacity(0.2),
-          width: 0.5,
-        ),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(
-            icon,
-            size: 12,
-            color: color,
-          ),
-          const SizedBox(width: 4),
-          Text(
-            label,
-            style: theme.textTheme.bodySmall?.copyWith(
-              color: theme.colorScheme.onSurface.withOpacity(0.8),
-              fontSize: 11,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
 }
-

@@ -17,6 +17,7 @@ import 'package:diohub/providers/repository/branch_provider.dart';
 import 'package:diohub/providers/repository/repository_provider.dart';
 import 'package:diohub/routes/router.gr.dart';
 import 'package:diohub/services/repositories/repo_services.dart';
+import 'package:diohub/style/surface_style_theme.dart';
 import 'package:diohub/utils/get_date.dart';
 import 'package:diohub/utils/utils.dart';
 import 'package:diohub/view/issues_pulls/issue_pull_screen.dart';
@@ -255,7 +256,7 @@ List<ActionButtonData> buildAllActions(
                                       color: issueModel.state == IssueState.OPEN
                                           ? Colors.green.withOpacity(0.12)
                                           : Colors.red.withOpacity(0.12),
-                                      borderRadius: BorderRadius.circular(4),
+                                      borderRadius: Theme.of(context).surfaceStyle.borderRadiusSmall(),
                                     ),
                                     child: Row(
                                       mainAxisSize: MainAxisSize.min,
@@ -749,14 +750,14 @@ Widget _buildBranchListItem(
             .setBranch(data.item.name!);
         onCollapse();
       },
-      borderRadius: BorderRadius.circular(8),
+      borderRadius: Theme.of(context).surfaceStyle.borderRadiusMedium(),
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         decoration: BoxDecoration(
           color: data.item.name == currentBranch
               ? context.colorScheme.primary.withOpacity(0.1)
               : Colors.transparent,
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: Theme.of(context).surfaceStyle.borderRadiusMedium(),
         ),
         child: Row(
           children: [
@@ -791,7 +792,7 @@ Widget _buildBranchListItem(
                       const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(
                     color: context.colorScheme.surfaceContainerHighest,
-                    borderRadius: BorderRadius.circular(4),
+                    borderRadius: Theme.of(context).surfaceStyle.borderRadiusSmall(),
                   ),
                   child: Text(
                     'Default',
@@ -973,7 +974,7 @@ class _BranchListExpandedWidgetState extends State<_BranchListExpandedWidget> {
                         color: Colors.transparent,
                         child: InkWell(
                           onTap: () => changeBranch(branchName),
-                          borderRadius: BorderRadius.circular(12),
+                          borderRadius: Theme.of(context).surfaceStyle.borderRadiusMedium(),
                           child: Container(
                             padding: const EdgeInsets.symmetric(
                               horizontal: 16,
@@ -984,7 +985,7 @@ class _BranchListExpandedWidgetState extends State<_BranchListExpandedWidget> {
                                   ? context.colorScheme.primaryContainer
                                       .withOpacity(0.3)
                                   : Colors.transparent,
-                              borderRadius: BorderRadius.circular(12),
+                              borderRadius: Theme.of(context).surfaceStyle.borderRadiusMedium(),
                               border: isCurrent
                                   ? Border.all(
                                       color: context.colorScheme.primary
@@ -1004,7 +1005,7 @@ class _BranchListExpandedWidgetState extends State<_BranchListExpandedWidget> {
                                         : context
                                             .colorScheme.surfaceContainerHighest
                                             .withOpacity(0.5),
-                                    borderRadius: BorderRadius.circular(8),
+                                    borderRadius: Theme.of(context).surfaceStyle.borderRadiusMedium(),
                                   ),
                                   child: Icon(
                                     Octicons.git_branch,
@@ -1062,8 +1063,7 @@ class _BranchListExpandedWidgetState extends State<_BranchListExpandedWidget> {
                                               decoration: BoxDecoration(
                                                 color: context.colorScheme
                                                     .secondaryContainer,
-                                                borderRadius:
-                                                    BorderRadius.circular(10),
+                                                borderRadius: Theme.of(context).surfaceStyle.borderRadiusMedium(),
                                               ),
                                               child: Text(
                                                 'Default',
@@ -1201,7 +1201,7 @@ class _BranchesBottomSheetHeaderState
           child: Container(
             decoration: BoxDecoration(
               color: context.colorScheme.surfaceContainerHighest,
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: Theme.of(context).surfaceStyle.borderRadiusMedium(),
               border: Border.all(
                 color: context.colorScheme.outline.withOpacity(0.12),
                 width: 1,
@@ -1397,7 +1397,7 @@ class _BranchesBottomSheetBodyState extends State<_BranchesBottomSheetBody> {
           color: Colors.transparent,
           child: InkWell(
             onTap: () => changeBranch(branchName),
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: Theme.of(context).surfaceStyle.borderRadiusMedium(),
             child: Container(
               padding: const EdgeInsets.symmetric(
                 horizontal: 16,
@@ -1407,7 +1407,7 @@ class _BranchesBottomSheetBodyState extends State<_BranchesBottomSheetBody> {
                 color: isCurrent
                     ? context.colorScheme.primaryContainer.withOpacity(0.3)
                     : Colors.transparent,
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: Theme.of(context).surfaceStyle.borderRadiusMedium(),
                 border: isCurrent
                     ? Border.all(
                         color: context.colorScheme.primary.withOpacity(0.3),
@@ -1424,7 +1424,7 @@ class _BranchesBottomSheetBodyState extends State<_BranchesBottomSheetBody> {
                           ? context.colorScheme.primary.withOpacity(0.1)
                           : context.colorScheme.surfaceContainerHighest
                               .withOpacity(0.5),
-                      borderRadius: BorderRadius.circular(8),
+                      borderRadius: Theme.of(context).surfaceStyle.borderRadiusMedium(),
                     ),
                     child: Icon(
                       Octicons.git_branch,
@@ -1474,7 +1474,7 @@ class _BranchesBottomSheetBodyState extends State<_BranchesBottomSheetBody> {
                                 ),
                                 decoration: BoxDecoration(
                                   color: context.colorScheme.secondaryContainer,
-                                  borderRadius: BorderRadius.circular(12),
+                                  borderRadius: Theme.of(context).surfaceStyle.borderRadiusMedium(),
                                 ),
                                 child: Text(
                                   'Default',

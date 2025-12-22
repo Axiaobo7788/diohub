@@ -4,6 +4,7 @@ import 'package:diohub/providers/repository/branch_provider.dart';
 import 'package:diohub/providers/repository/code_provider.dart';
 import 'package:diohub/providers/repository/repository_provider.dart';
 import 'package:diohub/routes/router.gr.dart';
+import 'package:diohub/style/surface_style_theme.dart';
 import 'package:diohub/utils/utils.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_material_design_icons/flutter_material_design_icons.dart';
@@ -75,7 +76,7 @@ class BrowserListTile extends StatelessWidget {
             );
           }
         },
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: Theme.of(context).surfaceStyle.borderRadiusMedium(),
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
           child: Row(

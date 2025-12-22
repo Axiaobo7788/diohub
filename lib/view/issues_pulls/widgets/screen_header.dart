@@ -3,6 +3,7 @@ import 'package:diohub/common/markdown_view/markdown_body.dart';
 import 'package:diohub/common/misc/editable_text.dart';
 import 'package:diohub/common/wrappers/editing_wrapper.dart';
 import 'package:diohub/graphql/queries/issues_pulls/__generated__/issue_pull_info.data.gql.dart';
+import 'package:diohub/style/surface_style_theme.dart';
 import 'package:diohub/utils/markdown_to_html.dart';
 import 'package:diohub/utils/utils.dart';
 import 'package:diohub/view/issues_pulls/issue_pull_info_template.dart';
@@ -40,7 +41,7 @@ class ScreenHeader extends StatelessWidget {
                           horizontal: 12, vertical: 6),
                       decoration: BoxDecoration(
                         color: context.colorScheme.tertiaryContainer,
-                        borderRadius: BorderRadius.circular(100),
+                        borderRadius: Theme.of(context).surfaceStyle.borderRadiusVeryLarge(),
                       ),
                       child: Row(
                         mainAxisSize: MainAxisSize.min,

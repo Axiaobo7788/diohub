@@ -9,6 +9,7 @@ import 'package:diohub/graphql/__generated__/schema.schema.gql.dart';
 import 'package:diohub/graphql/queries/issues_pulls/__generated__/timeline.data.gql.dart';
 import 'package:diohub/providers/issue_pulls/comment_provider.dart';
 import 'package:diohub/routes/router.gr.dart';
+import 'package:diohub/style/surface_style_theme.dart';
 import 'package:diohub/utils/copy_to_clipboard.dart';
 import 'package:diohub/utils/get_date.dart';
 import 'package:diohub/utils/utils.dart';
@@ -283,7 +284,7 @@ class BaseCommentState extends State<BaseComment> {
                             ),
                             decoration: BoxDecoration(
                               color: badgeColor?.withOpacity(0.6),
-                              borderRadius: BorderRadius.circular(3),
+                              borderRadius: Theme.of(context).surfaceStyle.borderRadiusSoft(),
                             ),
                             child: Text(
                               str ?? '',

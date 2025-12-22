@@ -17,6 +17,7 @@ import 'package:diohub/models/commits/commit_model.dart';
 import 'package:diohub/providers/base_provider.dart';
 import 'package:diohub/providers/commits/commit_provider.dart';
 import 'package:diohub/routes/router.gr.dart';
+import 'package:diohub/style/surface_style_theme.dart';
 import 'package:diohub/utils/get_date.dart';
 import 'package:diohub/utils/utils.dart';
 import 'package:diohub/view/repository/commits/widgets/changed_files.dart';
@@ -147,7 +148,7 @@ class CommitInfoScreenState extends State<CommitInfoScreen>
                       ),
                       decoration: BoxDecoration(
                         color: context.colorScheme.surfaceContainerHighest,
-                        borderRadius: BorderRadius.circular(6),
+                        borderRadius: Theme.of(context).surfaceStyle.borderRadiusSmall(),
                       ),
                       child: Row(
                         children: [
@@ -177,7 +178,7 @@ class CommitInfoScreenState extends State<CommitInfoScreen>
                         ),
                         decoration: BoxDecoration(
                           color: Colors.green.withOpacity(0.12),
-                          borderRadius: BorderRadius.circular(6),
+                          borderRadius: Theme.of(context).surfaceStyle.borderRadiusSmall(),
                         ),
                         child: Row(
                           children: [
@@ -407,7 +408,7 @@ class CommitInfoScreenState extends State<CommitInfoScreen>
                     onTap: () => AutoRouter.of(context).push(
                       CommitInfoRoute(commitURL: parent.commitUrl.toString()),
                     ),
-                    borderRadius: BorderRadius.circular(8),
+                    borderRadius: Theme.of(context).surfaceStyle.borderRadiusMedium(),
                     child: Container(
                       padding: const EdgeInsets.symmetric(
                         horizontal: 10,
@@ -415,7 +416,7 @@ class CommitInfoScreenState extends State<CommitInfoScreen>
                       ),
                       decoration: BoxDecoration(
                         color: context.colorScheme.surfaceContainerHighest,
-                        borderRadius: BorderRadius.circular(8),
+                        borderRadius: Theme.of(context).surfaceStyle.borderRadiusMedium(),
                         border: Border.all(
                           color: context.colorScheme.outlineVariant
                               .withOpacity(0.3),
@@ -639,10 +640,7 @@ class CommitInfoScreenState extends State<CommitInfoScreen>
         Colors.black,
         0.1,
       ),
-      elevation: 0,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-      ),
+     
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -761,9 +759,7 @@ class CommitInfoScreenState extends State<CommitInfoScreen>
         0.1,
       ),
       elevation: 0,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-      ),
+      
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -826,7 +822,7 @@ class CommitInfoScreenState extends State<CommitInfoScreen>
                   color: Colors.transparent,
                   child: InkWell(
                     onTap: () => launchUrl(Uri.parse(pr.url.toString())),
-                    borderRadius: BorderRadius.circular(8),
+                    borderRadius: Theme.of(context).surfaceStyle.borderRadiusMedium(),
                     child: Padding(
                       padding: const EdgeInsets.all(8),
                       child: Row(
@@ -838,7 +834,7 @@ class CommitInfoScreenState extends State<CommitInfoScreen>
                             ),
                             decoration: BoxDecoration(
                               color: stateColor.withOpacity(0.15),
-                              borderRadius: BorderRadius.circular(6),
+                              borderRadius: Theme.of(context).surfaceStyle.borderRadiusSmall(),
                             ),
                             child: Row(
                               mainAxisSize: MainAxisSize.min,

@@ -1,5 +1,6 @@
-import 'package:diohub/common/misc/nested_card_with_header.dart';
+import 'package:diohub/common/misc/surface_shape_resolver.dart';
 import 'package:diohub/models/contributions/contribution_query_models.dart';
+import 'package:diohub/style/surface_style_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_vector_icons/flutter_vector_icons.dart';
 
@@ -17,7 +18,7 @@ class ContributionMetaChips extends StatelessWidget {
     final theme = Theme.of(context);
     final hasRestrictedContributions =
         contributionResult.hasAnyRestrictedContributions;
-    
+
     // Aggregate repo counts across all years
     int totalReposWithCommits = 0;
     int totalReposWithIssues = 0;
@@ -27,7 +28,8 @@ class ContributionMetaChips extends StatelessWidget {
       totalReposWithCommits +=
           highlight.totalRepositoriesWithContributedCommits;
       totalReposWithIssues += highlight.totalRepositoriesWithContributedIssues;
-      totalReposWithPRs += highlight.totalRepositoriesWithContributedPullRequests;
+      totalReposWithPRs +=
+          highlight.totalRepositoriesWithContributedPullRequests;
     }
 
     // Only show if there's something to display
@@ -39,49 +41,56 @@ class ContributionMetaChips extends StatelessWidget {
     }
 
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 8),
-      child: NestedCardWithHeader(
-        padding: const EdgeInsets.all(12),
-        child: Wrap(
-          spacing: 12,
-          runSpacing: 8,
-          crossAxisAlignment: WrapCrossAlignment.center,
-          children: [
-            // Private/restricted badge
-            if (hasRestrictedContributions)
-              _buildChip(
-                context,
-                icon: Octicons.lock,
-                label:
-                    'Includes ${contributionResult.totalRestrictedContributions} private/restricted ${contributionResult.totalRestrictedContributions == 1 ? 'contribution' : 'contributions'}',
-                color: theme.colorScheme.tertiary,
-              ),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+      child: Material(
+        color: theme.colorScheme.surfaceContainerLow,
+        borderRadius: theme.surfaceStyle.borderRadiusMedium(),
+        child: Padding(
+          padding: const EdgeInsets.all(12),
+          child: Wrap(
+            spacing: 12,
+            runSpacing: 8,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            children: [
+              // Private/restricted badge
+              if (hasRestrictedContributions)
+                _buildChip(
+                  context,
+                  icon: Octicons.lock,
+                  label:
+                      'Includes ${contributionResult.totalRestrictedContributions} private/restricted ${contributionResult.totalRestrictedContributions == 1 ? 'contribution' : 'contributions'}',
+                  color: theme.colorScheme.tertiary,
+                ),
 
-            // Repo count chips
-            if (totalReposWithCommits > 0)
-              _buildChip(
-                context,
-                icon: Octicons.repo,
-                label: '$totalReposWithCommits ${totalReposWithCommits == 1 ? 'repo' : 'repos'} with commits',
-                color: const Color(0xFF2196F3),
-              ),
+              // Repo count chips
+              if (totalReposWithCommits > 0)
+                _buildChip(
+                  context,
+                  icon: Octicons.repo,
+                  label:
+                      '$totalReposWithCommits ${totalReposWithCommits == 1 ? 'repo' : 'repos'} with commits',
+                  color: const Color(0xFF2196F3),
+                ),
 
-            if (totalReposWithIssues > 0)
-              _buildChip(
-                context,
-                icon: Octicons.issue_opened,
-                label: '$totalReposWithIssues ${totalReposWithIssues == 1 ? 'repo' : 'repos'} with issues',
-                color: const Color(0xFF4CAF50),
-              ),
+              if (totalReposWithIssues > 0)
+                _buildChip(
+                  context,
+                  icon: Octicons.issue_opened,
+                  label:
+                      '$totalReposWithIssues ${totalReposWithIssues == 1 ? 'repo' : 'repos'} with issues',
+                  color: const Color(0xFF4CAF50),
+                ),
 
-            if (totalReposWithPRs > 0)
-              _buildChip(
-                context,
-                icon: Octicons.git_pull_request,
-                label: '$totalReposWithPRs ${totalReposWithPRs == 1 ? 'repo' : 'repos'} with PRs',
-                color: const Color(0xFF9C27B0),
-              ),
-          ],
+              if (totalReposWithPRs > 0)
+                _buildChip(
+                  context,
+                  icon: Octicons.git_pull_request,
+                  label:
+                      '$totalReposWithPRs ${totalReposWithPRs == 1 ? 'repo' : 'repos'} with PRs',
+                  color: const Color(0xFF9C27B0),
+                ),
+            ],
+          ),
         ),
       ),
     );
@@ -97,9 +106,10 @@ class ContributionMetaChips extends StatelessWidget {
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-      decoration: BoxDecoration(
+      decoration: SurfaceShapeResolver.boxDecoration(
+        context,
+        size: BorderRadiusSize.large,
         color: color.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(16),
         border: Border.all(
           color: color.withOpacity(0.3),
           width: 1,
@@ -127,4 +137,3 @@ class ContributionMetaChips extends StatelessWidget {
     );
   }
 }
-

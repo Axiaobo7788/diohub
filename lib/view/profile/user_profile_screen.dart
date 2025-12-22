@@ -20,6 +20,7 @@ import 'package:diohub/providers/base_provider.dart';
 import 'package:diohub/providers/users/user_contributions_provider.dart';
 import 'package:diohub/providers/users/user_provider.dart';
 import 'package:diohub/routes/router.gr.dart';
+import 'package:diohub/style/surface_style_theme.dart';
 import 'package:diohub/utils/get_date.dart';
 import 'package:diohub/utils/utils.dart';
 import 'package:diohub/view/profile/about/user_about_screen.dart';
@@ -1207,14 +1208,14 @@ class _DateRangeExpandedContent extends ConsumerWidget {
       color: Colors.transparent,
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: Theme.of(context).surfaceStyle.borderRadiusMedium(),
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
           decoration: BoxDecoration(
             color: isSelected
                 ? colorScheme.primaryContainer.withOpacity(0.3)
                 : Colors.transparent,
-            borderRadius: BorderRadius.circular(8),
+            borderRadius: Theme.of(context).surfaceStyle.borderRadiusMedium(),
             border: isSelected
                 ? Border.all(
                     color: colorScheme.primary.withOpacity(0.5),

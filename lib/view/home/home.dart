@@ -12,7 +12,9 @@ import 'package:diohub/common/misc/floating_toolbar_wrapper.dart';
 import 'package:diohub/common/misc/ink_pot.dart';
 import 'package:diohub/common/misc/profile_banner.dart';
 import 'package:diohub/common/misc/shimmer_widget.dart';
+import 'package:diohub/common/misc/surface_shape_resolver.dart';
 import 'package:diohub/common/search_overlay/search_bar.dart';
+import 'package:diohub/style/surface_style_theme.dart';
 import 'package:diohub/common/search_overlay/search_overlay.dart';
 import 'package:diohub/common/wrappers/dynamic_tabs_parent.dart';
 import 'package:diohub/common/wrappers/infinite_scroll_wrapper.dart';
@@ -506,7 +508,7 @@ class HomeScreenState extends State<HomeScreen>
     final subtitle = user.name?.trim().isNotEmpty == true ? user.login : null;
 
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 20, 16, 16),
+      padding: const EdgeInsets.fromLTRB(16, 20, 16, 8),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -629,7 +631,10 @@ class HomeScreenState extends State<HomeScreen>
             horizontal: 12,
             vertical: 4,
           ),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+          shape: SurfaceShapeResolver.shape(
+            context,
+            size: BorderRadiusSize.small,
+          ),
           selected: isSelected,
           selectedTileColor: isSelected ? context.colorScheme.primary : null,
           title: Text(
@@ -736,8 +741,9 @@ class HomeScreenState extends State<HomeScreen>
               horizontal: 12,
               vertical: 4,
             ),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(6),
+            shape: SurfaceShapeResolver.shape(
+              context,
+              size: BorderRadiusSize.small,
             ),
             selected: isSelected,
             selectedTileColor: isSelected ? context.colorScheme.primary : null,

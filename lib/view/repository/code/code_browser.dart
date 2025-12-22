@@ -4,6 +4,7 @@ import 'package:diohub/common/animations/size_expanded_widget.dart';
 import 'package:diohub/common/bottom_sheet/bottom_sheets.dart';
 import 'package:diohub/common/misc/highlighted_container.dart';
 import 'package:diohub/style/surface_style_theme.dart';
+import 'package:diohub/common/misc/surface_shape_resolver.dart';
 import 'package:diohub/common/misc/loading_indicator.dart';
 import 'package:diohub/common/wrappers/provider_loading_progress_wrapper.dart';
 import 'package:diohub/providers/base_provider.dart';
@@ -79,9 +80,10 @@ class CodeBrowserState extends State<CodeBrowser>
                             vertical: 16,
                             horizontal: 16,
                           ),
-                          decoration: BoxDecoration(
+                          decoration: SurfaceShapeResolver.boxDecoration(
+                            context,
+                            size: BorderRadiusSize.medium,
                             color: context.colorScheme.surfaceContainerHigh,
-                            borderRadius: BorderRadius.circular(12),
                           ),
                           child: const LoadingIndicator(),
                         ),
@@ -108,9 +110,10 @@ class CodeBrowserState extends State<CodeBrowser>
                           size: BorderRadiusSize.medium,
                           child: Container(
                             height: 40,
-                            decoration: BoxDecoration(
+                            decoration: SurfaceShapeResolver.boxDecoration(
+                              context,
+                              size: BorderRadiusSize.medium,
                               color: context.colorScheme.surfaceContainerHigh,
-                              borderRadius: BorderRadius.circular(12),
                             ),
                             padding: const EdgeInsets.symmetric(horizontal: 12),
                             child: ListView.separated(
@@ -143,7 +146,9 @@ class CodeBrowserState extends State<CodeBrowser>
                                       ).popTreeUntil(value.tree[index]);
                                     }
                                   },
-                                  borderRadius: BorderRadius.circular(8),
+                                  borderRadius: Theme.of(context)
+                                      .surfaceStyle
+                                      .borderRadius(size: BorderRadiusSize.small),
                                   child: Padding(
                                     padding: const EdgeInsets.symmetric(
                                       horizontal: 10,
@@ -194,9 +199,10 @@ class CodeBrowserState extends State<CodeBrowser>
                       highlightColor: context.colorScheme.primary,
                       size: BorderRadiusSize.large,
                       child: Container(
-                        decoration: BoxDecoration(
+                        decoration: SurfaceShapeResolver.boxDecoration(
+                          context,
+                          size: BorderRadiusSize.large,
                           color: context.colorScheme.surfaceContainerHigh,
-                          borderRadius: BorderRadius.circular(16),
                         ),
                         child: ListView.separated(
                           physics: const NeverScrollableScrollPhysics(),
@@ -239,12 +245,15 @@ class CodeBrowserState extends State<CodeBrowser>
     final BuildContext context,
     final CodeProvider value,
   ) {
+    final borderRadius = Theme.of(context)
+        .surfaceStyle
+        .borderRadius(size: BorderRadiusSize.medium);
     return HighlightedContainer(
       highlightColor: context.colorScheme.primary,
-      // borderRadius: 12,
+      size: BorderRadiusSize.medium,
       child: Material(
         color: context.colorScheme.surfaceContainerHigh,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: borderRadius,
         child: InkWell(
           onTap: () {
             showCommitHistory(
@@ -252,7 +261,7 @@ class CodeBrowserState extends State<CodeBrowser>
               value.tree.last.commit!.sha,
             );
           },
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: borderRadius,
           child: const Padding(
             padding: EdgeInsets.all(16),
             child: CommitInfoButton(),
@@ -274,14 +283,18 @@ class CodeBrowserState extends State<CodeBrowser>
             size: BorderRadiusSize.medium,
             child: Material(
               color: context.colorScheme.surfaceContainerHigh,
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: Theme.of(context)
+                  .surfaceStyle
+                  .borderRadius(size: BorderRadiusSize.medium),
               child: InkWell(
                 onTap: value.status == Status.loaded
                     ? () {
                         context.read<RepoBranchProvider>().reloadBranch();
                       }
                     : null,
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: Theme.of(context)
+                    .surfaceStyle
+                    .borderRadius(size: BorderRadiusSize.medium),
                 child: Padding(
                   padding: const EdgeInsets.all(16),
                   child: Row(

@@ -1,5 +1,6 @@
 import 'package:diohub/common/bottom_sheet/bottom_sheets.dart';
 import 'package:diohub/common/charts/contribution_calendar_widget.dart';
+import 'package:diohub/style/surface_style_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
@@ -102,7 +103,9 @@ class _DayDetailsBody extends StatelessWidget {
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: colorScheme.surfaceContainerHighest.withOpacity(0.3),
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: Theme.of(context)
+            .surfaceStyle
+            .borderRadius(size: BorderRadiusSize.medium),
       ),
       child: Row(
         children: [
@@ -231,7 +234,9 @@ class _DayDetailsBody extends StatelessWidget {
 
     return InkWell(
       onTap: contribution.onTap,
-      borderRadius: BorderRadius.circular(8),
+      borderRadius: Theme.of(context)
+          .surfaceStyle
+          .borderRadius(size: BorderRadiusSize.small),
       child: Padding(
         padding: const EdgeInsets.all(8),
         child: Row(
