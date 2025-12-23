@@ -5,6 +5,7 @@ import 'package:diohub/common/misc/repository_card.dart';
 import 'package:diohub/common/misc/surface_shape_resolver.dart';
 import 'package:diohub/common/pulls/simple_pull_card.dart';
 import 'package:diohub/common/timeline/left_right_timeline_item.dart';
+import 'package:diohub/models/contributions/contribution_chip_type.dart';
 import 'package:diohub/models/contributions/contribution_query_models.dart';
 import 'package:diohub/models/issues/issue_card_data_model.dart';
 import 'package:diohub/models/pull_requests/pull_request_card_data_model.dart';
@@ -19,11 +20,13 @@ class ContributionHighlightsSection extends StatelessWidget {
   const ContributionHighlightsSection({
     required this.yearlyHighlights,
     required this.userName,
+    this.onChipTap,
     super.key,
   });
 
   final List<YearlyContributionHighlights> yearlyHighlights;
   final String userName;
+  final void Function(ContributionChipType chipType)? onChipTap;
 
   @override
   Widget build(BuildContext context) {
@@ -54,6 +57,7 @@ class ContributionHighlightsSection extends StatelessWidget {
               highlight: entry.value,
               isFirst: entry.key == 0,
               isLast: entry.key == yearlyHighlights.length - 1,
+              onChipTap: onChipTap,
             );
           }).toList(),
         ],
@@ -67,11 +71,13 @@ class _YearHighlightItem extends StatelessWidget {
     required this.highlight,
     required this.isFirst,
     required this.isLast,
+    this.onChipTap,
   });
 
   final YearlyContributionHighlights highlight;
   final bool isFirst;
   final bool isLast;
+  final void Function(ContributionChipType chipType)? onChipTap;
 
   @override
   Widget build(BuildContext context) {
@@ -149,72 +155,54 @@ class _YearHighlightItem extends StatelessWidget {
               runSpacing: 8,
               crossAxisAlignment: WrapCrossAlignment.center,
               children: [
-                // Commits with repo count
                 if (highlight.totalCommitContributions > 0)
-                  ContributionInfoChip(
-                    icon: Octicons.git_commit,
+                  ContributionInfoChip.commits(
                     count: highlight.totalCommitContributions,
-                    label: highlight.totalRepositoriesWithContributedCommits > 0
-                        ? 'in ${highlight.totalRepositoriesWithContributedCommits} ${highlight.totalRepositoriesWithContributedCommits == 1 ? 'repo' : 'repos'}'
+                    repoCount: highlight.totalRepositoriesWithContributedCommits,
+                    onTap: onChipTap != null
+                        ? () => onChipTap!(ContributionChipType.commits)
                         : null,
-                    color: const Color(0xFF2196F3),
                   ),
-
-                // Issues with repo count
                 if (highlight.totalIssueContributions > 0)
-                  ContributionInfoChip(
-                    icon: Octicons.issue_opened,
+                  ContributionInfoChip.issues(
                     count: highlight.totalIssueContributions,
-                    label: highlight.totalRepositoriesWithContributedIssues > 0
-                        ? 'in ${highlight.totalRepositoriesWithContributedIssues} ${highlight.totalRepositoriesWithContributedIssues == 1 ? 'repo' : 'repos'}'
+                    repoCount: highlight.totalRepositoriesWithContributedIssues,
+                    onTap: onChipTap != null
+                        ? () => onChipTap!(ContributionChipType.issues)
                         : null,
-                    color: const Color(0xFF4CAF50),
                   ),
-
-                // Pull requests with repo count
                 if (highlight.totalPullRequestContributions > 0)
-                  ContributionInfoChip(
-                    icon: Octicons.git_pull_request,
+                  ContributionInfoChip.pullRequests(
                     count: highlight.totalPullRequestContributions,
-                    label: highlight
-                                .totalRepositoriesWithContributedPullRequests >
-                            0
-                        ? 'in ${highlight.totalRepositoriesWithContributedPullRequests} ${highlight.totalRepositoriesWithContributedPullRequests == 1 ? 'repo' : 'repos'}'
+                    repoCount:
+                        highlight.totalRepositoriesWithContributedPullRequests,
+                    onTap: onChipTap != null
+                        ? () => onChipTap!(ContributionChipType.pullRequests)
                         : null,
-                    color: const Color(0xFF9C27B0),
                   ),
-
-                // Reviews with repo count
                 if (highlight.totalPullRequestReviewContributions > 0)
-                  ContributionInfoChip(
-                    icon: Octicons.code_review,
+                  ContributionInfoChip.reviews(
                     count: highlight.totalPullRequestReviewContributions,
-                    label: highlight
-                                .totalRepositoriesWithContributedPullRequestReviews >
-                            0
-                        ? 'reviews in ${highlight.totalRepositoriesWithContributedPullRequestReviews} ${highlight.totalRepositoriesWithContributedPullRequestReviews == 1 ? 'repo' : 'repos'}'
-                        : 'reviews',
-                    color: const Color(0xFFFF9800),
+                    repoCount: highlight
+                        .totalRepositoriesWithContributedPullRequestReviews,
+                    onTap: onChipTap != null
+                        ? () => onChipTap!(ContributionChipType.reviews)
+                        : null,
                   ),
-
-                // Repository contributions
                 if (highlight.totalRepositoryContributions > 0)
-                  ContributionInfoChip(
-                    icon: Octicons.repo,
+                  ContributionInfoChip.repositories(
                     count: highlight.totalRepositoryContributions,
-                    label: highlight.totalRepositoryContributions == 1
-                        ? 'repo created'
-                        : 'repos created',
-                    color: const Color(0xFF795548),
+                    onTap: onChipTap != null
+                        ? () => onChipTap!(ContributionChipType.createdRepos)
+                        : null,
                   ),
-
-                // Restricted contributions
                 if (highlight.restrictedContributionsCount > 0)
-                  ContributionInfoChip(
-                    icon: Octicons.lock,
+                  ContributionInfoChip.private(
                     count: highlight.restrictedContributionsCount,
-                    label: 'private',
-                    color: theme.colorScheme.tertiary,
+                    colorScheme: theme.colorScheme,
+                    onTap: onChipTap != null
+                        ? () => onChipTap!(ContributionChipType.private)
+                        : null,
                   ),
               ],
             ),

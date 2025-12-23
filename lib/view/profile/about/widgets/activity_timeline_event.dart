@@ -1,5 +1,6 @@
 import 'package:diohub/graphql/__generated__/schema.schema.gql.dart' as _i2;
 import 'package:diohub/graphql/queries/users/__generated__/user_activity_timeline_full.data.gql.dart';
+import 'package:diohub/graphql/queries/users/__generated__/user_info.data.gql.dart';
 import 'package:diohub/models/commits/commit_card_data_model.dart';
 import 'package:diohub/models/issues/issue_card_data_model.dart';
 import 'package:diohub/models/pull_requests/pull_request_card_data_model.dart';
@@ -11,6 +12,7 @@ enum ActivityEventType {
   pullRequest,
   issue,
   repositoryCreated,
+  review,
 }
 
 /// Month header information (set on first event of each month during grouping)
@@ -48,11 +50,11 @@ class ActivityTimelineEvent {
   final String? repositoryUrl;
 
   // Full GraphQL node data (preserves all fields from API)
-  final GuserActivityTimelineFullData_user_pullRequests_edges_node?
-      pullRequestNode;
-  final GuserActivityTimelineFullData_user_issues_edges_node? issueNode;
-  final GuserActivityTimelineFullData_user_repositories_edges_node?
-      repositoryNode;
+  final GpullInfoTimeline? pullRequestNode;
+  final GissueInfoTimeline? issueNode;
+  final GrepositoryFields? repositoryNode;
+  // For reviews, we store the pull request node from the review contribution
+  final GpullInfoTimeline? reviewPullRequestNode;
   // For commits, we use commitData since it's aggregated from multiple repos
 
   // Unified data models for card widgets
@@ -71,6 +73,7 @@ class ActivityTimelineEvent {
     this.pullRequestNode,
     this.issueNode,
     this.repositoryNode,
+    this.reviewPullRequestNode,
     this.issueData,
     this.pullRequestData,
     this.commitData,
@@ -107,6 +110,15 @@ class ActivityTimelineEvent {
         return 'Opened issue';
       case ActivityEventType.repositoryCreated:
         return 'Created 1 repository';
+      case ActivityEventType.review:
+        if (pullRequestNode != null || reviewPullRequestNode != null) {
+          final prNode = pullRequestNode ?? reviewPullRequestNode;
+          final number = prNode?.number;
+          if (number != null) {
+            return 'Reviewed pull request #$number';
+          }
+        }
+        return 'Reviewed pull request';
     }
   }
 

@@ -1,4 +1,5 @@
 import 'package:diohub/common/events/events.dart';
+import 'package:diohub/models/contributions/contribution_chip_type.dart';
 import 'package:diohub/models/contributions/contribution_query_models.dart';
 import 'package:diohub/view/profile/about/widgets/activity_timeline_section.dart';
 import 'package:diohub/view/profile/about/widgets/contribution_summary_tab.dart';
@@ -15,6 +16,7 @@ class TabbedContributionSection extends StatefulWidget {
     required this.customToDate,
     required this.useCustomRange,
     required this.createdAt,
+    this.onChipTap,
     super.key,
   });
 
@@ -25,6 +27,7 @@ class TabbedContributionSection extends StatefulWidget {
   final DateTime? customToDate;
   final bool useCustomRange;
   final DateTime? createdAt;
+  final void Function(ContributionChipType chipType)? onChipTap;
 
   @override
   State<TabbedContributionSection> createState() =>
@@ -116,6 +119,7 @@ class _TabbedContributionSectionState extends State<TabbedContributionSection>
                 customToDate: widget.customToDate,
                 useCustomRange: widget.useCustomRange,
                 createdAt: widget.createdAt,
+                onChipTap: widget.onChipTap,
               ),
               // Contributions timeline tab
               CustomScrollView(

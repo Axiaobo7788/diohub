@@ -1,7 +1,9 @@
 import 'package:diohub/common/misc/shimmer_widget.dart';
 import 'package:diohub/graphql/queries/users/__generated__/user_info.data.gql.dart';
+import 'package:diohub/models/contributions/contribution_chip_type.dart';
 import 'package:diohub/models/contributions/contribution_query_models.dart';
 import 'package:diohub/providers/users/user_contributions_provider.dart';
+import 'package:diohub/view/profile/about/widgets/chip_detail_bottom_sheet.dart';
 import 'package:diohub/view/profile/about/widgets/tabbed_contribution_section.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -33,6 +35,25 @@ class UserAboutScreen extends ConsumerStatefulWidget {
 }
 
 class _UserAboutScreenState extends ConsumerState<UserAboutScreen> {
+  /// Handles chip tap to show bottom sheet with details
+  void _handleChipTap(
+    BuildContext context,
+    ContributionChipType chipType,
+    ContributionQueryKey queryKey,
+    ContributionCollectionResult result,
+  ) {
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      showDragHandle: true,
+      builder: (context) => ChipDetailBottomSheet(
+        chipType: chipType,
+        queryKey: queryKey,
+        contributionResult: result,
+      ),
+    );
+  }
+
   /// Builds a typed provider key based on selected year or custom date range
   /// Only recalculates when date range changes, not on every build
   ContributionQueryKey _getProviderKey() {
@@ -81,6 +102,12 @@ class _UserAboutScreenState extends ConsumerState<UserAboutScreen> {
           customToDate: widget.customToDate,
           useCustomRange: widget.useCustomRange,
           createdAt: widget.userData.createdAt,
+          onChipTap: (chipType) => _handleChipTap(
+            context,
+            chipType,
+            providerKey,
+            result,
+          ),
         );
       },
       loading: () => const _ContributionLoadingSkeleton(),

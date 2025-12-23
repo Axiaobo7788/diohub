@@ -1,4 +1,5 @@
 import 'package:diohub/common/animations/fade_animation_widget.dart';
+import 'package:diohub/models/contributions/contribution_chip_type.dart';
 import 'package:diohub/models/contributions/contribution_query_models.dart';
 import 'package:diohub/view/profile/about/widgets/activity_overview_section.dart';
 import 'package:diohub/view/profile/about/widgets/contribution_calendar_section.dart';
@@ -15,6 +16,7 @@ class ContributionSummaryTab extends StatelessWidget {
     required this.customToDate,
     required this.useCustomRange,
     required this.createdAt,
+    this.onChipTap,
     super.key,
   });
 
@@ -25,6 +27,7 @@ class ContributionSummaryTab extends StatelessWidget {
   final DateTime? customToDate;
   final bool useCustomRange;
   final DateTime? createdAt;
+  final void Function(ContributionChipType chipType)? onChipTap;
 
   /// Builds a styled section divider with gradient effect
   Widget _buildSectionDivider(BuildContext context) {
@@ -92,6 +95,8 @@ class ContributionSummaryTab extends StatelessWidget {
                 issues: viewModel.totalIssueContributions,
                 reviews: viewModel.totalPullRequestReviewContributions,
                 contributionResult: contributionResult,
+                onChipTap: onChipTap,
+                userLogin: userName,
               ),
             ),
           ),
@@ -131,6 +136,7 @@ class ContributionSummaryTab extends StatelessWidget {
             child: ContributionHighlightsSection(
               yearlyHighlights: highlights,
               userName: userName,
+              onChipTap: onChipTap,
             ),
           ),
         ],
