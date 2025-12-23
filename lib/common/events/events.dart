@@ -11,11 +11,11 @@ import 'package:diohub/common/timeline/unified_timeline_item.dart';
 import 'package:diohub/common/timeline_content/timeline_commit_content.dart';
 import 'package:diohub/common/timeline_content/timeline_issue_content.dart';
 import 'package:diohub/common/timeline_content/timeline_pull_request_content.dart';
+import 'package:diohub/common/wrappers/infinite_pagination.dart';
 import 'package:diohub/common/wrappers/infinite_scroll_wrapper.dart';
 import 'package:diohub/models/commits/commit_card_data_model.dart';
 import 'package:diohub/models/events/events_model.dart' hide Key, State;
 import 'package:diohub/models/issues/issue_card_data_model.dart';
-import 'package:diohub/models/issues/issue_model.dart';
 import 'package:diohub/providers/users/current_user_provider.dart';
 import 'package:diohub/services/activity/events_service.dart';
 import 'package:diohub/utils/utils.dart';
@@ -23,8 +23,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_vector_icons/flutter_vector_icons.dart';
 import 'package:provider/provider.dart';
 
-class Events extends StatelessWidget {
-  const Events({
+class Events extends StatefulWidget {
+   Events({
     this.privateEvents = true,
     this.specificUser,
     super.key,
@@ -33,153 +33,144 @@ class Events extends StatelessWidget {
   final bool privateEvents;
   final String? specificUser;
 
-  // Spacing constants for consistent user group separation
-  static const double itemSpacing = 8.0; // Between items from same user
-  static const double groupSpacing = 8.0; // Between user groups
-
   @override
-  Widget build(final BuildContext context) {
-    final CurrentUserProvider user = Provider.of<CurrentUserProvider>(context);
-    // Add bottom padding to account for SafeArea/system UI
-    final bottomPadding = MediaQuery.of(context).padding.bottom;
-    return InfiniteScrollWrapper<EventsModel>(
-      // header: (final BuildContext context) => Padding(
-      //   padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-      //   child: Text(
-      //     'Feed',
-      //     style: context.textTheme.headlineSmall?.copyWith(
-      //       fontWeight: FontWeight.bold,
-      //     ),
-      //   ),
-      // ),
-      padding: EdgeInsets.only(
-        top: 16,
-        bottom: 16 + bottomPadding, // Add SafeArea bottom padding
-      ),
-      firstPageLoadingBuilder: (final BuildContext context) => _KeepAlive(
-        child: TimelineShimmerList(
-          itemCount: 5,
-          showAvatar: false,
-          showUserHeaders: true,
-          padding: EdgeInsets.only(
-            top: 16,
-            bottom: 16 + bottomPadding,
+  State<Events> createState() => _EventsState();
+}
+
+class _EventsState extends State<Events> {
+  // Spacing constants for consistent user group separation
+  Future<List<EventsModel>> _fetchEvents(
+    final BuildContext context,
+    final ScrollWrapperFutureArguments<EventsModel> data,
+  ) async {
+    if (widget.specificUser != null) {
+      return EventsService.getUserEvents(
+        widget.specificUser,
+        page: data.pageNumber,
+        perPage: data.pageSize,
+        refresh: data.refresh,
+      );
+    } else if (widget.privateEvents) {
+      return EventsService.getReceivedEvents(
+        context.read<CurrentUserProvider>().data.login,
+        page: data.pageNumber,
+        perPage: data.pageSize,
+        refresh: data.refresh,
+      );
+    } else {
+      return EventsService.getPublicEvents(
+        page: data.pageNumber,
+        perPage: data.pageSize,
+        refresh: data.refresh,
+      );
+    }
+  }
+
+  List<EventsModel> _filterEvents(final List<EventsModel> items) {
+    final List<EventsModel> temp = <EventsModel>[];
+    for (final EventsModel item in items) {
+      if (<EventsType>{
+        // EventsType.CommitCommentEvent,
+        EventsType.CreateEvent,
+        EventsType.DeleteEvent,
+        EventsType.ForkEvent,
+        // EventsType.GollumEvent,
+        EventsType.IssueCommentEvent,
+        EventsType.IssuesEvent,
+        EventsType.MemberEvent,
+        EventsType.PublicEvent,
+        EventsType.PullRequestEvent,
+        // EventsType.PullRequestReviewCommentEvent,
+        EventsType.PushEvent,
+        // EventsType.ReleaseEvent,
+        // EventsType.SponsorshipEvent,
+        EventsType.WatchEvent,
+      }.contains(item.type)) {
+        temp.add(item);
+      }
+    }
+
+    return temp;
+  }
+
+  Widget _buildEventItem(
+    final BuildContext context,
+    final ScrollWrapperBuilderData<EventsModel> data,
+  ) {
+    final EventsModel item = data.item;
+
+    // Determine if timeline should break based on user changes
+    final currentUser = item.actor?.login;
+    final previousUser = data.previousItem?.actor?.login;
+    final nextUser = data.nextItem?.actor?.login;
+    final bool shouldShowUserHeader = widget.specificUser == null;
+
+    final isFirstInUserGroup = previousUser != currentUser || data.index == 0;
+    final isLastInUserGroup = nextUser != currentUser || data.isCurrentlyLast;
+
+    return Column(
+      children: [
+        // User group header (only show for first item in group)
+        if (shouldShowUserHeader && isFirstInUserGroup)
+          _buildUserGroupHeader(
+            context,
+            item.actor,
+            isFirst: data.index == 0,
+          ),
+        // Timeline event
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: buildTimelineEvent(
+            item,
+            data,
+            context,
+            isFirstInUserGroup: isFirstInUserGroup,
+            isLastInUserGroup: isLastInUserGroup,
           ),
         ),
-      ),
-      filterFn: (final List<EventsModel> items) {
-        final List<EventsModel> temp = <EventsModel>[];
-        for (final EventsModel item in items) {
-          if (<EventsType>{
-            // EventsType.CommitCommentEvent,
-            EventsType.CreateEvent,
-            EventsType.DeleteEvent,
-            EventsType.ForkEvent,
-            // EventsType.GollumEvent,
-            EventsType.IssueCommentEvent,
-            EventsType.IssuesEvent,
-            EventsType.MemberEvent,
-            EventsType.PublicEvent,
-            EventsType.PullRequestEvent,
-            // EventsType.PullRequestReviewCommentEvent,
-            EventsType.PushEvent,
-            // EventsType.ReleaseEvent,
-            // EventsType.SponsorshipEvent,
-            EventsType.WatchEvent,
-          }.contains(item.type)) {
-            temp.add(item);
-          }
-        }
-
-        return temp;
-      },
-      future: (
-        final ScrollWrapperFutureArguments<EventsModel> data,
-      ) async {
-        if (specificUser != null) {
-          return EventsService.getUserEvents(
-            specificUser,
-            page: data.pageNumber,
-            perPage: data.pageSize,
-            refresh: data.refresh,
-          );
-        } else if (privateEvents) {
-          return EventsService.getReceivedEvents(
-            user.data.login,
-            page: data.pageNumber,
-            perPage: data.pageSize,
-            refresh: data.refresh,
-          );
-        } else {
-          return EventsService.getPublicEvents(
-            page: data.pageNumber,
-            perPage: data.pageSize,
-            refresh: data.refresh,
-          );
-        }
-      },
-      builder: (
-        final BuildContext context,
-        final ScrollWrapperBuilderData<EventsModel> data,
-      ) {
-        final EventsModel item = data.item;
-
-        // Determine if timeline should break based on user changes
-        final currentUser = item.actor?.login;
-        final previousUser = data.previousItem?.actor?.login;
-        final nextUser = data.nextItem?.actor?.login;
-        final bool shouldShowUserHeader = specificUser == null;
-
-        final isFirstInUserGroup =
-            previousUser != currentUser || data.index == 0;
-        final isLastInUserGroup =
-            nextUser != currentUser || data.isCurrentlyLast;
-
-        return Column(
-          children: [
-            // Divider between groups (not for first item)
-            // if (isFirstInUserGroup && data.index > 0)
-            //   Padding(
-            //     padding: EdgeInsets.symmetric(
-            //       horizontal: MediaQuery.of(context).size.width * 0.05,
-            //       // vertical: groupSpacing / 2,
-            //     ).copyWith(top: 16),
-            //     child: Divider(
-            //       height: 1,
-            //       thickness: 1,
-            //       color: context.colorScheme.outlineVariant.withOpacity(0.2),
-            //     ),
-            //   ),
-            // User group header (only show for first item in group)
-            if (shouldShowUserHeader && isFirstInUserGroup)
-              _buildUserGroupHeader(
-                context,
-                item.actor,
-                isFirst: data.index == 0,
-              ),
-            // Timeline event
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: buildTimelineEvent(
-                item,
-                data,
-                context,
-                isFirstInUserGroup: isFirstInUserGroup,
-                isLastInUserGroup: isLastInUserGroup,
-              ),
-            ),
-          ],
-        );
-      },
+      ],
     );
   }
+
+late final infinitePaginationController =InfinitePaginationController<EventsModel>(
+        future: (final ScrollWrapperFutureArguments<EventsModel> data) => _fetchEvents(context, data),
+        builder: _buildEventItem,
+        filterFn: _filterEvents,
+        // Calculate padding dynamically with SafeArea support
+        padding: (final BuildContext context) {
+          final bottomPadding = MediaQuery.of(context).padding.bottom;
+          return EdgeInsets.only(
+            top: 16,
+            bottom: 16 + bottomPadding,
+          );
+        },
+        firstPageLoadingBuilder: (final BuildContext context) {
+          // Calculate bottom padding at build time when context is available
+          final bottomPadding = MediaQuery.of(context).padding.bottom;
+          return _KeepAlive(
+            child: TimelineShimmerList(
+              itemCount: 5,
+              showAvatar: false,
+              showUserHeaders: true,
+              padding: EdgeInsets.only(
+                top: 16,
+                bottom: 16 + bottomPadding,
+              ),
+            ),
+          );
+        },
+      );
+
+  @override
+  Widget build(final BuildContext context) =>
+     infinitePaginationController .buildSliverList(context);
 
   Widget buildTimelineEvent(
     final EventsModel item,
     final ScrollWrapperBuilderData<EventsModel> data,
     final BuildContext context, {
-    required bool isFirstInUserGroup,
-    required bool isLastInUserGroup,
+    required final bool isFirstInUserGroup,
+    required final bool isLastInUserGroup,
   }) {
     final date = item.createdAt;
     final eventType = item.type;
@@ -369,7 +360,7 @@ class Events extends StatelessWidget {
   }
 
   IconData _getEventIcon(
-      EventsType? type, EventsModel item, String actionText) {
+      final EventsType? type, final EventsModel item, final String actionText) {
     switch (type) {
       case EventsType.PushEvent:
         return Octicons.git_commit;
@@ -412,8 +403,8 @@ class Events extends StatelessWidget {
     }
   }
 
-  Color _getEventIconColor(BuildContext context, EventsType? type,
-      EventsModel item, String actionText) {
+  Color _getEventIconColor(final BuildContext context, final EventsType? type,
+      final EventsModel item, final String actionText) {
     final colorScheme = context.colorScheme;
     switch (type) {
       case EventsType.PushEvent:
@@ -458,9 +449,9 @@ class Events extends StatelessWidget {
   }
 
   Widget _buildUserGroupHeader(
-    BuildContext context,
-    Actor? actor, {
-    required bool isFirst,
+    final BuildContext context,
+    final Actor? actor, {
+    required final bool isFirst,
   }) {
     if (actor == null || actor.login == null) {
       return const SizedBox.shrink();
@@ -468,7 +459,7 @@ class Events extends StatelessWidget {
 
     return Container(
       margin: EdgeInsets.only(
-        top: isFirst ? 0 : groupSpacing,
+        top: isFirst ? 0 : 8,
       ),
       child: Material(
         color: Colors.transparent,
