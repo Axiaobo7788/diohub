@@ -1,33 +1,124 @@
 # import './user_info.graphql'
+# import '../issues_pulls/timeline.graphql'
 
-# Combined Phase 2 query: Fetch all event types in a single query
-# Uses cursors and counts from Phase 1 to fetch exactly what we need
-# Includes commits via contributionsCollection (already date-filtered)
-# Uses shared fragments (issueInfo, pullInfo, repositoryFields) for type compatibility with card adapters
+# Single-phase activity timeline query using contributionsCollection
+# All connections are already date-filtered by from/to and expose occurredAt
 query userActivityTimelineFull(
   $user: String!
   $from: DateTime!
   $to: DateTime!
-  $firstRepos: Int
-  $afterRepos: String
-  $firstPRs: Int
-  $afterPRs: String
-  $firstIssues: Int
-  $afterIssues: String
-  $firstContributions: Int = 100
-  $afterContributions: String
+  $firstRepoContributions: Int = 50
+  $afterRepoContributions: String
+  $firstPullRequestContributions: Int = 50
+  $afterPullRequestContributions: String
+  $firstIssueContributions: Int = 50
+  $afterIssueContributions: String
+  $firstReviewContributions: Int = 50
+  $afterReviewContributions: String
+  $firstCommitContributions: Int = 100
+  $afterCommitContributions: String
+  $maxCommitRepositories: Int = 50
 ) {
   user(login: $user) {
     __typename
     id
     contributionsCollection(from: $from, to: $to) {
-      commitContributionsByRepository(maxRepositories: 50) {
+      repositoryContributions(
+        first: $firstRepoContributions
+        after: $afterRepoContributions
+        orderBy: { direction: DESC }
+      ) {
+        nodes {
+          occurredAt
+          repository {
+            __typename
+            id
+            createdAt
+            ...repositoryFields
+          }
+        }
+        pageInfo {
+          hasNextPage
+          endCursor
+        }
+      }
+      pullRequestContributions(
+        first: $firstPullRequestContributions
+        after: $afterPullRequestContributions
+        orderBy: { direction: DESC }
+      ) {
+        nodes {
+          occurredAt
+          pullRequest {
+            ...pullInfoTimeline
+            repository {
+              url
+            }
+          }
+        }
+        pageInfo {
+          hasNextPage
+          endCursor
+        }
+      }
+      issueContributions(
+        first: $firstIssueContributions
+        after: $afterIssueContributions
+        orderBy: { direction: DESC }
+      ) {
+        nodes {
+          occurredAt
+          issue {
+            ...issueInfoTimeline
+            repository {
+              url
+            }
+          }
+        }
+        pageInfo {
+          hasNextPage
+          endCursor
+        }
+      }
+      pullRequestReviewContributions(
+        first: $firstReviewContributions
+        after: $afterReviewContributions
+        orderBy: { direction: DESC }
+      ) {
+        nodes {
+          occurredAt
+          pullRequest {
+            ...pullInfoTimeline
+            repository {
+              url
+            }
+          }
+          pullRequestReview {
+            id
+            state
+            body
+          }
+          repository {
+            __typename
+            id
+            ...repositoryFields
+          }
+        }
+        pageInfo {
+          hasNextPage
+          endCursor
+        }
+      }
+      commitContributionsByRepository(maxRepositories: $maxCommitRepositories) {
         repository {
           __typename
           id
           ...repositoryFields
         }
-        contributions(first: $firstContributions, after: $afterContributions) {
+        contributions(
+          first: $firstCommitContributions
+          after: $afterCommitContributions
+        ) {
           nodes {
             occurredAt
             commitCount
@@ -39,122 +130,52 @@ query userActivityTimelineFull(
         }
       }
     }
-    repositories(
-      first: $firstRepos
-      after: $afterRepos
-      orderBy: {field: CREATED_AT, direction: DESC}
-      affiliations: [OWNER, COLLABORATOR, ORGANIZATION_MEMBER]
-    ) {
-      edges {
-        cursor
-        node {
-          id
-          name
-          nameWithOwner
-          description
-          url
-          createdAt
-          primaryLanguage {
-            name
-            color
-          }
-          ...repositoryFields
-        }
-      }
-      pageInfo {
-        hasNextPage
-        endCursor
-      }
-    }
-    pullRequests(
-      first: $firstPRs
-      after: $afterPRs
-      orderBy: {field: CREATED_AT, direction: DESC}
-      states: [OPEN, CLOSED, MERGED]
-    ) {
-      edges {
-        cursor
-        node {
-          ...pullInfoTimeline
-          # Ensure repository has url field (repoInfo fragment doesn't include it)
-          repository {
-            url
-          }
-        }
-      }
-      pageInfo {
-        hasNextPage
-        endCursor
-      }
-    }
-    issues(
-      first: $firstIssues
-      after: $afterIssues
-      orderBy: {field: CREATED_AT, direction: DESC}
-      states: [OPEN, CLOSED]
-    ) {
-      edges {
-        cursor
-        node {
-          ...issueInfoTimeline
-          # Ensure repository has url field (repoInfo fragment doesn't include it)
-          repository {
-            url
-          }
-        }
-      }
-      pageInfo {
-        hasNextPage
-        endCursor
-      }
-    }
   }
 }
 
 # Timeline fragments: Minimal fields for activity timeline (no bodyHTML, no labels, no assignees)
 fragment issueInfoTimeline on Issue {
-    title
-    number
-    author{
-        ...actor
-    }
-    state
+  title
+  number
+  author {
+    ...actor
+  }
+  state
+  url
+  body
+  createdAt
+  comments {
+    totalCount
+  }
+  repository {
+    name
     url
-    body
-    createdAt
-    comments {
-        totalCount
+    owner {
+      login
     }
-    repository {
-        name
-        url
-        owner {
-            login
-        }
-    }
+  }
 }
 
 fragment pullInfoTimeline on PullRequest {
-    title
-    number
-    state
+  title
+  number
+  state
+  url
+  author {
+    ...actor
+  }
+  body
+  createdAt
+  merged
+  mergedAt
+  comments {
+    totalCount
+  }
+  repository {
+    name
     url
-     author{
-        ...actor
+    owner {
+      login
     }
-    body
-    createdAt
-    merged
-    mergedAt
-    comments {
-        totalCount
-    }
-    repository {
-        name
-        url
-        owner {
-            login
-        }
-    }
+  }
 }
-
