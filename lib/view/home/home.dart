@@ -14,6 +14,9 @@ import 'package:diohub/common/misc/profile_banner.dart';
 import 'package:diohub/common/misc/shimmer_widget.dart';
 import 'package:diohub/common/misc/surface_shape_resolver.dart';
 import 'package:diohub/common/search_overlay/search_bar.dart';
+import 'package:diohub/common/widgets/expandable_scroll_widget.dart';
+import 'package:diohub/common/widgets/pull_to_expand_indicator.dart';
+import 'package:diohub/common/widgets/expanded_content_widget.dart';
 import 'package:diohub/style/surface_style_theme.dart';
 import 'package:diohub/common/search_overlay/search_overlay.dart';
 import 'package:diohub/common/wrappers/dynamic_tabs_parent.dart';
@@ -66,7 +69,49 @@ class HomeScreenState extends State<HomeScreen>
           identifier: 'Events',
           tab: TabBarItem(label: 'Feed'),
           isDismissible: false,
-          tabViewBuilder: (final BuildContext context) => const Events(),
+          tabViewBuilder: (final BuildContext context) =>
+              RefreshIndicator(
+                displacement: 300,
+                onRefresh: () => Future.delayed(const Duration(seconds: 1), () => null),
+                child: CustomScrollView(slivers: [
+                            SliverExpandOnScroll(
+                collapsedWidget: (context, pullProgress) => PullToExpandIndicator(
+                  pullProgress: pullProgress,
+                  message: 'Pull to see more',
+                ),
+                expandedWidget: (context, onCollapse) => ExpandedContentWidget(
+                  onCollapse: onCollapse,
+                  title: 'Expanded Content',
+                  child: Container(
+                    height: 400,
+                    width: double.infinity,
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(12),
+                      gradient: LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [
+                          Colors.blue.withOpacity(0.1),
+                          Colors.purple.withOpacity(0.1),
+                        ],
+                      ),
+                    ),
+                    child: const Center(
+                      child: Text(
+                        'Your content goes here',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+                scrollController: context.primaryScrollController,
+                            ),
+                            Events(),
+                          ]),
+              ),
         ),
         DynamicTab(
           identifier: 'Issues',
@@ -483,7 +528,7 @@ class HomeScreenState extends State<HomeScreen>
             builder: (
               final BuildContext context,
               final PreferredSizeWidget tabBar,
-              final Widget tabView,
+              final WidgetBuilder tabView,
             ) =>
                 DynamicScroll(
               collapsedWidget: buildCollapsedAppBar(context),
@@ -493,7 +538,7 @@ class HomeScreenState extends State<HomeScreen>
                 // defaultPadding: const EdgeInsets.only(bottom: 8),
               ),
               expandedWidget: buildProfileCard(context),
-              body: tabView,
+              bodyBuilder: tabView,
             ),
           ),
         ),
