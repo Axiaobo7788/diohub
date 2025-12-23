@@ -14,6 +14,8 @@ import 'package:diohub/services/authentication/auth_service.dart';
 import 'package:diohub/style/surface_style_theme.dart';
 import 'package:diohub/common/misc/surface_shape_resolver.dart';
 import 'package:diohub/utils/device_display_mode.dart';
+import 'package:diohub/view/demo/expandable_scroll_demo_screen.dart';
+import 'package:diohub/view/issues_pulls/expandable_scroll_options_demo.dart';
 import 'package:dynamic_color/dynamic_color.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart';
@@ -42,11 +44,11 @@ void main() async {
   // ChuckerFlutter.showOnRelease = true;
   WidgetsFlutterBinding.ensureInitialized();
   // Error popup stream initialised.
-  ResponseHandler.getErrorStream();
+  // ResponseHandler.getErrorStream();
   // Success popup stream initialised.
-  ResponseHandler.getSuccessStream();
+  // ResponseHandler.getSuccessStream();
   // Connectivity check stream initialised.
-  await InternetConnectivity.networkStatusService();
+  // await InternetConnectivity.networkStatusService();
 
   await Future.wait(<Future<void>>[
     BaseAPIHandler.setupDioAPICache(),
@@ -54,74 +56,24 @@ void main() async {
     setHighRefreshRate(),
   ]);
 
+  
+
   // final initLink = await initUniLink();
   uniLinkStream();
   final bool auth = await AuthRepository().isAuthenticated;
   // runApp(NewWidget());
-  runApp(
-    MyApp(
-      authenticated: auth,
-      // initDeepLink: initLink,
-    ),
+  // runApp(
+  //   MyApp(
+  //     authenticated: auth,
+  //     // initDeepLink: initLink,
+  //   ),
+  // );
+   runApp(
+    ExpandableScrollOptionsDemo(),
   );
   await debugURLLauncher();
 }
 
-class NewWidget extends StatelessWidget {
-  const NewWidget({
-    super.key,
-  });
-
-  @override
-  Widget build(final BuildContext context) => MaterialApp(
-        navigatorObservers: <NavigatorObserver>[
-          ChuckerFlutter.navigatorObserver,
-        ],
-        home: Builder(
-          builder: (final BuildContext context) => Stack(
-            children: <Widget>[
-              SafeArea(
-                child: Scaffold(
-                  body: NestedScrollView(
-                    headerSliverBuilder: (final BuildContext context,
-                            final bool innerBoxIsScrolled) =>
-                        <Widget>[
-                      const SliverAppBar(
-                        title: Text('ajhs jhads '),
-                        expandedHeight: 500,
-                      ),
-                    ],
-                    body: ListView.builder(
-                      itemBuilder:
-                          (final BuildContext context, final int index) =>
-                              ListTile(title: Text(index.toString())),
-                    ),
-                  ),
-                ),
-              ),
-              Positioned(
-                top: 0,
-                left: 0,
-                right: 0,
-                height: MediaQuery.of(context).padding.top,
-                child: GestureDetector(
-                  onTap: () {
-                    PrimaryScrollController.of(context).animateTo(
-                      0,
-                      duration: const Duration(milliseconds: 300),
-                      curve: Curves.bounceIn,
-                    );
-                  },
-                  child: Container(
-                    color: Colors.red,
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      );
-}
 
 class MyApp extends StatelessWidget {
   const MyApp({required this.authenticated, super.key});
