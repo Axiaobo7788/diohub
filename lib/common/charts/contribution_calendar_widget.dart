@@ -1,6 +1,5 @@
 import 'package:contribution_heatmap/contribution_heatmap.dart';
 import 'package:diohub/style/surface_style_theme.dart';
-import 'package:diohub/utils/utils.dart';
 import 'package:flutter/material.dart';
 
 /// A single day in the contribution calendar
@@ -47,7 +46,7 @@ class ContributionCalendarWidget extends StatefulWidget {
     this.onDayLongPress,
     this.showMonthLabels = true,
     this.showDayLabels = true,
-    this.cellSize = 11.0,
+    this.cellSize = 25.0,
     this.cellSpacing = 2.0,
     this.monthLabelHeight = 20.0,
     this.dayLabelWidth = 20.0,
@@ -161,7 +160,8 @@ class _ContributionCalendarWidgetState
     // Update cache if needed (only recalculates when weeks change)
     _updateCacheIfNeeded();
 
-    // Build the heatmap widget
+    // Build the heatmap widget with high-contrast color scheme
+    // Using HeatmapColor.blue for better contrast differences
     final heatmap = ContributionHeatmap(
       entries: _cachedEntries!,
       minDate: _cachedMinDate,
@@ -173,7 +173,8 @@ class _ContributionCalendarWidgetState
       cellRadius: 2,
       showMonthLabels: widget.showMonthLabels,
       weekdayLabel: WeekdayLabel.none,
-      heatmapColor: HeatmapColor.green, // GitHub-style green
+
+      heatmapColor: HeatmapColor.blue, // Higher contrast than green
       onCellTap: widget.onDayTap != null
           ? (date, value) {
               // O(1) lookup using cached map
@@ -253,14 +254,14 @@ class _ContributionCalendarWidgetState
         fontSize: 10,
       );
 
-      // Get the green color palette (matching HeatmapColor.green)
-      // Using a subset of colors for the legend (0%, 25%, 50%, 75%, 100%)
+      // High-contrast blue color palette (matching HeatmapColor.blue)
+      // Using distinct colors with stronger differences between levels
       final legendColors = [
-        const Color(0xFFE8F5E8), // 0% - no contributions
-        const Color(0xFFB0D1B1), // ~30% - low
-        const Color(0xFF78AD7B), // ~60% - medium
-        const Color(0xFF539556), // ~80% - high
-        const Color(0xFF2E7D32), // 100% - very high
+        const Color(0xFFE3F2FD), // 0% - no contributions (very light blue)
+        const Color(0xFF90CAF9), // ~25% - low (light blue)
+        const Color(0xFF42A5F5), // ~50% - medium (medium blue)
+        const Color(0xFF1E88E5), // ~75% - high (darker blue)
+        const Color(0xFF1565C0), // 100% - very high (very dark blue)
       ];
 
       // Pre-build color containers list
