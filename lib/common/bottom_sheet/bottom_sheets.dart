@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:diohub/common/wrappers/infinite_scroll_wrapper.dart';
+import 'package:diohub/style/surface_style_theme.dart';
 import 'package:diohub/utils/extensions.dart';
 import 'package:diohub/utils/utils.dart';
 import 'package:flutter/cupertino.dart';
@@ -13,14 +14,17 @@ part 'bottom_sheet_headers.dart';
 Future<T?> showDHBottomSheet<T>(
   final BuildContext context, {
   required final WidgetBuilder builder,
-  final bool enableDrag = false,
+  final bool enableDrag = true,
   final bool isScrollControlled = false,
+  final bool useRootNavigator = false,
 }) =>
     showModalBottomSheet<T>(
-      backgroundColor: context.colorScheme.background,
+      backgroundColor: Colors.transparent,
       enableDrag: enableDrag,
+      isDismissible: true,
       // Notch obstructs sheet, https://github.com/flutter/flutter/issues/39205
       isScrollControlled: isScrollControlled,
+      useRootNavigator: useRootNavigator,
       context: context,
       builder: builder,
     );
@@ -29,10 +33,11 @@ Future<T?> showScrollableBottomSheet<T>(
   final BuildContext context, {
   required final StatefulWidgetBuilder headerBuilder,
   required final ScrollBuilder scrollableBodyBuilder,
-  final bool enableDrag = false,
+  final bool enableDrag = true,
 }) =>
     showDHBottomSheet<T>(
       context,
+      enableDrag: enableDrag,
       isScrollControlled: true,
       builder: (final BuildContext context) => DHBottomSheet(
         headerBuilder: headerBuilder,
@@ -62,39 +67,53 @@ class DHBottomSheet extends StatelessWidget {
   Widget build(final BuildContext context) => SafeArea(
         child: StatefulBuilder(
           builder: (final BuildContext context, final StateSetter setState) =>
-              Column(
-            mainAxisSize: MainAxisSize.min,
-            children: <Widget>[
-              const SizedBox(
-                height: 4,
+              Container(
+            decoration: BoxDecoration(
+              color: context.colorScheme.surface,
+              borderRadius: const BorderRadius.only(
+                topLeft: Radius.circular(20),
+                topRight: Radius.circular(20),
               ),
-              Padding(
-                padding: const EdgeInsets.all(8),
-                child: Container(
-                  decoration: BoxDecoration(
-                    // color: context.palette.faded1,
-                    borderRadius: BorderRadius.circular(15),
-                  ),
-                  height: 4,
-                  width: context.mediaQuery.size.width * 0.1,
-                ),
-              ),
-              if (headerBuilder != null) ...<Widget>[
-                Padding(
-                  padding: titlePadding,
-                  child: Center(
-                    child: headerBuilder!.call(context, setState),
-                  ),
-                ),
-                const SizedBox(
-                  height: 4,
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.1),
+                  blurRadius: 10,
+                  offset: const Offset(0, -2),
                 ),
               ],
-              Flexible(child: builder.call(context, setState)),
-              const SizedBox(
-                height: 8,
-              ),
-            ],
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: <Widget>[
+                const SizedBox(height: 12),
+                // Drag handle
+                Center(
+                  child: Container(
+                    width: 40,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color:
+                          context.colorScheme.onSurfaceVariant.withOpacity(0.3),
+                      borderRadius: Theme.of(context).surfaceStyle.borderRadiusSoft(),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                if (headerBuilder != null) ...<Widget>[
+                  Padding(
+                    padding: titlePadding,
+                    child: headerBuilder!.call(context, setState),
+                  ),
+                  Divider(
+                    height: 1,
+                    thickness: 1,
+                    color: context.colorScheme.outline.withOpacity(0.1),
+                  ),
+                ],
+                Flexible(child: builder.call(context, setState)),
+                const SizedBox(height: 8),
+              ],
+            ),
           ),
         ),
       );

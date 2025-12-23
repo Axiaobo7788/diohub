@@ -4,7 +4,7 @@ import 'package:diohub/common/misc/code_block_view.dart';
 import 'package:diohub/common/misc/image_loader.dart';
 import 'package:diohub/common/misc/info_card.dart';
 import 'package:diohub/common/misc/ink_pot.dart';
-import 'package:diohub/style/border_radiuses.dart';
+import 'package:diohub/style/surface_style_theme.dart';
 import 'package:diohub/utils/copy_to_clipboard.dart';
 import 'package:diohub/utils/lang_colors/get_language_color.dart';
 import 'package:diohub/utils/utils.dart';
@@ -138,9 +138,7 @@ class MyWidgetFactory extends WidgetFactory {
             child: DecoratedBox(
               decoration: BoxDecoration(
                 color: context.colorScheme.surfaceVariant,
-                borderRadius: context.themeData
-                    .extension<BorderRadiusTheme>()
-                    ?.medBorderRadius,
+                borderRadius: Theme.of(context).surfaceStyle.borderRadiusMedium(),
               ),
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 4),
@@ -194,6 +192,7 @@ class MyWidgetFactory extends WidgetFactory {
                 color: context.colorScheme.primary,
                 width: 2,
               ),
+
             ),
           ),
           child: Padding(
@@ -454,3 +453,4 @@ class _MarkdownExtension {
 //     return child;
 //   }
 // }
+

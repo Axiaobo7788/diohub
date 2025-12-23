@@ -144,16 +144,30 @@ fragment issueInfo on Issue{
 
     trackedInIssues(first: 10){
         totalCount
-        edges {
-            node {
-                title
+        nodes {
+            title
+            number
+            url
+            state
+            repository {
+                name
+                owner {
+                    login
+                }
             }
         }
     }    trackedIssues(first: 10){
         totalCount
-        edges {
-            node {
-                title
+        nodes {
+            title
+            number
+            url
+            state
+            repository {
+                name
+                owner {
+                    login
+                }
             }
         }
     }
@@ -189,9 +203,6 @@ fragment issueInfo on Issue{
             ...actor
         }
     }
-    projectCards{
-        totalCount
-    }
     projectsV2{
         totalCount
     }
@@ -202,6 +213,8 @@ fragment issueInfo on Issue{
         ...repoInfo
     }
     state
+    title
+    updatedAt
     titleHTML
     timelineItems{
         totalCount
@@ -250,9 +263,6 @@ fragment pullInfo on PullRequest{
             ...actor
         }
     }
-    projectCards{
-        totalCount
-    }
     projectsV2{
         totalCount
     }
@@ -263,10 +273,11 @@ fragment pullInfo on PullRequest{
         ...repoInfo
     }
     state
+    updatedAt
     timelineItems{
         totalCount
     }
-
+    title
     titleHTML
     url
     userContentEdits{
@@ -289,8 +300,20 @@ fragment pullInfo on PullRequest{
         }
     }
     changedFiles
-    closingIssuesReferences{
+    closingIssuesReferences(first: 10){
         totalCount
+        nodes {
+            title
+            number
+            url
+            state
+            repository {
+                name
+                owner {
+                    login
+                }
+            }
+        }
     }
     commits{
         totalCount
@@ -303,6 +326,7 @@ fragment pullInfo on PullRequest{
 
 fragment repoInfo on Repository{
     name
+    url
     owner{
         login
         avatarUrl

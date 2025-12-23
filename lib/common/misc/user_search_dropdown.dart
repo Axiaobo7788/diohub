@@ -6,7 +6,7 @@ import 'package:diohub/common/search_overlay/filters.dart';
 import 'package:diohub/common/wrappers/infinite_scroll_wrapper.dart';
 import 'package:diohub/graphql/queries/users/__generated__/user_info.data.gql.dart';
 import 'package:diohub/services/search/search_service.dart';
-import 'package:diohub/style/border_radiuses.dart';
+import 'package:diohub/style/surface_style_theme.dart';
 import 'package:diohub/utils/utils.dart';
 import 'package:flutter/material.dart';
 
@@ -30,7 +30,7 @@ class UserSearchDropdown extends StatelessWidget {
       ),
       child: Material(
         // color: Provider.of<PaletteSettings>(context).currentSetting.secondary,
-        borderRadius: context.themeData.borderRadiusTheme?.medBorderRadius,
+        borderRadius: Theme.of(context).surfaceStyle.borderRadiusMedium(),
         elevation: 8,
         child: query.isNotEmpty
             ? SizeExpandedSection(

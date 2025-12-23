@@ -1,185 +1,355 @@
 import 'package:auto_route/auto_route.dart';
+import 'package:diohub/adapters/deep_linking_handler.dart';
 import 'package:diohub/common/issues/issue_label.dart';
-import 'package:diohub/common/misc/tappable_card.dart';
-import 'package:diohub/graphql/__generated__/schema.schema.gql.dart';
+import 'package:diohub/common/misc/nested_card_with_header.dart';
+import 'package:diohub/common/misc/ink_pot.dart';
 import 'package:diohub/models/issues/issue_model.dart';
 import 'package:diohub/models/pull_requests/pull_request_model.dart';
-import 'package:diohub/routes/router.gr.dart';
+import 'package:diohub/style/surface_style_theme.dart';
 import 'package:diohub/utils/get_date.dart';
 import 'package:diohub/utils/utils.dart';
+import 'package:diohub/view/issues_pulls/issue_pull_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_vector_icons/flutter_vector_icons.dart';
 
+/// A widget that displays a pull request card using the nested card layout,
+/// similar to the nested issue card.
 class PullListCard extends StatelessWidget {
   const PullListCard(
     this.item, {
-    this.compact = false,
-    // this.disableMaterial = false,
     this.showRepoName = true,
-    this.padding = const EdgeInsets.symmetric(horizontal: 8),
+    this.isNested = false,
+    this.from,
+    this.to,
+    this.fromRepoName,
     super.key,
   });
 
   final PullRequestModel item;
-  final bool compact;
-
-  // final bool disableMaterial;
-  final EdgeInsets padding;
   final bool showRepoName;
+  final bool isNested;
+  final String? from;
+  final String? to;
+  final String? fromRepoName; // Full repo name (owner/repo) for head ref when different
 
   @override
-  Widget build(final BuildContext context) => BasicCard(
-        onTap: () async {
-          print(item.links!.self!.href!
-              .replaceAll(
-                'https://api.github.com/repos/',
-                '',
-              )
-              .split('/'));
-          final String repoName = item.links!.self!.href!
-              .replaceAll(
-                'https://api.github.com/repos/',
-                '',
-              )
-              .split('/')
-              .sublist(1, 2)
-              .join();
-          final String ownerName = item.links!.self!.href!
-              .replaceAll(
-                'https://api.github.com/repos/',
-                '',
-              )
-              .split('/')
-              .sublist(0, 1)
-              .join();
-          print(repoName);
-          print(ownerName);
-          await context.router.push(
-            IssuePullRoute(
-              number: item.number!,
-              repoName: repoName,
-              ownerName: ownerName,
-            ),
-          );
-        },
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: <Widget>[
-              Row(
+  Widget build(final BuildContext context) {
+    // Extract repo name from URL
+    final String? repoName = item.url != null
+        ? item.url!
+            .replaceAll('https://api.github.com/repos/', '')
+            .split('/')
+            .sublist(0, 2)
+            .join('/')
+        : null;
+    
+    // Check if from ref is from a different repo (only from can be different)
+    final bool fromDifferentRepo = fromRepoName != null &&
+        repoName != null &&
+        fromRepoName != repoName;
+
+    return InkPot(
+      onTap: () async {
+        if (item.url != null) {
+          await AutoRouter.of(context)
+              .push(issuePullScreenRoute(PathData.fromURL(item.url!)));
+        }
+      },
+      child: NestedCardWithHeader(
+        isNested: isNested,
+        
+        header: Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          mainAxisSize: MainAxisSize.min,
+          children: <Widget>[
+            // Pull request icon in colored container with PR number
+            Container(
+              constraints: const BoxConstraints(minWidth: 24),
+              height: 24,
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+              decoration: BoxDecoration(
+                color: _getPullIconColor(context, item.state, item.mergedAt)
+                    .withOpacity(0.12),
+                borderRadius: Theme.of(context).surfaceStyle.borderRadiusSmall(),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                mainAxisAlignment: MainAxisAlignment.center,
                 children: <Widget>[
-                  GetPullIcon(item.state!, item.mergedAt),
-                  const SizedBox(
-                    width: 4,
+                  Icon(
+                    _getPullIcon(item.state, item.mergedAt),
+                    size: 12,
+                    color:
+                        _getPullIconColor(context, item.state, item.mergedAt),
                   ),
-                  if (showRepoName)
-                    Flexible(
-                      child: Padding(
-                        padding: const EdgeInsets.only(right: 4),
-                        child: Text(
-                          item.links!.self!.href!
-                              .replaceAll(
-                                'https://api.github.com/repos/',
-                                '',
-                              )
-                              .split('/')
-                              .sublist(0, 2)
-                              .join('/'),
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                              // color: Provider.of<PaletteSettings>(context)
-                              //     .currentSetting
-                              //     .faded3,
-                              ),
-                        ),
-                      ),
-                    ),
+                  const SizedBox(width: 3),
                   Text(
-                    '#${item.number}',
-                    style: const TextStyle(
-                        // color: Provider.of<PaletteSettings>(context)
-                        //     .currentSetting
-                        //     .faded3,
+                    '${item.number}',
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: _getPullIconColor(
+                              context, item.state, item.mergedAt),
+                          fontWeight: FontWeight.w600,
+                          fontSize: 11,
                         ),
                   ),
                 ],
               ),
-              const SizedBox(
-                height: 8,
-              ),
-              Text(
-                item.title!,
-                // style: Theme.of(context).textTheme.bodyMedium,
-              ),
-              if (!compact)
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: <Widget>[
-                    const SizedBox(
-                      height: 8,
-                    ),
-                    Text(
-                      item.state == GIssueState.CLOSED
-                          ? item.mergedAt != null
-                              ? 'By ${item.user!.login}, merged ${getDate(item.mergedAt.toString(), shorten: false)}.'
-                              : 'By ${item.user!.login}, closed ${getDate(item.closedAt.toString(), shorten: false)}.'
-                          : 'Opened ${getDate(item.createdAt.toString(), shorten: false)} by ${item.user!.login}',
-                      style: context.textTheme.bodySmall?.asHint(),
-                    ),
-                    const SizedBox(
-                      height: 8,
-                    ),
-                    Wrap(
-                      children: List<Widget>.generate(
-                        item.labels!.length,
-                        (final int index) => Padding(
-                          padding: const EdgeInsets.only(
-                            right: 8,
-                            bottom: 8,
-                          ),
-                          child: IssueLabel(item.labels![index]),
-                        ),
+            ),
+            const SizedBox(width: 3),
+            // Repo name (only if showRepoName is true)
+            if (showRepoName && repoName != null) ...[
+              Flexible(
+                child: Text(
+                  repoName,
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: context.colorScheme.onSurfaceVariant
+                            .withOpacity(0.8),
+                        fontWeight: FontWeight.w500,
+                        fontSize: 11,
                       ),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ],
+            // Author and Comments (only if showRepoName is false)
+            if (!showRepoName) ...[
+              // Creator
+              SizedBox(width: 4),
+              if (item.user?.login != null) ...[
+                Text(
+                  item.user!.login ?? '',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: context.colorScheme.onSurfaceVariant
+                            .withOpacity(0.75),
+                        fontSize: 11,
+                      ),
+                ),
+                if (item.comments != null && item.comments! > 0)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 8),
+                    child: Container(
+                      width: 1,
+                      height: 12,
+                      color:
+                          context.colorScheme.onSurfaceVariant.withOpacity(0.2),
+                    ),
+                  ),
+              ],
+              // Comments
+              if (item.comments != null && item.comments! > 0)
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: <Widget>[
+                    Icon(
+                      Octicons.comment,
+                      size: 11,
+                      color: context.colorScheme.onSurfaceVariant
+                          .withOpacity(0.75),
+                    ),
+                    const SizedBox(width: 2),
+                    Text(
+                      '${item.comments}',
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: context.colorScheme.onSurfaceVariant
+                                .withOpacity(0.75),
+                          ),
                     ),
                   ],
                 ),
             ],
-          ),
+          ],
         ),
-      );
-}
+        trailing: isNested
+            ? null
+            : Text(
+                getDate(
+                  item.state == IssueState.CLOSED
+                      ? (item.mergedAt ?? item.closedAt)?.toString() ??
+                          item.createdAt?.toString() ??
+                          ''
+                      : item.createdAt?.toString() ?? '',
+                  shorten: true,
+                ),
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color:
+                          context.colorScheme.onSurfaceVariant.withOpacity(0.7),
+                      fontSize: 10,
+                    ),
+              ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: <Widget>[
+            // Pull request title
+            Text(
+              item.title ?? '',
+              style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                    fontWeight: FontWeight.w600,
+                    color: context.colorScheme.onSurface,
+                    height: 1.3,
+                  ),
+            ),
+            // Labels
+            if (item.labels != null && item.labels!.isNotEmpty) ...[
+              const SizedBox(height: 5),
+              Wrap(
+                spacing: 3,
+                runSpacing: 3,
+                children: List<Widget>.generate(
+                  item.labels!.length,
+                  (final int index) => IssueLabel(item.labels![index]),
+                ),
+              ),
+            ],
+            // From and To refs (when showRepoName is true, show below title)
+            if (showRepoName && (from != null || to != null)) ...[
+              const SizedBox(height: 5),
+              Wrap(
+                spacing: 4,
+                runSpacing: 4,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                children: <Widget>[
+                  if (from != null) ...[
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 5,
+                        vertical: 1,
+                      ),
+                      decoration: BoxDecoration(
+                        color: context.colorScheme.surfaceVariant
+                            .withOpacity(0.4),
+                        borderRadius: Theme.of(context).surfaceStyle.borderRadiusSoft(),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: <Widget>[
+                          if (fromDifferentRepo) ...[
+                            Text(
+                              '$fromRepoName:',
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .bodySmall
+                                  ?.copyWith(
+                                    color: context.colorScheme.onSurfaceVariant
+                                        .withOpacity(0.8),
+                                    fontFamily: 'monospace',
+                                    fontSize: 11,
+                                  ),
+                            ),
+                            const SizedBox(width: 3),
+                          ],
+                          Text(
+                            from!,
+                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                  color: context.colorScheme.onSurfaceVariant
+                                      .withOpacity(0.8),
+                                  fontFamily: 'monospace',
+                                  fontSize: 11,
+                                ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    if (to != null) ...[
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 4),
+                        child: Icon(
+                          Octicons.arrow_right,
+                          size: 11,
+                          color: context.colorScheme.onSurfaceVariant
+                              .withOpacity(0.6),
+                        ),
+                      ),
+                    ],
+                  ],
+                  if (to != null)
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 5,
+                        vertical: 1,
+                      ),
+                      decoration: BoxDecoration(
+                        color: context.colorScheme.surfaceVariant
+                            .withOpacity(0.4),
+                        borderRadius: Theme.of(context).surfaceStyle.borderRadiusSoft(),
+                      ),
+                      child: Text(
+                        to!,
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              color: context.colorScheme.onSurfaceVariant
+                                  .withOpacity(0.8),
+                              fontFamily: 'monospace',
+                              fontSize: 11,
+                            ),
+                      ),
+                    ),
+                ],
+              ),
+            ],
+            // Metadata: creator, comments (only if showRepoName is true)
+            if (showRepoName) ...[
+              const SizedBox(height: 5),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: <Widget>[
+                  // Creator
+                  if (item.user?.login != null) ...[
+                    Text(
+                      '${item.user!.login}',
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: context.colorScheme.onSurfaceVariant
+                                .withOpacity(0.75),
+                          ),
+                    ),
+                  ],
+                  // Comments
+                  if (item.comments != null && item.comments! > 0)
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: <Widget>[
+                        Icon(
+                          Octicons.comment,
+                          size: 13,
+                          color: context.colorScheme.onSurfaceVariant
+                              .withOpacity(0.75),
+                        ),
+                        const SizedBox(width: 2),
+                        Text(
+                          '${item.comments}',
+                          style:
+                              Theme.of(context).textTheme.bodySmall?.copyWith(
+                                    color: context.colorScheme.onSurfaceVariant
+                                        .withOpacity(0.75),
+                                  ),
+                        ),
+                      ],
+                    ),
+                ],
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
 
-class GetPullIcon extends StatelessWidget {
-  const GetPullIcon(this.state, this.mergedAt, {super.key});
-
-  final IssueState state;
-  final DateTime? mergedAt;
-
-  @override
-  Widget build(final BuildContext context) {
-    switch (state) {
-      case IssueState.CLOSED:
-        if (mergedAt == null) {
-          return const Icon(
-            Octicons.git_pull_request,
-            // color: red,
-            size: 15,
-          );
-        } else {
-          return const Icon(
-            Octicons.git_merge,
-            // color: deepPurple,
-            size: 15,
-          );
-        }
-      case IssueState.OPEN:
-      case IssueState.REOPENED:
-        return const Icon(
-          Octicons.git_pull_request,
-          // color: green,
-          size: 15,
-        );
+  IconData _getPullIcon(IssueState? state, DateTime? mergedAt) {
+    if (state == IssueState.CLOSED && mergedAt != null) {
+      return Octicons.git_merge;
     }
+    return Octicons.git_pull_request;
+  }
+
+  Color _getPullIconColor(
+      BuildContext context, IssueState? state, DateTime? mergedAt) {
+    if (state == IssueState.CLOSED) {
+      if (mergedAt != null) {
+        return const Color(0xFF9C27B0); // Purple for merged
+      } else {
+        return const Color(0xFFF44336); // Red for closed
+      }
+    }
+    // OPEN or REOPENED
+    return const Color(0xFF4CAF50); // Green
   }
 }

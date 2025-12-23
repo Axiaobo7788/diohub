@@ -1,80 +1,57 @@
 import 'package:dio/dio.dart';
 import 'package:diohub/app/api_handler/dio.dart';
+import 'package:diohub/graphql/__generated__/schema.schema.gql.dart';
+import 'package:diohub/graphql/queries/users/__generated__/user_contributions.data.gql.dart';
+import 'package:diohub/graphql/queries/users/__generated__/user_contributions.req.gql.dart';
 import 'package:diohub/graphql/queries/users/__generated__/user_info.data.gql.dart';
 import 'package:diohub/graphql/queries/users/__generated__/user_info.req.gql.dart';
 import 'package:diohub/graphql/queries/viewer/__generated__/viewer.query.data.gql.dart';
 import 'package:diohub/graphql/queries/viewer/__generated__/viewer.query.req.gql.dart';
-import 'package:diohub/models/repositories/repository_model.dart';
-import 'package:diohub/models/users/current_user_info_model.dart';
 import 'package:diohub/models/users/user_info_model.dart';
 import 'package:diohub/utils/type_cast.dart';
 
 class UserInfoService {
-  UserInfoService(this.temp);
+  UserInfoService(this.login);
 
-  static final GraphqlHandler _gqlHandler = GraphqlHandler();
-  final String temp;
+  static final GraphqlHandler _gqlHandler = GraphqlHandler(apiLogSettings: APILoggingSettings(responseBody: true));
+  final String login;
   static final RESTHandler _restHandler = RESTHandler();
 
   // Ref: https://docs.github.com/en/rest/reference/users#get-the-authenticated-user
-  static Future<CurrentUserInfoModel> getCurrentUserInfo() async {
-    final Response<TypeMap> response = await _restHandler.get<TypeMap>(
-      '/user',
+  static Future<GviewerInfoData_viewer> getViewerInfo() async {
+    final GQLResponse response = await _gqlHandler.query(
+      GviewerInfoReq(),
     );
-    return CurrentUserInfoModel.fromJson(response.data!);
+    return GviewerInfoData.fromJson(response.data!)!.viewer;
   }
 
-  // Ref: https://docs.github.com/en/rest/reference/repos#list-repositories-for-the-authenticated-user
-  static Future<List<RepositoryModel>> getCurrentUserRepos(
-    final int perPage,
-    final int pageNumber, {
-    required final bool refresh,
-    final String? sort,
-    final bool? ascending = false,
-  }) async {
-    final Response<List<dynamic>> response =
-        await _restHandler.get<List<dynamic>>(
-      '/user/repos',
-      queryParameters: <String, dynamic>{
-        if (sort != null) 'sort': sort,
-        if (ascending != null) 'direction': ascending ? 'asc' : 'desc',
-        'per_page': perPage,
-        'type': 'owner',
-        'page': pageNumber,
-      },
-      refreshCache: refresh,
-    );
-    return response.data!
-        // ignore: unnecessary_lambdas
-        .map((final dynamic e) => RepositoryModel.fromJson(e))
-        .toList();
-  }
-
-  static Future<List<RepositoryModel>> getUserRepos(
-    final String? username,
-    final int perPage,
-    final int pageNumber,
-    final String? sort, {
+  static Future<GgetUserRepositoriesData_user_repositories> getUserRepositories(
+    final String user,
+    final int first, {
+    final String? after,
+    final GRepositoryOrder? orderBy,
     required final bool refresh,
   }) async {
-    final Response<DynamicList> response = await _restHandler.get<DynamicList>(
-      '/users/$username/repos',
-      queryParameters: <String, dynamic>{
-        'sort': 'updated',
-        'per_page': perPage,
-        'page': pageNumber,
-        if (sort != null) 'sort': sort,
-      },
+    final GQLResponse response = await _gqlHandler.query(
+      GgetUserRepositoriesReq(
+        (final GgetUserRepositoriesReqBuilder b) {
+          b
+            ..vars.user = user
+            ..vars.first = first;
+          if (after != null) {
+            b.vars.after = after;
+          }
+          if (orderBy != null) {
+            b.vars.orderBy..field = orderBy.field;
+            b.vars.orderBy..direction = orderBy.direction;
+          }
+        },
+      ),
       refreshCache: refresh,
     );
-    final DynamicList unParsedData = response.data!;
-    final List<RepositoryModel> data = unParsedData
-        .map(
-          // ignore: unnecessary_lambdas
-          (final dynamic e) => RepositoryModel.fromJson(e),
-        )
-        .toList();
-    return data;
+    return GgetUserRepositoriesData.fromJson(response.data!)!
+        .user!
+        .repositories;
   }
 
   static Future<UserInfoModel> getUserInfo(final String? login) async {
@@ -84,18 +61,18 @@ class UserInfoService {
     return UserInfoModel.fromJson(response.data!);
   }
 
-  static Future<List<GgetUserPinnedReposData_user_pinnedItems_edges?>>
-      getUserPinnedRepos(final String user) async {
-    final GQLResponse res = await _gqlHandler.query(
-      GgetUserPinnedReposReq(
-          (final GgetUserPinnedReposReqBuilder b) => b..vars.user = user),
-    );
-    return GgetUserPinnedReposData.fromJson(res.data!)!
-        .user!
-        .pinnedItems
-        .edges!
-        .toList();
-  }
+  static Future<GuserInfoData_user> getUserInfoGraphQL(
+    final String login,
+  ) async =>
+      GuserInfoData.fromJson(
+        (await _gqlHandler.query(
+          GuserInfoReq(
+            (final GuserInfoReqBuilder b) => b..vars.user = login,
+          ),
+        ))
+            .data!,
+      )!
+          .user!;
 
   static Future<List<GgetViewerOrgsData_viewer_organizations_edges?>>
       getViewerOrgs({required final bool refresh, final String? after}) async {
@@ -141,5 +118,41 @@ class UserInfoService {
         ),
       );
     }
+  }
+
+  /// Fetches user contribution data with customizable date range.
+  ///
+  /// This query is separate from getUserInfoGraphQL to allow independent
+  /// updates of contribution data without refetching all user info.
+  ///
+  /// [from] and [to] are optional. If not provided, defaults to last year.
+  static Future<GuserContributionsData_user> getUserContributions(
+    final String login, {
+    final DateTime? from,
+    final DateTime? to,
+    final bool refreshCache = false,
+  }) async {
+    // Default to last year if not specified
+    final defaultTo = to ?? DateTime.now();
+    final defaultFrom = from ??
+        DateTime(
+          defaultTo.year - 1,
+          defaultTo.month,
+          defaultTo.day,
+        );
+
+    return GuserContributionsData.fromJson(
+      (await _gqlHandler.query(
+        GuserContributionsReq(
+          (final GuserContributionsReqBuilder b) => b
+            ..vars.user = login
+            ..vars.from = defaultFrom
+            ..vars.to = defaultTo,
+        ),
+        refreshCache: refreshCache,
+      ))
+          .data!,
+    )!
+        .user!;
   }
 }

@@ -30,7 +30,7 @@ class AppRouter extends RootStackRouter {
           initial: true,
         ),
         AutoRoute(
-          page: LandingRoute.page,
+          page: HomeRoute.page,
           guards: <AutoRouteGuard>[
             authGuard,
           ],
@@ -83,7 +83,7 @@ class AppRouter extends RootStackRouter {
           ],
         ),
         AutoRoute(
-          page: OtherUserProfileRoute.page,
+          page: UserProfileRoute.page,
           guards: <AutoRouteGuard>[
             authGuard,
           ],
@@ -96,6 +96,12 @@ class AppRouter extends RootStackRouter {
         ),
         AutoRoute(
           page: PRReviewRoute.page,
+          guards: <AutoRouteGuard>[
+            authGuard,
+          ],
+        ),
+        AutoRoute(
+          page: SearchRoute.page,
           guards: <AutoRouteGuard>[
             authGuard,
           ],

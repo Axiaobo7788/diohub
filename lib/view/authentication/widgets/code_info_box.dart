@@ -198,7 +198,7 @@ class CodeInfoBoxState extends State<CodeInfoBox> {
             Flexible(
               child: Card(
                 // shape: RoundedRectangleBorder(
-                //   borderRadius: BorderRadius.circular(10),
+                //   borderRadius: Theme.of(context).surfaceStyle.borderRadiusMedium(),
                 // ),
                 // color: Provider.of<PaletteSettings>(context)
                 //     .currentSetting
@@ -212,7 +212,7 @@ class CodeInfoBoxState extends State<CodeInfoBox> {
                           'Enter the code ${widget.deviceCodeModel.userCode} on:',
                     );
                     return GestureDetector(
-                      // borderRadius: BorderRadius.circular(10),
+                      // borderRadius: Theme.of(context).surfaceStyle.borderRadiusMedium(),
                       onTap: urlActions.launchURL,
                       onLongPress: () async {
                         await urlActions.showMenu(context);

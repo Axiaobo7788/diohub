@@ -2,7 +2,8 @@ import 'package:diohub/common/misc/info_card.dart';
 import 'package:diohub/graphql/__generated__/schema.schema.gql.dart';
 import 'package:diohub/graphql/queries/issues_pulls/__generated__/issue_pull_info.data.gql.dart';
 import 'package:diohub/graphql/queries/issues_pulls/__generated__/timeline.data.gql.dart';
-import 'package:diohub/view/issues_pulls/issue_pull_screen.dart';
+import 'package:diohub/view/issues_pulls/issue_pull_info_template.dart';
+import 'package:diohub/view/issues_pulls/models/issue_pull_state.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_vector_icons/flutter_vector_icons.dart';
 
@@ -14,6 +15,7 @@ class IssueScreen extends StatefulWidget {
     this.commentsSince,
     super.key,
   });
+
   final GissueInfo issueInfo;
   final DateTime? commentsSince;
   final int initialIndex;
@@ -23,18 +25,9 @@ class IssueScreen extends StatefulWidget {
   IssueScreenState createState() => IssueScreenState();
 }
 
-class IssueScreenState extends State<IssueScreen>
-    with SingleTickerProviderStateMixin {
-  late TabController tabController;
-  final ScrollController scrollController = ScrollController();
-
+class IssueScreenState extends State<IssueScreen> {
   @override
   void initState() {
-    tabController = TabController(
-      length: 2,
-      initialIndex: widget.initialIndex,
-      vsync: this,
-    );
     super.initState();
   }
 
@@ -64,6 +57,8 @@ class IssueScreenState extends State<IssueScreen>
         totalCount: data.participants.totalCount,
       ),
       uri: data.url,
+      linkedIssues: data.trackedIssues,
+      linkedIssuesTrackedIn: data.trackedInIssues,
     );
   }
 

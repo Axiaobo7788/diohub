@@ -3,7 +3,6 @@ import 'package:chucker_flutter/chucker_flutter.dart';
 import 'package:curl_logger_dio_interceptor/curl_logger_dio_interceptor.dart';
 import 'package:dio/dio.dart';
 import 'package:dio_cache_interceptor/dio_cache_interceptor.dart';
-import 'package:dio_cache_interceptor_db_store/dio_cache_interceptor_db_store.dart';
 import 'package:diohub/app/api_handler/response_handler.dart';
 import 'package:diohub/app/global.dart';
 import 'package:diohub/models/popup/popup_type.dart';
@@ -291,7 +290,7 @@ abstract class BaseAPIHandler {
 
   final APILoggingSettings? apiLogSettings;
 
-  APILoggingSettings? get defaultAPILogSettings => null;
+  APILoggingSettings? get defaultAPILogSettings => APILoggingSettings();
 
   Future<void> onError(
     final DioException error,
@@ -318,7 +317,8 @@ abstract class BaseAPIHandler {
     final Dio dio = Dio();
     // Log the request in the console if `apiLogSettings` is not null.
     final APILoggingSettings? logSettings =
-        apiLogSettings ?? defaultAPILogSettings;
+        // apiLogSettings ??
+         defaultAPILogSettings;
     dio.interceptors.add(
       ChuckerDioInterceptor(),
     );
@@ -427,7 +427,8 @@ abstract class BaseAPIHandler {
                   cache.cacheOptions.policy != CachePolicy.refresh &&
                   cache.maxAge != null;
           if (checkCache) {
-            final String key = cache.cacheOptions.keyBuilder(options);
+            final String key = cache.cacheOptions
+                .keyBuilder(url: options.uri, headers: options.headers.cast());
             final CacheResponse? cacheData = await _cacheStore.get(key);
             final bool cacheIsBeforeExpiry = cacheData != null &&
                 DateTime.now().isBefore(
@@ -452,13 +453,13 @@ abstract class BaseAPIHandler {
     return dio;
   }
 
-  static late final DbCacheStore _cacheStore;
+  static late final CacheStore _cacheStore;
 
   static Future<void> setupDioAPICache() async {
     String? directoryPath;
 
     directoryPath = (await getApplicationDocumentsDirectory()).path;
-    _cacheStore = DbCacheStore(databasePath: directoryPath);
+    _cacheStore = MemCacheStore();
   }
 
   static Future<void> clearCache() async {
@@ -472,12 +473,12 @@ abstract class BaseAPIHandler {
 
 class APILoggingSettings {
   APILoggingSettings({
-    this.request = true,
+    this.request = false,
     this.cURL = true,
     this.requestHeader = false,
     this.requestBody = false,
     this.responseHeader = false,
-    this.responseBody = true,
+    this.responseBody = false,
     this.error = true,
     this.maxWidth = 90,
     this.compact = true,

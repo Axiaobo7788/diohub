@@ -11,7 +11,8 @@ import 'package:diohub/providers/search_data_provider.dart';
 import 'package:diohub/providers/users/current_user_provider.dart';
 import 'package:diohub/routes/router.gr.dart';
 import 'package:diohub/services/authentication/auth_service.dart';
-import 'package:diohub/style/border_radiuses.dart';
+import 'package:diohub/style/surface_style_theme.dart';
+import 'package:diohub/common/misc/surface_shape_resolver.dart';
 import 'package:diohub/utils/device_display_mode.dart';
 import 'package:dynamic_color/dynamic_color.dart';
 import 'package:flutter/cupertino.dart';
@@ -19,6 +20,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_portal/flutter_portal.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart' as riverpod;
 import 'package:provider/provider.dart';
 import 'package:provider/single_child_widget.dart';
 
@@ -36,6 +38,7 @@ Future<void> debugURLLauncher() async {
 }
 
 void main() async {
+  ChuckerFlutter.showNotification = false;
   // ChuckerFlutter.showOnRelease = true;
   WidgetsFlutterBinding.ensureInitialized();
   // Error popup stream initialised.
@@ -190,43 +193,46 @@ class _RootAppState extends State<RootApp> {
           print('hjbs jhbf s');
           print(lightDynamic);
           print(darkDynamic);
-          if (lightDynamic != null && darkDynamic != null) {
-            (lightScheme, darkScheme) =
-                _generateDynamicColourSchemes(lightDynamic, darkDynamic);
-          } else {
-            // logic to set standard static themes here
-          }
-          return MaterialApp.router(
-            theme: getTheme(
-              context,
-              brightness: Brightness.light,
-              colorScheme: lightScheme,
-            ),
-            darkTheme: getTheme(
-              context,
-              brightness: Brightness.dark,
-              colorScheme: darkScheme,
-            ),
-            localizationsDelegates: const <LocalizationsDelegate>[
-              DefaultMaterialLocalizations.delegate,
-              DefaultCupertinoLocalizations.delegate,
-              DefaultWidgetsLocalizations.delegate,
-            ],
-            // getTheme(context, brightness: Brightness.light),
-            // darkTheme: getTheme(context, brightness: Brightness.dark),
-            routerDelegate: customRouter.delegate(
-              deepLinkBuilder: (final PlatformDeepLink deepLink) =>
-                  DeepLink(<PageRouteInfo>[
-                LandingLoadingRoute(
-                  initLink: deepLink.configuration.uri,
-                ),
-              ]),
-              navigatorObservers: () => <NavigatorObserver>[
-                ChuckerFlutter.navigatorObserver,
+          // if (lightDynamic != null && darkDynamic != null) {
+          //   (lightScheme, darkScheme) =
+          //       _generateDynamicColourSchemes(lightDynamic, darkDynamic);
+          // } else {
+          //   lightScheme = _defaultLightColorScheme;
+          //   darkScheme = _defaultDarkColorScheme;
+          // }
+          return riverpod.ProviderScope(
+            child: MaterialApp.router(
+              theme: getTheme(
+                context,
+                brightness: Brightness.light,
+                colorScheme: lightScheme,
+              ),
+              darkTheme: getTheme(
+                context,
+                brightness: Brightness.dark,
+                colorScheme: darkScheme,
+              ),
+              localizationsDelegates: const <LocalizationsDelegate>[
+                DefaultMaterialLocalizations.delegate,
+                DefaultCupertinoLocalizations.delegate,
+                DefaultWidgetsLocalizations.delegate,
               ],
-              rebuildStackOnDeepLink: true,
+              // getTheme(context, brightness: Brightness.light),
+              // darkTheme: getTheme(context, brightness: Brightness.dark),
+              routerDelegate: customRouter.delegate(
+                deepLinkBuilder: (final PlatformDeepLink deepLink) =>
+                    DeepLink(<PageRouteInfo>[
+                  LandingLoadingRoute(
+                    initLink: deepLink.configuration.uri,
+                  ),
+                ]),
+                navigatorObservers: () => <NavigatorObserver>[
+                  ChuckerFlutter.navigatorObserver,
+                ],
+                rebuildStackOnDeepLink: true,
+              ),
+              routeInformationParser: customRouter.defaultRouteParser(),
             ),
-            routeInformationParser: customRouter.defaultRouteParser(),
           );
         },
       );
@@ -239,161 +245,61 @@ ThemeData getTheme(
 }) {
   final ColorScheme? cs = colorScheme;
   // cs= cs.copyWith(surfaceTint: Colors.transparent);
-  final BorderRadiusTheme borderRadiusTheme = BorderRadiusTheme();
+  const SurfaceStyleTheme surfaceStyle = SurfaceStyleTheme();
   return ThemeData(
     useMaterial3: true,
     brightness: brightness,
-    // tabBarTheme: TabBarTheme(
-    //   labelPadding: EdgeInsets.all(8),
-    // indicator: BoxDecoration(
-    //   color: context.colorScheme.primary,
-    //   borderRadius: bigBorderRadius,
-    // ),
-    // labelStyle: TextStyle(color: context.colorScheme.onPrimary)
-    //     .merge(context.textTheme.titleSmall),
-    // ),
-    // visualDensity: VisualDensity.compact,
-    // unselectedWidgetColor: palette.faded1,
-    // cardColor: palette.primary,
-    // pageTransitionsTheme: const PageTransitionsTheme(
-    //   builders: <TargetPlatform, PageTransitionsBuilder>{
-    //     // TargetPlatform.android: CupertinoPageTransitionsBuilder(),
-    //     TargetPlatform.iOS: CupertinoPageTransitionsBuilder(),
-    //   },
-    // ),
-    // appBarTheme: const AppBarTheme(elevation: 0),
-    // tabBarTheme: TabBarTheme(
-    //   indicator: BoxDecoration(
-    //     borderRadius: bigBorderRadius,
-    //   ),
-    //   unselectedLabelStyle: Theme.of(context)
-    //       .textTheme
-    //       .titleLarge!
-    //       .copyWith( 14, fontWeight: FontWeight.w600),
-    //   labelStyle: Theme.of(context)
-    //       .textTheme
-    //       .titleLarge!
-    //       .copyWith( 20, fontWeight: FontWeight.bold),
-    //   labelPadding: const EdgeInsets.only(left: 8, right: 8, bottom: 8),
-    // ),
-
-    // bottomSheetTheme: BottomSheetThemeData(
-    //   shape: const RoundedRectangleBorder(
-    //     borderRadius: BorderRadius.only(
-    //       topRight: Radius.circular(20),
-    //       topLeft: Radius.circular(20),
-    //     ),
-    //   ),
-    // ),
-
-    // scrollbarTheme: ScrollbarThemeData(
-    //   thumbColor: MaterialStateProperty.all<Color>(grey),
-    // ),
-    // dialogTheme: DialogTheme(
-    //   shape: RoundedRectangleBorder(borderRadius: medBorderRadius),
-    // ),
-    // listTileTheme: ListTileThemeData(iconColor: context.palette.baseElements),
-    // dividerColor: grey.withOpacity(0.7),
-    // buttonTheme: ButtonThemeData(
-    //   textTheme: ButtonTextTheme.primary,
-    //   padding: EdgeInsets.zero,
-    //   colorScheme: const ColorScheme.dark(),
-    //   shape: RoundedRectangleBorder(borderRadius: medBorderRadius),
-    // ),
     fontFamily: Provider.of<FontSettings>(context).currentSetting,
-    // cardTheme: CardTheme(
-    //   // color: palette.secondary,
-    //   shape: RoundedRectangleBorder(borderRadius: medBorderRadius),
-    // ),
+    // Card shapes
+    cardTheme: CardThemeData(
+      shape: SurfaceShapeResolver.medium(context),
+    ),
+    // Dialog shapes
+    dialogTheme: DialogThemeData(
+      shape: SurfaceShapeResolver.large(context),
+    ),
+    // Bottom sheet with top corners only
     bottomSheetTheme: BottomSheetThemeData(
       surfaceTintColor: Colors.transparent,
-      modalBackgroundColor: cs?.background,
-      backgroundColor: cs?.background,
+      shape: SurfaceShapeResolver.large(
+        context,
+        corners: const [CornerSide.top],
+      ),
     ),
+    // Input fields
     inputDecorationTheme: InputDecorationTheme(
-      // contentPadding: const EdgeInsets.all(16),
-      // hintStyle: TextStyle( 12),
       filled: true,
-      enabledBorder: OutlineInputBorder(
+      enabledBorder: SurfaceShapeResolver.inputBorder(
+        context,
+        size: BorderRadiusSize.medium,
         borderSide: const BorderSide(color: Colors.transparent),
-        borderRadius: borderRadiusTheme.medBorderRadius,
       ),
-      focusedBorder: OutlineInputBorder(
-        borderRadius: borderRadiusTheme.medBorderRadius,
+      focusedBorder: SurfaceShapeResolver.inputBorder(
+        context,
+        size: BorderRadiusSize.medium,
       ),
-      border: OutlineInputBorder(
-        borderRadius: borderRadiusTheme.medBorderRadius,
+      border: SurfaceShapeResolver.inputBorder(
+        context,
+        size: BorderRadiusSize.medium,
       ),
     ),
     colorScheme: cs,
     extensions: <ThemeExtension<dynamic>>[
-      borderRadiusTheme,
+      surfaceStyle,
     ],
   );
 }
 
-const ColorScheme _defaultLightColorScheme = ColorScheme(
-  primary: Color(0xff0343ff),
-  primaryContainer: Color(0xffdee1ff),
-  onPrimaryContainer: Color(0xff001159),
-  secondary: Color(0xff5f5a7d),
-  onSecondary: Color(0xffffffff),
-  secondaryContainer: Color(0xffe5deff),
-  onSecondaryContainer: Color(0xff1c1736),
-  tertiary: Color(0xff6b5585),
-  onTertiary: Color(0xffffffff),
-  tertiaryContainer: Color(0xffeedbff),
-  onTertiaryContainer: Color(0xff25113e),
-  error: Color(0xffba1a1a),
-  errorContainer: Color(0xffffdad6),
-  onErrorContainer: Color(0xff410002),
-  background: Color(0xfffefbff),
-  onBackground: Color(0xff191b25),
-  surface: Color(0xfffefbff),
-  onSurface: Color(0xff191b25),
-  surfaceVariant: Color(0xffe1e1f3),
-  onSurfaceVariant: Color(0xff444654),
-  outline: Color(0xff747584),
-  outlineVariant: Color(0xffc5c5d6),
-  inverseSurface: Color(0xff2e303a),
-  onInverseSurface: Color(0xfff0effe),
-  inversePrimary: Color(0xffbac3ff),
-  surfaceTint: Color(0xff0343ff),
+const Color _seedColor = Color(0xff2563eb);
+
+final ColorScheme _defaultLightColorScheme = ColorScheme.fromSeed(
+  seedColor: _seedColor,
   brightness: Brightness.light,
-  onPrimary: Color(0xff191b25),
-  onError: Color(0xffffdad6),
 );
 
-const ColorScheme _defaultDarkColorScheme = ColorScheme(
+final ColorScheme _defaultDarkColorScheme = ColorScheme.fromSeed(
+  seedColor: _seedColor,
   brightness: Brightness.dark,
-  primary: Color(0xffbac3ff),
-  onPrimary: Color(0xff00218d),
-  primaryContainer: Color(0xff0031c5),
-  onPrimaryContainer: Color(0xffdee1ff),
-  secondary: Color(0xffc9c1ea),
-  onSecondary: Color(0xff312c4c),
-  secondaryContainer: Color(0xff484364),
-  onSecondaryContainer: Color(0xffe5deff),
-  tertiary: Color(0xffd6bcf3),
-  onTertiary: Color(0xff3b2754),
-  tertiaryContainer: Color(0xff523d6c),
-  onTertiaryContainer: Color(0xffeedbff),
-  error: Color(0xffffb4ab),
-  onError: Color(0xff690005),
-  errorContainer: Color(0xff93000a),
-  onErrorContainer: Color(0xffffb4ab),
-  background: Color(0xff191b25),
-  onBackground: Color(0xffe2e1ef),
-  surface: Color(0xff191b25),
-  onSurface: Color(0xffe2e1ef),
-  surfaceVariant: Color(0xff444654),
-  onSurfaceVariant: Color(0xffc5c5d6),
-  outline: Color(0xff8f909f),
-  outlineVariant: Color(0xff444654),
-  inverseSurface: Color(0xffe2e1ef),
-  onInverseSurface: Color(0xff2e303a),
-  inversePrimary: Color(0xff0343ff),
-  surfaceTint: Color(0xffbac3ff),
 );
 
 // Nice dark cs.
