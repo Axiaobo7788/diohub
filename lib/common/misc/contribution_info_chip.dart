@@ -1,6 +1,7 @@
 import 'package:diohub/common/misc/surface_shape_resolver.dart';
 import 'package:diohub/style/surface_style_theme.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_vector_icons/flutter_vector_icons.dart';
 
 /// A reusable chip widget for displaying contribution information
 ///
@@ -11,6 +12,7 @@ class ContributionInfoChip extends StatelessWidget {
     required this.count,
     this.label,
     required this.color,
+    this.onTap,
     super.key,
   });
 
@@ -26,12 +28,112 @@ class ContributionInfoChip extends StatelessWidget {
   /// Color for the icon and chip styling
   final Color color;
 
+  /// Optional callback when chip is tapped
+  final VoidCallback? onTap;
+
+  /// Factory method for commits chip with optional repo count
+  factory ContributionInfoChip.commits({
+    required int count,
+    int repoCount = 0,
+    VoidCallback? onTap,
+  }) {
+    return ContributionInfoChip(
+      icon: Octicons.git_commit,
+      count: count,
+      label: repoCount > 0
+          ? 'in $repoCount ${repoCount == 1 ? 'repo' : 'repos'}'
+          : null,
+      color: const Color(0xFF2196F3),
+      onTap: onTap,
+    );
+  }
+
+  /// Factory method for pull requests chip with optional repo count
+  factory ContributionInfoChip.pullRequests({
+    required int count,
+    int repoCount = 0,
+    VoidCallback? onTap,
+  }) {
+    return ContributionInfoChip(
+      icon: Octicons.git_pull_request,
+      count: count,
+      label: repoCount > 0
+          ? 'in $repoCount ${repoCount == 1 ? 'repo' : 'repos'}'
+          : null,
+      color: const Color(0xFF9C27B0),
+      onTap: onTap,
+    );
+  }
+
+  /// Factory method for issues chip with optional repo count
+  factory ContributionInfoChip.issues({
+    required int count,
+    int repoCount = 0,
+    VoidCallback? onTap,
+  }) {
+    return ContributionInfoChip(
+      icon: Octicons.issue_opened,
+      count: count,
+      label: repoCount > 0
+          ? 'in $repoCount ${repoCount == 1 ? 'repo' : 'repos'}'
+          : null,
+      color: const Color(0xFF4CAF50),
+      onTap: onTap,
+    );
+  }
+
+  /// Factory method for reviews chip with optional repo count
+  factory ContributionInfoChip.reviews({
+    required int count,
+    int repoCount = 0,
+    VoidCallback? onTap,
+  }) {
+    return ContributionInfoChip(
+      icon: Octicons.code_review,
+      count: count,
+      label: repoCount > 0
+          ? 'reviews in $repoCount ${repoCount == 1 ? 'repo' : 'repos'}'
+          : 'reviews',
+      color: const Color(0xFFFF9800),
+      onTap: onTap,
+    );
+  }
+
+  /// Factory method for repositories created chip
+  factory ContributionInfoChip.repositories({
+    required int count,
+    VoidCallback? onTap,
+  }) {
+    return ContributionInfoChip(
+      icon: Octicons.repo,
+      count: count,
+      label: count == 1 ? 'repo created' : 'repos created',
+      color: const Color(0xFF795548),
+      onTap: onTap,
+    );
+  }
+
+  /// Factory method for private/restricted contributions chip
+  factory ContributionInfoChip.private({
+    required int count,
+    required ColorScheme colorScheme,
+    VoidCallback? onTap,
+  }) {
+    return ContributionInfoChip(
+      icon: Octicons.lock,
+      count: count,
+      label: 'private',
+      color: colorScheme.tertiary,
+      onTap: onTap,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
 
-    return Container(
+    final chipContent = Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: SurfaceShapeResolver.boxDecoration(
         context,
@@ -72,6 +174,16 @@ class ContributionInfoChip extends StatelessWidget {
           ],
         ],
       ),
+    );
+
+    if (onTap == null) {
+      return chipContent;
+    }
+
+    return InkWell(
+      onTap: onTap,
+      borderRadius: theme.surfaceStyle.borderRadius(size: BorderRadiusSize.large),
+      child: chipContent,
     );
   }
 
