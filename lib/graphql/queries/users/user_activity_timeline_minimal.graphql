@@ -1,89 +1,90 @@
 # import './user_info.graphql'
 
-# Combined Phase 1 query: Fetch minimal data for all types in a single query
-# As we find ranges for each type, we can set their first param to 0 in subsequent pages
+# Minimal activity timeline query (not used in single-phase path, kept for reference)
 query userActivityTimelineMinimal(
   $user: String!
-  $firstRepos: Int
-  $afterRepos: String
-  $firstPRs: Int
-  $afterPRs: String
-  $firstIssues: Int
-  $afterIssues: String
+  $from: DateTime!
+  $to: DateTime!
+  $firstRepoContributions: Int = 50
+  $afterRepoContributions: String
+  $firstPullRequestContributions: Int = 50
+  $afterPullRequestContributions: String
+  $firstIssueContributions: Int = 50
+  $afterIssueContributions: String
+  $firstReviewContributions: Int = 50
+  $afterReviewContributions: String
+  $firstCommitContributions: Int = 100
+  $afterCommitContributions: String
+  $maxCommitRepositories: Int = 50
 ) {
   user(login: $user) {
-    repositories(
-      first: $firstRepos
-      after: $afterRepos
-      orderBy: {field: CREATED_AT, direction: DESC}
-      affiliations: [OWNER, COLLABORATOR, ORGANIZATION_MEMBER]
-    ) {
-      edges {
-        cursor
-        node {
-          id
-          name
-          owner {
-            login
-          }
-          createdAt
+    contributionsCollection(from: $from, to: $to) {
+      repositoryContributions(
+        first: $firstRepoContributions
+        after: $afterRepoContributions
+        orderBy: { direction: DESC }
+      ) {
+        nodes {
+          occurredAt
+        }
+        pageInfo {
+          hasNextPage
+          endCursor
         }
       }
-      pageInfo {
-        hasNextPage
-        endCursor
-      }
-    }
-    pullRequests(
-      first: $firstPRs
-      after: $afterPRs
-      orderBy: {field: CREATED_AT, direction: DESC}
-      states: [OPEN, CLOSED, MERGED]
-    ) {
-      edges {
-        cursor
-        node {
-          id
-          number
-          createdAt
-          repository {
-            name
-            owner {
-              login
-            }
-          }
+      pullRequestContributions(
+        first: $firstPullRequestContributions
+        after: $afterPullRequestContributions
+        orderBy: { direction: DESC }
+      ) {
+        nodes {
+          occurredAt
+        }
+        pageInfo {
+          hasNextPage
+          endCursor
         }
       }
-      pageInfo {
-        hasNextPage
-        endCursor
-      }
-    }
-    issues(
-      first: $firstIssues
-      after: $afterIssues
-      orderBy: {field: CREATED_AT, direction: DESC}
-      states: [OPEN, CLOSED]
-    ) {
-      edges {
-        cursor
-        node {
-          id
-          number
-          createdAt
-          repository {
-            name
-            owner {
-              login
-            }
-          }
+      issueContributions(
+        first: $firstIssueContributions
+        after: $afterIssueContributions
+        orderBy: { direction: DESC }
+      ) {
+        nodes {
+          occurredAt
+        }
+        pageInfo {
+          hasNextPage
+          endCursor
         }
       }
-      pageInfo {
-        hasNextPage
-        endCursor
+      pullRequestReviewContributions(
+        first: $firstReviewContributions
+        after: $afterReviewContributions
+        orderBy: { direction: DESC }
+      ) {
+        nodes {
+          occurredAt
+        }
+        pageInfo {
+          hasNextPage
+          endCursor
+        }
+      }
+      commitContributionsByRepository(maxRepositories: $maxCommitRepositories) {
+        contributions(
+          first: $firstCommitContributions
+          after: $afterCommitContributions
+        ) {
+          nodes {
+            occurredAt
+          }
+          pageInfo {
+            hasNextPage
+            endCursor
+          }
+        }
       }
     }
   }
 }
-
