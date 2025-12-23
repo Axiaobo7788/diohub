@@ -709,10 +709,10 @@ class IssuePullInfoTemplateState extends State<IssuePullInfoTemplate>
 
   Widget buildDynamicTabsParent() => DynamicTabsParent(
         controller: dynamicTabsController,
-        builder: (
+        builder:  (
           final BuildContext context,
           final PreferredSizeWidget tabBar,
-          final Widget tabView,
+          final WidgetBuilder tabViewBuilder,
         ) =>
             EditingWrapper(
           onSave: () {},
@@ -734,7 +734,7 @@ class IssuePullInfoTemplateState extends State<IssuePullInfoTemplate>
                   showTabBar: dynamicTabsController.activeLength > 1,
                   tabBar: buildTabsView(tabBar),
                 ),
-                body: tabView,
+                bodyBuilder: tabViewBuilder,
               ),
             ),
           ),

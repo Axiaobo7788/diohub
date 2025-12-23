@@ -243,7 +243,7 @@ class RepositoryScreenState extends DeepLinkWidgetState<RepositoryScreen>
                             builder: (
                               final BuildContext context,
                               final PreferredSizeWidget tabs,
-                              final Widget tabView,
+                              final WidgetBuilder tabViewBuilder,
                             ) =>
                                 DynamicScroll(
                               collapsedWidget:
@@ -262,10 +262,8 @@ class RepositoryScreenState extends DeepLinkWidgetState<RepositoryScreen>
                                 tabBar: tabs,
                              
                               ),
-                              body: loading
-                                  ? const Center(
-                                      child: CircularProgressIndicator())
-                                  : tabView,
+                              bodyBuilder: tabViewBuilder,
+                                 
                             ),
                           ),
                         ),
