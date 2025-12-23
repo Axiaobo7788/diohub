@@ -28,6 +28,7 @@ class PullRequestCardDataModel {
     this.additions = 0,
     this.deletions = 0,
     this.changedFiles = 0,
+    this.commentCount = 0,
     required this.repositoryData,
   });
 
@@ -51,6 +52,7 @@ class PullRequestCardDataModel {
   final int additions; // Lines added from GraphQL
   final int deletions; // Lines deleted from GraphQL
   final int changedFiles; // Files changed from GraphQL
+  final int commentCount; // Comment count from GraphQL or REST
   final RepoCardDataModel
       repositoryData; // Full repository metadata from GraphQL
 
@@ -111,6 +113,7 @@ class PullRequestCardDataModel {
       additions: pr.additions ?? 0, // Preserve additions
       deletions: pr.deletions ?? 0, // Preserve deletions
       changedFiles: pr.changedFiles ?? 0, // Preserve changedFiles
+      commentCount: pr.comments ?? 0, // Preserve comment count
       repositoryData: repositoryData, // Preserve repository data
     );
   }
@@ -154,6 +157,7 @@ class PullRequestCardDataModel {
       additions: 0, // Not in timeline fragment
       deletions: 0, // Not in timeline fragment
       changedFiles: 0, // Not in timeline fragment
+      commentCount: pr.comments.totalCount, // Extract from GraphQL
       repositoryData: RepoCardDataModel(
         name: pr.repository.name,
         url: pr.repository.url.toString(),
@@ -221,12 +225,50 @@ class PullRequestCardDataModel {
       additions: pr.additions,
       deletions: pr.deletions,
       changedFiles: pr.changedFiles,
+      commentCount: pr.comments.totalCount, // Extract from GraphQL
       repositoryData: RepoCardDataModel(
         name: pr.repository.name,
         url: pr.repository.url.toString(),
         description: null,
         language: null,
       ),
+    );
+  }
+
+  /// Convert to PullRequestModel for compatibility with PullListCard
+  PullRequestModel toPullRequestModel() {
+    // Convert state string to IssueState enum
+    IssueState? issueState;
+    if (state == 'OPEN') {
+      issueState = IssueState.OPEN;
+    } else if (state == 'CLOSED') {
+      issueState = IssueState.CLOSED;
+    }
+
+    // Build API URL from repository URL
+    final apiUrl = repositoryUrl
+        .replaceAll('https://github.com/', 'https://api.github.com/repos/');
+
+    return PullRequestModel(
+      url: apiUrl,
+      htmlUrl: url,
+      number: number,
+      state: issueState,
+      title: title,
+      user: author,
+      body: body,
+      bodyHtml: bodyHtml,
+      createdAt: createdAt,
+      updatedAt: updatedAt,
+      closedAt: closedAt,
+      mergedAt: mergedAt,
+      merged: merged,
+      labels: labels,
+      assignees: assignees,
+      comments: commentCount,
+      additions: additions,
+      deletions: deletions,
+      changedFiles: changedFiles,
     );
   }
 }

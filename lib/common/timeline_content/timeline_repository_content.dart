@@ -13,11 +13,9 @@ class TimelineRepositoryContent extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return RepoCardLoading(
-      repoData.url,
-      repoData.name,
-      refresh: false,
+    return RepositoryCard(
+      repoData,
+      withBackground: false,
     );
   }
 }
-

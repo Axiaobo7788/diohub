@@ -3,10 +3,11 @@ import 'package:diohub/common/charts/contribution_calendar_widget.dart';
 import 'package:diohub/common/misc/contribution_info_chip.dart';
 import 'package:diohub/common/misc/shimmer_widget.dart';
 import 'package:diohub/common/utils/contribution_utils.dart';
+import 'package:diohub/models/contributions/contribution_chip_type.dart';
 import 'package:diohub/models/contributions/contribution_query_models.dart';
+import 'package:diohub/view/profile/about/widgets/day_activity_bottom_sheet.dart';
 import 'package:diohub/style/surface_style_theme.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_vector_icons/flutter_vector_icons.dart';
 
 /// A section widget that displays the contribution calendar with statistics.
 ///
@@ -29,6 +30,8 @@ class ContributionCalendarSection extends StatelessWidget {
     this.issues,
     this.reviews,
     this.contributionResult,
+    this.onChipTap,
+    this.userLogin,
     super.key,
   });
 
@@ -77,6 +80,12 @@ class ContributionCalendarSection extends StatelessWidget {
   /// Contribution result for calculating repo counts
   final ContributionCollectionResult? contributionResult;
 
+  /// Callback when a chip is tapped
+  final void Function(ContributionChipType chipType)? onChipTap;
+
+  /// User login for fetching day activity
+  final String? userLogin;
+
   /// Checks if the current custom range matches "Since joining GitHub"
   bool get _isSinceJoining {
     if (!useCustomRange || customFromDate == null || createdAt == null) {
@@ -85,6 +94,50 @@ class ContributionCalendarSection extends StatelessWidget {
     return customFromDate!.year == createdAt!.year &&
         customFromDate!.month == createdAt!.month &&
         customFromDate!.day == createdAt!.day;
+  }
+
+  /// Handle day tap - opens bottom sheet if day has contributions
+  void _handleDayTap(BuildContext context, ContributionDay day) {
+    // Call original callback if provided
+    onDayTap?.call(day);
+
+    // Only open bottom sheet if day has contributions and userLogin is available
+    if (day.count > 0 && userLogin != null) {
+      // Ensure we're working with UTC dates
+      // The day.date might be in local time, so we need to extract the date components
+      // and create a UTC date to ensure we query the correct day
+      final dayDate = day.date.isUtc
+          ? day.date
+          : DateTime.utc(day.date.year, day.date.month, day.date.day);
+
+      // Create start of day in UTC (00:00:00)
+      final dayStart = DateTime.utc(
+        dayDate.year,
+        dayDate.month,
+        dayDate.day,
+      );
+
+      // Create end of day in UTC (23:59:59.999)
+      final dayEnd = dayStart.add(
+        const Duration(
+          hours: 23,
+          minutes: 59,
+          seconds: 59,
+          milliseconds: 999,
+        ),
+      );
+
+      showModalBottomSheet(
+        context: context,
+        isScrollControlled: true,
+        useSafeArea: true,
+        builder: (context) => DayActivityBottomSheet(
+          login: userLogin!,
+          from: dayStart,
+          to: dayEnd,
+        ),
+      );
+    }
   }
 
   @override
@@ -147,24 +200,25 @@ class ContributionCalendarSection extends StatelessWidget {
     }
 
     final colorScheme = theme.colorScheme;
-    
+
     // Calculate repo counts from contribution result
     int reposWithCommits = 0;
     int reposWithIssues = 0;
     int reposWithPRs = 0;
     int reposWithReviews = 0;
     int totalRepositoriesCreated = 0;
-    
+
     if (contributionResult != null) {
       for (final highlight in contributionResult!.yearlyHighlights) {
         reposWithCommits += highlight.totalRepositoriesWithContributedCommits;
         reposWithIssues += highlight.totalRepositoriesWithContributedIssues;
         reposWithPRs += highlight.totalRepositoriesWithContributedPullRequests;
-        reposWithReviews += highlight.totalRepositoriesWithContributedPullRequestReviews;
+        reposWithReviews +=
+            highlight.totalRepositoriesWithContributedPullRequestReviews;
         totalRepositoriesCreated += highlight.totalRepositoryContributions;
       }
     }
-    
+
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
       child: Column(
@@ -195,7 +249,7 @@ class ContributionCalendarSection extends StatelessWidget {
             child: ContributionCalendarWidget(
               weeks: weeks,
               colors: defaultColors,
-              onDayTap: onDayTap,
+              onDayTap: (day) => _handleDayTap(context, day),
               showMonthLabels: true,
               showDayLabels: false,
               cellSize: 11.0,
@@ -238,64 +292,59 @@ class ContributionCalendarSection extends StatelessWidget {
     final chips = <Widget>[];
 
     if (commits != null && commits! > 0) {
-      chips.add(ContributionInfoChip(
-        icon: Octicons.git_commit,
+      chips.add(ContributionInfoChip.commits(
         count: commits!,
-        label: reposWithCommits > 0
-            ? 'in $reposWithCommits ${reposWithCommits == 1 ? 'repo' : 'repos'}'
+        repoCount: reposWithCommits,
+        onTap: onChipTap != null
+            ? () => onChipTap!(ContributionChipType.commits)
             : null,
-        color: const Color(0xFF2196F3),
       ));
     }
     if (pullRequests != null && pullRequests! > 0) {
-      chips.add(ContributionInfoChip(
-        icon: Octicons.git_pull_request,
+      chips.add(ContributionInfoChip.pullRequests(
         count: pullRequests!,
-        label: reposWithPRs > 0
-            ? 'in $reposWithPRs ${reposWithPRs == 1 ? 'repo' : 'repos'}'
+        repoCount: reposWithPRs,
+        onTap: onChipTap != null
+            ? () => onChipTap!(ContributionChipType.pullRequests)
             : null,
-        color: const Color(0xFF9C27B0),
       ));
     }
     if (issues != null && issues! > 0) {
-      chips.add(ContributionInfoChip(
-        icon: Octicons.issue_opened,
+      chips.add(ContributionInfoChip.issues(
         count: issues!,
-        label: reposWithIssues > 0
-            ? 'in $reposWithIssues ${reposWithIssues == 1 ? 'repo' : 'repos'}'
+        repoCount: reposWithIssues,
+        onTap: onChipTap != null
+            ? () => onChipTap!(ContributionChipType.issues)
             : null,
-        color: const Color(0xFF4CAF50),
       ));
     }
     if (reviews != null && reviews! > 0) {
-      chips.add(ContributionInfoChip(
-        icon: Octicons.code_review,
+      chips.add(ContributionInfoChip.reviews(
         count: reviews!,
-        label: reposWithReviews > 0
-            ? 'reviews in $reposWithReviews ${reposWithReviews == 1 ? 'repo' : 'repos'}'
-            : 'reviews',
-        color: const Color(0xFFFF9800),
+        repoCount: reposWithReviews,
+        onTap: onChipTap != null
+            ? () => onChipTap!(ContributionChipType.reviews)
+            : null,
       ));
     }
 
-    // Add repository contributions chip if available
     if (totalRepositoriesCreated > 0) {
-      chips.add(ContributionInfoChip(
-        icon: Octicons.repo,
+      chips.add(ContributionInfoChip.repositories(
         count: totalRepositoriesCreated,
-        label: totalRepositoriesCreated == 1 ? 'repo created' : 'repos created',
-        color: const Color(0xFF795548), // Brown color for repositories
+        onTap: onChipTap != null
+            ? () => onChipTap!(ContributionChipType.createdRepos)
+            : null,
       ));
     }
 
-    // Add private contributions chip if available
     if (contributionResult != null &&
         contributionResult!.totalRestrictedContributions > 0) {
-      chips.add(ContributionInfoChip(
-        icon: Octicons.lock,
+      chips.add(ContributionInfoChip.private(
         count: contributionResult!.totalRestrictedContributions,
-        label: 'private',
-        color: colorScheme.tertiary,
+        colorScheme: colorScheme,
+        onTap: onChipTap != null
+            ? () => onChipTap!(ContributionChipType.private)
+            : null,
       ));
     }
 
@@ -327,16 +376,14 @@ class ContributionCalendarSectionLoading extends StatelessWidget {
           ShimmerWidget.container(
             height: 20,
             width: 200,
-            borderRadius: theme
-                .surfaceStyle
-                .borderRadius(size: BorderRadiusSize.small),
+            borderRadius:
+                theme.surfaceStyle.borderRadius(size: BorderRadiusSize.small),
           ),
           const SizedBox(height: 12),
           ShimmerWidget.container(
             height: 120,
-            borderRadius: theme
-                .surfaceStyle
-                .borderRadius(size: BorderRadiusSize.small),
+            borderRadius:
+                theme.surfaceStyle.borderRadius(size: BorderRadiusSize.small),
           ),
         ],
       ),
