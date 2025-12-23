@@ -1,6 +1,8 @@
 import 'package:diohub/common/misc/ink_pot.dart';
 import 'package:diohub/common/misc/menu_button.dart';
+import 'package:diohub/common/misc/nested_card_with_header.dart';
 import 'package:diohub/common/misc/tappable_card.dart';
+import 'package:diohub/style/surface_style_theme.dart';
 import 'package:diohub/utils/utils.dart';
 import 'package:flex_list/flex_list.dart';
 import 'package:flutter/material.dart';
@@ -33,7 +35,7 @@ class InfoCard extends StatelessWidget {
     this.title,
     this.leading,
     this.headerPadding =
-        const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+        const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
     final VoidCallback? onHeaderTap,
     this.headerColor,
     this.elevation,
@@ -50,7 +52,8 @@ class InfoCard extends StatelessWidget {
                 cardLinkType: CardLinkType.atTop,
               ),
               child: Padding(
-                padding: childPadding ?? const EdgeInsets.all(8),
+                padding: childPadding ??
+                    const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
                 child: Row(
                   children: <Widget>[
                     Flexible(child: child),
@@ -72,7 +75,7 @@ class InfoCard extends StatelessWidget {
     this.title,
     this.leading,
     this.headerPadding =
-        const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+        const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
     this.onHeaderTap,
     this.headerColor,
     this.elevation,
@@ -109,43 +112,51 @@ class InfoCard extends StatelessWidget {
       );
 
   Widget _buildUI(final BuildContext context) => IntrinsicWidth(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: <Widget>[
-            CardHeader(
-              onTap: onHeaderTap,
-              elevation: elevation,
-              color: headerColor,
-              child: Padding(
-                padding: headerPadding,
-                child: Row(
-                  // mainAxisSize: MainAxisSize.min,
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: <Widget>[
-                    _buildDescriptors(context),
-                    if (trailing != null) trailing!,
-                  ],
+        child: Material(
+          elevation: elevation ?? 0,
+          color: context.colorScheme.surfaceContainerLow,
+          borderRadius: Theme.of(context).surfaceStyle.borderRadiusMedium(),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: <Widget>[
+              CardHeader(
+                onTap: onHeaderTap,
+                elevation:
+                    0, // Remove elevation from header since parent has it
+                color: headerColor,
+                child: Padding(
+                  padding: headerPadding,
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: <Widget>[
+                      _buildDescriptors(context),
+                      if (trailing != null) trailing!,
+                    ],
+                  ),
                 ),
               ),
-            ),
-            ...List<Widget>.generate(children.length, (final int index) {
-              final bool isLast = index == children.length - 1;
-              return Column(
-                children: <Widget>[
-                  if (index > 0)
-                    const Divider(
-                      height: 0,
+              ...List<Widget>.generate(children.length, (final int index) {
+                final bool isLast = index == children.length - 1;
+                return Column(
+                  children: <Widget>[
+                    if (index > 0)
+                      Divider(
+                        height: 1,
+                        thickness: 1,
+                        color:
+                            context.colorScheme.outlineVariant.withOpacity(0.5),
+                      ),
+                    BasicCard.linked(
+                      elevation: 0, // Remove elevation since parent has it
+                      cardLinkType:
+                          isLast ? CardLinkType.atTop : CardLinkType.both,
+                      child: children[index],
                     ),
-                  BasicCard.linked(
-                    elevation: elevation,
-                    cardLinkType:
-                        isLast ? CardLinkType.atTop : CardLinkType.both,
-                    child: children[index],
-                  ),
-                ],
-              );
-            }),
-          ],
+                  ],
+                );
+              }),
+            ],
+          ),
         ),
       );
 
@@ -156,13 +167,14 @@ class InfoCard extends StatelessWidget {
               data: context.themeData.copyWith(
                 iconTheme: context.themeData.iconTheme.copyWith(
                   size: 16,
-                  color: context.colorScheme.onSurface.asHint(),
+                  color: context.colorScheme.primary,
                 ),
               ),
               child: DefaultTextStyle(
-                style: context.textTheme.bodyMedium!.asHint().copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
+                style: context.textTheme.labelMedium!.copyWith(
+                  fontWeight: FontWeight.w600,
+                  color: context.colorScheme.onSurface,
+                ),
                 child: leading!,
               ),
             ),
@@ -172,8 +184,11 @@ class InfoCard extends StatelessWidget {
             ),
           if (title != null)
             Text(
-              title!, style: context.textTheme.bodyMedium?.asHint(),
-              // .copyWith(fontWeight: FontWeight.bold),
+              title!,
+              style: context.textTheme.labelMedium?.copyWith(
+                fontWeight: FontWeight.w600,
+                color: context.colorScheme.onSurface,
+              ),
             ),
         ],
       );
@@ -207,6 +222,40 @@ class MenuInfoCard extends StatelessWidget {
   final List<PullDownMenuEntry> Function(BuildContext context) menuBuilder;
   final Widget child;
 
+  Widget _buildHeader(final BuildContext context) => Row(
+        mainAxisSize: MainAxisSize.min,
+        children: <Widget>[
+          if (leading != null)
+            Theme(
+              data: context.themeData.copyWith(
+                iconTheme: context.themeData.iconTheme.copyWith(
+                  size: 16,
+                  color: context.colorScheme.primary,
+                ),
+              ),
+              child: DefaultTextStyle(
+                style: context.textTheme.labelMedium!.copyWith(
+                  fontWeight: FontWeight.w600,
+                  color: context.colorScheme.onSurface,
+                ),
+                child: leading!,
+              ),
+            ),
+          if (title.isNotEmpty && leading != null)
+            const SizedBox(
+              width: 8,
+            ),
+          if (title.isNotEmpty)
+            Text(
+              title,
+              style: context.textTheme.labelMedium?.copyWith(
+                fontWeight: FontWeight.w600,
+                color: context.colorScheme.onSurface,
+              ),
+            ),
+        ],
+      );
+
   @override
   Widget build(final BuildContext context) {
     final List<PullDownMenuEntry> menuItems = menuBuilder.call(context);
@@ -220,6 +269,7 @@ class MenuInfoCard extends StatelessWidget {
             onPressed: showMenu,
             icon: Icon(
               Icons.adaptive.more_rounded,
+              size: 16,
             ),
             // padding: const EdgeInsets.all(4),
             // constraints: const BoxConstraints(),
@@ -229,32 +279,31 @@ class MenuInfoCard extends StatelessWidget {
             (final BuildContext context, final Widget button, final showMenu) =>
                 GestureDetector(
           onLongPress: showMenu,
-          child: InfoCard(
-            trailing: button,
-            headerColor: headerColor,
-            headerPadding: const EdgeInsets.only(
-              left: 12,
-              bottom: 2,
-              top: 2,
+          child: NestedCardWithHeader(
+            headerPadding: EdgeInsets.symmetric(horizontal: 4),
+            // childPadding:
+            // const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
+            header: InkPot(
+              onTap: showMenu,
+              child: _buildHeader(context),
             ),
-            elevation: elevation,
-            onTap: onTap,
-            onHeaderTap: showMenu,
-            title: title,
-            leading: leading,
-            // titleTextStyle: titleTextStyle,
-            child: child,
+            trailing: button,
+            child: InkPot(
+              onTap: onTap,
+              borderRadius: Theme.of(context).surfaceStyle.borderRadiusMedium(),
+              child: child,
+            ),
           ),
         ),
       );
     }
-    return InfoCard(
-      onTap: onTap,
-      title: title,
-      elevation: elevation,
-      headerColor: headerColor,
-      leading: leading,
-      child: child,
+    return NestedCardWithHeader(
+      header: _buildHeader(context),
+      child: InkPot(
+        onTap: onTap,
+        borderRadius: Theme.of(context).surfaceStyle.borderRadiusMedium(),
+        child: child,
+      ),
     );
   }
 }
@@ -285,16 +334,17 @@ class CardHeader extends StatelessWidget {
         cardLinkType: cardLinkType,
         elevation: elevation,
         // color: color ?? context.colorScheme.surfaceVariant.asHint(),
-        color: color ?? context.colorScheme.secondaryContainer,
+        // color: color ?? context.colorScheme.secondaryContainer,
         // elevation: 0,
         onTap: onTap,
+
         child: DefaultTextStyle(
           style: context.textTheme.bodySmall!.copyWith(
             color: context.colorScheme.onSecondaryContainer,
           ),
           child: IconTheme.merge(
             data: IconThemeData(
-              color: context.colorScheme.onSecondaryContainer,
+              // color: context.colorScheme.onSecondaryContainer,
               size: 16,
             ),
             child: child,

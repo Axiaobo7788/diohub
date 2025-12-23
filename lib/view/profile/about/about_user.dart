@@ -1,107 +1,131 @@
 import 'package:diohub/common/bottom_sheet/url_actions.dart';
-import 'package:diohub/common/misc/info_card.dart';
+import 'package:diohub/common/misc/collapsible_detail_tiles.dart';
+import 'package:diohub/common/misc/detail_tile.dart';
+import 'package:diohub/common/misc/detail_tile_content.dart';
 import 'package:diohub/models/users/user_info_model.dart';
 import 'package:diohub/utils/get_date.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_material_design_icons/flutter_material_design_icons.dart';
 
 class AboutUser extends StatelessWidget {
   const AboutUser(this.userInfoModel, {super.key});
   final UserInfoModel? userInfoModel;
 
-  List<Widget> items(final BuildContext context) => <Widget>[
-        if (userInfoModel!.bio != null)
-          InfoCard(
+  List<Widget> _buildAlwaysVisibleTiles(BuildContext context) {
+    final tiles = <Widget>[];
+
+    if (userInfoModel!.bio != null) {
+      tiles.add(
+        DetailTile(
             title: 'Bio',
-            child: Text(userInfoModel!.bio!),
+          child: DetailTileText(userInfoModel!.bio!),
           ),
-        if (userInfoModel!.twitterUsername != null)
-          MenuInfoCard(
-            title: 'Twitter',
-            leading: InfoCard.leadingIcon(
-              icon: MdiIcons.twitter,
+      );
+    }
+
+    if (userInfoModel!.location != null) {
+      tiles.add(
+        DetailTile(
+          title: 'Location',
+          child: DetailTileText(userInfoModel!.location!),
             ),
-            onTap: () async => URLActions(
-              uri: Uri.parse(
-                'https://twitter.com/${userInfoModel!.twitterUsername}',
+      );
+    }
+
+    if (userInfoModel!.company != null) {
+      tiles.add(
+        DetailTile(
+          title: 'Company',
+          child: DetailTileText(userInfoModel!.company!),
               ),
-            ).launchURL(),
-            menuBuilder: (final BuildContext context) => URLActions(
-              uri: Uri.parse(
-                'https://twitter.com/${userInfoModel!.twitterUsername}',
+      );
+    }
+
+    if (userInfoModel!.createdAt != null) {
+      tiles.add(
+        DetailTile(
+          title: 'Joined',
+          child: DetailTileText(
+            getDate(
+              userInfoModel!.createdAt.toString(),
+              shorten: false,
               ),
-            ).menuItems,
-            child: Text('@${userInfoModel!.twitterUsername}'),
           ),
-        if (userInfoModel!.email != null)
-          MenuInfoCard(
+        ),
+      );
+    }
+
+    return tiles;
+  }
+
+  List<Widget> _buildExpandableTiles(BuildContext context) {
+    final tiles = <Widget>[];
+
+    if (userInfoModel!.email != null) {
+      tiles.add(
+        DetailTile(
             title: 'Email',
             onTap: () async =>
                 URLActions(uri: Uri.parse('mailto:${userInfoModel!.email}'))
                     .launchURL(),
-            menuBuilder: (final BuildContext context) =>
-                URLActions(uri: Uri.parse('mailto:${userInfoModel!.email}'))
-                    .menuItems,
-            leading: InfoCard.leadingIcon(
-              icon: MdiIcons.at,
+          child: DetailTileText(userInfoModel!.email!),
+        ),
+      );
+    }
+
+    if (userInfoModel!.twitterUsername != null) {
+      tiles.add(
+        DetailTile(
+          title: 'Twitter',
+          onTap: () async => URLActions(
+            uri: Uri.parse(
+              'https://twitter.com/${userInfoModel!.twitterUsername}',
             ),
-            child: Text(userInfoModel!.email!),
+          ).launchURL(),
+          child: DetailTileText('@${userInfoModel!.twitterUsername}'),
           ),
-        if (userInfoModel!.blog?.isNotEmpty ?? false)
-          MenuInfoCard(
-            leading: InfoCard.leadingIcon(
-              icon: MdiIcons.bio,
-            ),
+      );
+    }
+
+    if (userInfoModel!.blog?.isNotEmpty ?? false) {
+      tiles.add(
+        DetailTile(
             title: 'Blog',
             onTap: URLActions(uri: Uri.parse(userInfoModel!.blog!)).launchURL,
-            menuBuilder: (final BuildContext context) =>
-                URLActions(uri: Uri.parse(userInfoModel!.blog!)).menuItems,
-            child: Text(userInfoModel!.blog!),
+          child: DetailTileText(userInfoModel!.blog!),
           ),
-        if (userInfoModel!.company != null)
-          InfoCard(
-            title: 'Company',
-            leading: InfoCard.leadingIcon(
-              icon: MdiIcons.officeBuilding,
-            ),
-            child: Text(userInfoModel!.company!),
-          ),
-        if (userInfoModel!.location != null)
-          InfoCard(
-            title: 'Location',
-            leading: InfoCard.leadingIcon(
-              icon: MdiIcons.mapMarker,
-            ),
-            child: Text(userInfoModel!.location!),
-          ),
-        if (userInfoModel!.createdAt != null)
-          InfoCard(
-            leading: InfoCard.leadingIcon(
-              icon: MdiIcons.calendar,
-            ),
-            title: 'Joined',
-            child: Text(
-              getDate(
-                userInfoModel!.createdAt.toString(),
-                shorten: false,
-              ),
-            ),
-          ),
-      ];
+      );
+    }
+
+    return tiles;
+  }
 
   @override
-  Widget build(final BuildContext context) => ListView(
-        // crossAxisAlignment: CrossAxisAlignment.start,
-        children: <Widget>[
-          const SizedBox(
-            height: 16,
+  Widget build(BuildContext context) {
+    if (userInfoModel == null) {
+      return const SizedBox.shrink();
+    }
+
+    final alwaysVisibleTiles = _buildAlwaysVisibleTiles(context);
+    final expandableTiles = _buildExpandableTiles(context);
+
+    if (alwaysVisibleTiles.isEmpty && expandableTiles.isEmpty) {
+      return const Center(
+        child: Padding(
+          padding: EdgeInsets.all(16.0),
+          child: Text('No information available'),
           ),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: WrappedCollection(
-              children: items(context),
-            ),
-          ),
-        ],
       );
+    }
+
+    return Padding(
+      padding: const EdgeInsets.all(16),
+      child: CollapsibleDetailTiles(
+        alwaysVisibleTiles: alwaysVisibleTiles,
+        expandableTiles: expandableTiles,
+        visibilityConfig: DetailTilesVisibilityConfig.fixedCount(
+          defaultVisibleCount: alwaysVisibleTiles.length.clamp(0, 3),
+        ),
+      ),
+    );
+  }
 }

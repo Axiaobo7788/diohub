@@ -8,6 +8,7 @@ import 'package:diohub/common/misc/button.dart';
 import 'package:diohub/common/misc/loading_indicator.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:liquid_pull_to_refresh/liquid_pull_to_refresh.dart';
 
 typedef ResponseBuilder<T> = Widget Function(
   BuildContext context,
@@ -66,7 +67,10 @@ class APIWrapper<T> extends StatefulWidget {
               animation: primaryAnimation,
               secondaryAnimation: secondaryAnimation,
               fillColor: Colors.transparent,
-              child: child,
+              child: AnimatedSize(
+                  duration: const Duration(milliseconds: 300),
+                  curve: Curves.easeInOut,
+                  child: child),
             ),
             child: snapshot.on(
               loaded: (final APISnapshotLoaded<T> snapshot) =>
@@ -182,11 +186,11 @@ class PullToRefreshWrapper<T> extends StatelessWidget {
   final Widget child;
 
   @override
-  Widget build(final BuildContext context) => RefreshIndicator(
+  Widget build(final BuildContext context) => LiquidPullToRefresh(
         onRefresh: () => Future<void>.sync(() async {
           await wrapperKey.currentState?.refreshData();
         }),
-        triggerMode: RefreshIndicatorTriggerMode.anywhere,
+        // triggerMode: RefreshIndicatorTriggerMode.anywhere,
         child: child,
       );
 }

@@ -8,62 +8,71 @@ class ScrollDynamicElevation extends StatefulWidget {
   });
 
   final Widget child;
+
   @override
   State<ScrollDynamicElevation> createState() => _ScrollDynamicElevationState();
 }
 
 class _ScrollDynamicElevationState extends State<ScrollDynamicElevation> {
+  static const double _tintDistance = 120;
+
   ScrollNotificationObserverState? _scrollNotificationObserver;
-
   bool _scrolledUnder = false;
-
-  @override
-  void initState() {
-    super.initState();
-  }
+  double _scrolledFraction = 0;
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    _scrollNotificationObserver?.removeListener(_handleScrollNotification);
-    _scrollNotificationObserver = ScrollNotificationObserver.maybeOf(context);
+    final ScrollNotificationObserverState? previousObserver =
+        _scrollNotificationObserver;
+    previousObserver?.removeListener(_handleScrollNotification);
 
+    _scrollNotificationObserver = ScrollNotificationObserver.maybeOf(context);
     _scrollNotificationObserver?.addListener(_handleScrollNotification);
   }
 
   @override
   void dispose() {
-    if (_scrollNotificationObserver != null) {
-      _scrollNotificationObserver!.removeListener(_handleScrollNotification);
-      _scrollNotificationObserver = null;
-    }
+    final ScrollNotificationObserverState? observer =
+        _scrollNotificationObserver;
+    observer?.removeListener(_handleScrollNotification);
+    _scrollNotificationObserver = null;
     super.dispose();
   }
 
   void _handleScrollNotification(final ScrollNotification notification) {
-    if (notification is ScrollUpdateNotification &&
-        defaultScrollNotificationPredicate(notification)) {
-      final bool oldScrolledUnder = _scrolledUnder;
-      final ScrollMetrics metrics = notification.metrics;
-      switch (metrics.axisDirection) {
-        case AxisDirection.up:
-          // Scroll view is reversed
-          _scrolledUnder = metrics.extentAfter > 0;
-        case AxisDirection.down:
-          _scrolledUnder = metrics.extentBefore > 0;
-        case AxisDirection.right:
-        case AxisDirection.left:
-          // Scrolled under is only supported in the vertical axis, and should
-          // not be altered based on horizontal notifications of the same
-          // predicate since it could be a 2D scroller.
-          break;
-      }
+    if (notification is! ScrollUpdateNotification ||
+        !defaultScrollNotificationPredicate(notification)) {
+      return;
+    }
 
-      if (_scrolledUnder != oldScrolledUnder) {
-        setState(() {
-          // React to a change in MaterialState.scrolledUnder
-        });
-      }
+    final bool oldScrolledUnder = _scrolledUnder;
+    final double oldFraction = _scrolledFraction;
+    final ScrollMetrics metrics = notification.metrics;
+
+    double? scrollDistance;
+    switch (metrics.axisDirection) {
+      case AxisDirection.up:
+        scrollDistance = metrics.extentAfter;
+      case AxisDirection.down:
+        scrollDistance = metrics.extentBefore;
+      case AxisDirection.right:
+      case AxisDirection.left:
+        // Only consider vertical scrolling for elevation changes.
+        break;
+    }
+
+    if (scrollDistance == null) {
+      return;
+    }
+
+    _scrolledUnder = scrollDistance > 0;
+    _scrolledFraction =
+        (scrollDistance / _tintDistance).clamp(0.0, 1.0).toDouble();
+
+    if (_scrolledUnder != oldScrolledUnder ||
+        _scrolledFraction != oldFraction) {
+      setState(() {});
     }
   }
 
@@ -76,17 +85,22 @@ class _ScrollDynamicElevationState extends State<ScrollDynamicElevation> {
       if (settings?.isScrolledUnder ?? _scrolledUnder)
         MaterialState.scrolledUnder,
     };
+
+    final bool scrolledUnder = states.contains(MaterialState.scrolledUnder);
+    final Color base = context.colorScheme.background;
+    final Color tinted = context.colorScheme.surfaceContainer;
+    final double fraction =
+        scrolledUnder ? _scrolledFraction.clamp(0.05, 1.0) : 0;
+    final Color background = Color.lerp(base, tinted, fraction) ?? base;
+
     return ColoredBox(
-      color: states.contains(MaterialState.scrolledUnder)
-          ? ElevationOverlay.applySurfaceTint(context.colorScheme.background,
-              context.colorScheme.surfaceTint, 3,)
-          : context.colorScheme.background,
-      // duration: Duration(milliseconds: 100),
+      color: background,
       child: widget.child,
     );
   }
 }
 
 bool defaultScrollNotificationPredicate(
-        final ScrollNotification notification,) =>
+  final ScrollNotification notification,
+) =>
     notification.depth == 0;

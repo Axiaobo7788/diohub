@@ -1,6 +1,6 @@
 import 'package:diohub/graphql/queries/issues_pulls/__generated__/timeline.data.gql.dart';
 import 'package:diohub/models/issues/issue_model.dart';
-import 'package:diohub/style/border_radiuses.dart';
+import 'package:diohub/style/surface_style_theme.dart';
 import 'package:diohub/utils/utils.dart';
 import 'package:flutter/material.dart';
 
@@ -21,22 +21,24 @@ class IssueLabel extends StatelessWidget {
         children: <Widget>[
           DecoratedBox(
             decoration: BoxDecoration(
-              borderRadius: context.themeData
-                  .extension<BorderRadiusTheme>()
-                  ?.smallBorderRadius,
+              borderRadius: Theme.of(context).surfaceStyle.borderRadiusSmall(),
+              color: Color(int.tryParse('0xFF$color') ?? 0xFFFFFFFF)
+                  .withOpacity(0.3),
               border: Border.all(
-                color: Color(int.tryParse('0xFF$color') ?? 0xFFFFFFFF),
-              ),
-              color: Color(int.tryParse('0x70$color') ?? 0xFFFFFFFF),
+                  color: Color(int.tryParse('0x60$color') ?? 0xFFFFFFFF),
+                  width: 0.8),
             ),
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
               child: Center(
                 child: Text(
                   name,
-                  style: TextStyle(
-                    color: context.colorScheme.onSurface,
-                  ).merge(context.textTheme.bodySmall),
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        // color: Color(int.tryParse('0xFF$color') ?? 0xFF000000),
+                        fontSize: 11,
+                        color: context.colorScheme.onSurface.withOpacity(0.7),
+                        fontWeight: FontWeight.w600,
+                      ),
                 ),
               ),
             ),

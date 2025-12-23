@@ -3,10 +3,11 @@ import 'package:diohub/common/misc/ink_pot.dart';
 import 'package:diohub/common/misc/language_indicator.dart';
 import 'package:diohub/common/misc/shimmer_widget.dart';
 import 'package:diohub/common/wrappers/api_wrapper_widget.dart';
+import 'package:diohub/models/repositories/repo_card_data_model.dart';
 import 'package:diohub/models/repositories/repository_model.dart';
 import 'package:diohub/routes/router.gr.dart';
 import 'package:diohub/services/repositories/repo_services.dart';
-import 'package:diohub/utils/get_date.dart';
+import 'package:diohub/style/surface_style_theme.dart';
 import 'package:diohub/utils/utils.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_vector_icons/flutter_vector_icons.dart';
@@ -29,151 +30,427 @@ class RepositoryCard extends StatelessWidget {
     this.repo, {
     // this.isThemed = true,
     this.branch,
+    this.commitSha,
+    this.commitShaUrl,
+    this.contributionCount,
+    this.reviewCount,
+    this.issueCount,
+    this.pullRequestCount,
+    this.withBackground = false,
+    this.branchColor,
+    this.branchStrikethrough = false,
     // this.padding = const EdgeInsets.symmetric(vertical: 8),
     super.key,
   });
 
-  final RepositoryModel? repo;
+  final RepoCardDataModel? repo;
 
   // final bool isThemed;
   final String? branch;
+  final String? commitSha;
+  final String? commitShaUrl;
+  final int? contributionCount;
+  final int? reviewCount;
+  final int? issueCount;
+  final int? pullRequestCount;
+  final bool withBackground;
+  final Color?
+      branchColor; // Optional color for branch indicator (e.g., green for created, red for deleted)
+  final bool
+      branchStrikethrough; // Whether to show strikethrough on branch text
 
   // final EdgeInsets padding;
 
   static const PaddedBuilder paddedBuilderData = PaddedBuilder(
-    padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+    padding: EdgeInsets.zero,
   );
 
   Column repoUnthemedWidget(final BuildContext context) => Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
+          // Repository name with icons
           Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: <Widget>[
+              // Lock icon for private repos
+              if (repo!.private == true)
+                Padding(
+                  padding: const EdgeInsets.only(right: 6),
+                  child: Icon(
+                    Octicons.lock,
+                    size: 16,
+                    color: context.colorScheme.onSurfaceVariant,
+                  ),
+                ),
+              // Repository name
               Expanded(
-                child: Wrap(
-                  crossAxisAlignment: WrapCrossAlignment.center,
-                  children: <Widget>[
-                    Visibility(
-                      visible: repo!.private!,
-                      child: Padding(
-                        padding: const EdgeInsets.only(right: 8),
-                        child: Icon(
-                          Octicons.lock,
-                          size:
-                              context.textTheme.bodyLarge!.getIconSize(context),
-                        ),
+                child: Text(
+                  repo!.name,
+                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                        fontWeight: FontWeight.w600,
+                        color: context.colorScheme.onSurface,
                       ),
-                    ),
-                    Text(
-                      repo!.name!,
-                      style: context.textTheme.bodyLarge,
-                    ),
-                    const SizedBox(
-                      width: 8,
-                    ),
-                    Visibility(
-                      visible: repo!.fork ?? false,
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: <Widget>[
-                          Icon(
-                            Octicons.repo_forked,
-                            size: 12,
-                            color: context.colorScheme.onSurface.asHint(),
-                            // color: Provider.of<PaletteSettings>(
-                            //   context,
-                            // ).currentSetting.faded3,
-                          ),
-                          const SizedBox(
-                            width: 4,
-                          ),
-                          Text(
-                            'Forked',
-                            style: context.textTheme.bodyLarge?.asHint(),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
               ),
-            ],
-          ),
-          if (repo?.description != null)
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: 4),
-              child: Row(
-                children: <Widget>[
-                  Flexible(
-                    child: Text(
-                      repo!.description!,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: context.textTheme.bodyMedium?.asHint(),
-                    ),
+              // Fork indicator
+              if (repo!.fork == true)
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: context.colorScheme.surfaceVariant.withOpacity(0.5),
+                    borderRadius:
+                        Theme.of(context).surfaceStyle.borderRadiusSmall(),
                   ),
-                ],
-              ),
-            ),
-          const SizedBox(
-            height: 8,
-          ),
-          Wrap(
-            crossAxisAlignment: WrapCrossAlignment.center,
-            children: <Widget>[
-              LanguageIndicator(
-                repo!.language,
-                // size: 11,
-                // textStyle: AppThemeTextStyles.eventCardChildFooter(
-                //   context,
-                // ),
-              ),
-              if ((repo?.stargazersCount ?? 0) > 0)
-                Padding(
-                  padding: const EdgeInsets.only(left: 16),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: <Widget>[
                       Icon(
-                        Octicons.star_fill,
+                        Octicons.repo_forked,
                         size: 12,
-                        color: context.colorScheme.onSurface.asHint(),
-                        // color: Provider.of<PaletteSettings>(context)
-                        //     .currentSetting
-                        //     .faded3,
+                        color: context.colorScheme.onSurfaceVariant,
                       ),
-                      const SizedBox(
-                        width: 4,
-                      ),
+                      const SizedBox(width: 4),
                       Text(
-                        repo!.stargazersCount!.toShortenedStr(),
-                        style: context.textTheme.bodySmall?.asHint(),
-                        // style: AppThemeTextStyles.eventCardChildFooter(
-                        //   context,
-                        // ),
+                        'Fork',
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              color: context.colorScheme.onSurfaceVariant,
+                              fontSize: 11,
+                            ),
                       ),
                     ],
                   ),
                 ),
-              const SizedBox(
-                width: 16,
-              ),
-              Icon(
-                Icons.update_rounded,
-                size: 12,
-                color: context.colorScheme.onSurface.asHint(),
-              ),
-              const SizedBox(
-                width: 4,
-              ),
-              Text(
-                getDate(repo!.updatedAt.toString()),
-                style: context.textTheme.bodySmall?.asHint(),
-                // style: AppThemeTextStyles.eventCardChildFooter(
-                //   context,
-                // ),
-              ),
             ],
+          ),
+          // Branch display - styled to match fork indicator for better blending
+          // Can be colored (green for created, red for deleted) with optional strikethrough
+          if (branch != null) ...[
+            const SizedBox(height: 6),
+            Wrap(
+              spacing: 8,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              children: <Widget>[
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: branchColor != null
+                        ? branchColor!.withOpacity(0.12)
+                        : context.colorScheme.surfaceVariant.withOpacity(0.5),
+                    borderRadius:
+                        Theme.of(context).surfaceStyle.borderRadiusSmall(),
+                    border: branchColor != null
+                        ? Border.all(
+                            color: branchColor!.withOpacity(0.25),
+                            width: 1,
+                          )
+                        : null,
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: <Widget>[
+                      Icon(
+                        Octicons.git_branch,
+                        size: 12,
+                        color: branchColor != null
+                            ? branchColor!.withOpacity(0.7)
+                            : context.colorScheme.onSurfaceVariant,
+                      ),
+                      const SizedBox(width: 4),
+                      Flexible(
+                        child: Text(
+                          branch!,
+                          style:
+                              Theme.of(context).textTheme.bodySmall?.copyWith(
+                                    color: branchColor != null
+                                        ? branchColor!.withOpacity(0.7)
+                                        : context.colorScheme.onSurfaceVariant,
+                                    fontSize: 11,
+                                    decoration: branchStrikethrough
+                                        ? TextDecoration.lineThrough
+                                        : null,
+                                  ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                // Commit SHA indicator - inline with branch
+                // Uses commit event blue color (0xFF2196F3)
+                if (commitSha != null)
+                  InkPot(
+                    onTap: commitShaUrl != null
+                        ? () async {
+                            await AutoRouter.of(context).push(
+                              CommitInfoRoute(commitURL: commitShaUrl!),
+                            );
+                          }
+                        : null,
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: <Widget>[
+                        Icon(
+                          Octicons.git_commit,
+                          size: 11,
+                          color: const Color(0xFF2196F3).withOpacity(
+                              0.7), // Commit event blue with reduced intensity
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          commitSha!.substring(0, 7),
+                          style:
+                              Theme.of(context).textTheme.bodySmall?.copyWith(
+                                    color: const Color(0xFF2196F3).withOpacity(
+                                        0.7), // Commit event blue with reduced intensity
+                                    fontFamily: 'monospace',
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                        ),
+                      ],
+                    ),
+                  ),
+              ],
+            ),
+          ],
+          // Description
+          if (repo?.description != null) ...[
+            const SizedBox(height: 8),
+            Text(
+              repo!.description!,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: context.colorScheme.onSurfaceVariant,
+                    // height: 1.4,
+                  ),
+            ),
+          ],
+          // Footer: Language, Stars, Contributions
+          Builder(
+            builder: (context) {
+              final hasLanguage =
+                  repo?.language != null && repo!.language!.isNotEmpty;
+              final starCount = repo?.stargazersCount ?? 0;
+              final hasStars = starCount > 0;
+              // Use contributionCount (which should be commit count) if provided, otherwise fallback to repo's contributionCount
+              final commitCountValue =
+                  contributionCount ?? repo?.contributionCount ?? 0;
+              final hasContributions = commitCountValue > 0;
+              final reviewCountValue = reviewCount ?? 0;
+              final hasReviews = reviewCountValue > 0;
+              final issueCountValue = issueCount ?? 0;
+              final hasIssues = issueCountValue > 0;
+              final pullRequestCountValue = pullRequestCount ?? 0;
+              final hasPullRequests = pullRequestCountValue > 0;
+
+              // Only show footer if at least one item exists
+              if (!hasLanguage &&
+                  !hasStars &&
+                  !hasContributions &&
+                  !hasReviews &&
+                  !hasIssues &&
+                  !hasPullRequests) {
+                return const SizedBox(
+                  height: 4,
+                );
+              }
+
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                       LanguageIndicator(
+                        repo!.language,
+                      ),
+                      if (hasStars)
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: <Widget>[
+                            Icon(
+                              Octicons.star_fill,
+                              size: 12,
+                              color: context.colorScheme.onSurface
+                                  .withOpacity(0.7),
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              starCount.toShortenedStr(),
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .bodySmall
+                                  ?.copyWith(
+                                    color: context.colorScheme.onSurface
+                                        .withOpacity(0.7),
+                                  ),
+                            ),
+                          ],
+                        ),
+                    ],
+                  ),
+                  SizedBox(height: 4),
+                  Wrap(
+                    spacing: 12,runSpacing: 4,
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    children: <Widget>[
+      
+                      if (hasContributions)
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF2196F3).withOpacity(0.1),
+                            borderRadius: Theme.of(context)
+                                .surfaceStyle
+                                .borderRadiusMedium(),
+                            border: Border.all(
+                              color: const Color(0xFF2196F3).withOpacity(0.3),
+                              width: 1,
+                            ),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: <Widget>[
+                              Icon(
+                                Octicons.git_commit,
+                                size: 12,
+                                color: const Color(0xFF2196F3),
+                              ),
+                              const SizedBox(width: 4),
+                              Text(
+                                '$commitCountValue ${commitCountValue == 1 ? 'commit' : 'commits'}',
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .bodySmall
+                                    ?.copyWith(
+                                      fontWeight: FontWeight.w600,
+                                      color: const Color(0xFF2196F3),
+                                    ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      if (hasReviews)
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFFF9800).withOpacity(0.1),
+                            borderRadius: Theme.of(context)
+                                .surfaceStyle
+                                .borderRadiusMedium(),
+                            border: Border.all(
+                              color: const Color(0xFFFF9800).withOpacity(0.3),
+                              width: 1,
+                            ),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: <Widget>[
+                              Icon(
+                                Octicons.code_review,
+                                size: 12,
+                                color: const Color(0xFFFF9800),
+                              ),
+                              const SizedBox(width: 4),
+                              Text(
+                                '$reviewCountValue ${reviewCountValue == 1 ? 'review' : 'reviews'}',
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .bodySmall
+                                    ?.copyWith(
+                                      fontWeight: FontWeight.w600,
+                                      color: const Color(0xFFFF9800),
+                                    ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      if (hasIssues)
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF4CAF50).withOpacity(0.1),
+                            borderRadius: Theme.of(context)
+                                .surfaceStyle
+                                .borderRadiusMedium(),
+                            border: Border.all(
+                              color: const Color(0xFF4CAF50).withOpacity(0.3),
+                              width: 1,
+                            ),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: <Widget>[
+                              Icon(
+                                Octicons.issue_opened,
+                                size: 12,
+                                color: const Color(0xFF4CAF50),
+                              ),
+                              const SizedBox(width: 4),
+                              Text(
+                                '$issueCountValue ${issueCountValue == 1 ? 'issue' : 'issues'}',
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .bodySmall
+                                    ?.copyWith(
+                                      fontWeight: FontWeight.w600,
+                                      color: const Color(0xFF4CAF50),
+                                    ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      if (hasPullRequests)
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF9C27B0).withOpacity(0.1),
+                            borderRadius: Theme.of(context)
+                                .surfaceStyle
+                                .borderRadiusMedium(),
+                            border: Border.all(
+                              color: const Color(0xFF9C27B0).withOpacity(0.3),
+                              width: 1,
+                            ),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: <Widget>[
+                              Icon(
+                                Octicons.git_pull_request,
+                                size: 12,
+                                color: const Color(0xFF9C27B0),
+                              ),
+                              const SizedBox(width: 4),
+                              Text(
+                                '$pullRequestCountValue ${pullRequestCountValue == 1 ? 'PR' : 'PRs'}',
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .bodySmall
+                                    ?.copyWith(
+                                      fontWeight: FontWeight.w600,
+                                      color: const Color(0xFF9C27B0),
+                                    ),
+                              ),
+                            ],
+                          ),
+                        ),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                ],
+              );
+            },
           ),
         ],
       );
@@ -183,15 +460,20 @@ class RepositoryCard extends StatelessWidget {
         onTap: () async {
           await pushToRepo(context);
         },
-        child: paddedBuilderData.applyPadding(
-          repoUnthemedWidget(context),
-        ),
+        backgroundColor:
+            withBackground ? context.colorScheme.surfaceContainer : null,
+        child: withBackground
+            ? Padding(
+                padding: const EdgeInsets.all(12),
+                child: repoUnthemedWidget(context),
+              )
+            : repoUnthemedWidget(context),
       );
 
   Future<void> pushToRepo(final BuildContext context) async {
     await AutoRouter.of(context).push(
       RepositoryRoute(
-        repositoryURL: repo!.url!,
+        repositoryURL: repo!.url,
         branch: branch,
       ),
     );
@@ -203,7 +485,11 @@ class RepoCardLoading extends StatelessWidget {
     this.repoURL,
     this.repoName, {
     this.branch,
+    this.commitSha,
+    this.commitShaUrl,
     this.refresh = false,
+    this.branchColor,
+    this.branchStrikethrough = false,
     super.key,
   });
 
@@ -213,6 +499,11 @@ class RepoCardLoading extends StatelessWidget {
   // final double elevation;
   final bool refresh;
   final String? branch;
+  final String? commitSha;
+  final String? commitShaUrl;
+  final Color? branchColor; // Optional color for branch indicator
+  final bool
+      branchStrikethrough; // Whether to show strikethrough on branch text
 
   @override
   Widget build(final BuildContext context) =>
@@ -222,7 +513,14 @@ class RepoCardLoading extends StatelessWidget {
             RepositoryServices.fetchRepository(repoURL!, refresh: refresh),
         loadingBuilder: (final BuildContext context) => buildLoading(),
         builder: (final BuildContext context, final RepositoryModel repo) =>
-            RepositoryCard(repo, branch: branch),
+            RepositoryCard(
+          RepoCardDataModel.fromRepositoryModel(repo),
+          branch: branch,
+          commitSha: commitSha,
+          commitShaUrl: commitShaUrl,
+          branchColor: branchColor,
+          branchStrikethrough: branchStrikethrough,
+        ),
       );
 
   Widget buildLoading() => RepositoryCard.paddedBuilderData.applyPadding(

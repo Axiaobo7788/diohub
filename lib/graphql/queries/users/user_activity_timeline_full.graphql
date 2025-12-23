@@ -1,0 +1,181 @@
+# import './user_info.graphql'
+# import '../issues_pulls/timeline.graphql'
+
+# Single-phase activity timeline query using contributionsCollection
+# All connections are already date-filtered by from/to and expose occurredAt
+query userActivityTimelineFull(
+  $user: String!
+  $from: DateTime!
+  $to: DateTime!
+  $firstRepoContributions: Int = 50
+  $afterRepoContributions: String
+  $firstPullRequestContributions: Int = 50
+  $afterPullRequestContributions: String
+  $firstIssueContributions: Int = 50
+  $afterIssueContributions: String
+  $firstReviewContributions: Int = 50
+  $afterReviewContributions: String
+  $firstCommitContributions: Int = 100
+  $afterCommitContributions: String
+  $maxCommitRepositories: Int = 50
+) {
+  user(login: $user) {
+    __typename
+    id
+    contributionsCollection(from: $from, to: $to) {
+      repositoryContributions(
+        first: $firstRepoContributions
+        after: $afterRepoContributions
+        orderBy: { direction: DESC }
+      ) {
+        nodes {
+          occurredAt
+          repository {
+            __typename
+            id
+            createdAt
+            ...repositoryFields
+          }
+        }
+        pageInfo {
+          hasNextPage
+          endCursor
+        }
+      }
+      pullRequestContributions(
+        first: $firstPullRequestContributions
+        after: $afterPullRequestContributions
+        orderBy: { direction: DESC }
+      ) {
+        nodes {
+          occurredAt
+          pullRequest {
+            ...pullInfoTimeline
+            repository {
+              url
+            }
+          }
+        }
+        pageInfo {
+          hasNextPage
+          endCursor
+        }
+      }
+      issueContributions(
+        first: $firstIssueContributions
+        after: $afterIssueContributions
+        orderBy: { direction: DESC }
+      ) {
+        nodes {
+          occurredAt
+          issue {
+            ...issueInfoTimeline
+            repository {
+              url
+            }
+          }
+        }
+        pageInfo {
+          hasNextPage
+          endCursor
+        }
+      }
+      pullRequestReviewContributions(
+        first: $firstReviewContributions
+        after: $afterReviewContributions
+        orderBy: { direction: DESC }
+      ) {
+        nodes {
+          occurredAt
+          pullRequest {
+            ...pullInfoTimeline
+            repository {
+              url
+            }
+          }
+          pullRequestReview {
+            id
+            state
+            body
+          }
+          repository {
+            __typename
+            id
+            ...repositoryFields
+          }
+        }
+        pageInfo {
+          hasNextPage
+          endCursor
+        }
+      }
+      commitContributionsByRepository(maxRepositories: $maxCommitRepositories) {
+        repository {
+          __typename
+          id
+          ...repositoryFields
+        }
+        contributions(
+          first: $firstCommitContributions
+          after: $afterCommitContributions
+        ) {
+          nodes {
+            occurredAt
+            commitCount
+          }
+          pageInfo {
+            hasNextPage
+            endCursor
+          }
+        }
+      }
+    }
+  }
+}
+
+# Timeline fragments: Minimal fields for activity timeline (no bodyHTML, no labels, no assignees)
+fragment issueInfoTimeline on Issue {
+  title
+  number
+  author {
+    ...actor
+  }
+  state
+  url
+  body
+  createdAt
+  comments {
+    totalCount
+  }
+  repository {
+    name
+    url
+    owner {
+      login
+    }
+  }
+}
+
+fragment pullInfoTimeline on PullRequest {
+  title
+  number
+  state
+  url
+  author {
+    ...actor
+  }
+  body
+  createdAt
+  merged
+  mergedAt
+  comments {
+    totalCount
+  }
+  repository {
+    name
+    url
+    owner {
+      login
+    }
+  }
+}

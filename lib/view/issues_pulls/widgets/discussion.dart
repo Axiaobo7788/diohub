@@ -5,7 +5,6 @@ import 'package:diohub/providers/issue_pulls/comment_provider.dart';
 import 'package:diohub/services/issues/issues_service.dart';
 import 'package:diohub/utils/utils.dart';
 import 'package:diohub/view/issues_pulls/widgets/comment_box.dart';
-import 'package:diohub/view/issues_pulls/widgets/discussion_comment.dart';
 import 'package:diohub/view/issues_pulls/widgets/timeline_item.dart';
 import 'package:flutter/material.dart' hide DatePickerTheme;
 import 'package:flutter_datetime_picker_plus/flutter_datetime_picker_plus.dart';
@@ -18,7 +17,7 @@ class IssuePullTimeline extends StatefulWidget {
     required this.number,
     required this.owner,
     required this.repoName,
-    required this.initComment,
+    // required this.initComment,
     required this.issueUrl,
     required this.isPull,
     this.commentsSince,
@@ -36,7 +35,7 @@ class IssuePullTimeline extends StatefulWidget {
   final String repoName;
   final String owner;
   final String? pullNodeID;
-  final BaseComment initComment;
+  // final BaseComment initComment;
   final Uri issueUrl;
   final int number;
   final bool? isLocked;
@@ -126,12 +125,13 @@ class IssuePullTimelineState extends State<IssuePullTimeline> {
                   ),
                 ),
               ),
-              if (widget.initComment.createdAt.isAfter(
-                commentsSince!.subtract(const Duration(seconds: 30)),
-              ))
-                PaddingWrap(
-                  child: widget.initComment,
-                ),
+              //if (widget.initComment.createdAt.isAfter(
+              // commentsSince!.subtract(const Duration(seconds: 30)),
+              //))
+              // PaddingWrap(
+              //   // child: widget.initComment,
+              //   child: Container(),
+              // ),
             ],
           )
         : Column(
@@ -184,14 +184,12 @@ class IssuePullTimelineState extends State<IssuePullTimeline> {
               // const SizedBox(
               //   height: 16,
               // ),
-              PaddingWrap(
-                child: widget.initComment,
-              ),
             ],
           );
     return Stack(
       children: <Widget>[
         InfiniteScrollWrapper<dynamic>(
+          padding: const EdgeInsets.only(top: 4),
           future: (
             data,
           ) async =>
@@ -217,12 +215,16 @@ class IssuePullTimelineState extends State<IssuePullTimeline> {
           builder: (
             final BuildContext context,
             final data,
-          ) =>
-              TimelineItem(
-            data.item.node,
-            pullNodeID: widget.pullNodeID,
-            onQuote: openCommentSheet,
-          ),
+          ) {
+            return Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 4),
+              child: TimelineItem(
+                data.item.node,
+                pullNodeID: widget.pullNodeID,
+                onQuote: openCommentSheet,
+              ),
+            );
+          },
         ),
         Align(
           alignment: Alignment.bottomRight,

@@ -2,10 +2,10 @@ import 'dart:async';
 
 import 'package:diohub/common/animations/size_expanded_widget.dart';
 import 'package:diohub/common/bottom_sheet/bottom_sheets.dart';
-import 'package:diohub/common/misc/button.dart';
-import 'package:diohub/common/misc/ink_pot.dart';
+import 'package:diohub/common/misc/highlighted_container.dart';
+import 'package:diohub/style/surface_style_theme.dart';
+import 'package:diohub/common/misc/surface_shape_resolver.dart';
 import 'package:diohub/common/misc/loading_indicator.dart';
-import 'package:diohub/common/misc/tappable_card.dart';
 import 'package:diohub/common/wrappers/provider_loading_progress_wrapper.dart';
 import 'package:diohub/providers/base_provider.dart';
 import 'package:diohub/providers/repository/branch_provider.dart';
@@ -67,28 +67,28 @@ class CodeBrowserState extends State<CodeBrowser>
               children: <Widget>[
                 if (context.read<RepoBranchProvider>().isCommit &&
                     value.tree.isNotEmpty)
-                  _buildPathWidget(value, context),
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 16),
+                    child: _buildPathWidget(value, context),
+                  ),
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: Button(
-                    padding: const EdgeInsets.symmetric(
-                      vertical: 16,
-                      horizontal: 8,
-                    ),
-                    color: context.colorScheme.primary,
-                    onTap: value.status == Status.loaded
-                        ? () {
-                            showCommitHistory(
-                              context,
-                              value.tree.last.commit!.sha,
-                            );
-                          }
-                        : null,
-                    child: value.status == Status.loaded
-                        ? const CommitInfoButton()
-                        : const LoadingIndicator(),
-                  ),
+                  child: value.status == Status.loaded
+                      ? _buildCommitButton(context, value)
+                      : Container(
+                          padding: const EdgeInsets.symmetric(
+                            vertical: 16,
+                            horizontal: 16,
+                          ),
+                          decoration: SurfaceShapeResolver.boxDecoration(
+                            context,
+                            size: BorderRadiusSize.medium,
+                            color: context.colorScheme.surfaceContainerHigh,
+                          ),
+                          child: const LoadingIndicator(),
+                        ),
                 ),
+                const SizedBox(height: 16),
               ],
             ),
           ),
@@ -103,45 +103,81 @@ class CodeBrowserState extends State<CodeBrowser>
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: <Widget>[
-                      const SizedBox(
-                        height: 16,
-                      ),
                       Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 16),
-                        child: SizedBox(
-                          height: 30,
-                          child: ListView.separated(
-                            physics: const BouncingScrollPhysics(),
-                            shrinkWrap: true,
-                            scrollDirection: Axis.horizontal,
-                            itemCount: value.tree.length,
-                            separatorBuilder:
-                                (final BuildContext context, final int index) =>
-                                    const Center(child: Text(' /')),
-                            itemBuilder:
-                                (final BuildContext context, final int index) =>
-                                    Material(
-                              // color: transparent,
-                              child: InkPot(
-                                // borderRadius: smallBorderRadius,
-                                onTap: () {
-                                  if (index != value.tree.length - 1) {
-                                    Provider.of<CodeProvider>(
-                                      context,
-                                      listen: false,
-                                    ).popTreeUntil(value.tree[index]);
-                                  }
-                                },
-                                child: Center(
-                                  child: Text(
-                                    ' ${index == 0 ? Provider.of<RepositoryProvider>(context).data.name! : value.tree[index - 1].tree![value.pathIndex[index - 1]].path!}',
-                                    style: TextStyle(
-                                      color: index == value.tree.length - 1
-                                          ? context.colorScheme.primary
-                                          : null,
-                                      fontWeight: index == value.tree.length - 1
-                                          ? FontWeight.bold
-                                          : FontWeight.w500,
+                        child: HighlightedContainer(
+                          highlightColor: context.colorScheme.primary,
+                          size: BorderRadiusSize.medium,
+                          child: Container(
+                            height: 40,
+                            decoration: SurfaceShapeResolver.boxDecoration(
+                              context,
+                              size: BorderRadiusSize.medium,
+                              color: context.colorScheme.surfaceContainerHigh,
+                            ),
+                            padding: const EdgeInsets.symmetric(horizontal: 12),
+                            child: ListView.separated(
+                              physics: const BouncingScrollPhysics(),
+                              shrinkWrap: true,
+                              scrollDirection: Axis.horizontal,
+                              itemCount: value.tree.length,
+                              separatorBuilder: (final BuildContext context,
+                                      final int index) =>
+                                  Padding(
+                                padding:
+                                    const EdgeInsets.symmetric(horizontal: 4),
+                                child: Icon(
+                                  Icons.chevron_right_rounded,
+                                  size: 16,
+                                  color: context.colorScheme.onSurfaceVariant
+                                      .withOpacity(0.5),
+                                ),
+                              ),
+                              itemBuilder: (final BuildContext context,
+                                      final int index) =>
+                                  Material(
+                                color: Colors.transparent,
+                                child: InkWell(
+                                  onTap: () {
+                                    if (index != value.tree.length - 1) {
+                                      Provider.of<CodeProvider>(
+                                        context,
+                                        listen: false,
+                                      ).popTreeUntil(value.tree[index]);
+                                    }
+                                  },
+                                  borderRadius: Theme.of(context)
+                                      .surfaceStyle
+                                      .borderRadius(size: BorderRadiusSize.small),
+                                  child: Padding(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 10,
+                                      vertical: 8,
+                                    ),
+                                    child: Center(
+                                      child: Text(
+                                        index == 0
+                                            ? Provider.of<RepositoryProvider>(
+                                                    context)
+                                                .data
+                                                .name!
+                                            : value
+                                                .tree[index - 1]
+                                                .tree![
+                                                    value.pathIndex[index - 1]]
+                                                .path!,
+                                        style: context.textTheme.bodyMedium
+                                            ?.copyWith(
+                                          color: index == value.tree.length - 1
+                                              ? context.colorScheme.primary
+                                              : context
+                                                  .colorScheme.onSurfaceVariant,
+                                          fontWeight:
+                                              index == value.tree.length - 1
+                                                  ? FontWeight.w600
+                                                  : FontWeight.w500,
+                                        ),
+                                      ),
                                     ),
                                   ),
                                 ),
@@ -150,30 +186,28 @@ class CodeBrowserState extends State<CodeBrowser>
                           ),
                         ),
                       ),
+                      const SizedBox(
+                        height: 16,
+                      ),
                     ],
                   ),
                 ),
                 SizeExpandedSection(
                   child: Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: BasicCard(
-                      elevation: BasicCard.hintElevation,
-                      child: DecoratedBox(
-                        decoration: BoxDecoration(
-                          // borderRadius: medBorderRadius,
-                          // color: Provider.of<PaletteSettings>(context)
-                          //     .currentSetting
-                          //     .secondary,
-                          border: Border.all(
-                            // color: Provider.of<PaletteSettings>(context)
-                            //     .currentSetting
-                            //     .faded1,
-                            width: 0.5,
-                          ),
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: HighlightedContainer(
+                      highlightColor: context.colorScheme.primary,
+                      size: BorderRadiusSize.large,
+                      child: Container(
+                        decoration: SurfaceShapeResolver.boxDecoration(
+                          context,
+                          size: BorderRadiusSize.large,
+                          color: context.colorScheme.surfaceContainerHigh,
                         ),
                         child: ListView.separated(
                           physics: const NeverScrollableScrollPhysics(),
                           shrinkWrap: true,
+                          padding: const EdgeInsets.symmetric(vertical: 4),
                           itemBuilder:
                               (final BuildContext context, final int index) =>
                                   BrowserListTile(
@@ -181,13 +215,16 @@ class CodeBrowserState extends State<CodeBrowser>
                             Provider.of<RepositoryProvider>(
                               context,
                               listen: false,
-                            ).data.url,
+                            ).data.url.toString(),
                             index,
                           ),
                           separatorBuilder:
                               (final BuildContext context, final int index) =>
-                                  const Divider(
-                            height: 0,
+                                  Divider(
+                            height: 1,
+                            thickness: 0.5,
+                            indent: 60,
+                            color: context.colorScheme.surfaceContainerHighest,
                           ),
                           itemCount: value.tree.last.tree!.length,
                         ),
@@ -204,6 +241,36 @@ class CodeBrowserState extends State<CodeBrowser>
     );
   }
 
+  Widget _buildCommitButton(
+    final BuildContext context,
+    final CodeProvider value,
+  ) {
+    final borderRadius = Theme.of(context)
+        .surfaceStyle
+        .borderRadius(size: BorderRadiusSize.medium);
+    return HighlightedContainer(
+      highlightColor: context.colorScheme.primary,
+      size: BorderRadiusSize.medium,
+      child: Material(
+        color: context.colorScheme.surfaceContainerHigh,
+        borderRadius: borderRadius,
+        child: InkWell(
+          onTap: () {
+            showCommitHistory(
+              context,
+              value.tree.last.commit!.sha,
+            );
+          },
+          borderRadius: borderRadius,
+          child: const Padding(
+            padding: EdgeInsets.all(16),
+            child: CommitInfoButton(),
+          ),
+        ),
+      ),
+    );
+  }
+
   SizeExpandedSection _buildPathWidget(
     final CodeProvider value,
     final BuildContext context,
@@ -211,41 +278,111 @@ class CodeBrowserState extends State<CodeBrowser>
       SizeExpandedSection(
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16),
-          child: Column(
-            children: <Widget>[
-              Button(
-                padding: const EdgeInsets.all(8),
+          child: HighlightedContainer(
+            highlightColor: context.colorScheme.primary,
+            size: BorderRadiusSize.medium,
+            child: Material(
+              color: context.colorScheme.surfaceContainerHigh,
+              borderRadius: Theme.of(context)
+                  .surfaceStyle
+                  .borderRadius(size: BorderRadiusSize.medium),
+              child: InkWell(
                 onTap: value.status == Status.loaded
                     ? () {
                         context.read<RepoBranchProvider>().reloadBranch();
                       }
                     : null,
-                child: Column(
-                  children: <Widget>[
-                    Text(
-                      'Currently browsing commit ${Provider.of<RepoBranchProvider>(context).currentSHA.substring(0, 6)}.',
-                      textAlign: TextAlign.center,
-                      style: context.textTheme.labelSmall?.asBold(),
-                    ),
-                    Text(
-                      'Load the latest code?',
-                      textAlign: TextAlign.center,
-                      style: context.textTheme.labelMedium?.asBold(),
-                    ),
-                  ],
+                borderRadius: Theme.of(context)
+                    .surfaceStyle
+                    .borderRadius(size: BorderRadiusSize.medium),
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Row(
+                    children: <Widget>[
+                      Container(
+                        width: 40,
+                        height: 40,
+                        decoration: BoxDecoration(
+                          color: context.colorScheme.primary.withOpacity(0.1),
+                          shape: BoxShape.circle,
+                        ),
+                        child: Icon(
+                          Octicons.git_commit,
+                          size: 20,
+                          color: context.colorScheme.primary,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
+                          children: <Widget>[
+                            Text(
+                              'Currently browsing commit',
+                              style: context.textTheme.labelSmall?.copyWith(
+                                color: context.colorScheme.onSurfaceVariant,
+                                fontSize: 11,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Row(
+                              children: <Widget>[
+                                Text(
+                                  Provider.of<RepoBranchProvider>(context)
+                                      .currentSHA
+                                      .substring(0, 7),
+                                  style: context.textTheme.bodySmall?.copyWith(
+                                    fontFamily: 'monospace',
+                                    fontWeight: FontWeight.w600,
+                                    color: context.colorScheme.primary,
+                                    fontSize: 12,
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                Text(
+                                  '·',
+                                  style: context.textTheme.bodySmall?.copyWith(
+                                    color: context.colorScheme.onSurfaceVariant
+                                        .withOpacity(0.5),
+                                    fontSize: 12,
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                Flexible(
+                                  child: Text(
+                                    'Tap to load latest commits',
+                                    style:
+                                        context.textTheme.bodySmall?.copyWith(
+                                      fontWeight: FontWeight.w500,
+                                      fontSize: 10,
+                                    ),
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                      Icon(
+                        Icons.refresh_rounded,
+                        size: 20,
+                        color: context.colorScheme.primary,
+                      ),
+                    ],
+                  ),
                 ),
               ),
-              const SizedBox(
-                height: 16,
-              ),
-            ],
+            ),
           ),
         ),
       );
 }
 
 void showCommitHistory(final BuildContext context, final String? currentSHA) {
-  final String? repoUrl = context.read<RepositoryProvider>().data.url;
+  final String? repoUrl =
+      context.read<RepositoryProvider>().data.url.toString();
 
   final String branchName = context.read<RepoBranchProvider>().currentSHA;
 

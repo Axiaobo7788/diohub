@@ -1,5 +1,6 @@
 import 'package:another_flushbar/flushbar.dart';
 import 'package:diohub/models/popup/popup_type.dart';
+import 'package:diohub/style/surface_style_theme.dart';
 import 'package:diohub/utils/utils.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_material_design_icons/flutter_material_design_icons.dart';
@@ -14,7 +15,7 @@ class DialogHelper {
   ) async =>
       Flushbar<dynamic>(
         margin: const EdgeInsets.all(8),
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: Theme.of(context).surfaceStyle.borderRadiusMedium(),
         shouldIconPulse: false,
         animationDuration: const Duration(milliseconds: 750),
         reverseAnimationCurve: Curves.decelerate,

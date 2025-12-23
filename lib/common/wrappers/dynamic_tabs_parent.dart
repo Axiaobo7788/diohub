@@ -1,6 +1,8 @@
-import 'package:diohub/common/misc/round_button.dart';
+import 'package:diohub/common/misc/menu_button.dart';
+import 'package:diohub/style/surface_style_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_dynamic_tabs/flutter_dynamic_tabs.dart';
+import 'package:pull_down_button/pull_down_button.dart';
 
 class DynamicTabsParent extends StatelessWidget {
   const DynamicTabsParent({
@@ -24,48 +26,93 @@ class DynamicTabsParent extends StatelessWidget {
   ) builder;
 
   @override
-  Widget build(final BuildContext context) => DynamicTabsWrapper(
-        controller: controller,
-        tabBarSettings: DynamicTabSettings(
-            // indicatorPadding: const EdgeInsets.only(left: 8, right: 8, bottom: 8),
+  Widget build(final BuildContext context) {
+    final ThemeData theme = Theme.of(context);
+    final ColorScheme colorScheme = theme.colorScheme;
+
+    return DynamicTabsWrapper(
+      controller: controller,
+      tabBarSettings: DynamicTabSettings(
+        // Color-only design: No indicator, just color change
+        indicator: const BoxDecoration(),
+        indicatorSize: TabBarIndicatorSize.label,
+        indicatorPadding: EdgeInsets.zero,
+        dividerColor: Colors.transparent,
+        tabAlignment: TabAlignment.center,
+        labelStyle: theme.textTheme.labelLarge?.copyWith(
+          fontWeight: FontWeight.w700,
+          fontSize: 13,
+          letterSpacing: 0.2,
+        ),
+        unselectedLabelStyle: theme.textTheme.labelLarge?.copyWith(
+          fontWeight: FontWeight.w500,
+          fontSize: 13,
+          letterSpacing: 0.1,
+        ),
+        labelColor: colorScheme.primary,
+        unselectedLabelColor: colorScheme.onSurfaceVariant.withOpacity(0.6),
+        labelPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+        childPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+        physics: const BouncingScrollPhysics(),
+      ),
+      tabBuilder: (final BuildContext context, final DynamicTab tab) =>
+          tabBuilder?.call(context, tab) ??
+          _buildDynamicTabMenuButton(tab: tab, tabController: controller),
+      onTabClose: onTabClose,
+      builder: builder,
+    );
+  }
+}
+
+Tab _buildDynamicTabMenuButton({
+  required final DynamicTab tab,
+  required final DynamicTabsController tabController,
+}) =>
+    Tab(
+      height: 40, // Fixed height to reduce vertical padding
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: <Widget>[
+          Flexible(
+            child: Text(
+              tab.tab?.label ?? tab.identifier,
+              overflow: TextOverflow.ellipsis,
+              maxLines: 1,
             ),
-        tabBuilder: (final BuildContext context, final DynamicTab tab) =>
-            tabBuilder?.call(context, tab) ??
-            Tab(
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: <Widget>[
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16)
-                        .copyWith(right: tab.isDismissible ? 0 : 16),
-                    child: Text(
-                      tab.identifier,
-                    ),
-                  ),
-                  if (tab.isDismissible)
-                    Padding(
-                      padding: const EdgeInsets.only(right: 4),
-                      child: RoundButton(
-                        // color: context.palette.elementsOnColors,
-                        padding: const EdgeInsets.all(4),
-                        onPressed: () {
-                          controller.closeTab(tab.identifier, showDialog: true);
-                        },
-                        onLongPress: () {
-                          controller.closeTab(tab.identifier);
-                        },
-                        icon: const Icon(
-                          Icons.close_rounded,
-                          size: 12,
-                          // color: context.colorScheme.accent,
-                        ),
+          ),
+          if (tab.isDismissible)
+            Padding(
+              padding: const EdgeInsets.only(left: 4),
+              child: MenuButton(
+                buttonBuilder:
+                    (final BuildContext context, final VoidCallback showMenu) =>
+                        Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                    borderRadius: Theme.of(context).surfaceStyle.borderRadiusMedium(),
+                    onTap: showMenu,
+                    child: Padding(
+                      padding: const EdgeInsets.all(2),
+                      child: Icon(
+                        Icons.adaptive.more_rounded,
+                        size: 14,
                       ),
                     ),
+                  ),
+                ),
+                itemBuilder: (final BuildContext context) =>
+                    <PullDownMenuEntry>[
+                  PullDownMenuItem(
+                    onTap: () {
+                      tabController.closeTab(tab.identifier);
+                    },
+                    title: 'Close Tab',
+                    icon: Icons.close_rounded,
+                  ),
                 ],
               ),
             ),
-        onTabClose: onTabClose,
-        builder: builder,
-      );
-}
+        ],
+      ),
+    );

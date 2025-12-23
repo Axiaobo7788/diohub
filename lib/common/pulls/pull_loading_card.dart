@@ -1,21 +1,27 @@
 import 'package:auto_route/auto_route.dart';
 import 'package:diohub/adapters/deep_linking_handler.dart';
+import 'package:diohub/common/misc/nested_card_with_header.dart';
 import 'package:diohub/common/misc/ink_pot.dart';
-import 'package:diohub/common/misc/loading_indicator.dart';
 import 'package:diohub/common/misc/shimmer_widget.dart';
 import 'package:diohub/common/pulls/pull_list_card.dart';
 import 'package:diohub/common/wrappers/api_wrapper_widget.dart';
 import 'package:diohub/models/issues/issue_model.dart';
 import 'package:diohub/models/pull_requests/pull_request_model.dart';
 import 'package:diohub/services/pulls/pulls_service.dart';
+import 'package:diohub/style/surface_style_theme.dart';
+import 'package:diohub/utils/get_date.dart';
+import 'package:diohub/utils/utils.dart';
 import 'package:diohub/view/issues_pulls/issue_pull_screen.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_vector_icons/flutter_vector_icons.dart';
 
 class PullLoadingCard extends StatelessWidget {
   const PullLoadingCard(
     this.url, {
     this.compact = false,
     this.issueModel,
+    this.showRepoName = true,
+    this.isNested = false,
     // this.disableMaterial = false,
     super.key,
   });
@@ -23,6 +29,8 @@ class PullLoadingCard extends StatelessWidget {
   final String url;
   final bool compact;
   final IssueModel? issueModel;
+  final bool showRepoName;
+  final bool isNested;
 
   // final bool disableMaterial;
 
@@ -33,87 +41,320 @@ class PullLoadingCard extends StatelessWidget {
             PullsService.getPullInformation(fullUrl: url, refresh: refresh),
         loadingBuilder: (final BuildContext context) {
           if (issueModel != null) {
+            // Extract repo name from URL
+            final String? repoName = issueModel!.url != null
+                ? issueModel!.url!
+                    .replaceAll('https://api.github.com/repos/', '')
+                    .split('/')
+                    .sublist(0, 2)
+                    .join('/')
+                : null;
+
+            // Get the date to display
+            final DateTime? dateToUse = issueModel!.state == IssueState.CLOSED
+                ? (issueModel!.closedAt ?? issueModel!.createdAt)
+                : issueModel!.createdAt;
+
             return InkPot(
               onTap: () async {
                 await AutoRouter.of(context).push(
                   issuePullScreenRoute(PathData.fromURL(issueModel!.url!)),
                 );
               },
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+              child: NestedCardWithHeader(
+                isNested: isNested,
+                header: Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  mainAxisSize: MainAxisSize.min,
                   children: <Widget>[
-                    Row(
-                      children: <Widget>[
-                        // const GetPullIcon(null, null),
-                        const SizedBox(
-                          width: 4,
-                        ),
-                        Flexible(
-                          child: Padding(
-                            padding: const EdgeInsets.only(right: 4),
-                            child: Text(
-                              issueModel!.url!
-                                  .replaceAll(
-                                    'https://api.github.com/repos/',
-                                    '',
-                                  )
-                                  .split('/')
-                                  .sublist(0, 2)
-                                  .join('/'),
-                              overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
-                                  // color: Provider.of<PaletteSettings>(context)
-                                  //     .currentSetting
-                                  //     .faded3,
-                                  ),
-                            ),
-                          ),
-                        ),
-                        Text(
-                          '#${issueModel!.number}',
-                          style: const TextStyle(
-                              // color: Provider.of<PaletteSettings>(context)
-                              //     .currentSetting
-                              //     .faded3,
-                              ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(
-                      height: 8,
-                    ),
-                    Text(
-                      issueModel!.title!,
-                      style: Theme.of(context).textTheme.bodyLarge,
-                    ),
-                    if (!compact)
-                      Column(
+                    // Pull request icon in colored container with PR number
+                    Container(
+                      constraints: const BoxConstraints(minWidth: 24),
+                      height: 24,
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 6, vertical: 4),
+                      decoration: BoxDecoration(
+                        color:
+                            _getPullIconColor(context, issueModel!.state, null)
+                                .withOpacity(0.12),
+                        borderRadius: Theme.of(context).surfaceStyle.borderRadiusSmall(),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        mainAxisAlignment: MainAxisAlignment.center,
                         children: <Widget>[
-                          const SizedBox(
-                            height: 16,
+                          Icon(
+                            _getPullIcon(issueModel!.state, null),
+                            size: 12,
+                            color: _getPullIconColor(
+                                context, issueModel!.state, null),
                           ),
-                          ShimmerWidget.container(),
+                          const SizedBox(width: 3),
+                          Text(
+                            '${issueModel!.number}',
+                            style:
+                                Theme.of(context).textTheme.bodySmall?.copyWith(
+                                      color: _getPullIconColor(
+                                          context, issueModel!.state, null),
+                                      fontWeight: FontWeight.w600,
+                                      fontSize: 11,
+                                    ),
+                          ),
                         ],
                       ),
+                    ),
+                    const SizedBox(width: 3),
+                    // Repo name (only if showRepoName is true)
+                    if (showRepoName && repoName != null) ...[
+                      Flexible(
+                        child: Text(
+                          repoName,
+                          style:
+                              Theme.of(context).textTheme.bodySmall?.copyWith(
+                                    color: context.colorScheme.onSurfaceVariant
+                                        .withOpacity(0.8),
+                                    fontWeight: FontWeight.w500,
+                                    fontSize: 11,
+                                  ),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                    // Author and Comments (only if showRepoName is false)
+                    if (!showRepoName) ...[
+                      SizedBox(width: 4),
+                      if (issueModel!.user?.login != null) ...[
+                        Text(
+                          issueModel!.user!.login ?? '',
+                          style:
+                              Theme.of(context).textTheme.bodySmall?.copyWith(
+                                    color: context.colorScheme.onSurfaceVariant
+                                        .withOpacity(0.75),
+                                    fontSize: 11,
+                                  ),
+                        ),
+                        if (issueModel!.comments != null &&
+                            issueModel!.comments! > 0)
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 8),
+                            child: Container(
+                              width: 1,
+                              height: 12,
+                              color: context.colorScheme.onSurfaceVariant
+                                  .withOpacity(0.2),
+                            ),
+                          ),
+                      ],
+                      // Comments
+                      if (issueModel!.comments != null &&
+                          issueModel!.comments! > 0)
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: <Widget>[
+                            Icon(
+                              Octicons.comment,
+                              size: 11,
+                              color: context.colorScheme.onSurfaceVariant
+                                  .withOpacity(0.75),
+                            ),
+                            const SizedBox(width: 2),
+                            Text(
+                              '${issueModel!.comments}',
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .bodySmall
+                                  ?.copyWith(
+                                    color: context.colorScheme.onSurfaceVariant
+                                        .withOpacity(0.75),
+                                  ),
+                            ),
+                          ],
+                        ),
+                    ],
+                  ],
+                ),
+                trailing: isNested
+                    ? null
+                    : (dateToUse != null
+                        ? Text(
+                            dateToUse.toRelativeDate(shorten: true),
+                            style: Theme.of(context)
+                                .textTheme
+                                .bodySmall
+                                ?.copyWith(
+                                  color: context.colorScheme.onSurfaceVariant
+                                      .withOpacity(0.7),
+                                  fontSize: 10,
+                                ),
+                          )
+                        : null),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: <Widget>[
+                    // Pull request title
+                    Text(
+                      issueModel!.title ?? '',
+                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                            fontWeight: FontWeight.w600,
+                            color: context.colorScheme.onSurface,
+                            height: 1.3,
+                          ),
+                    ),
+                    // Shimmer for labels/metadata
+                    if (!compact) ...[
+                      const SizedBox(height: 5),
+                      ShimmerWidget.container(),
+                    ],
+                    // Metadata: creator, comments (only if showRepoName is true)
+                    if (showRepoName) ...[
+                      const SizedBox(height: 5),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: <Widget>[
+                          // Creator
+                          if (issueModel!.user?.login != null) ...[
+                            Text(
+                              '${issueModel!.user!.login}',
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .bodySmall
+                                  ?.copyWith(
+                                    color: context.colorScheme.onSurfaceVariant
+                                        .withOpacity(0.75),
+                                  ),
+                            ),
+                          ],
+                          // Comments
+                          if (issueModel!.comments != null &&
+                              issueModel!.comments! > 0)
+                            Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: <Widget>[
+                                Icon(
+                                  Octicons.comment,
+                                  size: 13,
+                                  color: context.colorScheme.onSurfaceVariant
+                                      .withOpacity(0.75),
+                                ),
+                                const SizedBox(width: 2),
+                                Text(
+                                  '${issueModel!.comments}',
+                                  style: Theme.of(context)
+                                      .textTheme
+                                      .bodySmall
+                                      ?.copyWith(
+                                        color: context
+                                            .colorScheme.onSurfaceVariant
+                                            .withOpacity(0.75),
+                                      ),
+                                ),
+                              ],
+                            ),
+                        ],
+                      ),
+                    ],
                   ],
                 ),
               ),
             );
           }
-          return const SizedBox(
-            height: 80,
-            child: Center(
-              child: LoadingIndicator(),
+          // Show shimmer effect matching the HeaderCard structure
+          return NestedCardWithHeader(
+            isNested: isNested,
+            header: Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              mainAxisSize: MainAxisSize.min,
+              children: <Widget>[
+                // Shimmer for PR icon container
+                ShimmerWidget.container(
+                  width: 60,
+                  height: 24,
+                  borderRadius: Theme.of(context).surfaceStyle.borderRadiusSmall(),
+                ),
+                const SizedBox(width: 3),
+                // Shimmer for repo name
+                if (!compact) ...[
+                  ShimmerWidget.container(
+                    width: 120,
+                    height: 14,
+                  ),
+                ],
+              ],
+            ),
+            trailing: isNested
+                ? null
+                : ShimmerWidget.container(
+                    width: 40,
+                    height: 12,
+                  ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: <Widget>[
+                // Shimmer for title
+                ShimmerWidget.container(
+                  height: 20,
+                ),
+                if (!compact) ...[
+                  const SizedBox(height: 5),
+                  // Shimmer for labels
+                  ShimmerWidget.container(
+                    width: 80,
+                    height: 20,
+                  ),
+                  const SizedBox(height: 5),
+                  // Shimmer for metadata
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: <Widget>[
+                      ShimmerWidget.container(
+                        width: 60,
+                        height: 14,
+                      ),
+                      ShimmerWidget.container(
+                        width: 30,
+                        height: 14,
+                      ),
+                    ],
+                  ),
+                ],
+              ],
             ),
           );
         },
-        builder: (final BuildContext context, final PullRequestModel data) =>
-            PullListCard(
-          data,
-          compact: compact,
-          padding: EdgeInsets.zero,
-        ),
+        builder: (final BuildContext context, final PullRequestModel data) {
+          // Extract repo name from head ref (only from can be from different repo)
+          final String? fromRepoName = data.head?.repo?.fullName;
+          
+          return PullListCard(
+            data,
+            showRepoName: showRepoName,
+            isNested: isNested,
+            from: data.head?.ref,
+            to: data.base?.ref,
+            fromRepoName: fromRepoName,
+          );
+        },
       );
+
+  IconData _getPullIcon(IssueState? state, DateTime? mergedAt) {
+    if (state == IssueState.CLOSED && mergedAt != null) {
+      return Octicons.git_merge;
+    }
+    return Octicons.git_pull_request;
+  }
+
+  Color _getPullIconColor(
+      BuildContext context, IssueState? state, DateTime? mergedAt) {
+    if (state == IssueState.CLOSED) {
+      if (mergedAt != null) {
+        return const Color(0xFF9C27B0); // Purple for merged
+      } else {
+        return const Color(0xFFF44336); // Red for closed
+      }
+    }
+    // OPEN or REOPENED
+    return const Color(0xFF4CAF50); // Green
+  }
 }

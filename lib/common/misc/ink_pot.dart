@@ -1,5 +1,4 @@
-import 'package:diohub/style/border_radiuses.dart';
-import 'package:diohub/utils/utils.dart';
+import 'package:diohub/style/surface_style_theme.dart';
 import 'package:flutter/material.dart';
 
 class InkPot extends StatelessWidget {
@@ -20,8 +19,8 @@ class InkPot extends StatelessWidget {
 
   @override
   Widget build(final BuildContext context) {
-    final BorderRadius? radius = borderRadius ??
-        context.themeData.extension<BorderRadiusTheme>()?.inkwellBorderRadius;
+    final BorderRadius? radius =
+        borderRadius ?? Theme.of(context).surfaceStyle.borderRadiusMedium();
     if (backgroundColor != null) {
       return Material(
         color: backgroundColor,

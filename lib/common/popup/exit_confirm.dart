@@ -7,7 +7,7 @@
 //   @override
 //   Widget build(BuildContext context) {
 //     return Dialog(
-//       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+//       shape: RoundedRectangleBorder(borderRadius: Theme.of(context).surfaceStyle.borderRadiusLarge()),
 //       elevation: 0,
 //       backgroundColor: transparent,
 //       child: _buildChild(context),
