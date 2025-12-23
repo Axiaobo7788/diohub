@@ -78,7 +78,7 @@ class CommitInfoScreenState extends State<CommitInfoScreen>
       builder: (
         final BuildContext context,
         final PreferredSizeWidget tabBar,
-        final Widget tabView,
+        final WidgetBuilder tabViewBuilder,
       ) =>
           Scaffold(
         body: PullToRefreshWrapper(
@@ -93,7 +93,7 @@ class CommitInfoScreenState extends State<CommitInfoScreen>
               expand: dynamicTabsController.activeLength > 1,
               child: _buildTabsView(tabBar),
             ),
-            body: tabView,
+            bodyBuilder: tabViewBuilder,
           ),
         ),
       ),

@@ -168,7 +168,7 @@ class ActivityOverviewSection extends StatelessWidget {
             child: BorderedContainer(
               // borderColor: Colors.blue,
               borderSide: BorderSideType.bottom,
-              size: BorderRadiusSize.small,
+              // size: BorderRadiusSize.small,
               child: Padding(
                 padding: const EdgeInsets.all(12),
                 child: RepositoryCard(

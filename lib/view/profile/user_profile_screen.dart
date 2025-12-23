@@ -54,9 +54,9 @@ class UserProfileScreenState extends State<UserProfileScreen>
   /// Gets the display label for the current date range selection
   String _getDateRangeLabel() {
     if (_useCustomRange && _customFromDate != null) {
-      final createdAt = data?.createdAt;
+      final DateTime? createdAt = data?.createdAt;
       if (createdAt != null) {
-        final isSinceJoining = _customFromDate!.year == createdAt.year &&
+        final bool isSinceJoining = _customFromDate!.year == createdAt.year &&
             _customFromDate!.month == createdAt.month &&
             _customFromDate!.day == createdAt.day;
         return isSinceJoining ? 'Since joining' : 'Custom';
@@ -67,7 +67,7 @@ class UserProfileScreenState extends State<UserProfileScreen>
   }
 
   /// Handles year selection change
-  void _onYearChanged(int year) {
+  void _onYearChanged(final int year) {
     setState(() {
       _selectedYear = year;
       _useCustomRange = false;
@@ -77,7 +77,7 @@ class UserProfileScreenState extends State<UserProfileScreen>
   }
 
   /// Handles custom date range change
-  void _onCustomRangeChanged(DateTime? from, DateTime? to) {
+  void _onCustomRangeChanged(final DateTime? from, final DateTime? to) {
     setState(() {
       if (from == null && to == null) {
         // Reset to last year
@@ -97,11 +97,11 @@ class UserProfileScreenState extends State<UserProfileScreen>
   }
 
   /// Builds a provider key for contributions (same logic as UserAboutScreen)
-  ContributionQueryKey _getContributionProviderKey(String userName) {
+  ContributionQueryKey _getContributionProviderKey(final String userName) {
     if (_useCustomRange && _customFromDate != null && _customToDate != null) {
-      final from = DateTime(
+      final DateTime from = DateTime(
           _customFromDate!.year, _customFromDate!.month, _customFromDate!.day);
-      final to = DateTime(
+      final DateTime to = DateTime(
           _customToDate!.year, _customToDate!.month, _customToDate!.day);
       return ContributionQueryKey.customRange(
         userName: userName,
@@ -119,9 +119,9 @@ class UserProfileScreenState extends State<UserProfileScreen>
 
   /// Builds the expanded content for the date range selector
   Widget _buildDateRangeExpandedContent(
-    BuildContext context,
-    GuserInfoData_user userData,
-    VoidCallback onCollapse,
+    final BuildContext context,
+    final GuserInfoData_user userData,
+    final VoidCallback onCollapse,
   ) {
     // Use a ConsumerWidget wrapper to watch the contributions provider for available years
     return _DateRangeExpandedContent(
@@ -139,8 +139,7 @@ class UserProfileScreenState extends State<UserProfileScreen>
   }
 
   Widget _buildCollapsedHeader(
-      BuildContext context, GuserInfoData_user userData) {
-    return Row(
+      final BuildContext context, final GuserInfoData_user userData) => Row(
       children: <Widget>[
         ProfileTile.avatar(
           avatarUrl: userData.avatarUrl.toString(),
@@ -152,7 +151,7 @@ class UserProfileScreenState extends State<UserProfileScreen>
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
-            children: [
+            children: <Widget>[
               Text(
                 userData.name ?? userData.login,
                 style: context.textTheme.bodyLarge,
@@ -169,10 +168,9 @@ class UserProfileScreenState extends State<UserProfileScreen>
         ),
       ],
     );
-  }
 
-  Widget _buildExpandedHeader(BuildContext context, GuserInfoData_user userData,
-      DynamicTabsController? tabController) {
+  Widget _buildExpandedHeader(final BuildContext context, final GuserInfoData_user userData,
+      final DynamicTabsController? tabController) {
     const double leadingWidth = 56.0;
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
@@ -185,7 +183,7 @@ class UserProfileScreenState extends State<UserProfileScreen>
             padding: EdgeInsets.only(left: leadingWidth),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
+              children: <Widget>[
                 Text(
                   userData.name ?? userData.login,
                   overflow: TextOverflow.ellipsis,
@@ -213,16 +211,14 @@ class UserProfileScreenState extends State<UserProfileScreen>
   }
 
   Widget _buildDetailTilesSection(
-      BuildContext context, GuserInfoData_user userData) {
-    return userData.when(
-      user: (user) => _buildUserDetailTiles(context, user),
+      final BuildContext context, final GuserInfoData_user userData) => userData.when(
+      user: (final GuserInfoData_user__asUser user) => _buildUserDetailTiles(context, user),
       orElse: () => _buildOrganizationDetailTiles(context, userData),
     );
-  }
 
   Widget _buildUserDetailTiles(
-      BuildContext context, GuserInfoData_user__asUser userData) {
-    final List<Widget> alwaysVisibleTiles = [];
+      final BuildContext context, final GuserInfoData_user__asUser userData) {
+    final List<Widget> alwaysVisibleTiles = <Widget>[];
 
     // Bio
     if (userData.bio != null && userData.bio!.isNotEmpty) {
@@ -270,7 +266,7 @@ class UserProfileScreenState extends State<UserProfileScreen>
 
     // Status
     if (userData.status != null && userData.status!.message != null) {
-      final statusText = userData.status!.emoji != null
+      final String statusText = userData.status!.emoji != null
           ? '${userData.status!.emoji} ${userData.status!.message}'
           : userData.status!.message!;
       alwaysVisibleTiles.add(
@@ -304,7 +300,7 @@ class UserProfileScreenState extends State<UserProfileScreen>
       ),
     );
 
-    final List<Widget> expandableTiles = [];
+    final List<Widget> expandableTiles = <Widget>[];
 
     // Email
     if (userData.email.isNotEmpty) {
@@ -390,13 +386,13 @@ class UserProfileScreenState extends State<UserProfileScreen>
       visibilityConfig: DetailTilesVisibilityConfig.fixedCount(
         defaultVisibleCount: alwaysVisibleTiles.length.clamp(0, 3),
       ),
-      onExpandChanged: (isExpanded) {},
+      onExpandChanged: (final bool isExpanded) {},
     );
   }
 
   Widget _buildOrganizationDetailTiles(
-      BuildContext context, GuserInfoData_user userData) {
-    final List<Widget> alwaysVisibleTiles = [];
+      final BuildContext context, final GuserInfoData_user userData) {
+    final List<Widget> alwaysVisibleTiles = <Widget>[];
 
     // Bio
     if (userData.bio != null) {
@@ -431,7 +427,7 @@ class UserProfileScreenState extends State<UserProfileScreen>
       ),
     );
 
-    final List<Widget> expandableTiles = [];
+    final List<Widget> expandableTiles = <Widget>[];
 
     // Twitter
     if (userData.twitterUsername != null) {
@@ -471,15 +467,15 @@ class UserProfileScreenState extends State<UserProfileScreen>
       visibilityConfig: DetailTilesVisibilityConfig.fixedCount(
         defaultVisibleCount: alwaysVisibleTiles.length.clamp(0, 3),
       ),
-      onExpandChanged: (isExpanded) {},
+      onExpandChanged: (final bool isExpanded) {},
     );
   }
 
-  Widget _buildActionButtons(BuildContext context, GuserInfoData_user userData,
-      DynamicTabsController? tabController) {
-    final isViewer = userData.isViewer;
+  Widget _buildActionButtons(final BuildContext context, final GuserInfoData_user userData,
+      final DynamicTabsController? tabController) {
+    final bool isViewer = userData.isViewer;
 
-    final List<ActionButtonData> primaryActions = [];
+    final List<ActionButtonData> primaryActions = <ActionButtonData>[];
 
     // Follow/Unfollow button (only for other users)
     if (!isViewer && userData.viewerCanFollow) {
@@ -530,7 +526,7 @@ class UserProfileScreenState extends State<UserProfileScreen>
 
     // Following count (only for users, not organizations)
     userData.when(
-      user: (user) {
+      user: (final GuserInfoData_user__asUser user) {
         primaryActions.add(
           MinorActionButton(
             icon: Octicons.person,
@@ -550,7 +546,7 @@ class UserProfileScreenState extends State<UserProfileScreen>
       },
     );
 
-    final List<ActionButtonData> secondaryActions = [];
+    final List<ActionButtonData> secondaryActions = <ActionButtonData>[];
 
     // More actions can go here
     // Note: publicGists is not available in GraphQL user query
@@ -563,7 +559,7 @@ class UserProfileScreenState extends State<UserProfileScreen>
     return CollapsibleActionButtons(
       primaryActions: primaryActions,
       secondaryActions: secondaryActions,
-      actionCardBuilder: (context, action) => buildStandardActionCard(
+      actionCardBuilder: (final BuildContext context, final ActionButtonData action) => buildStandardActionCard(
         context,
         action,
         iconSize: 16,
@@ -573,26 +569,26 @@ class UserProfileScreenState extends State<UserProfileScreen>
         minPerRow: 2,
         maxPerRow: 4,
       ),
-      onExpandChanged: (isExpanded) {},
+      onExpandChanged: (final bool isExpanded) {},
     );
   }
 
-  List<ActionButtonData> _buildToolbarActions(BuildContext context,
-      GuserInfoData_user userData, DynamicTabsController? tabController) {
-    final currentTab = tabController?.activeIdentifier ?? 'Activity';
+  List<ActionButtonData> _buildToolbarActions(final BuildContext context,
+      final GuserInfoData_user userData, final DynamicTabsController? tabController) {
+    final String currentTab = tabController?.activeIdentifier ?? 'Activity';
 
     // Get pinned repositories
-    final pinnedItems = userData.pinnedItems.edges?.toList() ??
+    final List<GuserInfoData_user_pinnedItems_edges?> pinnedItems = userData.pinnedItems.edges?.toList() ??
         <GuserInfoData_user_pinnedItems_edges?>[];
-    final pinnedRepos = pinnedItems
-        .map((edge) => edge?.node)
+    final List<GrepositoryFields> pinnedRepos = pinnedItems
+        .map((final GuserInfoData_user_pinnedItems_edges? edge) => edge?.node)
         .whereType<GuserInfoData_user_pinnedItems_edges_node>()
-        .where((node) => node.G__typename == 'Repository')
-        .map((node) => node as GrepositoryFields)
+        .where((final GuserInfoData_user_pinnedItems_edges_node node) => node.G__typename == 'Repository')
+        .map((final GuserInfoData_user_pinnedItems_edges_node node) => node as GrepositoryFields)
         .toList();
-    final pinnedReposCount = pinnedRepos.length;
+    final int pinnedReposCount = pinnedRepos.length;
 
-    return [
+    return <ActionButtonData>[
       // Pinned Repos - visible on all tabs
       if (pinnedReposCount > 0)
         ExpandableActionButton(
@@ -604,8 +600,8 @@ class UserProfileScreenState extends State<UserProfileScreen>
           enabled: pinnedReposCount > 0,
           category: 'Primary',
           visibilityState: ActionButtonVisibilityState.both,
-          expandableWidgetBuilder: (onCollapse) => Builder(
-            builder: (context) {
+          expandableWidgetBuilder: (final onCollapse) => Builder(
+            builder: (final BuildContext context) {
               if (pinnedRepos.isEmpty) {
                 return Padding(
                   padding: const EdgeInsets.symmetric(
@@ -627,16 +623,16 @@ class UserProfileScreenState extends State<UserProfileScreen>
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.start,
-                  children: pinnedRepos.asMap().entries.map((entry) {
-                    final index = entry.key;
-                    final repo = entry.value;
-                    final isLast = index == pinnedRepos.length - 1;
+                  children: pinnedRepos.asMap().entries.map((final MapEntry<int, GrepositoryFields> entry) {
+                    final int index = entry.key;
+                    final GrepositoryFields repo = entry.value;
+                    final bool isLast = index == pinnedRepos.length - 1;
 
-                    final ownerLogin = repo.owner.login;
-                    final repoName = repo.name;
+                    final String ownerLogin = repo.owner.login;
+                    final String repoName = repo.name;
 
                     // Construct repository URL for navigation: owner/repo
-                    final navigationUrl = '$ownerLogin/$repoName';
+                    final String navigationUrl = '$ownerLogin/$repoName';
 
                     return Material(
                       color: Colors.transparent,
@@ -669,12 +665,12 @@ class UserProfileScreenState extends State<UserProfileScreen>
                                   ),
                           ),
                           child: Row(
-                            children: [
+                            children: <Widget>[
                               Expanded(
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   mainAxisSize: MainAxisSize.min,
-                                  children: [
+                                  children: <Widget>[
                                     Text(
                                       repoName,
                                       style: context.textTheme.bodyMedium
@@ -686,7 +682,7 @@ class UserProfileScreenState extends State<UserProfileScreen>
                                       overflow: TextOverflow.ellipsis,
                                     ),
                                     if (repo.description != null &&
-                                        repo.description!.isNotEmpty) ...[
+                                        repo.description!.isNotEmpty) ...<Widget>[
                                       const SizedBox(height: 4),
                                       Text(
                                         repo.description!,
@@ -704,11 +700,11 @@ class UserProfileScreenState extends State<UserProfileScreen>
                                   ],
                                 ),
                               ),
-                              if (repo.stargazerCount > 0) ...[
+                              if (repo.stargazerCount > 0) ...<Widget>[
                                 const SizedBox(width: 8),
                                 Row(
                                   mainAxisSize: MainAxisSize.min,
-                                  children: [
+                                  children: <Widget>[
                                     Icon(
                                       Octicons.star,
                                       size: 14,
@@ -751,13 +747,11 @@ class UserProfileScreenState extends State<UserProfileScreen>
         visibilityState: currentTab == 'Activity'
             ? ActionButtonVisibilityState.both
             : ActionButtonVisibilityState.none,
-        expandableWidgetBuilder: (onCollapse) {
-          return _buildDateRangeExpandedContent(
+        expandableWidgetBuilder: (final onCollapse) => _buildDateRangeExpandedContent(
             context,
             userData,
             onCollapse,
-          );
-        },
+          ),
       ),
       // Primary - always visible in collapsed state
       MinorActionButton(
@@ -806,7 +800,7 @@ class UserProfileScreenState extends State<UserProfileScreen>
         label: 'Gists',
         category: 'Primary',
         trailing: userData.when(
-          user: (user) => buildActionButtonTrailingCount(
+          user: (final GuserInfoData_user__asUser user) => buildActionButtonTrailingCount(
             context,
             user.gists.totalCount,
           ),
@@ -852,7 +846,7 @@ class UserProfileScreenState extends State<UserProfileScreen>
         label: 'Organizations',
         category: 'Content',
         trailing: userData.when(
-          user: (user) => buildActionButtonTrailingCount(
+          user: (final GuserInfoData_user__asUser user) => buildActionButtonTrailingCount(
             context,
             user.organizations.totalCount,
           ),
@@ -884,7 +878,7 @@ class UserProfileScreenState extends State<UserProfileScreen>
         label: 'Following',
         category: 'Social',
         trailing: userData.when(
-          user: (user) => buildActionButtonTrailingCount(
+          user: (final GuserInfoData_user__asUser user) => buildActionButtonTrailingCount(
             context,
             user.following.totalCount,
           ),
@@ -941,41 +935,37 @@ class UserProfileScreenState extends State<UserProfileScreen>
   }
 
   @override
-  Widget build(BuildContext context) {
-    return provider.ChangeNotifierProvider<UserProvider>(
-      create: (_) => UserProvider(widget.login),
-      builder: (context, _) => SafeArea(
-        child: Scaffold(
-          appBar: provider.Provider.of<UserProvider>(context).status !=
-                  Status.loaded
-              ? AppBar(elevation: 0)
-              : null,
-          body: ScaffoldBody(
-            child: ProviderLoadingProgressWrapper<UserProvider>(
-              childBuilder: (context, value) {
-                data = value.data;
-
-                return _UserProfileTabsContent(
-                  userData: value.data,
-                  parentState: this,
-                  buildCollapsedHeader: _buildCollapsedHeader,
-                  buildExpandedHeader: _buildExpandedHeader,
-                  buildToolbarActions: _buildToolbarActions,
-                  buildActionButtons: _buildActionButtons,
-                  selectedYear: _selectedYear,
-                  customFromDate: _customFromDate,
-                  customToDate: _customToDate,
-                  useCustomRange: _useCustomRange,
-                  onYearChanged: _onYearChanged,
-                  onCustomRangeChanged: _onCustomRangeChanged,
-                );
-              },
-            ),
+  Widget build(final BuildContext context) => provider.ChangeNotifierProvider<UserProvider>(
+      create: (final _) => UserProvider(widget.login),
+      builder: (final BuildContext context, final _) => Scaffold(
+        appBar: provider.Provider.of<UserProvider>(context).status !=
+                Status.loaded
+            ? AppBar(elevation: 0)
+            : null,
+        body: ScaffoldBody(
+          child: ProviderLoadingProgressWrapper<UserProvider>(
+            childBuilder: (final BuildContext context, final UserProvider value) {
+              data = value.data;
+      
+              return _UserProfileTabsContent(
+                userData: value.data,
+                parentState: this,
+                buildCollapsedHeader: _buildCollapsedHeader,
+                buildExpandedHeader: _buildExpandedHeader,
+                buildToolbarActions: _buildToolbarActions,
+                buildActionButtons: _buildActionButtons,
+                selectedYear: _selectedYear,
+                customFromDate: _customFromDate,
+                customToDate: _customToDate,
+                useCustomRange: _useCustomRange,
+                onYearChanged: _onYearChanged,
+                onCustomRangeChanged: _onCustomRangeChanged,
+              );
+            },
           ),
         ),
       ),
     );
-  }
 }
 
 /// ConsumerWidget wrapper for date range expanded content
@@ -1006,7 +996,7 @@ class _DateRangeExpandedContent extends ConsumerWidget {
   final VoidCallback onCollapse;
 
   /// Checks if the current custom range matches "Since joining GitHub"
-  bool _isSinceJoining(DateTime? customFrom, DateTime? created) {
+  bool _isSinceJoining(final DateTime? customFrom, final DateTime? created) {
     if (!useCustomRange || customFrom == null || created == null) {
       return false;
     }
@@ -1016,18 +1006,18 @@ class _DateRangeExpandedContent extends ConsumerWidget {
   }
 
   Future<void> _showCustomDateRangePicker(
-    BuildContext context,
-    DateTime? earliestDate,
+    final BuildContext context,
+    final DateTime? earliestDate,
   ) async {
-    final now = DateTime.now();
-    final initialFrom =
+    final DateTime now = DateTime.now();
+    final DateTime initialFrom =
         customFromDate ?? now.subtract(const Duration(days: 365));
-    final initialTo = customToDate ?? now;
+    final DateTime initialTo = customToDate ?? now;
 
     // Use createdAt as earliest date, or default to year 2000 if not available
-    final earliest = earliestDate ?? DateTime(2000);
+    final DateTime earliest = earliestDate ?? DateTime(2000);
 
-    final pickedFrom = await showDatePicker(
+    final DateTime? pickedFrom = await showDatePicker(
       context: context,
       initialDate: initialFrom,
       firstDate: earliest,
@@ -1037,7 +1027,7 @@ class _DateRangeExpandedContent extends ConsumerWidget {
 
     if (pickedFrom == null) return;
 
-    final pickedTo = await showDatePicker(
+    final DateTime? pickedTo = await showDatePicker(
       context: context,
       initialDate: pickedFrom.isAfter(initialTo) ? pickedFrom : initialTo,
       firstDate: pickedFrom,
@@ -1052,45 +1042,45 @@ class _DateRangeExpandedContent extends ConsumerWidget {
   }
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
-    final providerKey = getProviderKey(userName);
-    final contributionsAsync = ref.watch(
+  Widget build(final BuildContext context, final WidgetRef ref) {
+    final ThemeData theme = Theme.of(context);
+    final ColorScheme colorScheme = theme.colorScheme;
+    final ContributionQueryKey providerKey = getProviderKey(userName);
+    final AsyncValue<ContributionCollectionResult> contributionsAsync = ref.watch(
       userContributionsProvider(providerKey),
     );
 
     // Watch the last year provider separately to get available years
     // This ensures years list doesn't disappear when current provider is loading
-    final lastYearKey = ContributionQueryKey.lastYear(userName);
-    final lastYearAsync = ref.watch(
+    final ContributionQueryKey lastYearKey = ContributionQueryKey.lastYear(userName);
+    final AsyncValue<ContributionCollectionResult> lastYearAsync = ref.watch(
       userContributionsProvider(lastYearKey),
     );
 
     // Get available years from the last year provider (which always has all years)
     // Fall back to current provider if last year provider is not available
-    final availableYears = lastYearAsync.when(
-      data: (result) => result.viewModel.contributionYears,
+    final List<int> availableYears = lastYearAsync.when(
+      data: (final ContributionCollectionResult result) => result.viewModel.contributionYears,
       loading: () => contributionsAsync.when(
-        data: (result) => result.viewModel.contributionYears,
+        data: (final ContributionCollectionResult result) => result.viewModel.contributionYears,
         loading: () => <int>[],
-        error: (_, __) => <int>[],
+        error: (final _, final __) => <int>[],
       ),
-      error: (_, __) => contributionsAsync.when(
-        data: (result) => result.viewModel.contributionYears,
+      error: (final _, final __) => contributionsAsync.when(
+        data: (final ContributionCollectionResult result) => result.viewModel.contributionYears,
         loading: () => <int>[],
-        error: (_, __) => <int>[],
+        error: (final _, final __) => <int>[],
       ),
     );
 
     // Determine which option is currently selected
-    final isLastYearSelected = !useCustomRange && selectedYear == null;
-    final isSinceJoiningSelected =
+    final bool isLastYearSelected = !useCustomRange && selectedYear == null;
+    final bool isSinceJoiningSelected =
         useCustomRange && _isSinceJoining(customFromDate, createdAt);
-    final isCustomSelected = useCustomRange && !isSinceJoiningSelected;
+    final bool isCustomSelected = useCustomRange && !isSinceJoiningSelected;
 
     // Build all options into a list
-    final List<Widget> optionTiles = [];
+    final List<Widget> optionTiles = <Widget>[];
 
     // Last Year option
     optionTiles.add(
@@ -1110,9 +1100,9 @@ class _DateRangeExpandedContent extends ConsumerWidget {
 
     // Year options (sorted in descending order - newest first)
     if (availableYears.isNotEmpty) {
-      final sortedYears = List<int>.from(availableYears)
-        ..sort((a, b) => b.compareTo(a));
-      for (final year in sortedYears) {
+      final List<int> sortedYears = List<int>.from(availableYears)
+        ..sort((final int a, final int b) => b.compareTo(a));
+      for (final int year in sortedYears) {
         optionTiles.add(
           _buildOptionTile(
             context: context,
@@ -1141,7 +1131,7 @@ class _DateRangeExpandedContent extends ConsumerWidget {
           title: 'Since joining GitHub',
           isSelected: isSinceJoiningSelected,
           onTap: () {
-            final now = DateTime.now();
+            final DateTime now = DateTime.now();
             onCustomRangeChanged(createdAt, now);
             onCollapse();
           },
@@ -1171,10 +1161,10 @@ class _DateRangeExpandedContent extends ConsumerWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: optionTiles.asMap().entries.map((entry) {
-            final index = entry.key;
-            final tile = entry.value;
-            final isLast = index == optionTiles.length - 1;
+          children: optionTiles.asMap().entries.map((final MapEntry<int, Widget> entry) {
+            final int index = entry.key;
+            final Widget tile = entry.value;
+            final bool isLast = index == optionTiles.length - 1;
 
             return Container(
               decoration: BoxDecoration(
@@ -1196,15 +1186,14 @@ class _DateRangeExpandedContent extends ConsumerWidget {
   }
 
   Widget _buildOptionTile({
-    required BuildContext context,
-    required ThemeData theme,
-    required ColorScheme colorScheme,
-    required IconData icon,
-    required String title,
-    required bool isSelected,
-    required VoidCallback onTap,
-  }) {
-    return Material(
+    required final BuildContext context,
+    required final ThemeData theme,
+    required final ColorScheme colorScheme,
+    required final IconData icon,
+    required final String title,
+    required final bool isSelected,
+    required final VoidCallback onTap,
+  }) => Material(
       color: Colors.transparent,
       child: InkWell(
         onTap: onTap,
@@ -1224,7 +1213,7 @@ class _DateRangeExpandedContent extends ConsumerWidget {
                 : null,
           ),
           child: Row(
-            children: [
+            children: <Widget>[
               Icon(
                 icon,
                 size: 18,
@@ -1256,7 +1245,6 @@ class _DateRangeExpandedContent extends ConsumerWidget {
         ),
       ),
     );
-  }
 }
 
 class _UserProfileTabsContent extends StatefulWidget {
@@ -1316,14 +1304,14 @@ class _UserProfileTabsContentState extends State<_UserProfileTabsContent>
   }
 
   void _initializeTabs() {
-    final userData = widget.userData;
+    final GuserInfoData_user userData = widget.userData;
 
-    final tabs = <DynamicTab>[
+    final List<DynamicTab> tabs = <DynamicTab>[
       DynamicTab(
         identifier: 'Activity',
         isDismissible: false,
         isFocusedOnInit: true,
-        tabViewBuilder: (context) => UserAboutScreen(
+        tabViewBuilder: (final BuildContext context) => UserAboutScreen(
           userData,
           selectedYear: widget.selectedYear,
           customFromDate: widget.customFromDate,
@@ -1336,7 +1324,7 @@ class _UserProfileTabsContentState extends State<_UserProfileTabsContent>
       DynamicTab(
         identifier: 'Activity Feed',
         tab: TabBarItem(label: 'Feed'),
-        tabViewBuilder: (context) => Events(
+        tabViewBuilder: (final BuildContext context) => Events(
           privateEvents: false,
           specificUser: userData.login,
         ),
@@ -1344,59 +1332,59 @@ class _UserProfileTabsContentState extends State<_UserProfileTabsContent>
       DynamicTab(
         identifier: 'Repositories',
         // isDismissible: false,
-        tabViewBuilder: (context) => UserRepositories(
+        tabViewBuilder: (final BuildContext context) => UserRepositories(
           userData.login,
           currentUser: userData.isViewer,
         ),
       ),
       DynamicTab(
         identifier: 'Gists',
-        tabViewBuilder: (context) =>
+        tabViewBuilder: (final BuildContext context) =>
             const SizedBox.shrink(), // TODO: Implement Gists tab
       ),
       DynamicTab(
         identifier: 'Organizations',
-        tabViewBuilder: (context) =>
+        tabViewBuilder: (final BuildContext context) =>
             const SizedBox.shrink(), // TODO: Implement Organizations tab
       ),
       DynamicTab(
         identifier: 'Followers',
-        tabViewBuilder: (context) =>
+        tabViewBuilder: (final BuildContext context) =>
             const SizedBox.shrink(), // TODO: Implement Followers tab
       ),
       DynamicTab(
         identifier: 'Following',
-        tabViewBuilder: (context) =>
+        tabViewBuilder: (final BuildContext context) =>
             const SizedBox.shrink(), // TODO: Implement Following tab
       ),
       DynamicTab(
         identifier: 'Stars',
-        tabViewBuilder: (context) =>
+        tabViewBuilder: (final BuildContext context) =>
             const SizedBox.shrink(), // TODO: Implement Stars tab
       ),
       DynamicTab(
         identifier: 'Packages',
-        tabViewBuilder: (context) =>
+        tabViewBuilder: (final BuildContext context) =>
             const SizedBox.shrink(), // TODO: Implement Packages tab
       ),
       DynamicTab(
         identifier: 'Pull Requests',
-        tabViewBuilder: (context) =>
+        tabViewBuilder: (final BuildContext context) =>
             const SizedBox.shrink(), // TODO: Implement Pull Requests tab
       ),
       DynamicTab(
         identifier: 'Issues',
-        tabViewBuilder: (context) =>
+        tabViewBuilder: (final BuildContext context) =>
             const SizedBox.shrink(), // TODO: Implement Issues tab
       ),
       DynamicTab(
         identifier: 'Projects',
-        tabViewBuilder: (context) =>
+        tabViewBuilder: (final BuildContext context) =>
             const SizedBox.shrink(), // TODO: Implement Projects tab
       ),
       DynamicTab(
         identifier: 'Sponsors',
-        tabViewBuilder: (context) =>
+        tabViewBuilder: (final BuildContext context) =>
             const SizedBox.shrink(), // TODO: Implement Sponsors tab
       ),
     ];
@@ -1410,12 +1398,11 @@ class _UserProfileTabsContentState extends State<_UserProfileTabsContent>
   }
 
   @override
-  Widget build(BuildContext context) {
-    return FloatingToolbarWrapper(
-      toolbarBuilder: (scrollNotificationNotifier) {
+  Widget build(final BuildContext context) => FloatingToolbarWrapper(
+      toolbarBuilder: (final ValueNotifier<ScrollNotification?> scrollNotificationNotifier) {
         return ListenableBuilder(
           listenable: tabController ?? ValueNotifier(''),
-          builder: (context, _) {
+          builder: (final BuildContext context, final _) {
             return FloatingActionToolbar(
               key: const ValueKey('user_profile_toolbar'),
               actions: widget.buildToolbarActions(
@@ -1423,7 +1410,7 @@ class _UserProfileTabsContentState extends State<_UserProfileTabsContent>
                 widget.userData,
                 tabController,
               ),
-              actionCardBuilder: (context, action) =>
+              actionCardBuilder: (final BuildContext context, final ActionButtonData action) =>
                   buildStandardActionCard(context, action),
               position: FloatingPosition.bottom,
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -1432,7 +1419,7 @@ class _UserProfileTabsContentState extends State<_UserProfileTabsContent>
               subtitle:
                   widget.userData.name != null ? widget.userData.login : null,
               scrollNotificationNotifier: scrollNotificationNotifier,
-              onExpandChanged: (isExpanded) {},
+              onExpandChanged: (final bool isExpanded) {},
             );
           },
         );
@@ -1440,7 +1427,7 @@ class _UserProfileTabsContentState extends State<_UserProfileTabsContent>
       child: tabController != null
           ? DynamicTabsParent(
               controller: tabController!,
-              builder: (context, tabBar, tabView) => DynamicScroll(
+              builder: (final BuildContext context, final PreferredSizeWidget tabBar, final tabView) => DynamicScroll(
                 collapsedWidget: widget.buildCollapsedHeader(
                   context,
                   widget.userData,
@@ -1465,10 +1452,9 @@ class _UserProfileTabsContentState extends State<_UserProfileTabsContent>
                     ],
                   ),
                 ),
-                body: tabView,
+                bodyBuilder: tabView,
               ),
             )
           : const SizedBox.shrink(),
     );
-  }
 }
