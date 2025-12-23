@@ -1,6 +1,5 @@
 // ignore_for_file: avoid_classes_with_only_static_members
 
-import 'package:diohub/graphql/queries/issues_pulls/__generated__/issue_pull_info.data.gql.dart';
 import 'package:diohub/graphql/queries/users/__generated__/user_activity_timeline_full.data.gql.dart';
 import 'package:diohub/graphql/queries/users/__generated__/user_info.data.gql.dart';
 import 'package:diohub/models/commits/commit_card_data_model.dart';
@@ -57,6 +56,7 @@ class ActivityTimelineConverter {
     events.addAll(_convertRepositories(fullData));
     events.addAll(_convertPullRequests(fullData));
     events.addAll(_convertIssues(fullData));
+    events.addAll(_convertReviews(fullData));
     events.addAll(_convertCommits(fullData));
 
     // Sort events by date (newest first)
@@ -72,26 +72,25 @@ class ActivityTimelineConverter {
     GuserActivityTimelineFullData_user fullData,
   ) {
     final events = <ActivityTimelineEvent>[];
-    final edges = fullData.repositories.edges;
+    final repoContributions =
+        fullData.contributionsCollection.repositoryContributions.nodes;
 
-    if (edges == null) return events;
+    if (repoContributions == null) return events;
 
-    for (final edge in edges) {
-      if (edge?.node == null) continue;
+    for (final contribution in repoContributions) {
+      final repo = contribution?.repository;
+      if (repo == null) continue;
 
-      final repo = edge!.node!;
       final owner = repo.owner.login;
       final name = repo.name;
       final url = repo.url.toString();
 
-      // Create unified repository data model using fromGraphQL to preserve all metadata
-      // Cast to GrepositoryFields since the query includes ...repositoryFields fragment
       final repoData = RepoCardDataModel.fromGraphQL(repo as GrepositoryFields);
 
       events.add(
         ActivityTimelineEvent(
           type: ActivityEventType.repositoryCreated,
-          date: repo.createdAt,
+          date: contribution!.occurredAt,
           repositoryOwner: owner,
           repositoryName: name,
           repositoryUrl: url,
@@ -109,20 +108,19 @@ class ActivityTimelineConverter {
     GuserActivityTimelineFullData_user fullData,
   ) {
     final events = <ActivityTimelineEvent>[];
-    final edges = fullData.pullRequests.edges;
+    final contributions =
+        fullData.contributionsCollection.pullRequestContributions.nodes;
 
-    if (edges == null) return events;
+    if (contributions == null) return events;
 
-    for (final edge in edges) {
-      if (edge?.node == null) continue;
+    for (final contribution in contributions) {
+      final pr = contribution?.pullRequest;
+      if (pr == null) continue;
 
-      final pr = edge!.node!;
       final owner = pr.repository.owner.login;
       final name = pr.repository.name;
       final url = pr.repository.url.toString();
 
-      // Create unified PR data model using timeline constructor
-      // Cast to fragment interface (node implements GpullInfoTimeline)
       final prData = PullRequestCardDataModel.fromGraphQLTimeline(
         pr as GpullInfoTimeline,
       );
@@ -130,7 +128,7 @@ class ActivityTimelineConverter {
       events.add(
         ActivityTimelineEvent(
           type: ActivityEventType.pullRequest,
-          date: pr.createdAt,
+          date: contribution!.occurredAt,
           title: pr.title,
           repositoryOwner: owner,
           repositoryName: name,
@@ -149,20 +147,19 @@ class ActivityTimelineConverter {
     GuserActivityTimelineFullData_user fullData,
   ) {
     final events = <ActivityTimelineEvent>[];
-    final edges = fullData.issues.edges;
+    final contributions =
+        fullData.contributionsCollection.issueContributions.nodes;
 
-    if (edges == null) return events;
+    if (contributions == null) return events;
 
-    for (final edge in edges) {
-      if (edge?.node == null) continue;
+    for (final contribution in contributions) {
+      final issue = contribution?.issue;
+      if (issue == null) continue;
 
-      final issue = edge!.node!;
       final owner = issue.repository.owner.login;
       final name = issue.repository.name;
       final url = issue.repository.url.toString();
 
-      // Create unified issue data model using timeline constructor
-      // Cast to fragment interface (node implements GissueInfoTimeline)
       final issueData = IssueCardDataModel.fromGraphQLTimeline(
         issue as GissueInfoTimeline,
       );
@@ -170,13 +167,52 @@ class ActivityTimelineConverter {
       events.add(
         ActivityTimelineEvent(
           type: ActivityEventType.issue,
-          date: issue.createdAt,
+          date: contribution!.occurredAt,
           title: issue.title,
           repositoryOwner: owner,
           repositoryName: name,
           repositoryUrl: url,
           issueData: issueData,
           issueNode: issue, // Store full GraphQL node
+        ),
+      );
+    }
+
+    return events;
+  }
+
+  /// Convert reviews to review events
+  static List<ActivityTimelineEvent> _convertReviews(
+    GuserActivityTimelineFullData_user fullData,
+  ) {
+    final events = <ActivityTimelineEvent>[];
+    final contributions =
+        fullData.contributionsCollection.pullRequestReviewContributions.nodes;
+
+    if (contributions == null) return events;
+
+    for (final contribution in contributions) {
+      final pullRequest = contribution?.pullRequest;
+      if (pullRequest == null) continue;
+
+      final owner = pullRequest.repository.owner.login;
+      final name = pullRequest.repository.name;
+      final url = pullRequest.repository.url.toString();
+
+      final prData = PullRequestCardDataModel.fromGraphQLTimeline(
+        pullRequest as GpullInfoTimeline,
+      );
+
+      events.add(
+        ActivityTimelineEvent(
+          type: ActivityEventType.review,
+          date: contribution!.occurredAt,
+          title: pullRequest.title,
+          repositoryOwner: owner,
+          repositoryName: name,
+          repositoryUrl: url,
+          pullRequestData: prData,
+          reviewPullRequestNode: pullRequest,
         ),
       );
     }
