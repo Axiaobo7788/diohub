@@ -1,0 +1,40 @@
+# Query for fetching user's created repository contributions with pagination
+# Used for created repos chip detail bottom sheet
+
+# import './user_info.graphql'
+
+query userRepositoryContributions(
+  $user: String!
+  $from: DateTime
+  $to: DateTime
+  $after: String
+  $first: Int = 50
+) {
+  user(login: $user) {
+    __typename
+    id
+    login
+    contributionsCollection(from: $from, to: $to) {
+      totalRepositoryContributions
+      repositoryContributions(
+        first: $first
+        after: $after
+        orderBy: { direction: DESC }
+      ) {
+        totalCount
+        pageInfo {
+          hasNextPage
+          endCursor
+        }
+        nodes {
+          occurredAt
+          repository {
+            ...repositoryFields
+            id
+            createdAt
+          }
+        }
+      }
+    }
+  }
+}

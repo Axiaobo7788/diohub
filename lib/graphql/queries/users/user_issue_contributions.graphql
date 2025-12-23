@@ -1,0 +1,44 @@
+# Query for fetching user's issue contributions with pagination
+# Used for issue chip detail bottom sheet
+
+# import './user_info.graphql'
+# import './user_activity_timeline_full.graphql'
+
+query userIssueContributions(
+  $user: String!
+  $from: DateTime
+  $to: DateTime
+  $after: String
+  $first: Int = 50
+) {
+  user(login: $user) {
+    __typename
+    id
+    login
+    contributionsCollection(from: $from, to: $to) {
+      totalIssueContributions
+      issueContributionsByRepository(maxRepositories: 100) {
+        repository {
+          ...repositoryFields
+        }
+        contributions(
+          first: $first
+          after: $after
+          orderBy: { direction: DESC }
+        ) {
+          totalCount
+          pageInfo {
+            hasNextPage
+            endCursor
+          }
+          nodes {
+            occurredAt
+            issue {
+              ...issueInfoTimeline
+            }
+          }
+        }
+      }
+    }
+  }
+}
