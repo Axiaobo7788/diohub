@@ -22,7 +22,7 @@ class DynamicTabsParent extends StatelessWidget {
   final Widget Function(
     BuildContext context,
     PreferredSizeWidget tabBar,
-    Widget tabView,
+    WidgetBuilder tabViewBuilder,
   ) builder;
 
   @override

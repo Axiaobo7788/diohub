@@ -66,16 +66,17 @@ class DynamicScroll extends StatefulWidget {
   const DynamicScroll({
     required this.expandedWidget,
     required this.collapsedWidget,
-    required this.body,
+     this.body,
     this.bottom,
     this.actions,
-    super.key,
+    super.key, this.bodyBuilder,
   });
 
   final Widget collapsedWidget;
   final Widget expandedWidget;
   final Widget? bottom;
-  final Widget body;
+  final Widget? body;
+  final WidgetBuilder? bodyBuilder;
   final List<Widget>? actions;
 
   @override
@@ -114,7 +115,9 @@ class _DynamicScrollState extends State<DynamicScroll> {
             ),
           ),
         ],
-        body: widget.body,
+        body: Builder(
+          builder: (final BuildContext context) => widget.bodyBuilder?.call(context) ?? widget.body ?? const SizedBox.shrink(),
+        ),
       );
 }
 

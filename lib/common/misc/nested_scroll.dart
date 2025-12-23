@@ -24,6 +24,7 @@ class NestedScroll extends StatelessWidget {
             handle: NestedScrollView.sliverOverlapAbsorberHandleFor(context),
             sliver: SliverSafeArea(
               top: false, // permit header overlap under status bar
+              bottom: false,
               // bottom: false,
               sliver: MultiSliver(
                 children: header(
@@ -35,6 +36,7 @@ class NestedScroll extends StatelessWidget {
               ),
             ),
           ),
+         
         ],
         body: Builder(
           builder: (final BuildContext context) {
