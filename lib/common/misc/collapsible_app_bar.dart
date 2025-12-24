@@ -1,6 +1,7 @@
 import 'dart:ui';
 
 import 'package:diohub/common/misc/scroll_dynamic_elevation.dart';
+import 'package:diohub/style/surface_style_theme.dart';
 import 'package:diohub/utils/utils.dart';
 import 'package:flutter/material.dart';
 import 'package:sliver_tools/sliver_tools.dart';
@@ -66,15 +67,17 @@ class DynamicScroll extends StatefulWidget {
   const DynamicScroll({
     required this.expandedWidget,
     required this.collapsedWidget,
+    this.headerSlivers,
      this.body,
-    this.bottom,
+    // this.bottom,
     this.actions,
     super.key, this.bodyBuilder,
   });
 
   final Widget collapsedWidget;
   final Widget expandedWidget;
-  final Widget? bottom;
+  final List<Widget>? headerSlivers;
+  // final Widget? bottom;
   final Widget? body;
   final WidgetBuilder? bodyBuilder;
   final List<Widget>? actions;
@@ -94,24 +97,22 @@ class _DynamicScrollState extends State<DynamicScroll> {
             <Widget>[
           SliverOverlapAbsorber(
             handle: NestedScrollView.sliverOverlapAbsorberHandleFor(context),
-            sliver: SliverSafeArea(
-              sliver: MultiSliver(
-                children: <Widget>[
-                  DynamicSliverAppBar(
-                    scrollController: _scrollController,
-                    expanded: _RoundedExpandedWidget(
+            sliver: MultiSliver(
+              children: <Widget>[
+                DynamicSliverAppBar(
+                  scrollController: _scrollController,
+                  expanded: Padding(
+          padding: EdgeInsets.only(
+                top: MediaQuery.of(context).padding.top,
+              ),                    child: _RoundedExpandedWidget(
                       child: widget.expandedWidget,
                     ),
-                    collapsed: widget.collapsedWidget,
                   ),
-                  if (widget.bottom != null)
-                    SliverPinnedHeader(
-                      child: ScrollDynamicElevation(
-                        child: widget.bottom!,
-                      ),
-                    )
-                ],
-              ),
+                  collapsed: widget.collapsedWidget,
+                ),
+                if (widget.headerSlivers != null)
+                  ...widget.headerSlivers!,
+              ],
             ),
           ),
         ],
@@ -136,11 +137,7 @@ class _RoundedExpandedWidget extends StatelessWidget {
     return Container(
       decoration: BoxDecoration(
         color: backgroundColor,
-        borderRadius: const BorderRadius.only(
-          bottomLeft: Radius.circular(20),
-          bottomRight: Radius.circular(20),
-        ),
-      ),
+        borderRadius: Theme.of(context).surfaceStyle.borderRadius(size: BorderRadiusSize.veryLarge),),
       child: child,
     );
   }
