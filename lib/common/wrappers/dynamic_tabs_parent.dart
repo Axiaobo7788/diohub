@@ -33,7 +33,7 @@ class DynamicTabsParent extends StatelessWidget {
 
     return DynamicTabsWrapper(
       controller: controller,
-      tabBarSettings: getTabBarDesign(context,6),
+      tabBarSettings: getTabBarDesign(context, 6),
       tabBuilder: (final BuildContext context, final DynamicTab tab) =>
           tabBuilder?.call(context, tab) ??
           _buildDynamicTabMenuButton(tab: tab, tabController: controller),
@@ -69,7 +69,8 @@ Tab _buildDynamicTabMenuButton({
                         Material(
                   color: Colors.transparent,
                   child: InkWell(
-                    borderRadius: Theme.of(context).surfaceStyle.borderRadiusMedium(),
+                    borderRadius:
+                        Theme.of(context).surfaceStyle.borderRadiusMedium(),
                     onTap: showMenu,
                     child: Padding(
                       padding: const EdgeInsets.all(2),
