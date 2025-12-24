@@ -70,80 +70,64 @@ class ContributionSummaryTab extends StatelessWidget {
     final viewModel = contributionResult.viewModel;
     final highlights = contributionResult.yearlyHighlights;
 
-    return CustomScrollView(
-      slivers: [
-        const SliverToBoxAdapter(child: SizedBox(height: 16)),
-
+    return Column(
+      children: [
         // Calendar section
-        SliverToBoxAdapter(
-          child: FadeAnimationSection(
-            duration: const Duration(milliseconds: 400),
-            child: Padding(
-              padding: const EdgeInsets.all(8.0),
-              child: ContributionCalendarSection(
-                weeks: viewModel.weeks,
-                totalContributions: viewModel.totalContributions,
-                colors: viewModel.colors,
-                availableYears: viewModel.contributionYears,
-                selectedYear: selectedYear,
-                customFromDate: customFromDate,
-                customToDate: customToDate,
-                useCustomRange: useCustomRange,
-                createdAt: createdAt,
-                commits: viewModel.totalCommitContributions,
-                pullRequests: viewModel.totalPullRequestContributions,
-                issues: viewModel.totalIssueContributions,
-                reviews: viewModel.totalPullRequestReviewContributions,
-                contributionResult: contributionResult,
-                onChipTap: onChipTap,
-                userLogin: userName,
-              ),
+        FadeAnimationSection(
+          duration: const Duration(milliseconds: 400),
+          child: Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: ContributionCalendarSection(
+              weeks: viewModel.weeks,
+              totalContributions: viewModel.totalContributions,
+              colors: viewModel.colors,
+              availableYears: viewModel.contributionYears,
+              selectedYear: selectedYear,
+              customFromDate: customFromDate,
+              customToDate: customToDate,
+              useCustomRange: useCustomRange,
+              createdAt: createdAt,
+              commits: viewModel.totalCommitContributions,
+              pullRequests: viewModel.totalPullRequestContributions,
+              issues: viewModel.totalIssueContributions,
+              reviews: viewModel.totalPullRequestReviewContributions,
+              contributionResult: contributionResult,
+              onChipTap: onChipTap,
+              userLogin: userName,
             ),
           ),
         ),
 
         // Activity Overview section with header
-        SliverToBoxAdapter(
-          child: _buildSectionDivider(context),
-        ),
+        _buildSectionDivider(context),
 
-        SliverToBoxAdapter(
-          child: _buildSectionHeader(context, 'Activity Overview'),
-        ),
+        _buildSectionHeader(context, 'Activity Overview'),
 
-        SliverToBoxAdapter(
-          child: FadeAnimationSection(
-            duration: const Duration(milliseconds: 400),
-            child: Padding(
-              padding: const EdgeInsets.all(8.0),
-              child: ActivityOverviewSection(
-                repositories: viewModel.commitContributionsByRepository,
-                commits: viewModel.totalCommitContributions,
-                issues: viewModel.totalIssueContributions,
-                pullRequests: viewModel.totalPullRequestContributions,
-                reviews: viewModel.totalPullRequestReviewContributions,
-              ),
+        FadeAnimationSection(
+          duration: const Duration(milliseconds: 400),
+          child: Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: ActivityOverviewSection(
+              repositories: viewModel.commitContributionsByRepository,
+              commits: viewModel.totalCommitContributions,
+              issues: viewModel.totalIssueContributions,
+              pullRequests: viewModel.totalPullRequestContributions,
+              reviews: viewModel.totalPullRequestReviewContributions,
             ),
           ),
         ),
 
         // Highlights section
         if (highlights.isNotEmpty) ...[
-          SliverToBoxAdapter(
-            child: _buildSectionDivider(context),
-          ),
-          SliverToBoxAdapter(
-            child: ContributionHighlightsSection(
-              yearlyHighlights: highlights,
-              userName: userName,
-              onChipTap: onChipTap,
-            ),
+          _buildSectionDivider(context),
+          ContributionHighlightsSection(
+            yearlyHighlights: highlights,
+            userName: userName,
+            onChipTap: onChipTap,
           ),
         ],
 
-        const SliverToBoxAdapter(
-          child: SizedBox(height: 32),
-        ),
+        const SizedBox(height: 32),
       ],
     );
   }

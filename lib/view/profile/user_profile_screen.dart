@@ -1,18 +1,18 @@
 import 'package:auto_route/annotations.dart';
 import 'package:auto_route/auto_route.dart';
 import 'package:diohub/common/events/events.dart';
+import 'package:diohub/common/misc/animated_tab_bar.dart';
 import 'package:diohub/common/misc/collapsible_app_bar.dart';
 import 'package:diohub/common/misc/collapsible_action_buttons.dart';
-import 'package:diohub/common/misc/collapsible_detail_tiles.dart';
 import 'package:diohub/common/misc/action_card_builder.dart';
 import 'package:diohub/common/misc/detail_tile.dart';
 import 'package:diohub/common/misc/detail_tile_content.dart';
-import 'package:diohub/common/misc/profile_banner.dart';
 import 'package:diohub/common/misc/floating_action_toolbar.dart';
 import 'package:diohub/common/misc/floating_toolbar_wrapper.dart';
 import 'package:diohub/common/misc/scaffold_body.dart';
+import 'package:diohub/common/widgets/expandable_scroll_wrapper.dart';
 import 'package:diohub/common/wrappers/provider_loading_progress_wrapper.dart';
-import 'package:diohub/common/animations/size_expanded_widget.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:diohub/common/wrappers/dynamic_tabs_parent.dart';
 import 'package:diohub/graphql/queries/users/__generated__/user_info.data.gql.dart';
 import 'package:diohub/models/contributions/contribution_query_models.dart';
@@ -100,9 +100,15 @@ class UserProfileScreenState extends State<UserProfileScreen>
   ContributionQueryKey _getContributionProviderKey(final String userName) {
     if (_useCustomRange && _customFromDate != null && _customToDate != null) {
       final DateTime from = DateTime(
-          _customFromDate!.year, _customFromDate!.month, _customFromDate!.day);
+        _customFromDate!.year,
+        _customFromDate!.month,
+        _customFromDate!.day,
+      );
       final DateTime to = DateTime(
-          _customToDate!.year, _customToDate!.month, _customToDate!.day);
+        _customToDate!.year,
+        _customToDate!.month,
+        _customToDate!.day,
+      );
       return ContributionQueryKey.customRange(
         userName: userName,
         from: from,
@@ -139,340 +145,173 @@ class UserProfileScreenState extends State<UserProfileScreen>
   }
 
   Widget _buildCollapsedHeader(
-      final BuildContext context, final GuserInfoData_user userData) => Row(
-      children: <Widget>[
-        ProfileTile.avatar(
-          avatarUrl: userData.avatarUrl.toString(),
-          userLogin: userData.login,
-          size: 20,
-        ),
-        const SizedBox(width: 8),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: <Widget>[
-              Text(
-                userData.name ?? userData.login,
-                style: context.textTheme.bodyLarge,
-                overflow: TextOverflow.ellipsis,
-              ),
-              if (userData.name != null)
-                Text(
-                  userData.login,
-                  style: context.textTheme.bodySmall,
-                  overflow: TextOverflow.ellipsis,
+    final BuildContext context,
+    final GuserInfoData_user userData,
+  ) =>
+      Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: <Widget>[
+            ClipOval(
+              child: CachedNetworkImage(
+                imageUrl: userData.avatarUrl.toString(),
+                width: 24,
+                height: 24,
+                fit: BoxFit.cover,
+                placeholder: (final _, final __) => Container(
+                  width: 24,
+                  height: 24,
+                  color: context.colorScheme.surfaceVariant,
                 ),
-            ],
-          ),
+                errorWidget: (final _, final __, final ___) => Container(
+                  width: 24,
+                  height: 24,
+                  color: context.colorScheme.surfaceVariant,
+                  child: Icon(
+                    Icons.person,
+                    size: 16,
+                    color: context.colorScheme.onSurfaceVariant,
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(width: 8),
+            Flexible(
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: <Widget>[
+                  Flexible(
+                    child: Text(
+                      userData.name ?? userData.login,
+                      style: context.textTheme.bodyLarge?.copyWith(
+                        fontWeight: FontWeight.w600,
+                        fontSize: 15,
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                      maxLines: 1,
+                    ),
+                  ),
+                  if (userData.name != null) ...<Widget>[
+                    const SizedBox(width: 6),
+                    Text(
+                      '•',
+                      style: context.textTheme.bodySmall?.copyWith(
+                        color: context.colorScheme.onSurfaceVariant
+                            .withOpacity(0.5),
+                        fontSize: 13,
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    Flexible(
+                      child: Text(
+                        userData.login,
+                        style: context.textTheme.bodySmall?.copyWith(
+                          color: context.colorScheme.onSurfaceVariant,
+                          fontSize: 13,
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                        maxLines: 1,
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ],
         ),
-      ],
-    );
+      );
 
-  Widget _buildExpandedHeader(final BuildContext context, final GuserInfoData_user userData,
-      final DynamicTabsController? tabController) {
+  Widget _buildExpandedHeader(
+    final BuildContext context,
+    final GuserInfoData_user userData,
+    final DynamicTabsController? tabController,
+  ) {
     const double leadingWidth = 56.0;
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
+      padding: const EdgeInsets.fromLTRB(16, 20, 16, 16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
         children: <Widget>[
-          // User name
+          // User info row with avatar and name
           Padding(
             padding: EdgeInsets.only(left: leadingWidth),
-            child: Column(
+            child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
-                Text(
-                  userData.name ?? userData.login,
-                  overflow: TextOverflow.ellipsis,
-                  style: Theme.of(context).textTheme.headlineSmall!.copyWith(
-                        fontWeight: FontWeight.bold,
+                // Larger avatar in expanded state
+                ClipOval(
+                  child: CachedNetworkImage(
+                    imageUrl: userData.avatarUrl.toString(),
+                    width: 56,
+                    height: 56,
+                    fit: BoxFit.cover,
+                    placeholder: (final _, final __) => Container(
+                      width: 56,
+                      height: 56,
+                      color: context.colorScheme.surfaceVariant,
+                      child: Center(
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: context.colorScheme.primary,
+                        ),
                       ),
+                    ),
+                    errorWidget: (final _, final __, final ___) => Container(
+                      width: 56,
+                      height: 56,
+                      color: context.colorScheme.surfaceVariant,
+                      child: Icon(
+                        Icons.person,
+                        size: 32,
+                        color: context.colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ),
                 ),
-                Text(
-                  userData.login,
-                  style: Theme.of(context).textTheme.bodyMedium,
-                  overflow: TextOverflow.ellipsis,
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: <Widget>[
+                      Text(
+                        userData.name ?? userData.login,
+                        overflow: TextOverflow.ellipsis,
+                        style:
+                            Theme.of(context).textTheme.headlineSmall!.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 24,
+                                  height: 1.2,
+                                ),
+                        maxLines: 2,
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        userData.login,
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                              color: context.colorScheme.onSurfaceVariant,
+                              fontSize: 15,
+                            ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                  ),
                 ),
               ],
             ),
           ),
-        //   const SizedBox(height: 16),
-        //   // Detail tiles section
-        //   _buildDetailTilesSection(context, userData),
-        //   const SizedBox(height: 16),
-        //   // Action buttons
-        //   _buildActionButtons(context, userData, tabController),
         ],
       ),
     );
   }
 
-  Widget _buildDetailTilesSection(
-      final BuildContext context, final GuserInfoData_user userData) => userData.when(
-      user: (final GuserInfoData_user__asUser user) => _buildUserDetailTiles(context, user),
-      orElse: () => _buildOrganizationDetailTiles(context, userData),
-    );
-
-  Widget _buildUserDetailTiles(
-      final BuildContext context, final GuserInfoData_user__asUser userData) {
-    final List<Widget> alwaysVisibleTiles = <Widget>[];
-
-    // Bio
-    if (userData.bio != null && userData.bio!.isNotEmpty) {
-      alwaysVisibleTiles.add(
-        DetailTile(
-          title: 'Bio',
-          actionType: DetailTileActionType.none,
-          child: DetailTileText(userData.bio!),
-        ),
-      );
-    }
-
-    // Pronouns
-    if (userData.pronouns != null && userData.pronouns!.isNotEmpty) {
-      alwaysVisibleTiles.add(
-        DetailTile(
-          title: 'Pronouns',
-          actionType: DetailTileActionType.none,
-          child: DetailTileText(userData.pronouns!),
-        ),
-      );
-    }
-
-    // Location
-    if (userData.location != null) {
-      alwaysVisibleTiles.add(
-        DetailTile(
-          title: 'Location',
-          actionType: DetailTileActionType.none,
-          child: DetailTileText(userData.location!),
-        ),
-      );
-    }
-
-    // Company
-    if (userData.company != null) {
-      alwaysVisibleTiles.add(
-        DetailTile(
-          title: 'Company',
-          actionType: DetailTileActionType.none,
-          child: DetailTileText(userData.company!),
-        ),
-      );
-    }
-
-    // Status
-    if (userData.status != null && userData.status!.message != null) {
-      final String statusText = userData.status!.emoji != null
-          ? '${userData.status!.emoji} ${userData.status!.message}'
-          : userData.status!.message!;
-      alwaysVisibleTiles.add(
-        DetailTile(
-          title: 'Status',
-          actionType: DetailTileActionType.none,
-          child: DetailTileText(statusText),
-        ),
-      );
-    }
-
-    // Available for hire
-    if (userData.isHireable == true) {
-      alwaysVisibleTiles.add(
-        DetailTile(
-          title: 'Available for hire',
-          actionType: DetailTileActionType.none,
-          child: DetailTileText('Yes'),
-        ),
-      );
-    }
-
-    // Joined date
-    alwaysVisibleTiles.add(
-      DetailTile(
-        title: 'Joined',
-        actionType: DetailTileActionType.none,
-        child: DetailTileText(
-          getDate(userData.createdAt.toString(), shorten: false),
-        ),
-      ),
-    );
-
-    final List<Widget> expandableTiles = <Widget>[];
-
-    // Email
-    if (userData.email.isNotEmpty) {
-      expandableTiles.add(
-        DetailTile(
-          title: 'Email',
-          actionType: DetailTileActionType.navigation,
-          onTap: () async {
-            // Handle email tap
-          },
-          child: DetailTileText(userData.email),
-        ),
-      );
-    }
-
-    // Twitter
-    if (userData.twitterUsername != null) {
-      expandableTiles.add(
-        DetailTile(
-          title: 'Twitter',
-          actionType: DetailTileActionType.navigation,
-          onTap: () async {
-            // Handle Twitter tap
-          },
-          child: DetailTileText('@${userData.twitterUsername}'),
-        ),
-      );
-    }
-
-    // Blog
-    if (userData.websiteUrl != null) {
-      expandableTiles.add(
-        DetailTile(
-          title: 'Blog',
-          actionType: DetailTileActionType.navigation,
-          onTap: () {
-            // Handle blog tap
-          },
-          child: DetailTileText(userData.websiteUrl!.toString()),
-        ),
-      );
-    }
-
-    // Organizations
-    if (userData.organizations.totalCount > 0) {
-      expandableTiles.add(
-        DetailTile(
-          title: 'Organizations',
-          actionType: DetailTileActionType.navigation,
-          onTap: () {
-            // TODO: Navigate to organizations list
-          },
-          child: DetailTileText(
-            '${userData.organizations.totalCount} ${userData.organizations.totalCount == 1 ? 'organization' : 'organizations'}',
-          ),
-        ),
-      );
-    }
-
-    // Gists
-    if (userData.gists.totalCount > 0) {
-      expandableTiles.add(
-        DetailTile(
-          title: 'Gists',
-          actionType: DetailTileActionType.navigation,
-          onTap: () {
-            // TODO: Navigate to gists list
-          },
-          child: DetailTileText(
-            '${userData.gists.totalCount} ${userData.gists.totalCount == 1 ? 'gist' : 'gists'}',
-          ),
-        ),
-      );
-    }
-
-    if (alwaysVisibleTiles.isEmpty && expandableTiles.isEmpty) {
-      return const SizedBox.shrink();
-    }
-
-    return CollapsibleDetailTiles(
-      alwaysVisibleTiles: alwaysVisibleTiles,
-      expandableTiles: expandableTiles,
-      visibilityConfig: DetailTilesVisibilityConfig.fixedCount(
-        defaultVisibleCount: alwaysVisibleTiles.length.clamp(0, 3),
-      ),
-      onExpandChanged: (final bool isExpanded) {},
-    );
-  }
-
-  Widget _buildOrganizationDetailTiles(
-      final BuildContext context, final GuserInfoData_user userData) {
-    final List<Widget> alwaysVisibleTiles = <Widget>[];
-
-    // Bio
-    if (userData.bio != null) {
-      alwaysVisibleTiles.add(
-        DetailTile(
-          title: 'Bio',
-          actionType: DetailTileActionType.none,
-          child: DetailTileText(userData.bio!),
-        ),
-      );
-    }
-
-    // Location
-    if (userData.location != null) {
-      alwaysVisibleTiles.add(
-        DetailTile(
-          title: 'Location',
-          actionType: DetailTileActionType.none,
-          child: DetailTileText(userData.location!),
-        ),
-      );
-    }
-
-    // Created date
-    alwaysVisibleTiles.add(
-      DetailTile(
-        title: 'Created',
-        actionType: DetailTileActionType.none,
-        child: DetailTileText(
-          getDate(userData.createdAt.toString(), shorten: false),
-        ),
-      ),
-    );
-
-    final List<Widget> expandableTiles = <Widget>[];
-
-    // Twitter
-    if (userData.twitterUsername != null) {
-      expandableTiles.add(
-        DetailTile(
-          title: 'Twitter',
-          actionType: DetailTileActionType.navigation,
-          onTap: () async {
-            // Handle Twitter tap
-          },
-          child: DetailTileText('@${userData.twitterUsername}'),
-        ),
-      );
-    }
-
-    // Blog
-    if (userData.websiteUrl != null) {
-      expandableTiles.add(
-        DetailTile(
-          title: 'Blog',
-          actionType: DetailTileActionType.navigation,
-          onTap: () {
-            // Handle blog tap
-          },
-          child: DetailTileText(userData.websiteUrl!.toString()),
-        ),
-      );
-    }
-
-    if (alwaysVisibleTiles.isEmpty && expandableTiles.isEmpty) {
-      return const SizedBox.shrink();
-    }
-
-    return CollapsibleDetailTiles(
-      alwaysVisibleTiles: alwaysVisibleTiles,
-      expandableTiles: expandableTiles,
-      visibilityConfig: DetailTilesVisibilityConfig.fixedCount(
-        defaultVisibleCount: alwaysVisibleTiles.length.clamp(0, 3),
-      ),
-      onExpandChanged: (final bool isExpanded) {},
-    );
-  }
-
-  Widget _buildActionButtons(final BuildContext context, final GuserInfoData_user userData,
-      final DynamicTabsController? tabController) {
+  Widget _buildActionButtons(
+    final BuildContext context,
+    final GuserInfoData_user userData,
+    final DynamicTabsController? tabController,
+  ) {
     final bool isViewer = userData.isViewer;
 
     final List<ActionButtonData> primaryActions = <ActionButtonData>[];
@@ -559,7 +398,9 @@ class UserProfileScreenState extends State<UserProfileScreen>
     return CollapsibleActionButtons(
       primaryActions: primaryActions,
       secondaryActions: secondaryActions,
-      actionCardBuilder: (final BuildContext context, final ActionButtonData action) => buildStandardActionCard(
+      actionCardBuilder:
+          (final BuildContext context, final ActionButtonData action) =>
+              buildStandardActionCard(
         context,
         action,
         iconSize: 16,
@@ -573,18 +414,28 @@ class UserProfileScreenState extends State<UserProfileScreen>
     );
   }
 
-  List<ActionButtonData> _buildToolbarActions(final BuildContext context,
-      final GuserInfoData_user userData, final DynamicTabsController? tabController) {
+  List<ActionButtonData> _buildToolbarActions(
+    final BuildContext context,
+    final GuserInfoData_user userData,
+    final DynamicTabsController? tabController,
+  ) {
     final String currentTab = tabController?.activeIdentifier ?? 'Activity';
 
     // Get pinned repositories
-    final List<GuserInfoData_user_pinnedItems_edges?> pinnedItems = userData.pinnedItems.edges?.toList() ??
-        <GuserInfoData_user_pinnedItems_edges?>[];
+    final List<GuserInfoData_user_pinnedItems_edges?> pinnedItems =
+        userData.pinnedItems.edges?.toList() ??
+            <GuserInfoData_user_pinnedItems_edges?>[];
     final List<GrepositoryFields> pinnedRepos = pinnedItems
         .map((final GuserInfoData_user_pinnedItems_edges? edge) => edge?.node)
         .whereType<GuserInfoData_user_pinnedItems_edges_node>()
-        .where((final GuserInfoData_user_pinnedItems_edges_node node) => node.G__typename == 'Repository')
-        .map((final GuserInfoData_user_pinnedItems_edges_node node) => node as GrepositoryFields)
+        .where(
+          (final GuserInfoData_user_pinnedItems_edges_node node) =>
+              node.G__typename == 'Repository',
+        )
+        .map(
+          (final GuserInfoData_user_pinnedItems_edges_node node) =>
+              node as GrepositoryFields,
+        )
         .toList();
     final int pinnedReposCount = pinnedRepos.length;
 
@@ -623,7 +474,10 @@ class UserProfileScreenState extends State<UserProfileScreen>
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.start,
-                  children: pinnedRepos.asMap().entries.map((final MapEntry<int, GrepositoryFields> entry) {
+                  children: pinnedRepos
+                      .asMap()
+                      .entries
+                      .map((final MapEntry<int, GrepositoryFields> entry) {
                     final int index = entry.key;
                     final GrepositoryFields repo = entry.value;
                     final bool isLast = index == pinnedRepos.length - 1;
@@ -682,7 +536,8 @@ class UserProfileScreenState extends State<UserProfileScreen>
                                       overflow: TextOverflow.ellipsis,
                                     ),
                                     if (repo.description != null &&
-                                        repo.description!.isNotEmpty) ...<Widget>[
+                                        repo.description!
+                                            .isNotEmpty) ...<Widget>[
                                       const SizedBox(height: 4),
                                       Text(
                                         repo.description!,
@@ -747,11 +602,12 @@ class UserProfileScreenState extends State<UserProfileScreen>
         visibilityState: currentTab == 'Activity'
             ? ActionButtonVisibilityState.both
             : ActionButtonVisibilityState.none,
-        expandableWidgetBuilder: (final onCollapse) => _buildDateRangeExpandedContent(
-            context,
-            userData,
-            onCollapse,
-          ),
+        expandableWidgetBuilder: (final onCollapse) =>
+            _buildDateRangeExpandedContent(
+          context,
+          userData,
+          onCollapse,
+        ),
       ),
       // Primary - always visible in collapsed state
       MinorActionButton(
@@ -800,7 +656,8 @@ class UserProfileScreenState extends State<UserProfileScreen>
         label: 'Gists',
         category: 'Primary',
         trailing: userData.when(
-          user: (final GuserInfoData_user__asUser user) => buildActionButtonTrailingCount(
+          user: (final GuserInfoData_user__asUser user) =>
+              buildActionButtonTrailingCount(
             context,
             user.gists.totalCount,
           ),
@@ -846,7 +703,8 @@ class UserProfileScreenState extends State<UserProfileScreen>
         label: 'Organizations',
         category: 'Content',
         trailing: userData.when(
-          user: (final GuserInfoData_user__asUser user) => buildActionButtonTrailingCount(
+          user: (final GuserInfoData_user__asUser user) =>
+              buildActionButtonTrailingCount(
             context,
             user.organizations.totalCount,
           ),
@@ -878,7 +736,8 @@ class UserProfileScreenState extends State<UserProfileScreen>
         label: 'Following',
         category: 'Social',
         trailing: userData.when(
-          user: (final GuserInfoData_user__asUser user) => buildActionButtonTrailingCount(
+          user: (final GuserInfoData_user__asUser user) =>
+              buildActionButtonTrailingCount(
             context,
             user.following.totalCount,
           ),
@@ -935,37 +794,41 @@ class UserProfileScreenState extends State<UserProfileScreen>
   }
 
   @override
-  Widget build(final BuildContext context) => provider.ChangeNotifierProvider<UserProvider>(
-      create: (final _) => UserProvider(widget.login),
-      builder: (final BuildContext context, final _) => Scaffold(
-        appBar: provider.Provider.of<UserProvider>(context).status !=
-                Status.loaded
-            ? AppBar(elevation: 0)
-            : null,
-        body: ScaffoldBody(
-          child: ProviderLoadingProgressWrapper<UserProvider>(
-            childBuilder: (final BuildContext context, final UserProvider value) {
-              data = value.data;
-      
-              return _UserProfileTabsContent(
-                userData: value.data,
-                parentState: this,
-                buildCollapsedHeader: _buildCollapsedHeader,
-                buildExpandedHeader: _buildExpandedHeader,
-                buildToolbarActions: _buildToolbarActions,
-                buildActionButtons: _buildActionButtons,
-                selectedYear: _selectedYear,
-                customFromDate: _customFromDate,
-                customToDate: _customToDate,
-                useCustomRange: _useCustomRange,
-                onYearChanged: _onYearChanged,
-                onCustomRangeChanged: _onCustomRangeChanged,
-              );
-            },
+  Widget build(final BuildContext context) =>
+      provider.ChangeNotifierProvider<UserProvider>(
+        create: (final _) => UserProvider(widget.login),
+        builder: (final BuildContext context, final _) => SafeArea(
+          child: Scaffold(
+            appBar: provider.Provider.of<UserProvider>(context).status !=
+                    Status.loaded
+                ? AppBar(elevation: 0)
+                : null,
+            body: ScaffoldBody(
+              child: ProviderLoadingProgressWrapper<UserProvider>(
+                childBuilder:
+                    (final BuildContext context, final UserProvider value) {
+                  data = value.data;
+
+                  return _UserProfileTabsContent(
+                    userData: value.data,
+                    parentState: this,
+                    buildCollapsedHeader: _buildCollapsedHeader,
+                    buildExpandedHeader: _buildExpandedHeader,
+                    buildToolbarActions: _buildToolbarActions,
+                    buildActionButtons: _buildActionButtons,
+                    selectedYear: _selectedYear,
+                    customFromDate: _customFromDate,
+                    customToDate: _customToDate,
+                    useCustomRange: _useCustomRange,
+                    onYearChanged: _onYearChanged,
+                    onCustomRangeChanged: _onCustomRangeChanged,
+                  );
+                },
+              ),
+            ),
           ),
         ),
-      ),
-    );
+      );
 }
 
 /// ConsumerWidget wrapper for date range expanded content
@@ -1046,13 +909,15 @@ class _DateRangeExpandedContent extends ConsumerWidget {
     final ThemeData theme = Theme.of(context);
     final ColorScheme colorScheme = theme.colorScheme;
     final ContributionQueryKey providerKey = getProviderKey(userName);
-    final AsyncValue<ContributionCollectionResult> contributionsAsync = ref.watch(
+    final AsyncValue<ContributionCollectionResult> contributionsAsync =
+        ref.watch(
       userContributionsProvider(providerKey),
     );
 
     // Watch the last year provider separately to get available years
     // This ensures years list doesn't disappear when current provider is loading
-    final ContributionQueryKey lastYearKey = ContributionQueryKey.lastYear(userName);
+    final ContributionQueryKey lastYearKey =
+        ContributionQueryKey.lastYear(userName);
     final AsyncValue<ContributionCollectionResult> lastYearAsync = ref.watch(
       userContributionsProvider(lastYearKey),
     );
@@ -1060,14 +925,17 @@ class _DateRangeExpandedContent extends ConsumerWidget {
     // Get available years from the last year provider (which always has all years)
     // Fall back to current provider if last year provider is not available
     final List<int> availableYears = lastYearAsync.when(
-      data: (final ContributionCollectionResult result) => result.viewModel.contributionYears,
+      data: (final ContributionCollectionResult result) =>
+          result.viewModel.contributionYears,
       loading: () => contributionsAsync.when(
-        data: (final ContributionCollectionResult result) => result.viewModel.contributionYears,
+        data: (final ContributionCollectionResult result) =>
+            result.viewModel.contributionYears,
         loading: () => <int>[],
         error: (final _, final __) => <int>[],
       ),
       error: (final _, final __) => contributionsAsync.when(
-        data: (final ContributionCollectionResult result) => result.viewModel.contributionYears,
+        data: (final ContributionCollectionResult result) =>
+            result.viewModel.contributionYears,
         loading: () => <int>[],
         error: (final _, final __) => <int>[],
       ),
@@ -1161,7 +1029,10 @@ class _DateRangeExpandedContent extends ConsumerWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: optionTiles.asMap().entries.map((final MapEntry<int, Widget> entry) {
+          children: optionTiles
+              .asMap()
+              .entries
+              .map((final MapEntry<int, Widget> entry) {
             final int index = entry.key;
             final Widget tile = entry.value;
             final bool isLast = index == optionTiles.length - 1;
@@ -1193,58 +1064,59 @@ class _DateRangeExpandedContent extends ConsumerWidget {
     required final String title,
     required final bool isSelected,
     required final VoidCallback onTap,
-  }) => Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: Theme.of(context).surfaceStyle.borderRadiusMedium(),
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-          decoration: BoxDecoration(
-            color: isSelected
-                ? colorScheme.primaryContainer.withOpacity(0.3)
-                : Colors.transparent,
-            borderRadius: Theme.of(context).surfaceStyle.borderRadiusMedium(),
-            border: isSelected
-                ? Border.all(
-                    color: colorScheme.primary.withOpacity(0.5),
-                    width: 1,
-                  )
-                : null,
-          ),
-          child: Row(
-            children: <Widget>[
-              Icon(
-                icon,
-                size: 18,
-                color: isSelected
-                    ? colorScheme.primary
-                    : colorScheme.onSurfaceVariant,
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Text(
-                  title,
-                  style: theme.textTheme.bodyMedium?.copyWith(
-                    color: isSelected
-                        ? colorScheme.primary
-                        : colorScheme.onSurface,
-                    fontWeight:
-                        isSelected ? FontWeight.w600 : FontWeight.normal,
+  }) =>
+      Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: Theme.of(context).surfaceStyle.borderRadiusMedium(),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            decoration: BoxDecoration(
+              color: isSelected
+                  ? colorScheme.primaryContainer.withOpacity(0.3)
+                  : Colors.transparent,
+              borderRadius: Theme.of(context).surfaceStyle.borderRadiusMedium(),
+              border: isSelected
+                  ? Border.all(
+                      color: colorScheme.primary.withOpacity(0.5),
+                      width: 1,
+                    )
+                  : null,
+            ),
+            child: Row(
+              children: <Widget>[
+                Icon(
+                  icon,
+                  size: 18,
+                  color: isSelected
+                      ? colorScheme.primary
+                      : colorScheme.onSurfaceVariant,
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    title,
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      color: isSelected
+                          ? colorScheme.primary
+                          : colorScheme.onSurface,
+                      fontWeight:
+                          isSelected ? FontWeight.w600 : FontWeight.normal,
+                    ),
                   ),
                 ),
-              ),
-              if (isSelected)
-                Icon(
-                  Icons.check_circle,
-                  size: 20,
-                  color: colorScheme.primary,
-                ),
-            ],
+                if (isSelected)
+                  Icon(
+                    Icons.check_circle,
+                    size: 20,
+                    color: colorScheme.primary,
+                  ),
+              ],
+            ),
           ),
         ),
-      ),
-    );
+      );
 }
 
 class _UserProfileTabsContent extends StatefulWidget {
@@ -1399,62 +1271,280 @@ class _UserProfileTabsContentState extends State<_UserProfileTabsContent>
 
   @override
   Widget build(final BuildContext context) => FloatingToolbarWrapper(
-      toolbarBuilder: (final ValueNotifier<ScrollNotification?> scrollNotificationNotifier) {
-        return ListenableBuilder(
-          listenable: tabController ?? ValueNotifier(''),
-          builder: (final BuildContext context, final _) {
-            return FloatingActionToolbar(
-              key: const ValueKey('user_profile_toolbar'),
-              actions: widget.buildToolbarActions(
-                context,
-                widget.userData,
-                tabController,
-              ),
-              actionCardBuilder: (final BuildContext context, final ActionButtonData action) =>
-                  buildStandardActionCard(context, action),
-              position: FloatingPosition.bottom,
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              bottomPadding: 0.0,
-              title: widget.userData.name ?? widget.userData.login,
-              subtitle:
-                  widget.userData.name != null ? widget.userData.login : null,
-              scrollNotificationNotifier: scrollNotificationNotifier,
-              onExpandChanged: (final bool isExpanded) {},
-            );
-          },
-        );
-      },
-      child: tabController != null
-          ? DynamicTabsParent(
-              controller: tabController!,
-              builder: (final BuildContext context, final PreferredSizeWidget tabBar, final tabView) => DynamicScroll(
-                collapsedWidget: widget.buildCollapsedHeader(
-                  context,
-                  widget.userData,
-                ),
-                expandedWidget: widget.buildExpandedHeader(
+        toolbarBuilder: (
+          final ValueNotifier<ScrollNotification?> scrollNotificationNotifier,
+        ) {
+          return ListenableBuilder(
+            listenable: tabController ?? ValueNotifier(''),
+            builder: (final BuildContext context, final _) {
+              return FloatingActionToolbar(
+                key: const ValueKey('user_profile_toolbar'),
+                actions: widget.buildToolbarActions(
                   context,
                   widget.userData,
                   tabController,
                 ),
-                actions: <Widget>[
-                  // Share button can go here
-                ],
-                bottom: SizeExpandedSection(
-                  expand: tabController!.activeLength > 1,
-                  child: Column(
-                    children: <Widget>[
-                      const SizedBox(height: 8),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: <Widget>[tabBar],
+                actionCardBuilder: (
+                  final BuildContext context,
+                  final ActionButtonData action,
+                ) =>
+                    buildStandardActionCard(context, action),
+                position: FloatingPosition.bottom,
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                bottomPadding: 0.0,
+                title: widget.userData.name ?? widget.userData.login,
+                subtitle:
+                    widget.userData.name != null ? widget.userData.login : null,
+                scrollNotificationNotifier: scrollNotificationNotifier,
+                onExpandChanged: (final bool isExpanded) {},
+              );
+            },
+          );
+        },
+        child: tabController != null
+            ? ExpandOnScrollWrapper(
+                collapsedWidget:
+                    (final BuildContext context, final double pullProgress) =>
+                        PullToExpandIndicator(
+                  pullProgress: pullProgress,
+                ),
+                expandedWidget: (
+                  final BuildContext context,
+                  final VoidCallback onCollapse,
+                ) =>
+                    ExpandableMetadataContent(
+                  onCollapse: onCollapse,
+                  // title: widget.userData.login,
+                  children: _buildUserMetadataTiles(),
+                ),
+                builder: (
+                  final BuildContext context,
+                  final Widget expandOnScrollWidget,
+                ) =>
+                    DynamicTabsParent(
+                  controller: tabController!,
+                  builder: (
+                    final BuildContext context,
+                    final PreferredSizeWidget tabBar,
+                    final tabView,
+                  ) =>
+                      DynamicScroll(
+                    collapsedWidget: widget.buildCollapsedHeader(
+                      context,
+                      widget.userData,
+                    ),
+                    expandedWidget: widget.buildExpandedHeader(
+                      context,
+                      widget.userData,
+                      tabController,
+                    ),
+                    actions: <Widget>[
+                      // Share button can go here
+                    ],
+                    headerSlivers: [
+                      SliverToBoxAdapter(
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 4),
+                          child: expandOnScrollWidget,
+                        ),
+                      ),
+                      AnimatedTabBar(
+                        showTabBar: tabController!.activeLength > 1,
+                        tabBar: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 16),
+                          child: tabBar,
+                        ),
                       ),
                     ],
+                    bodyBuilder: tabView,
                   ),
                 ),
-                bodyBuilder: tabView,
-              ),
-            )
-          : const SizedBox.shrink(),
+              )
+            : const SizedBox.shrink(),
+      );
+
+  /// Builds metadata tiles for the user
+  List<Widget> _buildUserMetadataTiles() {
+    final List<Widget> tiles = <Widget>[];
+
+    return widget.userData.when(
+      user: (final GuserInfoData_user__asUser user) {
+        // Bio
+        if (user.bio != null && user.bio!.isNotEmpty) {
+          tiles.add(
+            DetailTile(
+              title: 'Bio',
+              actionType: DetailTileActionType.none,
+              child: DetailTileText(user.bio!),
+            ),
+          );
+        }
+
+        // Pronouns
+        if (user.pronouns != null && user.pronouns!.isNotEmpty) {
+          tiles.add(
+            DetailTile(
+              title: 'Pronouns',
+              actionType: DetailTileActionType.none,
+              child: DetailTileText(user.pronouns!),
+            ),
+          );
+        }
+
+        // Location
+        if (user.location != null) {
+          tiles.add(
+            DetailTile(
+              title: 'Location',
+              actionType: DetailTileActionType.none,
+              child: DetailTileText(user.location!),
+            ),
+          );
+        }
+
+        // Company
+        if (user.company != null) {
+          tiles.add(
+            DetailTile(
+              title: 'Company',
+              actionType: DetailTileActionType.none,
+              child: DetailTileText(user.company!),
+            ),
+          );
+        }
+
+        // Status
+        if (user.status != null && user.status!.message != null) {
+          final String statusText = user.status!.emoji != null
+              ? '${user.status!.emoji} ${user.status!.message}'
+              : user.status!.message!;
+          tiles.add(
+            DetailTile(
+              title: 'Status',
+              actionType: DetailTileActionType.none,
+              child: DetailTileText(statusText),
+            ),
+          );
+        }
+
+        // Available for hire
+        if (user.isHireable == true) {
+          tiles.add(
+            DetailTile(
+              title: 'Available for hire',
+              actionType: DetailTileActionType.none,
+              child: DetailTileText('Yes'),
+            ),
+          );
+        }
+
+        // Email
+        if (user.email.isNotEmpty) {
+          tiles.add(
+            DetailTile(
+              title: 'Email',
+              actionType: DetailTileActionType.navigation,
+              onTap: () {
+                // Handle email tap
+              },
+              child: DetailTileText(user.email),
+            ),
+          );
+        }
+
+        // Twitter
+        if (user.twitterUsername != null) {
+          tiles.add(
+            DetailTile(
+              title: 'Twitter',
+              actionType: DetailTileActionType.navigation,
+              onTap: () {
+                // Handle Twitter tap
+              },
+              child: DetailTileText('@${user.twitterUsername}'),
+            ),
+          );
+        }
+
+        // Website
+        if (user.websiteUrl != null) {
+          tiles.add(
+            DetailTile(
+              title: 'Website',
+              actionType: DetailTileActionType.navigation,
+              onTap: () {
+                // Handle website tap
+              },
+              child: DetailTileText(user.websiteUrl!.toString()),
+            ),
+          );
+        }
+
+        // Joined date
+        tiles.add(
+          DetailTile(
+            title: 'Joined',
+            actionType: DetailTileActionType.none,
+            child: DetailTileText(
+              getDate(user.createdAt.toString(), shorten: false),
+            ),
+          ),
+        );
+
+        return tiles;
+      },
+      orElse: () {
+        // Organization metadata
+        // Bio
+        if (widget.userData.bio != null) {
+          tiles.add(
+            DetailTile(
+              title: 'Bio',
+              actionType: DetailTileActionType.none,
+              child: DetailTileText(widget.userData.bio!),
+            ),
+          );
+        }
+
+        // Location
+        if (widget.userData.location != null) {
+          tiles.add(
+            DetailTile(
+              title: 'Location',
+              actionType: DetailTileActionType.none,
+              child: DetailTileText(widget.userData.location!),
+            ),
+          );
+        }
+
+        // Website
+        if (widget.userData.websiteUrl != null) {
+          tiles.add(
+            DetailTile(
+              title: 'Website',
+              actionType: DetailTileActionType.navigation,
+              onTap: () {
+                // Handle website tap
+              },
+              child: DetailTileText(widget.userData.websiteUrl!.toString()),
+            ),
+          );
+        }
+
+        // Created date
+        tiles.add(
+          DetailTile(
+            title: 'Created',
+            actionType: DetailTileActionType.none,
+            child: DetailTileText(
+              getDate(widget.userData.createdAt.toString(), shorten: false),
+            ),
+          ),
+        );
+
+        return tiles;
+      },
     );
+  }
 }
