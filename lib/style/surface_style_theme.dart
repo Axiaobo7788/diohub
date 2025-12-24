@@ -76,7 +76,7 @@ class SurfaceStyleTheme extends ThemeExtension<SurfaceStyleTheme> {
   final Color? backgroundColor;
 
   /// Get radius value for a given size
-  double radius(BorderRadiusSize size) {
+  double radius(final BorderRadiusSize size) {
     switch (size) {
       case BorderRadiusSize.soft:
         return softRadius;
@@ -93,8 +93,8 @@ class SurfaceStyleTheme extends ThemeExtension<SurfaceStyleTheme> {
 
   /// Create a BorderRadius based on size and corner sides
   BorderRadius borderRadius({
-    required BorderRadiusSize size,
-    List<CornerSide>? corners,
+    required final BorderRadiusSize size,
+    final List<CornerSide>? corners,
   }) {
     final r = radius(size);
     final cs = corners ?? const [CornerSide.all];
@@ -105,7 +105,7 @@ class SurfaceStyleTheme extends ThemeExtension<SurfaceStyleTheme> {
 
     return BorderRadius.only(
       topLeft: cs.any(
-        (c) =>
+        (final c) =>
             c == CornerSide.topLeft ||
             c == CornerSide.top ||
             c == CornerSide.left,
@@ -113,7 +113,7 @@ class SurfaceStyleTheme extends ThemeExtension<SurfaceStyleTheme> {
           ? Radius.circular(r)
           : Radius.zero,
       topRight: cs.any(
-        (c) =>
+        (final c) =>
             c == CornerSide.topRight ||
             c == CornerSide.top ||
             c == CornerSide.right,
@@ -121,7 +121,7 @@ class SurfaceStyleTheme extends ThemeExtension<SurfaceStyleTheme> {
           ? Radius.circular(r)
           : Radius.zero,
       bottomLeft: cs.any(
-        (c) =>
+        (final c) =>
             c == CornerSide.bottomLeft ||
             c == CornerSide.bottom ||
             c == CornerSide.left,
@@ -129,7 +129,7 @@ class SurfaceStyleTheme extends ThemeExtension<SurfaceStyleTheme> {
           ? Radius.circular(r)
           : Radius.zero,
       bottomRight: cs.any(
-        (c) =>
+        (final c) =>
             c == CornerSide.bottomRight ||
             c == CornerSide.bottom ||
             c == CornerSide.right,
@@ -141,8 +141,8 @@ class SurfaceStyleTheme extends ThemeExtension<SurfaceStyleTheme> {
 
   /// Create a SmoothBorderRadius based on size and corner sides (for figma squircle)
   SmoothBorderRadius smoothBorderRadius({
-    required BorderRadiusSize size,
-    List<CornerSide>? corners,
+    required final BorderRadiusSize size,
+    final List<CornerSide>? corners,
   }) {
     final r = radius(size);
     final s = cornerSmoothing;
@@ -156,25 +156,25 @@ class SurfaceStyleTheme extends ThemeExtension<SurfaceStyleTheme> {
     }
 
     final topLeft = cs.any(
-      (c) =>
+      (final c) =>
           c == CornerSide.topLeft ||
           c == CornerSide.top ||
           c == CornerSide.left,
     );
     final topRight = cs.any(
-      (c) =>
+      (final c) =>
           c == CornerSide.topRight ||
           c == CornerSide.top ||
           c == CornerSide.right,
     );
     final bottomLeft = cs.any(
-      (c) =>
+      (final c) =>
           c == CornerSide.bottomLeft ||
           c == CornerSide.bottom ||
           c == CornerSide.left,
     );
     final bottomRight = cs.any(
-      (c) =>
+      (final c) =>
           c == CornerSide.bottomRight ||
           c == CornerSide.bottom ||
           c == CornerSide.right,
@@ -197,39 +197,39 @@ class SurfaceStyleTheme extends ThemeExtension<SurfaceStyleTheme> {
   }
 
   /// Helper method: Get BorderRadius with soft size (4px default)
-  BorderRadius borderRadiusSoft({List<CornerSide>? corners}) =>
+  BorderRadius borderRadiusSoft({final List<CornerSide>? corners}) =>
       borderRadius(size: BorderRadiusSize.soft, corners: corners);
 
   /// Helper method: Get BorderRadius with small size (10px default)
-  BorderRadius borderRadiusSmall({List<CornerSide>? corners}) =>
+  BorderRadius borderRadiusSmall({final List<CornerSide>? corners}) =>
       borderRadius(size: BorderRadiusSize.small, corners: corners);
 
   /// Helper method: Get BorderRadius with medium size (14px default)
-  BorderRadius borderRadiusMedium({List<CornerSide>? corners}) =>
+  BorderRadius borderRadiusMedium({final List<CornerSide>? corners}) =>
       borderRadius(size: BorderRadiusSize.medium, corners: corners);
 
   /// Helper method: Get BorderRadius with large size (18px default)
-  BorderRadius borderRadiusLarge({List<CornerSide>? corners}) =>
+  BorderRadius borderRadiusLarge({final List<CornerSide>? corners}) =>
       borderRadius(size: BorderRadiusSize.large, corners: corners);
 
   /// Helper method: Get BorderRadius with very large size (28px default)
-  BorderRadius borderRadiusVeryLarge({List<CornerSide>? corners}) =>
+  BorderRadius borderRadiusVeryLarge({final List<CornerSide>? corners}) =>
       borderRadius(size: BorderRadiusSize.veryLarge, corners: corners);
 
   @override
   SurfaceStyleTheme copyWith({
-    BorderShapeType? shapeType,
-    double? softRadius,
-    double? smallRadius,
-    double? mediumRadius,
-    double? largeRadius,
-    double? veryLargeRadius,
-    double? cornerSmoothing,
-    double? borderWidth,
-    Color? borderColor,
-    List<BoxShadow>? shadow,
-    EdgeInsetsGeometry? padding,
-    Color? backgroundColor,
+    final BorderShapeType? shapeType,
+    final double? softRadius,
+    final double? smallRadius,
+    final double? mediumRadius,
+    final double? largeRadius,
+    final double? veryLargeRadius,
+    final double? cornerSmoothing,
+    final double? borderWidth,
+    final Color? borderColor,
+    final List<BoxShadow>? shadow,
+    final EdgeInsetsGeometry? padding,
+    final Color? backgroundColor,
   }) {
     return SurfaceStyleTheme(
       shapeType: shapeType ?? this.shapeType,
@@ -249,8 +249,8 @@ class SurfaceStyleTheme extends ThemeExtension<SurfaceStyleTheme> {
 
   @override
   SurfaceStyleTheme lerp(
-    covariant ThemeExtension<SurfaceStyleTheme>? other,
-    double t,
+    covariant final ThemeExtension<SurfaceStyleTheme>? other,
+    final double t,
   ) {
     if (other is! SurfaceStyleTheme) return this;
     return SurfaceStyleTheme(
@@ -275,4 +275,10 @@ class SurfaceStyleTheme extends ThemeExtension<SurfaceStyleTheme> {
 extension SurfaceStyleThemeEx on ThemeData {
   SurfaceStyleTheme get surfaceStyle =>
       extension<SurfaceStyleTheme>() ?? const SurfaceStyleTheme();
+}
+
+
+extension SurfaceShapeResolverContextEx on BuildContext {
+  BorderRadius borderRadius(final BorderRadiusSize size) =>
+    Theme.of(this).surfaceStyle.borderRadius(size: size);
 }
