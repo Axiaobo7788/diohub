@@ -14,12 +14,11 @@ import 'package:diohub/services/authentication/auth_service.dart';
 import 'package:diohub/style/surface_style_theme.dart';
 import 'package:diohub/common/misc/surface_shape_resolver.dart';
 import 'package:diohub/utils/device_display_mode.dart';
-import 'package:diohub/view/demo/expandable_scroll_demo_screen.dart';
-import 'package:diohub/view/issues_pulls/expandable_scroll_options_demo.dart';
 import 'package:dynamic_color/dynamic_color.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_portal/flutter_portal.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart' as riverpod;
@@ -40,6 +39,8 @@ Future<void> debugURLLauncher() async {
 }
 
 void main() async {
+    // debugPaintSizeEnabled = true;
+
   ChuckerFlutter.showNotification = false;
   // ChuckerFlutter.showOnRelease = true;
   WidgetsFlutterBinding.ensureInitialized();
@@ -62,15 +63,13 @@ void main() async {
   uniLinkStream();
   final bool auth = await AuthRepository().isAuthenticated;
   // runApp(NewWidget());
-  // runApp(
-  //   MyApp(
-  //     authenticated: auth,
-  //     // initDeepLink: initLink,
-  //   ),
-  // );
-   runApp(
-    ExpandableScrollOptionsDemo(),
+  runApp(
+    MyApp(
+      authenticated: auth,
+      // initDeepLink: initLink,
+    ),
   );
+  
   await debugURLLauncher();
 }
 

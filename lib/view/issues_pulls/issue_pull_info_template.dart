@@ -730,10 +730,10 @@ class IssuePullInfoTemplateState extends State<IssuePullInfoTemplate>
                 collapsedWidget: _buildCollapsedHeader(context),
                 expandedWidget: _buildExpandedHeader(context),
                 // pinnedWidget: _buildConversationButton(context),
-                bottom: AnimatedTabBar(
+                headerSlivers: [ AnimatedTabBar(
                   showTabBar: dynamicTabsController.activeLength > 1,
                   tabBar: buildTabsView(tabBar),
-                ),
+                )],
                 bodyBuilder: tabViewBuilder,
               ),
             ),
