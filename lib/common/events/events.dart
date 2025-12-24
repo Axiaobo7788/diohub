@@ -16,6 +16,10 @@ import 'package:diohub/common/wrappers/infinite_scroll_wrapper.dart';
 import 'package:diohub/models/commits/commit_card_data_model.dart';
 import 'package:diohub/models/events/events_model.dart' hide Key, State;
 import 'package:diohub/models/issues/issue_card_data_model.dart';
+import 'package:diohub/models/issues/issue_model.dart';
+import 'package:diohub/models/pull_requests/pull_request_model.dart';
+import 'package:diohub/models/repositories/repository_model.dart';
+import 'package:diohub/models/users/user_info_model.dart';
 import 'package:diohub/providers/users/current_user_provider.dart';
 import 'package:diohub/services/activity/events_service.dart';
 import 'package:diohub/utils/utils.dart';
@@ -100,16 +104,16 @@ class _EventsState extends State<Events> {
     final EventsModel item = data.item;
 
     // Determine if timeline should break based on user changes
-    final currentUser = item.actor?.login;
-    final previousUser = data.previousItem?.actor?.login;
-    final nextUser = data.nextItem?.actor?.login;
+    final String? currentUser = item.actor?.login;
+    final String? previousUser = data.previousItem?.actor?.login;
+    final String? nextUser = data.nextItem?.actor?.login;
     final bool shouldShowUserHeader = widget.specificUser == null;
 
-    final isFirstInUserGroup = previousUser != currentUser || data.index == 0;
-    final isLastInUserGroup = nextUser != currentUser || data.isCurrentlyLast;
+    final bool isFirstInUserGroup = previousUser != currentUser || data.index == 0;
+    final bool isLastInUserGroup = nextUser != currentUser || data.isCurrentlyLast;
 
     return Column(
-      children: [
+      children: <Widget>[
         // User group header (only show for first item in group)
         if (shouldShowUserHeader && isFirstInUserGroup)
           _buildUserGroupHeader(
@@ -132,21 +136,21 @@ class _EventsState extends State<Events> {
     );
   }
 
-late final infinitePaginationController =InfinitePaginationController<EventsModel>(
+late final InfinitePaginationController<EventsModel> infinitePaginationController =InfinitePaginationController<EventsModel>(
         future: (final ScrollWrapperFutureArguments<EventsModel> data) => _fetchEvents(context, data),
         builder: _buildEventItem,
         filterFn: _filterEvents,
         // Calculate padding dynamically with SafeArea support
-        padding: (final BuildContext context) {
-          final bottomPadding = MediaQuery.of(context).padding.bottom;
+        paddingBuilder: (final BuildContext context) {
+          final double bottomPadding = MediaQuery.of(context).padding.bottom;
           return EdgeInsets.only(
-            top: 16,
+            // top: 8,
             bottom: 16 + bottomPadding,
           );
         },
         firstPageLoadingBuilder: (final BuildContext context) {
           // Calculate bottom padding at build time when context is available
-          final bottomPadding = MediaQuery.of(context).padding.bottom;
+          final double bottomPadding = MediaQuery.of(context).padding.bottom;
           return _KeepAlive(
             child: TimelineShimmerList(
               itemCount: 5,
@@ -172,8 +176,8 @@ late final infinitePaginationController =InfinitePaginationController<EventsMode
     required final bool isFirstInUserGroup,
     required final bool isLastInUserGroup,
   }) {
-    final date = item.createdAt;
-    final eventType = item.type;
+    final DateTime? date = item.createdAt;
+    final EventsType? eventType = item.type;
 
     String actionText;
     Widget content;
@@ -181,12 +185,12 @@ late final infinitePaginationController =InfinitePaginationController<EventsMode
     switch (item.type) {
       case EventsType.PushEvent:
         actionText = 'pushed commits';
-        final commitData = CommitCardDataModel.fromPushEvent(item);
+        final CommitCardDataModel commitData = CommitCardDataModel.fromPushEvent(item);
         // Extract branch name from ref (e.g., "refs/heads/main" -> "main")
         // for RepoCardLoading which shows it in the card
-        final branchName = item.payload?.ref?.split('/').last;
+        final String? branchName = item.payload?.ref?.split('/').last;
         // Pass commit SHA (head) as ref - this is the latest commit SHA
-        final commitSha = item.payload?.head;
+        final String? commitSha = item.payload?.head;
         content = _KeepAlive(
           child: TimelineCommitContent(
             commitData: commitData,
@@ -205,7 +209,7 @@ late final infinitePaginationController =InfinitePaginationController<EventsMode
         );
 
       case EventsType.ForkEvent:
-        final forkee = item.payload?.forkee;
+        final RepositoryModel? forkee = item.payload?.forkee;
         actionText = 'forked repository';
         content = _KeepAlive(
           child: TimelineForkContent(
@@ -217,8 +221,8 @@ late final infinitePaginationController =InfinitePaginationController<EventsMode
         );
 
       case EventsType.CreateEvent:
-        final refType = item.payload?.refType;
-        final ref = item.payload?.ref;
+        final RefType? refType = item.payload?.refType;
+        final String? ref = item.payload?.ref;
 
         if (refType == RefType.REPOSITORY) {
           actionText = 'created a repository';
@@ -240,7 +244,7 @@ late final infinitePaginationController =InfinitePaginationController<EventsMode
             ),
           );
         } else {
-          final refTypeName = refTypeValues.reverse![refType] ?? 'tag';
+          final String refTypeName = refTypeValues.reverse![refType] ?? 'tag';
           actionText = 'created a $refTypeName';
           content = _KeepAlive(
             child: TimelineCreateContent(
@@ -253,10 +257,10 @@ late final infinitePaginationController =InfinitePaginationController<EventsMode
         }
 
       case EventsType.DeleteEvent:
-        final refType = item.payload?.refType;
-        final ref = item.payload?.ref;
-        final refTypeName = refTypeValues.reverse![refType] ?? 'branch';
-        final refName = ref?.split('/').last ?? '';
+        final RefType? refType = item.payload?.refType;
+        final String? ref = item.payload?.ref;
+        final String refTypeName = refTypeValues.reverse![refType] ?? 'branch';
+        final String refName = ref?.split('/').last ?? '';
 
         actionText = 'deleted a $refTypeName';
 
@@ -279,8 +283,8 @@ late final infinitePaginationController =InfinitePaginationController<EventsMode
         );
 
       case EventsType.MemberEvent:
-        final member = item.payload?.member;
-        final action = item.payload?.action ?? 'added';
+        final UserInfoModel? member = item.payload?.member;
+        final String action = item.payload?.action ?? 'added';
         actionText = '$action a member';
         content = _KeepAlive(
           child: TimelineMemberContent(
@@ -292,16 +296,16 @@ late final infinitePaginationController =InfinitePaginationController<EventsMode
         );
 
       case EventsType.IssuesEvent:
-        final issue = item.payload?.issue;
-        final action = item.payload?.action ?? 'opened';
+        final IssueModel? issue = item.payload?.issue;
+        final String action = item.payload?.action ?? 'opened';
         actionText = '$action an issue';
         content = TimelineIssueContent(
           issueData: IssueCardDataModel.fromIssueModel(issue!),
         );
 
       case EventsType.IssueCommentEvent:
-        final issue = item.payload?.issue;
-        final comment = item.payload?.comment;
+        final IssueModel? issue = item.payload?.issue;
+        final Comment? comment = item.payload?.comment;
         actionText = 'commented on issue';
         content = TimelineIssueContent(
           issueData: IssueCardDataModel.fromIssueModel(issue!),
@@ -310,8 +314,8 @@ late final infinitePaginationController =InfinitePaginationController<EventsMode
         );
 
       case EventsType.PullRequestEvent:
-        final pr = item.payload?.pullRequest;
-        final action = item.payload?.action ?? 'opened';
+        final PullRequestModel? pr = item.payload?.pullRequest;
+        final String action = item.payload?.action ?? 'opened';
         final bool isMergedAction = action
             .toLowerCase()
             .contains('merged'); // payload can be "merged a pull request"
@@ -324,10 +328,10 @@ late final infinitePaginationController =InfinitePaginationController<EventsMode
           actionText = '$action a pull request';
         }
         // Extract head (from) and base (to) branch refs
-        final fromRef = pr?.head?.ref; // Source branch
-        final toRef = pr?.base?.ref; // Target/base branch
+        final String? fromRef = pr?.head?.ref; // Source branch
+        final String? toRef = pr?.base?.ref; // Target/base branch
         // Use PR URL to fetch full data via SimplePullLoadingCard
-        final prUrl = pr?.htmlUrl ?? pr?.url ?? '';
+        final String prUrl = pr?.htmlUrl ?? pr?.url ?? '';
         content = _KeepAlive(
           child: TimelinePullRequestContent(
             prUrl: prUrl,
@@ -365,7 +369,7 @@ late final infinitePaginationController =InfinitePaginationController<EventsMode
       case EventsType.PushEvent:
         return Octicons.git_commit;
       case EventsType.PullRequestEvent:
-        final actionLower = actionText.toLowerCase();
+        final String actionLower = actionText.toLowerCase();
         // Icon based on action text only (not current state)
         if (actionLower.contains('merged')) {
           return Octicons.git_merge;
@@ -377,7 +381,7 @@ late final infinitePaginationController =InfinitePaginationController<EventsMode
           return Octicons.git_pull_request;
         }
       case EventsType.IssuesEvent:
-        final actionLower = actionText.toLowerCase();
+        final String actionLower = actionText.toLowerCase();
         // Icon based on action text only (not current state)
         if (actionLower.contains('closed')) {
           return Octicons.issue_closed;
@@ -405,12 +409,12 @@ late final infinitePaginationController =InfinitePaginationController<EventsMode
 
   Color _getEventIconColor(final BuildContext context, final EventsType? type,
       final EventsModel item, final String actionText) {
-    final colorScheme = context.colorScheme;
+    final ColorScheme colorScheme = context.colorScheme;
     switch (type) {
       case EventsType.PushEvent:
         return const Color(0xFF2196F3); // Blue
       case EventsType.PullRequestEvent:
-        final actionLower = actionText.toLowerCase();
+        final String actionLower = actionText.toLowerCase();
         // Color based on action text only (not current state)
         if (actionLower.contains('merged')) {
           return Colors.deepPurple; // Purple for merged
@@ -422,7 +426,7 @@ late final infinitePaginationController =InfinitePaginationController<EventsMode
           return Colors.green; // Green for open
         }
       case EventsType.IssuesEvent:
-        final actionLower = actionText.toLowerCase();
+        final String actionLower = actionText.toLowerCase();
         // Color based on action text only (not current state)
         if (actionLower.contains('closed')) {
           return Colors.red; // Red for closed
@@ -478,7 +482,7 @@ late final infinitePaginationController =InfinitePaginationController<EventsMode
               0,
             ),
             child: Row(
-              children: [
+              children: <Widget>[
                 UserAvatar(
                   avatarUrl: actor.avatarUrl,
                   size: 24,
