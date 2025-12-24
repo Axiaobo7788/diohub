@@ -227,80 +227,76 @@ class UserProfileScreenState extends State<UserProfileScreen>
     final GuserInfoData_user userData,
     final DynamicTabsController? tabController,
   ) {
-    const double leadingWidth = 56.0;
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 20, 16, 16),
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
         children: <Widget>[
           // User info row with avatar and name
-          Padding(
-            padding: EdgeInsets.only(left: leadingWidth),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: <Widget>[
-                // Larger avatar in expanded state
-                ClipOval(
-                  child: CachedNetworkImage(
-                    imageUrl: userData.avatarUrl.toString(),
-                    width: 56,
-                    height: 56,
-                    fit: BoxFit.cover,
-                    placeholder: (final _, final __) => Container(
-                      width: 56,
-                      height: 56,
-                      color: context.colorScheme.surfaceVariant,
-                      child: Center(
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: context.colorScheme.primary,
-                        ),
-                      ),
-                    ),
-                    errorWidget: (final _, final __, final ___) => Container(
-                      width: 56,
-                      height: 56,
-                      color: context.colorScheme.surfaceVariant,
-                      child: Icon(
-                        Icons.person,
-                        size: 32,
-                        color: context.colorScheme.onSurfaceVariant,
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: <Widget>[
+              // Larger avatar in expanded state
+              ClipOval(
+                child: CachedNetworkImage(
+                  imageUrl: userData.avatarUrl.toString(),
+                  width: 44,
+                  height: 44,
+                  fit: BoxFit.cover,
+                  placeholder: (final _, final __) => Container(
+                    width: 44,
+                    height: 44,
+                    color: context.colorScheme.surfaceVariant,
+                    child: Center(
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: context.colorScheme.primary,
                       ),
                     ),
                   ),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: <Widget>[
-                      Text(
-                        userData.name ?? userData.login,
-                        overflow: TextOverflow.ellipsis,
-                        style:
-                            Theme.of(context).textTheme.headlineSmall!.copyWith(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 24,
-                                  height: 1.2,
-                                ),
-                        maxLines: 2,
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        userData.login,
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                              color: context.colorScheme.onSurfaceVariant,
-                              fontSize: 15,
-                            ),
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ],
+                  errorWidget: (final _, final __, final ___) => Container(
+                    width: 44,
+                    height: 44,
+                    color: context.colorScheme.surfaceVariant,
+                    child: Icon(
+                      Icons.person,
+                      size: 24,
+                      color: context.colorScheme.onSurfaceVariant,
+                    ),
                   ),
                 ),
-              ],
-            ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: <Widget>[
+                    Text(
+                      userData.name ?? userData.login,
+                      overflow: TextOverflow.ellipsis,
+                      style:
+                          Theme.of(context).textTheme.headlineSmall!.copyWith(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 20,
+                                height: 1.2,
+                              ),
+                      maxLines: 2,
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      userData.login,
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                            color: context.colorScheme.onSurfaceVariant,
+                            fontSize: 13,
+                          ),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
         ],
       ),
@@ -797,34 +793,32 @@ class UserProfileScreenState extends State<UserProfileScreen>
   Widget build(final BuildContext context) =>
       provider.ChangeNotifierProvider<UserProvider>(
         create: (final _) => UserProvider(widget.login),
-        builder: (final BuildContext context, final _) => SafeArea(
-          child: Scaffold(
-            appBar: provider.Provider.of<UserProvider>(context).status !=
-                    Status.loaded
-                ? AppBar(elevation: 0)
-                : null,
-            body: ScaffoldBody(
-              child: ProviderLoadingProgressWrapper<UserProvider>(
-                childBuilder:
-                    (final BuildContext context, final UserProvider value) {
-                  data = value.data;
+        builder: (final BuildContext context, final _) => Scaffold(
+          appBar: provider.Provider.of<UserProvider>(context).status !=
+                  Status.loaded
+              ? AppBar(elevation: 0)
+              : null,
+          body: ScaffoldBody(
+            child: ProviderLoadingProgressWrapper<UserProvider>(
+              childBuilder:
+                  (final BuildContext context, final UserProvider value) {
+                data = value.data;
 
-                  return _UserProfileTabsContent(
-                    userData: value.data,
-                    parentState: this,
-                    buildCollapsedHeader: _buildCollapsedHeader,
-                    buildExpandedHeader: _buildExpandedHeader,
-                    buildToolbarActions: _buildToolbarActions,
-                    buildActionButtons: _buildActionButtons,
-                    selectedYear: _selectedYear,
-                    customFromDate: _customFromDate,
-                    customToDate: _customToDate,
-                    useCustomRange: _useCustomRange,
-                    onYearChanged: _onYearChanged,
-                    onCustomRangeChanged: _onCustomRangeChanged,
-                  );
-                },
-              ),
+                return _UserProfileTabsContent(
+                  userData: value.data,
+                  parentState: this,
+                  buildCollapsedHeader: _buildCollapsedHeader,
+                  buildExpandedHeader: _buildExpandedHeader,
+                  buildToolbarActions: _buildToolbarActions,
+                  buildActionButtons: _buildActionButtons,
+                  selectedYear: _selectedYear,
+                  customFromDate: _customFromDate,
+                  customToDate: _customToDate,
+                  useCustomRange: _useCustomRange,
+                  onYearChanged: _onYearChanged,
+                  onCustomRangeChanged: _onCustomRangeChanged,
+                );
+              },
             ),
           ),
         ),
@@ -1303,64 +1297,68 @@ class _UserProfileTabsContentState extends State<_UserProfileTabsContent>
           );
         },
         child: tabController != null
-            ? ExpandOnScrollWrapper(
-                collapsedWidget:
-                    (final BuildContext context, final double pullProgress) =>
-                        PullToExpandIndicator(
-                  pullProgress: pullProgress,
-                ),
-                expandedWidget: (
-                  final BuildContext context,
-                  final VoidCallback onCollapse,
-                ) =>
-                    ExpandableMetadataContent(
-                  onCollapse: onCollapse,
-                  // title: widget.userData.login,
-                  children: _buildUserMetadataTiles(),
-                ),
-                builder: (
-                  final BuildContext context,
-                  final Widget expandOnScrollWidget,
-                ) =>
-                    DynamicTabsParent(
-                  controller: tabController!,
+            ? SafeArea(
+              child: ExpandOnScrollWrapper(
+                  collapsedWidget: (final BuildContext context,
+                          final double pullProgress,
+                          final bool isReadyToExpand) =>
+                      PullToExpandIndicator(
+                    pullProgress: pullProgress,
+                    isReadyToExpand: isReadyToExpand,
+                  ),
+                  expandedWidget: (
+                    final BuildContext context,
+                    final VoidCallback onCollapse,
+                  ) =>
+                      ExpandableMetadataContent(
+                    onCollapse: onCollapse,
+                    // title: widget.userData.login,
+                    children: _buildUserMetadataTiles(),
+                  ),
                   builder: (
                     final BuildContext context,
-                    final PreferredSizeWidget tabBar,
-                    final tabView,
+                    final Widget expandOnScrollWidget,
                   ) =>
-                      DynamicScroll(
-                    collapsedWidget: widget.buildCollapsedHeader(
-                      context,
-                      widget.userData,
-                    ),
-                    expandedWidget: widget.buildExpandedHeader(
-                      context,
-                      widget.userData,
-                      tabController,
-                    ),
-                    actions: <Widget>[
-                      // Share button can go here
-                    ],
-                    headerSlivers: [
-                      SliverToBoxAdapter(
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 4),
-                          child: expandOnScrollWidget,
-                        ),
+                      DynamicTabsParent(
+                    controller: tabController!,
+                    builder: (
+                      final BuildContext context,
+                      final PreferredSizeWidget tabBar,
+                      final tabView,
+                    ) =>
+                        DynamicScroll(
+                      collapsedWidget: widget.buildCollapsedHeader(
+                        context,
+                        widget.userData,
                       ),
-                      AnimatedTabBar(
-                        showTabBar: tabController!.activeLength > 1,
-                        tabBar: Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 16),
-                          child: tabBar,
-                        ),
+                      expandedWidget: widget.buildExpandedHeader(
+                        context,
+                        widget.userData,
+                        tabController,
                       ),
-                    ],
-                    bodyBuilder: tabView,
+                      actions: <Widget>[
+                        // Share button can go here
+                      ],
+                      headerSlivers: [
+                        SliverToBoxAdapter(
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 4),
+                            child: expandOnScrollWidget,
+                          ),
+                        ),
+                        AnimatedTabBar(
+                          showTabBar: tabController!.activeLength > 1,
+                          tabBar: Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 16),
+                            child: tabBar,
+                          ),
+                        ),
+                      ],
+                      bodyBuilder: tabView,
+                    ),
                   ),
                 ),
-              )
+            )
             : const SizedBox.shrink(),
       );
 
