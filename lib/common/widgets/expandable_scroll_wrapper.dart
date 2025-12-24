@@ -10,6 +10,7 @@ typedef ExpandableScrollBuilder = Widget Function(
 typedef PullToExpandCollapsedWidgetBuilder = Widget Function(
   BuildContext context,
   double pullProgress,
+  bool isReadyToExpand,
 );
 
 typedef PullToExpandExpandedWidgetBuilder = Widget Function(
@@ -24,9 +25,12 @@ typedef PullToExpandTransitionBuilder = Widget Function(
 
 /// Indicator widget shown when collapsed, displaying "Pull for details" with a chevron.
 /// The text and chevron animate based on pull progress with rotation, scale, and opacity.
-class PullToExpandIndicator extends StatelessWidget {
+/// Shows a background pill that reveals as pull progress increases, with a visual effect
+/// when ready to expand.
+class PullToExpandIndicator extends StatefulWidget {
   const PullToExpandIndicator({
     required this.pullProgress,
+    required this.isReadyToExpand,
     this.text = 'More Details',
     super.key,
   });
@@ -34,8 +38,62 @@ class PullToExpandIndicator extends StatelessWidget {
   /// Pull progress from 0.0 (not pulling) to 1.0 (at threshold).
   final double pullProgress;
 
+  /// Whether the pull distance has reached the threshold and is ready to expand.
+  final bool isReadyToExpand;
+
   /// Text to display. Defaults to "Pull for details".
   final String text;
+
+  @override
+  State<PullToExpandIndicator> createState() => _PullToExpandIndicatorState();
+}
+
+class _PullToExpandIndicatorState extends State<PullToExpandIndicator>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _pulseController;
+  late Animation<double> _pulseAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _pulseController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 250),
+    );
+    _pulseAnimation = TweenSequence<double>([
+      TweenSequenceItem(
+        tween: Tween<double>(begin: 1.0, end: 1.12)
+            .chain(CurveTween(curve: Curves.easeOut)),
+        weight: 0.5,
+      ),
+      TweenSequenceItem(
+        tween: Tween<double>(begin: 1.12, end: 1.0)
+            .chain(CurveTween(curve: Curves.easeIn)),
+        weight: 0.5,
+      ),
+    ]).animate(_pulseController);
+  }
+
+  @override
+  void didUpdateWidget(PullToExpandIndicator oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.isReadyToExpand && !oldWidget.isReadyToExpand) {
+      // Single jump animation when becoming ready
+      _pulseController.forward(from: 0.0).then((_) {
+        // After animation completes, reset to 1.0 and keep it there
+        _pulseController.reset();
+      });
+    } else if (!widget.isReadyToExpand && oldWidget.isReadyToExpand) {
+      _pulseController.stop();
+      _pulseController.reset();
+    }
+  }
+
+  @override
+  void dispose() {
+    _pulseController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -43,67 +101,79 @@ class PullToExpandIndicator extends StatelessWidget {
     final colorScheme = theme.colorScheme;
 
     // Scale text from 0 to 1 based on pull progress - makes text 0 size at 0 state
-    final double textScale = pullProgress.clamp(0.0, 1.0);
+    final double textScale = widget.pullProgress.clamp(0.0, 1.0);
 
     // Animate text opacity: start at 0, increase as you pull
-    final double textOpacity = pullProgress.clamp(0.0, 1.0);
+    final double textOpacity = widget.pullProgress.clamp(0.0, 1.0);
 
     // Animate icon opacity: start at 0, increase as you pull
-    final double iconOpacity = 0.8 + pullProgress.clamp(0.0, 1.0);
+    final double iconOpacity =
+        0.5 + (widget.pullProgress.clamp(0.0, 1.0) * 0.2); // 0.5 to 0.7
 
     // Animate text size from 12 to 13 based on progress
-    final double fontSize = 12.0 + (pullProgress * 1.0);
+    final double fontSize = 12.0 + (widget.pullProgress * 1.0);
 
     // Animate chevron size from 16 to 18 based on progress
-    final double chevronSize = 16.0 + (pullProgress * 2.0);
+    final double chevronSize = 16.0 + (widget.pullProgress * 2.0);
 
-    // Rotate chevron from 0° (down) to 180° (up) as progress increases
-    final double easedProgress =
-        pullProgress * pullProgress * (3 - 2 * pullProgress); // Smoothstep
-    final double rotationRadians = easedProgress * 3.14159; // 0 to π radians
-
-    // Text and icon color - use primary color with opacity for better visibility
-    final double colorOpacity = 0.5 + (pullProgress * 0.5); // 0.5 to 1.0
+    // Text and icon color - use onSurface color with opacity for subtle appearance
+    final double colorOpacity = 0.4 + (widget.pullProgress * 0.3); // 0.4 to 0.7
 
     return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          SizeTransition(
-            sizeFactor: AlwaysStoppedAnimation(textScale),
-            axisAlignment: 0.0,
-            child: Opacity(
-              opacity: textOpacity.clamp(0.0, 1.0),
-              child: Center(
-                child: Text(
-                  text,
-                  textAlign: TextAlign.center,
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    fontSize: fontSize,
-                    color: colorScheme.primary
-                        .withOpacity(colorOpacity.clamp(0.0, 1.0)),
-                    fontWeight: FontWeight.w500,
-                    letterSpacing: 0.1,
+      child: AnimatedBuilder(
+        animation: _pulseAnimation,
+        builder: (context, child) {
+          // Use pulse animation value during the jump, then 1.0 when ready (after jump completes)
+          final double scale = widget.isReadyToExpand
+              ? (_pulseController.isAnimating ? _pulseAnimation.value : 1.0)
+              : 1.0;
+
+          return Transform.scale(
+            scale: scale,
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                SizeTransition(
+                  sizeFactor: AlwaysStoppedAnimation(textScale),
+                  axisAlignment: 0.0,
+                  child: Opacity(
+                    opacity: textOpacity.clamp(0.0, 1.0),
+                    child: Center(
+                      child: Text(
+                        widget.text,
+                        textAlign: TextAlign.center,
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          fontSize: fontSize,
+                          color: colorScheme.onSurface
+                              .withOpacity(colorOpacity.clamp(0.0, 1.0)),
+                          fontWeight: FontWeight.w500,
+                          letterSpacing: 0.1,
+                        ),
+                      ),
+                    ),
                   ),
                 ),
-              ),
+                Opacity(
+                  opacity: iconOpacity.clamp(0.0, 1.0),
+                  child: TweenAnimationBuilder<double>(
+                    tween: Tween<double>(begin: 16.0, end: chevronSize),
+                    duration: const Duration(milliseconds: 150),
+                    curve: Curves.easeOut,
+                    builder: (context, animatedSize, child) {
+                      return Icon(
+                        Icons.keyboard_arrow_down_rounded,
+                        size: animatedSize,
+                        color: colorScheme.onSurface
+                            .withOpacity(colorOpacity.clamp(0.0, 1.0)),
+                      );
+                    },
+                  ),
+                ),
+              ],
             ),
-          ),
-          if (textScale > 0) const SizedBox(height: 4),
-          Opacity(
-            opacity: iconOpacity.clamp(0.0, 1.0),
-            child: Transform.rotate(
-              angle: rotationRadians,
-              child: Icon(
-                Icons.keyboard_arrow_down_rounded,
-                size: chevronSize,
-                color: colorScheme.primary
-                    .withOpacity(colorOpacity.clamp(0.0, 1.0)),
-              ),
-            ),
-          ),
-        ],
+          );
+        },
       ),
     );
   }
@@ -128,6 +198,30 @@ class ExpandableMetadataContent extends StatelessWidget {
   /// Title to display in the header. If null, defaults to 'Details'.
   final String? title;
 
+  BorderRadius _getTileBorderRadius(
+    SurfaceStyleTheme surfaceStyle,
+    int index,
+    int total,
+  ) {
+    if (total == 1) {
+      // Single tile - round bottom corners only
+      return surfaceStyle.borderRadiusLarge(
+        corners: [CornerSide.bottom],
+      );
+    } else if (index == 0) {
+      // First tile - no rounded corners (connects to header)
+      return BorderRadius.zero;
+    } else if (index == total - 1) {
+      // Last tile - round bottom corners
+      return surfaceStyle.borderRadiusLarge(
+        corners: [CornerSide.bottom],
+      );
+    } else {
+      // Middle tiles - no rounded corners
+      return BorderRadius.zero;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -138,12 +232,12 @@ class ExpandableMetadataContent extends StatelessWidget {
       return const SizedBox.shrink();
     }
 
-    // Use surface container colors directly for clean, consistent appearance
+    // Use darker colors to match app bar styling
     final bool isDark = colorScheme.brightness == Brightness.dark;
-    final Color backgroundColor = colorScheme.surfaceContainerHighest;
+    final Color backgroundColor = colorScheme.surfaceContainer;
 
-    // Header background - use a slightly different shade for subtle separation
-    final Color headerBackground = colorScheme.surfaceContainerHigh;
+    // Header background - match app bar color
+    final Color headerBackground = colorScheme.surfaceContainer;
 
     return Container(
       margin: const EdgeInsets.fromLTRB(16, 8, 16, 0),
@@ -226,11 +320,11 @@ class ExpandableMetadataContent extends StatelessWidget {
                         vertical: 8,
                       ),
                       decoration: BoxDecoration(
-                        color: colorScheme.surfaceContainerHighest
-                            .withOpacity(0.6),
+                        color:
+                            colorScheme.surfaceContainerHigh.withOpacity(0.8),
                         borderRadius: BorderRadius.circular(24),
                         border: Border.all(
-                          color: colorScheme.outlineVariant.withOpacity(0.2),
+                          color: colorScheme.outlineVariant.withOpacity(0.3),
                           width: 1,
                         ),
                       ),
@@ -262,7 +356,7 @@ class ExpandableMetadataContent extends StatelessWidget {
           ),
           // Metadata content section with visual separation
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 0),
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
             decoration: BoxDecoration(
               color: backgroundColor,
               borderRadius: surfaceStyle.borderRadiusLarge().copyWith(
@@ -274,15 +368,20 @@ class ExpandableMetadataContent extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 for (int i = 0; i < children.length; i++) ...[
-                  children[i],
+                  ClipRRect(
+                    borderRadius: _getTileBorderRadius(
+                      surfaceStyle,
+                      i,
+                      children.length,
+                    ),
+                    child: children[i],
+                  ),
                   if (i < children.length - 1)
-                    Divider(
+                    Container(
                       height: 1,
-                      thickness: 1,
+                      margin: const EdgeInsets.symmetric(horizontal: 12),
                       color: colorScheme.outlineVariant
                           .withOpacity(isDark ? 0.15 : 0.1),
-                      indent: 16,
-                      endIndent: 16,
                     ),
                 ],
               ],
@@ -305,8 +404,9 @@ class ExpandableMetadataContent extends StatelessWidget {
 /// Example:
 /// ```dart
 /// ExpandOnScrollWrapper(
-///   collapsedWidget: (context, progress) => PullToExpandIndicator(
+///   collapsedWidget: (context, progress, isReadyToExpand) => PullToExpandIndicator(
 ///     pullProgress: progress,
+///     isReadyToExpand: isReadyToExpand,
 ///   ),
 ///   expandedWidget: (context, onCollapse) => ExpandedContentWidget(
 ///     onCollapse: onCollapse,
@@ -326,13 +426,15 @@ class ExpandOnScrollWrapper extends StatefulWidget {
     this.collapsedWidget,
     this.duration = const Duration(milliseconds: 250),
     this.curve = Curves.fastOutSlowIn,
-    this.expandThreshold = 150.0,
+    this.expandThreshold = 100.0,
     this.transitionBuilder,
     super.key,
   });
 
-  /// Builder that receives pull progress (0.0 to 1.0) for animating collapsed widget.
+  /// Builder that receives pull progress (0.0 to 1.0) and isReadyToExpand flag
+  /// for animating collapsed widget.
   /// progress = 0.0 when not pulling, 1.0 when at expandThreshold.
+  /// isReadyToExpand = true when pull distance has reached expandThreshold.
   /// If null, nothing is shown when collapsed.
   final PullToExpandCollapsedWidgetBuilder? collapsedWidget;
 
@@ -346,7 +448,7 @@ class ExpandOnScrollWrapper extends StatefulWidget {
   final Curve curve;
 
   /// Pull distance threshold (in pixels) required to trigger expansion.
-  /// Defaults to 200.0 pixels.
+  /// Defaults to 100.0 pixels.
   final double expandThreshold;
 
   /// Custom transition builder for the expand/collapse animation.
@@ -367,11 +469,40 @@ class ExpandOnScrollWrapper extends StatefulWidget {
 class _ExpandOnScrollWrapperState extends State<ExpandOnScrollWrapper> {
   double _pullProgress = 0.0;
   bool _isExpanded = false;
+  bool _isReadyToExpand = false;
   static const bool _debugLogging = true; // Set to false to disable logs
 
   void _log(final String message) {
     if (_debugLogging) {
       debugPrint('[ExpandOnScrollWrapper] $message');
+    }
+  }
+
+  void _resetPullState() {
+    setState(() {
+      _pullProgress = 0.0;
+      _isReadyToExpand = false;
+    });
+  }
+
+  void _updatePullProgress(final double pullDistance) {
+    final double progress =
+        (pullDistance / widget.expandThreshold).clamp(0.0, 1.0);
+    final bool isReady = pullDistance >= widget.expandThreshold;
+
+    if (_pullProgress != progress || _isReadyToExpand != isReady) {
+      final double currentProgress = _pullProgress;
+      final bool wasReady = _isReadyToExpand;
+      _log(
+          'Updating pull progress: $currentProgress -> $progress, isReadyToExpand: $wasReady -> $isReady');
+      setState(() {
+        _pullProgress = progress;
+        _isReadyToExpand = isReady;
+      });
+      // Trigger haptic feedback when becoming ready
+      if (!wasReady && isReady) {
+        HapticFeedback.mediumImpact();
+      }
     }
   }
 
@@ -396,26 +527,9 @@ class _ExpandOnScrollWrapperState extends State<ExpandOnScrollWrapper> {
 
       if (overscroll < 0) {
         final double pullDistance = overscroll.abs();
-        final double progress =
-            (pullDistance / widget.expandThreshold).clamp(0.0, 1.0);
         _log(
-            'Pull detected: distance=$pullDistance, progress=$progress, threshold=${widget.expandThreshold}');
-
-        if (_pullProgress != progress) {
-          _log('Updating pull progress: $_pullProgress -> $progress');
-          setState(() {
-            _pullProgress = progress;
-          });
-        }
-
-        // Expand when threshold reached
-        if (pullDistance >= widget.expandThreshold && !_isExpanded) {
-          _log('Threshold reached! Expanding...');
-          HapticFeedback.mediumImpact();
-          setState(() {
-            _isExpanded = true;
-          });
-        }
+            'Pull detected: distance=$pullDistance, threshold=${widget.expandThreshold}');
+        _updatePullProgress(pullDistance);
       }
       return false; // Don't consume, let RefreshIndicator work
     }
@@ -430,33 +544,13 @@ class _ExpandOnScrollWrapperState extends State<ExpandOnScrollWrapper> {
       // Check if we're at the top and pulling down (pixels < 0)
       if (metrics.pixels < 0) {
         final double pullDistance = metrics.pixels.abs();
-        final double progress =
-            (pullDistance / widget.expandThreshold).clamp(0.0, 1.0);
-        _log(
-            'Pull detected (pixels < 0): distance=$pullDistance, progress=$progress');
-
-        if (_pullProgress != progress) {
-          _log('Updating pull progress: $_pullProgress -> $progress');
-          setState(() {
-            _pullProgress = progress;
-          });
-        }
-
-        // Expand when threshold reached
-        if (pullDistance >= widget.expandThreshold && !_isExpanded) {
-          _log('Threshold reached! Expanding...');
-          HapticFeedback.mediumImpact();
-          setState(() {
-            _isExpanded = true;
-          });
-        }
+        _log('Pull detected (pixels < 0): distance=$pullDistance');
+        _updatePullProgress(pullDistance);
       } else if (metrics.pixels >= 0 && _pullProgress > 0 && !_isExpanded) {
         // Only reset pull progress if NOT expanded
         // If expanded, keep it expanded (only collapse via onCollapse callback)
         _log('Resetting pull progress: pixels >= 0');
-        setState(() {
-          _pullProgress = 0.0;
-        });
+        _resetPullState();
       }
       return false;
     }
@@ -473,9 +567,7 @@ class _ExpandOnScrollWrapperState extends State<ExpandOnScrollWrapper> {
           _pullProgress > 0 &&
           !_isExpanded) {
         _log('Resetting pull progress: pixels >= 0');
-        setState(() {
-          _pullProgress = 0.0;
-        });
+        _resetPullState();
       }
       return false;
     }
@@ -488,10 +580,23 @@ class _ExpandOnScrollWrapperState extends State<ExpandOnScrollWrapper> {
       return false;
     }
 
-    // Handle scroll end
+    // Handle scroll end - expand only when user releases at threshold
     if (notification is ScrollEndNotification) {
       final ScrollMetrics metrics = notification.metrics;
-      _log('ScrollEndNotification: pixels=${metrics.pixels}');
+      _log(
+          'ScrollEndNotification: pixels=${metrics.pixels}, isReadyToExpand=$_isReadyToExpand');
+
+      // Only expand if threshold was reached and user releases
+      if (_isReadyToExpand && !_isExpanded) {
+        _log('Threshold reached on release! Expanding...');
+        setState(() {
+          _isExpanded = true;
+        });
+      } else if (!_isReadyToExpand && _pullProgress > 0 && !_isExpanded) {
+        // Reset if user released before reaching threshold
+        _log('Resetting pull progress: released before threshold');
+        _resetPullState();
+      }
       return false;
     }
 
@@ -502,8 +607,8 @@ class _ExpandOnScrollWrapperState extends State<ExpandOnScrollWrapper> {
     _log('Collapsing...');
     setState(() {
       _isExpanded = false;
-      _pullProgress = 0.0;
     });
+    _resetPullState();
   }
 
   @override
@@ -521,6 +626,7 @@ class _ExpandOnScrollWrapperState extends State<ExpandOnScrollWrapper> {
     // Create the expandable widget with current state
     final _ExpandOnScrollContent expandOnScrollWidget = _ExpandOnScrollContent(
       pullProgress: _pullProgress.clamp(0.0, 1.0),
+      isReadyToExpand: _isReadyToExpand,
       isExpanded: _isExpanded,
       onCollapse: _collapse,
       collapsedWidget: widget.collapsedWidget,
@@ -542,6 +648,7 @@ class _ExpandOnScrollWrapperState extends State<ExpandOnScrollWrapper> {
 class _ExpandOnScrollContent extends StatelessWidget {
   const _ExpandOnScrollContent({
     required this.pullProgress,
+    required this.isReadyToExpand,
     required this.isExpanded,
     required this.onCollapse,
     this.collapsedWidget,
@@ -552,9 +659,11 @@ class _ExpandOnScrollContent extends StatelessWidget {
   });
 
   final double pullProgress;
+  final bool isReadyToExpand;
   final bool isExpanded;
   final VoidCallback onCollapse;
-  final Widget Function(BuildContext context, double pullProgress)?
+  final Widget Function(
+          BuildContext context, double pullProgress, bool isReadyToExpand)?
       collapsedWidget;
   final Widget Function(BuildContext context, VoidCallback onCollapse)
       expandedWidget;
@@ -590,7 +699,7 @@ class _ExpandOnScrollContent extends StatelessWidget {
             )
           : KeyedSubtree(
               key: const ValueKey('collapsed'),
-              child: collapsedWidget!(context, pullProgress),
+              child: collapsedWidget!(context, pullProgress, isReadyToExpand),
             ),
     );
   }
