@@ -22,7 +22,7 @@ class InfinitePaginationController<T> {
     this.firstPageLoadingBuilder,
     this.emptyBuilder,
     this.enableStaggeredAnimation = true,
-  }) : padding = paddingBuilder ?? ((final _) => const EdgeInsets.symmetric(vertical: 16));
+  }) : paddingBuilder = paddingBuilder ?? ((final _) => const EdgeInsets.symmetric(vertical: 16,));
 
   final ScrollWrapperFuture<T> future;
   final ScrollWrapperBuilder<T> builder;
