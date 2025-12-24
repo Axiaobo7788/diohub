@@ -1,8 +1,12 @@
+import 'package:diohub/common/misc/detail_tile.dart';
+import 'package:diohub/common/misc/detail_tile_content.dart';
 import 'package:diohub/common/misc/shimmer_widget.dart';
+import 'package:diohub/common/widgets/expandable_scroll_wrapper.dart';
 import 'package:diohub/graphql/queries/users/__generated__/user_info.data.gql.dart';
 import 'package:diohub/models/contributions/contribution_chip_type.dart';
 import 'package:diohub/models/contributions/contribution_query_models.dart';
 import 'package:diohub/providers/users/user_contributions_provider.dart';
+import 'package:diohub/utils/get_date.dart';
 import 'package:diohub/view/profile/about/widgets/chip_detail_bottom_sheet.dart';
 import 'package:diohub/view/profile/about/widgets/tabbed_contribution_section.dart';
 import 'package:flutter/foundation.dart';
@@ -37,16 +41,16 @@ class UserAboutScreen extends ConsumerStatefulWidget {
 class _UserAboutScreenState extends ConsumerState<UserAboutScreen> {
   /// Handles chip tap to show bottom sheet with details
   void _handleChipTap(
-    BuildContext context,
-    ContributionChipType chipType,
-    ContributionQueryKey queryKey,
-    ContributionCollectionResult result,
+    final BuildContext context,
+    final ContributionChipType chipType,
+    final ContributionQueryKey queryKey,
+    final ContributionCollectionResult result,
   ) {
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
       showDragHandle: true,
-      builder: (context) => ChipDetailBottomSheet(
+      builder: (final BuildContext context) => ChipDetailBottomSheet(
         chipType: chipType,
         queryKey: queryKey,
         contributionResult: result,
@@ -61,10 +65,10 @@ class _UserAboutScreenState extends ConsumerState<UserAboutScreen> {
         widget.customFromDate != null &&
         widget.customToDate != null) {
       // Normalize dates to day level for stable keys
-      final from = DateTime(widget.customFromDate!.year,
+      final DateTime from = DateTime(widget.customFromDate!.year,
           widget.customFromDate!.month, widget.customFromDate!.day);
-      final to = DateTime(widget.customToDate!.year, widget.customToDate!.month,
-          widget.customToDate!.day);
+      final DateTime to = DateTime(widget.customToDate!.year,
+          widget.customToDate!.month, widget.customToDate!.day);
       return ContributionQueryKey.customRange(
         userName: widget.userData.login,
         from: from,
@@ -72,7 +76,7 @@ class _UserAboutScreenState extends ConsumerState<UserAboutScreen> {
       );
     }
 
-    final selectedYear = widget.selectedYear;
+    final int? selectedYear = widget.selectedYear;
     if (selectedYear == null) {
       // Default: last year from today
       return ContributionQueryKey.lastYear(widget.userData.login);
@@ -82,36 +86,38 @@ class _UserAboutScreenState extends ConsumerState<UserAboutScreen> {
     }
   }
 
+  
+
   @override
-  Widget build(BuildContext context) {
+  Widget build(final BuildContext context) {
     // Fetch contributions data using Riverpod with typed key
     // Key only changes when date range changes, preventing unnecessary rebuilds
-    final providerKey = _getProviderKey();
+    final ContributionQueryKey providerKey = _getProviderKey();
 
-    final contributionsAsync = ref.watch(
+    final AsyncValue<ContributionCollectionResult> contributionsAsync =
+        ref.watch(
       userContributionsProvider(providerKey),
     );
 
     return contributionsAsync.when(
-      data: (result) {
-        return TabbedContributionSection(
-          contributionResult: result,
-          userName: widget.userData.login,
-          selectedYear: widget.selectedYear,
-          customFromDate: widget.customFromDate,
-          customToDate: widget.customToDate,
-          useCustomRange: widget.useCustomRange,
-          createdAt: widget.userData.createdAt,
-          onChipTap: (chipType) => _handleChipTap(
-            context,
-            chipType,
-            providerKey,
-            result,
-          ),
-        );
-      },
+      data: (final ContributionCollectionResult result) => _WrappedTabbedContributionSection(
+            contributionResult: result,
+            userName: widget.userData.login,
+            selectedYear: widget.selectedYear,
+            customFromDate: widget.customFromDate,
+            customToDate: widget.customToDate,
+            useCustomRange: widget.useCustomRange,
+            createdAt: widget.userData.createdAt,
+            onChipTap: (final ContributionChipType chipType) => _handleChipTap(
+              context,
+              chipType,
+              providerKey,
+              result,
+            ),
+        
+        ),
       loading: () => const _ContributionLoadingSkeleton(),
-      error: (error, stackTrace) {
+      error: (final Object error, final StackTrace stackTrace) {
         if (kDebugMode) {
           debugPrint('Error loading contribution data: $error');
           debugPrint('Stack trace: $stackTrace');
@@ -122,7 +128,7 @@ class _UserAboutScreenState extends ConsumerState<UserAboutScreen> {
             padding: const EdgeInsets.all(16.0),
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
-              children: [
+              children: <Widget>[
                 Icon(
                   Icons.error_outline,
                   size: 48,
@@ -156,13 +162,51 @@ class _UserAboutScreenState extends ConsumerState<UserAboutScreen> {
   }
 }
 
+/// Wrapper for TabbedContributionSection that integrates with expandable scroll wrapper
+class _WrappedTabbedContributionSection extends StatelessWidget {
+  const _WrappedTabbedContributionSection({
+    // required this.expandOnScrollWidget,
+    required this.contributionResult,
+    required this.userName,
+    required this.selectedYear,
+    required this.customFromDate,
+    required this.customToDate,
+    required this.useCustomRange,
+    required this.createdAt,
+    this.onChipTap,
+  });
+
+  // final Widget expandOnScrollWidget;
+  final ContributionCollectionResult contributionResult;
+  final String userName;
+  final int? selectedYear;
+  final DateTime? customFromDate;
+  final DateTime? customToDate;
+  final bool useCustomRange;
+  final DateTime? createdAt;
+  final void Function(ContributionChipType chipType)? onChipTap;
+
+  @override
+  Widget build(final BuildContext context) => TabbedContributionSection(
+        contributionResult: contributionResult,
+        userName: userName,
+        selectedYear: selectedYear,
+        customFromDate: customFromDate,
+        customToDate: customToDate,
+        useCustomRange: useCustomRange,
+        createdAt: createdAt,
+        onChipTap: onChipTap,
+        // topWidget: expandOnScrollWidget,
+      );
+}
+
 /// Loading skeleton that mimics the contribution section layout
 class _ContributionLoadingSkeleton extends StatelessWidget {
   const _ContributionLoadingSkeleton();
 
   /// Builds a styled divider matching the actual divider style
-  Widget _buildStyledDivider(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
+  Widget _buildStyledDivider(final BuildContext context) {
+    final ColorScheme colorScheme = Theme.of(context).colorScheme;
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 16),
       child: Container(
@@ -170,7 +214,7 @@ class _ContributionLoadingSkeleton extends StatelessWidget {
         margin: const EdgeInsets.symmetric(horizontal: 16),
         decoration: BoxDecoration(
           gradient: LinearGradient(
-            colors: [
+            colors: <Color>[
               Colors.transparent,
               colorScheme.outlineVariant.withOpacity(0.3),
               Colors.transparent,
@@ -182,210 +226,208 @@ class _ContributionLoadingSkeleton extends StatelessWidget {
   }
 
   @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
+  Widget build(final BuildContext context) {
+    final ThemeData theme = Theme.of(context);
 
     return LayoutBuilder(
-      builder: (context, constraints) {
-        return Column(
-          children: [
-            // Calendar skeleton
-            Padding(
-              padding: const EdgeInsets.all(8.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Title and stats row
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      ShimmerWidget.container(
-                        height: 20,
-                        width: 150,
-                      ),
-                      ShimmerWidget.container(
-                        height: 20,
-                        width: 100,
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-                  // Calendar grid
-                  ShimmerWidget.container(
-                    height: 120,
-                    width: double.infinity,
-                  ),
-                  const SizedBox(height: 12),
-                  // Stats chips
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: [
-                      ShimmerWidget.container(height: 28, width: 80),
-                      ShimmerWidget.container(height: 28, width: 70),
-                      ShimmerWidget.container(height: 28, width: 75),
-                      ShimmerWidget.container(height: 28, width: 65),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-
-            const SizedBox(height: 16),
-
-            // Divider between calendar and activity overview
-            _buildStyledDivider(context),
-
-            const SizedBox(height: 16),
-
-            // Activity overview skeleton (radar chart section)
-            Padding(
-              padding: const EdgeInsets.all(8.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Section header skeleton
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(8, 0, 8, 12),
-                    child: ShimmerWidget.container(
-                      height: 24,
-                      width: 180,
+      builder: (final BuildContext context, final BoxConstraints constraints) =>
+          Column(
+        children: <Widget>[
+          // Calendar skeleton
+          Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                // Title and stats row
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: <Widget>[
+                    ShimmerWidget.container(
+                      height: 20,
+                      width: 150,
                     ),
+                    ShimmerWidget.container(
+                      height: 20,
+                      width: 100,
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                // Calendar grid
+                ShimmerWidget.container(
+                  height: 120,
+                  width: double.infinity,
+                ),
+                const SizedBox(height: 12),
+                // Stats chips
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: <Widget>[
+                    ShimmerWidget.container(height: 28, width: 80),
+                    ShimmerWidget.container(height: 28, width: 70),
+                    ShimmerWidget.container(height: 28, width: 75),
+                    ShimmerWidget.container(height: 28, width: 65),
+                  ],
+                ),
+              ],
+            ),
+          ),
+
+          const SizedBox(height: 16),
+
+          // Divider between calendar and activity overview
+          _buildStyledDivider(context),
+
+          const SizedBox(height: 16),
+
+          // Activity overview skeleton (radar chart section)
+          Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                // Section header skeleton
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(8, 0, 8, 12),
+                  child: ShimmerWidget.container(
+                    height: 24,
+                    width: 180,
                   ),
-                  const SizedBox(height: 8),
-                  ShimmerWidget.container(
-                    height: 18,
-                    width: 120,
-                  ),
-                  const SizedBox(height: 16),
-                  Row(
-                    children: [
-                      // Repositories list
-                      Expanded(
-                        flex: 3,
-                        child: Column(
-                          children: List.generate(
-                            3,
-                            (index) => Padding(
-                              padding: const EdgeInsets.only(bottom: 12),
-                              child: Row(
-                                children: [
-                                  ShimmerWidget.container(
-                                    height: 16,
-                                    width: 16,
+                ),
+                const SizedBox(height: 8),
+                ShimmerWidget.container(
+                  height: 18,
+                  width: 120,
+                ),
+                const SizedBox(height: 16),
+                Row(
+                  children: <Widget>[
+                    // Repositories list
+                    Expanded(
+                      flex: 3,
+                      child: Column(
+                        children: List.generate(
+                          3,
+                          (final int index) => Padding(
+                            padding: const EdgeInsets.only(bottom: 12),
+                            child: Row(
+                              children: <Widget>[
+                                ShimmerWidget.container(
+                                  height: 16,
+                                  width: 16,
+                                ),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: <Widget>[
+                                      ShimmerWidget.container(
+                                        height: 14,
+                                        width: double.infinity,
+                                      ),
+                                      const SizedBox(height: 4),
+                                      ShimmerWidget.container(
+                                        height: 12,
+                                        width: 80,
+                                      ),
+                                    ],
                                   ),
-                                  const SizedBox(width: 8),
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        ShimmerWidget.container(
-                                          height: 14,
-                                          width: double.infinity,
-                                        ),
-                                        const SizedBox(height: 4),
-                                        ShimmerWidget.container(
-                                          height: 12,
-                                          width: 80,
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ],
-                              ),
+                                ),
+                              ],
                             ),
                           ),
                         ),
                       ),
-                      const SizedBox(width: 16),
-                      // Radar chart
-                      Expanded(
-                        flex: 2,
-                        child: Column(
-                          children: [
-                            ShimmerWidget.container(
-                              height: 14,
-                              width: 80,
-                            ),
-                            const SizedBox(height: 12),
-                            ShimmerWidget.container(
-                              height: 150,
-                              width: 150,
-                            ),
-                          ],
-                        ),
+                    ),
+                    const SizedBox(width: 16),
+                    // Radar chart
+                    Expanded(
+                      flex: 2,
+                      child: Column(
+                        children: <Widget>[
+                          ShimmerWidget.container(
+                            height: 14,
+                            width: 80,
+                          ),
+                          const SizedBox(height: 12),
+                          ShimmerWidget.container(
+                            height: 150,
+                            width: 150,
+                          ),
+                        ],
                       ),
-                    ],
-                  ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+
+          const SizedBox(height: 16),
+
+          // Divider before tabs
+          _buildStyledDivider(context),
+
+          // Tabs skeleton
+          Container(
+            decoration: BoxDecoration(
+              border: Border(
+                bottom: BorderSide(
+                  color: theme.colorScheme.outlineVariant.withOpacity(0.5),
+                  width: 1,
+                ),
+              ),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              child: Row(
+                children: <Widget>[
+                  ShimmerWidget.container(height: 16, width: 70),
+                  const SizedBox(width: 24),
+                  ShimmerWidget.container(height: 16, width: 90),
+                  const SizedBox(width: 24),
+                  ShimmerWidget.container(height: 16, width: 60),
                 ],
               ),
             ),
+          ),
 
-            const SizedBox(height: 16),
-
-            // Divider before tabs
-            _buildStyledDivider(context),
-
-            // Tabs skeleton
-            Container(
-              decoration: BoxDecoration(
-                border: Border(
-                  bottom: BorderSide(
-                    color: theme.colorScheme.outlineVariant.withOpacity(0.5),
-                    width: 1,
-                  ),
-                ),
-              ),
-              child: Padding(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                child: Row(
-                  children: [
-                    ShimmerWidget.container(height: 16, width: 70),
-                    const SizedBox(width: 24),
-                    ShimmerWidget.container(height: 16, width: 90),
-                    const SizedBox(width: 24),
-                    ShimmerWidget.container(height: 16, width: 60),
-                  ],
-                ),
-              ),
-            ),
-
-            // Tab content skeleton - takes remaining space
-            Expanded(
-              child: ListView(
-                padding: const EdgeInsets.all(16),
-                children: List.generate(
-                  3,
-                  (index) => Padding(
-                    padding: const EdgeInsets.only(bottom: 16),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        ShimmerWidget.container(
-                          height: 16,
-                          width: double.infinity,
-                        ),
-                        const SizedBox(height: 8),
-                        ShimmerWidget.container(
-                          height: 14,
-                          width: 150,
-                        ),
-                        const SizedBox(height: 4),
-                        ShimmerWidget.container(
-                          height: 14,
-                          width: 100,
-                        ),
-                      ],
-                    ),
+          // Tab content skeleton - takes remaining space
+          Expanded(
+            child: ListView(
+              padding: const EdgeInsets.all(16),
+              children: List.generate(
+                3,
+                (final int index) => Padding(
+                  padding: const EdgeInsets.only(bottom: 16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: <Widget>[
+                      ShimmerWidget.container(
+                        height: 16,
+                        width: double.infinity,
+                      ),
+                      const SizedBox(height: 8),
+                      ShimmerWidget.container(
+                        height: 14,
+                        width: 150,
+                      ),
+                      const SizedBox(height: 4),
+                      ShimmerWidget.container(
+                        height: 14,
+                        width: 100,
+                      ),
+                    ],
                   ),
                 ),
               ),
             ),
-          ],
-        );
-      },
+          ),
+        ],
+      ),
     );
   }
 }
