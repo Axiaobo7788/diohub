@@ -29,6 +29,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_dynamic_tabs/flutter_dynamic_tabs.dart';
 import 'package:provider/provider.dart';
 import 'package:provider/single_child_widget.dart';
+import 'package:sliver_tools/sliver_tools.dart';
 
 @RoutePage()
 class RepositoryScreen extends DeepLinkWidget {
@@ -257,11 +258,11 @@ class RepositoryScreenState extends DeepLinkWidgetState<RepositoryScreen>
                               actions: <Widget>[
                                 ShareButton(repo.url.toString())
                               ],
-                              bottom: AnimatedTabBar(
+                              headerSlivers: [  AnimatedTabBar(
                                 showTabBar: tabController.activeLength > 1,
                                 tabBar: tabs,
-                             
-                              ),
+                                                           
+                              )],
                               bodyBuilder: tabViewBuilder,
                                  
                             ),

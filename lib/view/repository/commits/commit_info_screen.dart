@@ -2,6 +2,7 @@ import 'package:auto_route/annotations.dart';
 import 'package:auto_route/auto_route.dart';
 import 'package:diohub/common/animations/size_expanded_widget.dart';
 import 'package:diohub/common/misc/action_card_builder.dart';
+import 'package:diohub/common/misc/animated_tab_bar.dart';
 import 'package:diohub/common/misc/collapsible_action_buttons.dart';
 import 'package:diohub/common/misc/collapsible_app_bar.dart';
 import 'package:diohub/common/misc/collapsible_detail_tiles.dart';
@@ -89,10 +90,10 @@ class CommitInfoScreenState extends State<CommitInfoScreen>
           child: DynamicScroll(
             collapsedWidget: _buildCollapsedHeader(commit),
             expandedWidget: _buildExpandedHeader(commit, provider),
-            bottom: SizeExpandedSection(
-              expand: dynamicTabsController.activeLength > 1,
-              child: _buildTabsView(tabBar),
-            ),
+            headerSlivers:[ AnimatedTabBar(
+              showTabBar: dynamicTabsController.activeLength > 1,
+              tabBar: _buildTabsView(tabBar),
+            )],
             bodyBuilder: tabViewBuilder,
           ),
         ),
@@ -907,9 +908,7 @@ class CommitInfoScreenState extends State<CommitInfoScreen>
             mainAxisAlignment: MainAxisAlignment.center,
             children: <Widget>[tabBar],
           ),
-          const Padding(
-            padding: EdgeInsets.symmetric(horizontal: 16),
-          ),
+
         ],
       );
 }
