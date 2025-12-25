@@ -22,7 +22,6 @@ import 'package:diohub/graphql/queries/issues_pulls/__generated__/issue_pull_inf
 import 'package:diohub/graphql/queries/issues_pulls/__generated__/timeline.data.gql.dart';
 import 'package:diohub/providers/issue_pulls/comment_provider.dart';
 import 'package:diohub/providers/issue_pulls/issue_provider.dart';
-import 'package:diohub/routes/router.gr.dart';
 import 'package:diohub/adapters/deep_linking_handler.dart';
 import 'package:diohub/view/issues_pulls/issue_pull_screen.dart';
 import 'package:diohub/utils/get_date.dart';
@@ -783,16 +782,17 @@ class IssuePullInfoTemplateState extends State<IssuePullInfoTemplate>
           ) =>
               Column(
             children: [
-              ExpandableMetadataContent(
-                onCollapse: onCollapse,
+              ExpandableSection(
                 title: 'Details',
+                onCollapse: onCollapse,
                 children: _buildMetadataTiles(context),
               ),
               if (widget.viewerCanUpdate && widget.actionButtons.isNotEmpty)
-                ExpandableActionsContent(
-                  actions: widget.actionButtons,
-                  onCollapse: () {}, // No-op since always expanded
+                ExpandableSection(
                   title: 'Actions',
+                  headerColor: context.colorScheme.error,
+                  onCollapse: () {},
+                  children: widget.actionButtons,
                 ),
             ],
           ),
@@ -827,7 +827,7 @@ class IssuePullInfoTemplateState extends State<IssuePullInfoTemplate>
                     ),
                   ),
                 ],
-                bodyBuilder: tabViewBuilder,t
+                bodyBuilder: tabViewBuilder,
               ),
             ),
           ),

@@ -1,4 +1,3 @@
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:diohub/common/misc/detail_tile.dart';
 import 'package:diohub/common/misc/detail_tile_content.dart';
 import 'package:diohub/common/misc/profile_banner.dart';
@@ -6,6 +5,7 @@ import 'package:diohub/graphql/__generated__/schema.schema.gql.dart';
 import 'package:diohub/graphql/queries/repositories/__generated__/repo_info.data.gql.dart';
 import 'package:diohub/utils/get_date.dart';
 import 'package:diohub/utils/utils.dart';
+import 'package:diohub/view/repository/widgets/repository_title.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_dynamic_tabs/flutter_dynamic_tabs.dart';
 import 'package:flutter_vector_icons/flutter_vector_icons.dart';
@@ -20,53 +20,20 @@ Widget buildCollapsedHeader(
     organization: (o) => o.login,
     orElse: () => null,
   );
-  final ownerAvatarUrl = repo.owner.when(
-    user: (u) => u.avatarUrl.toString(),
-    organization: (o) => o.avatarUrl.toString(),
-    orElse: () => null,
-  );
 
   return Padding(
     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-    child: Row(
-      children: <Widget>[
-        if (ownerAvatarUrl != null)
-          ClipRRect(
-            borderRadius: BorderRadius.circular(4),
-            child: CachedNetworkImage(
-              imageUrl: ownerAvatarUrl,
-              width: 20,
-              height: 20,
-              fit: BoxFit.cover,
-              placeholder: (final _, final __) => Container(
-                width: 20,
-                height: 20,
-                color: context.colorScheme.surfaceVariant,
-              ),
-              errorWidget: (final _, final __, final ___) => Container(
-                width: 20,
-                height: 20,
-                color: context.colorScheme.surfaceVariant,
-                child: Icon(
-                  Octicons.repo,
-                  size: 12,
-                  color: context.colorScheme.onSurfaceVariant,
-                ),
-              ),
-            ),
-          ),
-        if (ownerAvatarUrl != null) const SizedBox(width: 8),
-        Expanded(
-          child: Text(
-            ownerLogin != null ? '$ownerLogin/${repo.name}' : repo.name,
-            style: context.textTheme.titleSmall?.copyWith(
-              fontWeight: FontWeight.w600,
-              fontSize: 15,
-            ),
-            overflow: TextOverflow.ellipsis,
-          ),
-        ),
-      ],
+    child: RepositoryTitle(
+      repo: repo,
+      compact: true,
+      onOwnerTap: ownerLogin != null
+          ? () {
+              navigateToProfile(
+                login: ownerLogin,
+                context: context,
+              );
+            }
+          : null,
     ),
   );
 }
@@ -83,11 +50,6 @@ Widget buildExpandedHeader(
     organization: (o) => o.login,
     orElse: () => null,
   );
-  final ownerAvatarUrl = repo.owner.when(
-    user: (u) => u.avatarUrl.toString(),
-    organization: (o) => o.avatarUrl.toString(),
-    orElse: () => null,
-  );
 
   return Padding(
     padding: const EdgeInsets.fromLTRB(16, 20, 16, 16),
@@ -95,60 +57,19 @@ Widget buildExpandedHeader(
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
       children: <Widget>[
-        // Owner info row
-        if (ownerLogin != null && ownerAvatarUrl != null)
-          Row(
-            children: [
-              ClipRRect(
-                borderRadius: BorderRadius.circular(6),
-                child: CachedNetworkImage(
-                  imageUrl: ownerAvatarUrl,
-                  width: 20,
-                  height: 20,
-                  fit: BoxFit.cover,
-                  placeholder: (final _, final __) => Container(
-                    width: 20,
-                    height: 20,
-                    color: context.colorScheme.surfaceVariant,
-                  ),
-                  errorWidget: (final _, final __, final ___) => Container(
-                    width: 20,
-                    height: 20,
-                    color: context.colorScheme.surfaceVariant,
-                    child: Icon(
-                      Octicons.repo,
-                      size: 12,
-                      color: context.colorScheme.onSurfaceVariant,
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 6),
-              Expanded(
-                child: Text(
-                  ownerLogin,
-                  style: context.textTheme.bodyMedium?.copyWith(
-                    color: context.colorScheme.onSurfaceVariant,
-                    fontSize: 13,
-                    fontWeight: FontWeight.w500,
-                  ),
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-            ],
-          ),
-        if (ownerLogin != null && ownerAvatarUrl != null)
-          const SizedBox(height: 12),
-        // Repository name
-        Text(
-          repo.name,
-          style: context.textTheme.headlineSmall?.copyWith(
-            fontWeight: FontWeight.bold,
-            fontSize: 22,
-            height: 1.3,
-          ),
-          maxLines: 2,
-          overflow: TextOverflow.ellipsis,
+        // Owner and repository name in column layout
+        RepositoryTitle(
+          repo: repo,
+          avatarSize: 20,
+          spacing: 6,
+          onOwnerTap: ownerLogin != null
+              ? () {
+                  navigateToProfile(
+                    login: ownerLogin,
+                    context: context,
+                  );
+                }
+              : null,
         ),
         const SizedBox(height: 12),
         // Description (if available)

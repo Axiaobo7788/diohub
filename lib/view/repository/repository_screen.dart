@@ -13,6 +13,7 @@ import 'package:diohub/common/misc/theme_from_image.dart';
 import 'package:diohub/common/misc/detail_tile.dart';
 import 'package:diohub/common/misc/detail_tile_content.dart';
 import 'package:diohub/common/widgets/expandable_scroll_wrapper.dart';
+import 'package:diohub/view/repository/widgets/repository_info_grid.dart';
 import 'package:diohub/common/wrappers/dynamic_tabs_parent.dart';
 import 'package:diohub/common/wrappers/provider_loading_progress_wrapper.dart';
 import 'package:diohub/graphql/queries/repositories/__generated__/repo_info.data.gql.dart';
@@ -472,9 +473,9 @@ class RepositoryScreenState extends DeepLinkWidgetState<RepositoryScreen>
                             ) =>
                                 Column(
                               children: [
-                                ExpandableMetadataContent(
-                                  onCollapse: onCollapse,
+                                ExpandableSectionTertiary(
                                   title: 'Details',
+                                  onCollapse: onCollapse,
                                   children: _buildDetailsTiles(
                                     context,
                                     repo,
@@ -482,9 +483,10 @@ class RepositoryScreenState extends DeepLinkWidgetState<RepositoryScreen>
                                   ),
                                 ),
                                 if (repo.latestRelease != null)
-                                  ExpandableMetadataContent(
-                                    onCollapse: () {},
+                                  ExpandableSection(
                                     title: 'Latest Release',
+                                    headerColor: context.colorScheme.tertiary,
+                                    onCollapse: () {},
                                     children: _buildReleaseTiles(
                                       context,
                                       repo.latestRelease!,
@@ -492,37 +494,18 @@ class RepositoryScreenState extends DeepLinkWidgetState<RepositoryScreen>
                                   ),
                                 if (repo.repositoryTopics.edges?.isNotEmpty ??
                                     false)
-                                  ExpandableMetadataContent(
-                                    onCollapse: () {},
+                                  ExpandableSectionTertiary(
                                     title: 'Topics',
+                                    headerColor: context.colorScheme.secondary,
+                                    onCollapse: () {},
                                     children: _buildTopicsTiles(
                                       context,
                                       repo.repositoryTopics,
                                     ),
                                   ),
-                                ExpandableRepositoryInfoContent(
+                                ExpandableRepositoryInfoGrid(
+                                  repo: repo,
                                   onCollapse: () {},
-                                  primaryLanguage: repo.primaryLanguage != null
-                                      ? (
-                                          name: repo.primaryLanguage!.name,
-                                          color: repo.primaryLanguage!.color,
-                                        )
-                                      : null,
-                                  licenseInfo: repo.licenseInfo != null
-                                      ? (
-                                          name: repo.licenseInfo!.name,
-                                          spdxId: repo.licenseInfo!.spdxId,
-                                        )
-                                      : null,
-                                  diskUsage: repo.diskUsage,
-                                  isPrivate: repo.isPrivate,
-                                  isArchived: repo.isArchived,
-                                  hasIssuesEnabled: repo.hasIssuesEnabled,
-                                  hasProjectsEnabled: repo.hasProjectsEnabled,
-                                  hasWikiEnabled: repo.hasWikiEnabled,
-                                  hasDiscussionsEnabled:
-                                      repo.hasDiscussionsEnabled,
-                                  title: 'Repository Info',
                                 ),
                               ],
                             ),
