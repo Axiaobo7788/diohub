@@ -361,18 +361,9 @@ class _InfinitePaginationState<T> extends State<_InfinitePagination<T>> {
     _pagingController.refresh();
   }
 
-  // Fetch the data to display.
   Future<List<_ListItem<T>>> _fetchPage(final int pageKey) async {
     try {
-      // Calculate the actual page number from the page key
-      // pageKey starts at 0, so for pageNumber starting at widget.pageNumber:
-      // pageKey 0 -> pageNumber widget.pageNumber
-      // pageKey 1 -> pageNumber widget.pageNumber + 1
-      // etc.
       final int currentPageNumber = widget.pageNumber + pageKey;
-
-      // log.log(Level.debug, 'Fetching page $currentPageNumber, key:$pageKey, $this');
-      // Use the supplied APIs accordingly, based on the *refresh* value.
       final List<T> newItems = await widget.future(
         ScrollWrapperFutureArguments<T>(
           pageNumber: currentPageNumber,

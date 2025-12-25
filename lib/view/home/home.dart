@@ -293,11 +293,7 @@ class HomeScreenState extends State<HomeScreen>
                   ),
                 );
 
-                // Quick options as CheckboxActionButton widgets - always include, use visibilityState
-                // Always add to maintain consistent list structure (prevents widget recreation)
                 final options = searchWrapperState?.quickOptions;
-                // Define a fixed order for options to maintain consistency
-                // This ensures buttons are always added in the same order
                 final optionsToAdd = options?.entries.toList() ?? [];
                 for (final entry in optionsToAdd) {
                   // Capture entry.key in a variable for the closure

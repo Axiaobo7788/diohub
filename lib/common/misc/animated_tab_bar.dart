@@ -2,19 +2,7 @@ import 'package:diohub/common/misc/scroll_dynamic_elevation.dart';
 import 'package:flutter/material.dart';
 import 'package:sliver_tools/sliver_tools.dart';
 
-/// A widget that animates a tab bar in and out, with default padding when hidden.
-///
-/// When the tab bar is not visible, it provides default padding to maintain spacing.
-/// This ensures consistent layout whether the tab bar is shown or hidden.
-///
-/// Example usage:
-/// ```dart
-/// AnimatedTabBar(
-///   showTabBar: tabController.activeLength > 1,
-///   tabBar: tabs,
-///   defaultPadding: const EdgeInsets.only(bottom: 8),
-/// )
-/// ```
+/// A widget that animates a tab bar in and out.
 class AnimatedTabBar extends StatelessWidget {
   const AnimatedTabBar({
     required this.showTabBar,

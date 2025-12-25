@@ -368,11 +368,9 @@ class _FloatingExpandableWidgetState extends State<FloatingExpandableWidget>
   }
 
   void _onPanStart(DragStartDetails details) {
-    // Track if tile was expanded before drag starts
     _wasExpandedBeforeDrag = _isExpanded;
 
-    // Calculate offset from touch point to widget center
-    // This ensures smooth dragging regardless of where you touch the widget
+    // Calculate offset from touch point to widget center for smooth dragging
     Offset? centerOffset;
     if (_centerPosition != null) {
       // _centerPosition is in screen coordinates (center of widget)

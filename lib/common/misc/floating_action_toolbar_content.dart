@@ -995,8 +995,6 @@ class _AnimatedCollapsedActionsRowState
                           debugLogging: widget.debugLogging,
                         );
                       } else {
-                        // Use _AnimatedProminentAction for all prominent actions (same as expanded state)
-                        // This ensures consistent rebuild behavior for checkbox animations
                         return _AnimatedProminentAction(
                           key: ValueKey('prominent_collapsed_${action.label}'),
                           action: action,
@@ -1263,8 +1261,7 @@ class _AnimatedActionButtonState extends State<_AnimatedActionButton>
       _visibilityController.addStatusListener(_statusListener!);
     }
 
-    // Force rebuild if checkbox value changed (even if visibility didn't change)
-    // This ensures AnimatedContainer in buildCompactProminentButton sees the color change and animates
+    // Force rebuild if checkbox value changed so AnimatedContainer animates
     if (checkboxValueChanged) {
       setState(() {});
     }
@@ -1474,8 +1471,7 @@ class _AnimatedProminentActionState extends State<_AnimatedProminentAction>
           '[_AnimatedProminentAction] initState: action=${widget.action.label}, _wasVisible=$_wasVisible, visibilityState=${widget.action.visibilityState}, isExpanded=${widget.callbacks.isExpanded}');
     }
 
-    // Always start at 0.0, then animate to target state after first frame
-    // This ensures newly created visible widgets animate in smoothly
+    // Start at 0.0, then animate to target state after first frame
     _visibilityController.value = 0.0;
 
     // Animate to target state after first frame

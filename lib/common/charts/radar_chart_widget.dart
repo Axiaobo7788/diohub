@@ -109,8 +109,7 @@ class RadarChartWidget extends StatelessWidget {
         .map((value) => RadarEntry(value: value.clamp(0.0, calculatedMax)))
         .toList();
 
-    // Create transparent dataset with max values to set the chart scale
-    // This ensures the chart always scales to calculatedMax (100) even if actual data is lower
+    // Create transparent dataset with max values to set chart scale
     final maxValueEntries = List.generate(
       dataEntries.length,
       (index) => RadarEntry(value: calculatedMax),

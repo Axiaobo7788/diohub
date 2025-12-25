@@ -117,7 +117,6 @@ class DateChunkingHelper {
       }
 
       // Move to next day after current chunk ends
-      // This ensures no gaps or overlaps between chunks
       currentFrom = chunkTo.add(const Duration(days: 1));
 
       // Safety check: prevent infinite loops from date calculation bugs

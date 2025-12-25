@@ -130,25 +130,12 @@ extension StringIntp on int {
   }
 }
 
-/// Sanitized linear interpolation for doubles that handles floating-point precision issues.
-///
-/// This function ensures that when [t] is very close to 0.0 or 1.0, the result
-/// is exactly [a] or [b] respectively, avoiding precision errors that can occur
-/// with [lerpDouble] when values are near the boundaries.
-///
-/// Parameters:
-/// - [a]: The start value (when t = 0.0)
-/// - [b]: The end value (when t = 1.0)
-/// - [t]: The interpolation factor, typically between 0.0 and 1.0
-///
-/// Returns the interpolated value, guaranteed to be exactly [a] when t <= 0.0
-/// and exactly [b] when t >= 1.0.
+/// Linear interpolation for doubles that handles boundary cases to avoid precision issues.
 double sanitizedLerpDouble(
   final double a,
   final double b,
   final double t,
 ) {
-  // Handle boundary cases to avoid precision issues
   if (t <= 0.0) {
     return a;
   }
@@ -156,36 +143,20 @@ double sanitizedLerpDouble(
     return b;
   }
 
-  // Use lerpDouble for the interpolation, but fall back to direct calculation
-  // if it returns null (which can happen due to epsilon checks)
   final double? lerped = lerpDouble(a, b, t);
   if (lerped != null) {
     return lerped;
   }
 
-  // Fallback to direct calculation: a + (b - a) * t
   return a + (b - a) * t;
 }
 
-/// Sanitized linear interpolation for BorderRadius that handles floating-point precision issues.
-///
-/// This function ensures that when [t] is very close to 0.0 or 1.0, the result
-/// is exactly [a] or [b] respectively, avoiding precision errors that can occur
-/// with [BorderRadius.lerp] when values are near the boundaries.
-///
-/// Parameters:
-/// - [a]: The start BorderRadius (when t = 0.0)
-/// - [b]: The end BorderRadius (when t = 1.0)
-/// - [t]: The interpolation factor, typically between 0.0 and 1.0
-///
-/// Returns the interpolated BorderRadius, guaranteed to be exactly [a] when t <= 0.0
-/// and exactly [b] when t >= 1.0.
+/// Linear interpolation for BorderRadius that handles boundary cases.
 BorderRadius sanitizedLerpBorderRadius(
   final BorderRadius? a,
   final BorderRadius? b,
   final double t,
 ) {
-  // Handle boundary cases to avoid precision issues
   if (t <= 0.0) {
     return a ?? BorderRadius.zero;
   }
@@ -193,35 +164,20 @@ BorderRadius sanitizedLerpBorderRadius(
     return b ?? BorderRadius.zero;
   }
 
-  // Use BorderRadius.lerp for the interpolation, but fall back to [a] if it returns null
   final BorderRadius? lerped = BorderRadius.lerp(a, b, t);
   if (lerped != null) {
     return lerped;
   }
 
-  // Fallback to [a] if lerp returns null
   return a ?? BorderRadius.zero;
 }
 
-/// Sanitized linear interpolation for Color that handles floating-point precision issues.
-///
-/// This function ensures that when [t] is very close to 0.0 or 1.0, the result
-/// is exactly [a] or [b] respectively, avoiding precision errors that can occur
-/// with [Color.lerp] when values are near the boundaries.
-///
-/// Parameters:
-/// - [a]: The start Color (when t = 0.0)
-/// - [b]: The end Color (when t = 1.0)
-/// - [t]: The interpolation factor, typically between 0.0 and 1.0
-///
-/// Returns the interpolated Color, guaranteed to be exactly [a] when t <= 0.0
-/// and exactly [b] when t >= 1.0. Returns [a] if both are null, or [b] if only [a] is null.
+/// Linear interpolation for Color that handles boundary cases.
 Color? sanitizedLerpColor(
   final Color? a,
   final Color? b,
   final double t,
 ) {
-  // Handle boundary cases to avoid precision issues
   if (t <= 0.0) {
     return a;
   }
@@ -229,12 +185,10 @@ Color? sanitizedLerpColor(
     return b;
   }
 
-  // Use Color.lerp for the interpolation, but fall back to [a] if it returns null
   final Color? lerped = Color.lerp(a, b, t);
   if (lerped != null) {
     return lerped;
   }
 
-  // Fallback to [a] if lerp returns null
   return a;
 }
