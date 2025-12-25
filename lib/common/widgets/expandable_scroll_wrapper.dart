@@ -1,3 +1,4 @@
+import 'package:diohub/graphql/queries/repositories/__generated__/repo_info.data.gql.dart';
 import 'package:diohub/style/surface_style_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -1467,6 +1468,579 @@ class _ExpandOnScrollContent extends StatelessWidget {
               key: const ValueKey('collapsed'),
               child: collapsedWidget!(context, pullProgress, isReadyToExpand),
             ),
+    );
+  }
+}
+
+/// Generic, compact expandable section widget for displaying categorized content.
+/// Designed to be sleek and handle multiple sections stacked together without clutter.
+///
+/// Features:
+/// - Modern header with title, accent bar, and collapse button
+/// - Proper padding and margins matching app design
+/// - Subtle dividers between sections
+/// - Collapsible with smooth animations
+/// - Supports any content type (DetailTiles, custom widgets, etc.)
+class ExpandableSection extends StatelessWidget {
+  const ExpandableSection({
+    required this.title,
+    required this.children,
+    required this.onCollapse,
+    this.headerColor,
+    super.key,
+  });
+
+  /// Title to display in the header
+  final String title;
+
+  /// List of widgets to display in the content area
+  final List<Widget> children;
+
+  /// Callback to collapse the expanded content
+  final VoidCallback onCollapse;
+
+  /// Optional color for the header accent bar. If null, uses primary color.
+  final Color? headerColor;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final surfaceStyle = theme.surfaceStyle;
+
+    if (children.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    final bool isDark = colorScheme.brightness == Brightness.dark;
+    final Color backgroundColor = colorScheme.surfaceContainer;
+    final Color accentColor = headerColor ?? colorScheme.primary;
+
+    // Use app's border radius system - large radius (18px default)
+    final BorderRadius borderRadius = surfaceStyle.borderRadiusLarge();
+
+    return Container(
+      margin: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+      decoration: BoxDecoration(
+        color: backgroundColor,
+        borderRadius: borderRadius,
+        border: Border.all(
+          color: colorScheme.outlineVariant.withOpacity(isDark ? 0.12 : 0.08),
+          width: 1,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(isDark ? 0.3 : 0.06),
+            blurRadius: 16,
+            offset: const Offset(0, 4),
+            spreadRadius: 0,
+          ),
+          BoxShadow(
+            color: Colors.black.withOpacity(isDark ? 0.2 : 0.03),
+            blurRadius: 6,
+            offset: const Offset(0, 2),
+            spreadRadius: 0,
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // Header section with title, accent bar, and collapse button
+          Container(
+            padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+            decoration: BoxDecoration(
+              color: backgroundColor,
+              border: Border(
+                bottom: BorderSide(
+                  color: colorScheme.outlineVariant
+                      .withOpacity(isDark ? 0.2 : 0.12),
+                  width: 1,
+                ),
+              ),
+              borderRadius: borderRadius.copyWith(
+                bottomLeft: Radius.zero,
+                bottomRight: Radius.zero,
+              ),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      width: 4,
+                      height: 20,
+                      decoration: BoxDecoration(
+                        color: accentColor.withOpacity(0.6),
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Text(
+                      title,
+                      style: theme.textTheme.titleSmall?.copyWith(
+                        color: colorScheme.onSurface,
+                        fontWeight: FontWeight.w700,
+                        fontSize: 17,
+                        letterSpacing: -0.3,
+                      ),
+                    ),
+                  ],
+                ),
+                Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                    onTap: onCollapse,
+                    borderRadius: BorderRadius.circular(24),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 14,
+                        vertical: 8,
+                      ),
+                      decoration: BoxDecoration(
+                        color:
+                            colorScheme.surfaceContainerHigh.withOpacity(0.8),
+                        borderRadius: BorderRadius.circular(24),
+                        border: Border.all(
+                          color: colorScheme.outlineVariant.withOpacity(0.3),
+                          width: 1,
+                        ),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.keyboard_arrow_up_rounded,
+                            size: 18,
+                            color: colorScheme.primary.withOpacity(0.9),
+                          ),
+                          const SizedBox(width: 6),
+                          Text(
+                            'Collapse',
+                            style: theme.textTheme.labelSmall?.copyWith(
+                              color: colorScheme.primary.withOpacity(0.9),
+                              fontWeight: FontWeight.w600,
+                              fontSize: 12,
+                              letterSpacing: 0.2,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          // Content section with proper padding
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            decoration: BoxDecoration(
+              color: backgroundColor,
+              borderRadius: borderRadius.copyWith(
+                topLeft: Radius.zero,
+                topRight: Radius.zero,
+              ),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                for (int i = 0; i < children.length; i++) ...[
+                  ClipRRect(
+                    borderRadius: _getTileBorderRadius(
+                      surfaceStyle,
+                      i,
+                      children.length,
+                    ),
+                    child: children[i],
+                  ),
+                  if (i < children.length - 1)
+                    Container(
+                      height: 1,
+                      margin: const EdgeInsets.symmetric(horizontal: 12),
+                      color: colorScheme.outlineVariant
+                          .withOpacity(isDark ? 0.15 : 0.1),
+                    ),
+                ],
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  BorderRadius _getTileBorderRadius(
+    SurfaceStyleTheme surfaceStyle,
+    int index,
+    int total,
+  ) {
+    if (total == 1) {
+      // Single tile - round bottom corners
+      return surfaceStyle.borderRadiusLarge(corners: [CornerSide.bottom]);
+    } else if (index == 0) {
+      // First tile - no rounded corners (connects to header)
+      return BorderRadius.zero;
+    } else if (index == total - 1) {
+      // Last tile - round bottom corners
+      return surfaceStyle.borderRadiusLarge(corners: [CornerSide.bottom]);
+    } else {
+      // Middle tiles - no rounded corners
+      return BorderRadius.zero;
+    }
+  }
+}
+
+/// Primary prominence expandable section - for most important content
+/// Features: Larger shadows, more padding, bolder header, larger accent bar
+class ExpandableSectionPrimary extends ExpandableSection {
+  const ExpandableSectionPrimary({
+    required super.title,
+    required super.children,
+    required super.onCollapse,
+    super.headerColor,
+    super.key,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final surfaceStyle = theme.surfaceStyle;
+
+    if (children.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    final bool isDark = colorScheme.brightness == Brightness.dark;
+    final Color backgroundColor = colorScheme.surfaceContainer;
+    final Color accentColor = headerColor ?? colorScheme.primary;
+
+    final BorderRadius borderRadius = surfaceStyle.borderRadiusLarge();
+
+    return Container(
+      margin: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+      decoration: BoxDecoration(
+        color: backgroundColor,
+        borderRadius: borderRadius,
+        border: Border.all(
+          color: colorScheme.outlineVariant.withOpacity(isDark ? 0.12 : 0.08),
+          width: 1,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(isDark ? 0.4 : 0.08),
+            blurRadius: 20,
+            offset: const Offset(0, 6),
+            spreadRadius: 0,
+          ),
+          BoxShadow(
+            color: Colors.black.withOpacity(isDark ? 0.3 : 0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 3),
+            spreadRadius: 0,
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 20),
+            decoration: BoxDecoration(
+              color: backgroundColor,
+              border: Border(
+                bottom: BorderSide(
+                  color: colorScheme.outlineVariant
+                      .withOpacity(isDark ? 0.2 : 0.12),
+                  width: 1,
+                ),
+              ),
+              borderRadius: borderRadius.copyWith(
+                bottomLeft: Radius.zero,
+                bottomRight: Radius.zero,
+              ),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      width: 5,
+                      height: 24,
+                      decoration: BoxDecoration(
+                        color: accentColor.withOpacity(0.7),
+                        borderRadius: BorderRadius.circular(2.5),
+                      ),
+                    ),
+                    const SizedBox(width: 14),
+                    Text(
+                      title,
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        color: colorScheme.onSurface,
+                        fontWeight: FontWeight.w800,
+                        fontSize: 19,
+                        letterSpacing: -0.4,
+                      ),
+                    ),
+                  ],
+                ),
+                Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                    onTap: onCollapse,
+                    borderRadius: BorderRadius.circular(24),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 10,
+                      ),
+                      decoration: BoxDecoration(
+                        color:
+                            colorScheme.surfaceContainerHigh.withOpacity(0.8),
+                        borderRadius: BorderRadius.circular(24),
+                        border: Border.all(
+                          color: colorScheme.outlineVariant.withOpacity(0.3),
+                          width: 1,
+                        ),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.keyboard_arrow_up_rounded,
+                            size: 20,
+                            color: colorScheme.primary.withOpacity(0.9),
+                          ),
+                          const SizedBox(width: 6),
+                          Text(
+                            'Collapse',
+                            style: theme.textTheme.labelSmall?.copyWith(
+                              color: colorScheme.primary.withOpacity(0.9),
+                              fontWeight: FontWeight.w600,
+                              fontSize: 12,
+                              letterSpacing: 0.2,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            decoration: BoxDecoration(
+              color: backgroundColor,
+              borderRadius: borderRadius.copyWith(
+                topLeft: Radius.zero,
+                topRight: Radius.zero,
+              ),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                for (int i = 0; i < children.length; i++) ...[
+                  ClipRRect(
+                    borderRadius: _getTileBorderRadius(
+                      surfaceStyle,
+                      i,
+                      children.length,
+                    ),
+                    child: children[i],
+                  ),
+                  if (i < children.length - 1)
+                    Container(
+                      height: 1,
+                      margin: const EdgeInsets.symmetric(horizontal: 12),
+                      color: colorScheme.outlineVariant
+                          .withOpacity(isDark ? 0.15 : 0.1),
+                    ),
+                ],
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Tertiary prominence expandable section - for less important content
+/// Features: Subtle shadows, compact padding, smaller header
+class ExpandableSectionTertiary extends ExpandableSection {
+  const ExpandableSectionTertiary({
+    required super.title,
+    required super.children,
+    required super.onCollapse,
+    super.headerColor,
+    super.key,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final surfaceStyle = theme.surfaceStyle;
+
+    if (children.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    final bool isDark = colorScheme.brightness == Brightness.dark;
+    final Color backgroundColor = colorScheme.surfaceContainer;
+    final Color accentColor = headerColor ?? colorScheme.primary;
+
+    final BorderRadius borderRadius = surfaceStyle.borderRadiusLarge();
+
+    return Container(
+      margin: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+      decoration: BoxDecoration(
+        color: backgroundColor,
+        borderRadius: borderRadius,
+        border: Border.all(
+          color: colorScheme.outlineVariant.withOpacity(isDark ? 0.1 : 0.06),
+          width: 0.5,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(isDark ? 0.2 : 0.03),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+            spreadRadius: 0,
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 14),
+            decoration: BoxDecoration(
+              color: backgroundColor,
+              border: Border(
+                bottom: BorderSide(
+                  color: colorScheme.outlineVariant
+                      .withOpacity(isDark ? 0.15 : 0.1),
+                  width: 0.5,
+                ),
+              ),
+              borderRadius: borderRadius.copyWith(
+                bottomLeft: Radius.zero,
+                bottomRight: Radius.zero,
+              ),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      width: 3,
+                      height: 16,
+                      decoration: BoxDecoration(
+                        color: accentColor.withOpacity(0.5),
+                        borderRadius: BorderRadius.circular(1.5),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Text(
+                      title,
+                      style: theme.textTheme.titleSmall?.copyWith(
+                        color: colorScheme.onSurface,
+                        fontWeight: FontWeight.w600,
+                        fontSize: 15,
+                        letterSpacing: -0.2,
+                      ),
+                    ),
+                  ],
+                ),
+                Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                    onTap: onCollapse,
+                    borderRadius: BorderRadius.circular(20),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 6,
+                      ),
+                      decoration: BoxDecoration(
+                        color:
+                            colorScheme.surfaceContainerHigh.withOpacity(0.7),
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(
+                          color: colorScheme.outlineVariant.withOpacity(0.25),
+                          width: 0.5,
+                        ),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.keyboard_arrow_up_rounded,
+                            size: 16,
+                            color: colorScheme.primary.withOpacity(0.8),
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            'Collapse',
+                            style: theme.textTheme.labelSmall?.copyWith(
+                              color: colorScheme.primary.withOpacity(0.8),
+                              fontWeight: FontWeight.w600,
+                              fontSize: 11,
+                              letterSpacing: 0.2,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+            decoration: BoxDecoration(
+              color: backgroundColor,
+              borderRadius: borderRadius.copyWith(
+                topLeft: Radius.zero,
+                topRight: Radius.zero,
+              ),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                for (int i = 0; i < children.length; i++) ...[
+                  ClipRRect(
+                    borderRadius: _getTileBorderRadius(
+                      surfaceStyle,
+                      i,
+                      children.length,
+                    ),
+                    child: children[i],
+                  ),
+                  if (i < children.length - 1)
+                    Container(
+                      height: 0.5,
+                      margin: const EdgeInsets.symmetric(horizontal: 12),
+                      color: colorScheme.outlineVariant
+                          .withOpacity(isDark ? 0.1 : 0.08),
+                    ),
+                ],
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
