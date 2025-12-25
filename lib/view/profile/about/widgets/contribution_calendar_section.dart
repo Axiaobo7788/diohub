@@ -5,6 +5,7 @@ import 'package:diohub/common/misc/shimmer_widget.dart';
 import 'package:diohub/common/utils/contribution_utils.dart';
 import 'package:diohub/models/contributions/contribution_chip_type.dart';
 import 'package:diohub/models/contributions/contribution_query_models.dart';
+import 'package:diohub/utils/contribution_query_utils.dart';
 import 'package:diohub/view/profile/about/widgets/day_activity_bottom_sheet.dart';
 import 'package:diohub/style/surface_style_theme.dart';
 import 'package:flutter/material.dart';
@@ -17,14 +18,10 @@ class ContributionCalendarSection extends StatelessWidget {
   const ContributionCalendarSection({
     required this.weeks,
     required this.totalContributions,
+    required this.providerKey,
+    required this.createdAt,
     this.colors,
     this.onDayTap,
-    this.selectedYear,
-    this.availableYears,
-    this.customFromDate,
-    this.customToDate,
-    this.useCustomRange = false,
-    this.createdAt,
     this.commits,
     this.pullRequests,
     this.issues,
@@ -41,29 +38,23 @@ class ContributionCalendarSection extends StatelessWidget {
   /// Total contributions in the displayed period
   final int totalContributions;
 
+  /// Provider key containing date range information
+  final ContributionQueryKey providerKey;
+
+  /// User's GitHub account creation date (for "Since joining GitHub" option)
+  final DateTime? createdAt;
+
   /// Color scheme for contribution levels
   final List<Color>? colors;
 
   /// Callback when a day is tapped
   final void Function(ContributionDay day)? onDayTap;
-
-  /// Currently selected year (for display purposes only)
-  final int? selectedYear;
-
-  /// Available years to select from (for display purposes only)
-  final List<int>? availableYears;
-
-  /// Custom date range start (for display purposes only)
-  final DateTime? customFromDate;
-
-  /// Custom date range end (for display purposes only)
-  final DateTime? customToDate;
-
-  /// Whether custom date range is active (for display purposes only)
-  final bool useCustomRange;
-
-  /// User's GitHub account creation date (for "Since joining GitHub" option)
-  final DateTime? createdAt;
+  
+  /// Extract display values from providerKey
+  int? get selectedYear => providerKey.dateRange.displayYear;
+  DateTime? get customFromDate => providerKey.dateRange.displayFromDate;
+  DateTime? get customToDate => providerKey.dateRange.displayToDate;
+  bool get useCustomRange => providerKey.dateRange.isCustomRange;
 
   /// Number of commits
   final int? commits;
@@ -86,15 +77,6 @@ class ContributionCalendarSection extends StatelessWidget {
   /// User login for fetching day activity
   final String? userLogin;
 
-  /// Checks if the current custom range matches "Since joining GitHub"
-  bool get _isSinceJoining {
-    if (!useCustomRange || customFromDate == null || createdAt == null) {
-      return false;
-    }
-    return customFromDate!.year == createdAt!.year &&
-        customFromDate!.month == createdAt!.month &&
-        customFromDate!.day == createdAt!.day;
-  }
 
   /// Handle day tap - opens bottom sheet if day has contributions
   void _handleDayTap(BuildContext context, ContributionDay day) {
@@ -177,19 +159,37 @@ class ContributionCalendarSection extends StatelessWidget {
     bool shouldScroll = false;
     String subtitleText;
 
-    if (useCustomRange && customFromDate != null && customToDate != null) {
+    final dateRange = providerKey.dateRange;
+    
+    // Check for "Last Year" first (it's a CustomRange with isLastYear flag)
+    if (dateRange.isLastYear) {
+      subtitleText = 'Last Year';
+      shouldScroll = false;
+    } else if (useCustomRange && customFromDate != null && customToDate != null) {
       final daysDiff = customToDate!.difference(customFromDate!).inDays;
       final yearsDiff = daysDiff / 365.25;
 
       // Enable scrolling for ranges > 1 year
       shouldScroll = yearsDiff > 1.0;
 
-      if (_isSinceJoining) {
+      if (isSinceJoining(
+        useCustomRange: useCustomRange,
+        customFromDate: customFromDate,
+        createdAt: createdAt,
+      )) {
         subtitleText = 'Since joining GitHub';
       } else {
-        final fromStr = formatDateOnly(customFromDate!);
-        final toStr = formatDateOnly(customToDate!);
-        subtitleText = 'from $fromStr to $toStr';
+        // Check if custom range spans exactly a full year (Jan 1 - Dec 31)
+        final fullYear = dateRange.fullYearIfCustomRange;
+        if (fullYear != null) {
+          // Show just the year if it's a full year range
+          subtitleText = '$fullYear';
+        } else {
+          // Show date range for partial year ranges
+          final fromStr = formatDateOnly(customFromDate!);
+          final toStr = formatDateOnly(customToDate!);
+          subtitleText = 'from $fromStr to $toStr';
+        }
       }
     } else if (selectedYear == null) {
       subtitleText = 'Last Year';

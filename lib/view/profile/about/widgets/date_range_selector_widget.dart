@@ -1,5 +1,6 @@
 import 'package:diohub/common/misc/surface_shape_resolver.dart';
 import 'package:diohub/style/surface_style_theme.dart';
+import 'package:diohub/utils/contribution_query_utils.dart';
 import 'package:flutter/material.dart';
 
 /// A reusable widget for selecting contribution date ranges
@@ -12,7 +13,6 @@ import 'package:flutter/material.dart';
 class DateRangeSelectorWidget extends StatelessWidget {
   const DateRangeSelectorWidget({
     required this.selectedYear,
-    required this.availableYears,
     required this.customFromDate,
     required this.customToDate,
     required this.useCustomRange,
@@ -24,9 +24,6 @@ class DateRangeSelectorWidget extends StatelessWidget {
 
   /// Currently selected year (null = last year)
   final int? selectedYear;
-
-  /// Available years to select from
-  final List<int>? availableYears;
 
   /// Custom date range start
   final DateTime? customFromDate;
@@ -46,20 +43,16 @@ class DateRangeSelectorWidget extends StatelessWidget {
   /// Callback when custom date range changes
   final void Function(DateTime? from, DateTime? to)? onCustomRangeChanged;
 
-  /// Checks if the current custom range matches "Since joining GitHub"
-  bool get _isSinceJoining {
-    if (!useCustomRange || customFromDate == null || createdAt == null) {
-      return false;
-    }
-    return customFromDate!.year == createdAt!.year &&
-        customFromDate!.month == createdAt!.month &&
-        customFromDate!.day == createdAt!.day;
-  }
-
   /// Gets the display text for the current selection
   String get displayText {
     if (useCustomRange) {
-      return _isSinceJoining ? 'Since joining' : 'Custom';
+      return isSinceJoining(
+        useCustomRange: useCustomRange,
+        customFromDate: customFromDate,
+        createdAt: createdAt,
+      )
+          ? 'Since joining'
+          : 'Custom';
     }
     return selectedYear?.toString() ?? 'Last Year';
   }
@@ -117,14 +110,15 @@ class DateRangeSelectorWidget extends StatelessWidget {
         ),
       ),
       itemBuilder: (context) {
+        final availableYears = generateAvailableYears(createdAt);
         final items = <PopupMenuEntry<String>>[
           const PopupMenuItem(
             value: 'lastYear',
             child: Text('Last Year'),
           ),
-          if (availableYears != null && availableYears!.isNotEmpty) ...[
+          if (availableYears.isNotEmpty) ...[
             const PopupMenuDivider(),
-            ...availableYears!.map((year) => PopupMenuItem(
+            ...availableYears.map((year) => PopupMenuItem(
                   value: 'year:$year',
                   child: Text(year.toString()),
                 )),

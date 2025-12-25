@@ -140,6 +140,8 @@ query repositoryInfo($owner: String!, $name: String!) {
     viewerSubscription
     viewerCanSubscribe
     viewerPermission
+    lockReason
+    forkingAllowed
     
     # Counts
     issues(states: [OPEN]) {

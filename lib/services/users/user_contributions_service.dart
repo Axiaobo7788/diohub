@@ -20,6 +20,11 @@ class UserContributionsService {
   static Future<ContributionCollectionResult> fetchContributions(
     ContributionQueryKey key,
   ) async {
+    if (kDebugMode) {
+      final timestamp = DateTime.now().millisecondsSinceEpoch;
+      log.d(
+          '[UserContributionsService] ⚠️ fetchContributions CALLED at $timestamp for user "${key.userName}", hashCode: ${key.hashCode}, dateRange: ${key.dateRange}');
+    }
     try {
       final (from, to) = key.dateRange.dates;
 
@@ -27,21 +32,39 @@ class UserContributionsService {
       // Use actual day difference instead of year subtraction to correctly handle
       // "last year" queries that span two calendar years but are only 365 days
       final daysDiff = to.difference(from).inDays;
+      if (kDebugMode) {
+        log.d(
+            '[UserContributionsService] fetchContributions: Date range is $daysDiff days (from ${from.toIso8601String()} to ${to.toIso8601String()})');
+      }
 
       // If the range is 366 days or less, treat it as single-year
       // (366 accounts for leap years; most years are 365 days)
       if (daysDiff <= 366) {
+        if (kDebugMode) {
+          log.d(
+              '[UserContributionsService] fetchContributions: Single-year query, fetching directly');
+        }
         // Single year - fetch and convert to view model
         final result = await UserInfoService.getUserContributions(
           key.userName,
           from: from,
           to: to,
         );
-        return _convertSingleYearToViewModel(result);
+        final viewModel = _convertSingleYearToViewModel(result);
+        if (kDebugMode) {
+          log.d(
+              '[UserContributionsService] fetchContributions: Single-year conversion complete. Total contributions: ${viewModel.viewModel.totalContributions}');
+        }
+        return viewModel;
       }
 
       // Multi-year range: fetch each year in parallel
       final yearQueries = <Future<GuserContributionsData_user>>[];
+      final yearCount = to.year - from.year + 1;
+      if (kDebugMode) {
+        log.d(
+            '[UserContributionsService] fetchContributions: Multi-year query spanning $yearCount years, fetching in parallel');
+      }
 
       for (int year = from.year; year <= to.year; year++) {
         final yearStart = year == from.year
@@ -50,6 +73,11 @@ class UserContributionsService {
         final yearEnd = year == to.year
             ? DateTime(year, to.month, to.day)
             : DateTime(year, 12, 31);
+
+        if (kDebugMode) {
+          log.d(
+              '[UserContributionsService] fetchContributions: Adding query for year $year (${yearStart.toIso8601String()} to ${yearEnd.toIso8601String()})');
+        }
 
         yearQueries.add(
           UserInfoService.getUserContributions(
@@ -61,13 +89,27 @@ class UserContributionsService {
       }
 
       // Fetch all years in parallel
+      if (kDebugMode) {
+        log.d(
+            '[UserContributionsService] fetchContributions: Executing ${yearQueries.length} parallel queries');
+      }
       final results = await Future.wait(yearQueries, eagerError: true);
-
+      if (kDebugMode) {
+        log.d(
+            '[UserContributionsService] fetchContributions: All ${results.length} queries completed, combining results');
+      }
       // Combine results into unified view model
-      return _combineMultiYearResults(results);
+      final combined = _combineMultiYearResults(results);
+      if (kDebugMode) {
+        log.d(
+            '[UserContributionsService] fetchContributions: Multi-year combination complete. Total contributions: ${combined.viewModel.totalContributions}, ${combined.yearlyHighlights.length} year highlights');
+      }
+      return combined;
     } catch (e, stackTrace) {
-      log.e('Error fetching user contributions',
-          error: e, stackTrace: stackTrace);
+      log.e(
+          '[UserContributionsService] fetchContributions: Error for user "${key.userName}"',
+          error: e,
+          stackTrace: stackTrace);
       rethrow;
     }
   }
@@ -76,6 +118,10 @@ class UserContributionsService {
   static ContributionCollectionResult _convertSingleYearToViewModel(
     GuserContributionsData_user data,
   ) {
+    if (kDebugMode) {
+      log.d(
+          '[UserContributionsService] _convertSingleYearToViewModel: Starting conversion');
+    }
     final collection = data.contributionsCollection;
 
     // Build flattened view model
@@ -170,6 +216,10 @@ class UserContributionsService {
 
     final mergedRepos = repoMap.values.toList()
       ..sort((a, b) => b.contributionCount.compareTo(a.contributionCount));
+    if (kDebugMode) {
+      log.d(
+          '[UserContributionsService] _convertSingleYearToViewModel: Merged ${mergedRepos.length} repositories');
+    }
 
     // Update viewModel with merged repositories
     final updatedViewModel = ContributionViewModel(
@@ -332,6 +382,11 @@ class UserContributionsService {
       mostReviewedRepository: mostReviewedRepo,
       joinedGitHub: joinedGitHub,
     );
+
+    if (kDebugMode) {
+      log.d(
+          '[UserContributionsService] _convertSingleYearToViewModel: Conversion complete. Year: ${highlights.year}, Contributions: ${highlights.totalContributions}, Commits: ${highlights.totalCommitContributions}, PRs: ${highlights.totalPullRequestContributions}, Issues: ${highlights.totalIssueContributions}, Reviews: ${highlights.totalPullRequestReviewContributions}');
+    }
 
     return ContributionCollectionResult(
       viewModel: updatedViewModel,
@@ -729,6 +784,10 @@ class UserContributionsService {
     // Sort repositories by contribution count (descending)
     final repositories = repoMap.values.toList()
       ..sort((a, b) => b.contributionCount.compareTo(a.contributionCount));
+    if (kDebugMode) {
+      log.d(
+          '[UserContributionsService] _combineMultiYearResults: Merged ${repositories.length} repositories');
+    }
 
     // Sum all statistics
     int totalContributions = 0;
@@ -746,6 +805,10 @@ class UserContributionsService {
       totalIssues += collection.totalIssueContributions;
       totalReviews += collection.totalPullRequestReviewContributions;
       allYears.addAll(collection.contributionYears);
+    }
+    if (kDebugMode) {
+      log.d(
+          '[UserContributionsService] _combineMultiYearResults: Aggregated totals - Contributions: $totalContributions, Commits: $totalCommits, PRs: $totalPRs, Issues: $totalIssues, Reviews: $totalReviews, Years: ${allYears.toList()..sort()}');
     }
 
     // Get colors from the first result (they should be the same)
@@ -768,6 +831,10 @@ class UserContributionsService {
     );
 
     // Return combined result with both flattened data and per-year highlights
+    if (kDebugMode) {
+      log.d(
+          '[UserContributionsService] _combineMultiYearResults: Combination complete. ViewModel: ${viewModel.totalContributions} contributions, ${viewModel.commitContributionsByRepository.length} repos. Yearly highlights: ${yearlyHighlights.length} years');
+    }
     return ContributionCollectionResult(
       viewModel: viewModel,
       yearlyHighlights: yearlyHighlights,

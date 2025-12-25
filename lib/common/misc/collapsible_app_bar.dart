@@ -1,5 +1,6 @@
 import 'dart:ui';
 
+import 'package:diohub/common/misc/scroll_dynamic_elevation.dart';
 import 'package:diohub/style/surface_style_theme.dart';
 import 'package:diohub/utils/utils.dart';
 import 'package:flutter/material.dart';
@@ -225,9 +226,9 @@ class _RoundedExpandedWidget extends StatelessWidget {
                         ),
                         Expanded(
                           child: SizedBox(
-              width: double.infinity,
-              child: child,
-            ),
+                            width: double.infinity,
+                            child: child,
+                          ),
                         ),
                       ],
                     )
@@ -369,13 +370,45 @@ class _DynamicSliverAppBarDelegate extends SliverPersistentHeaderDelegate {
     return (t * 2.0).clamp(0.0, 1.0);
   }
 
+  /// Calculates top margin offset: 0.0 (default) -> 16.0 (overscroll) -> 0.0 (collapsed).
+  double _calculateTopMargin({
+    required double collapseProgress,
+    required double overscrollFactor,
+  }) {
+    const double baseTopMargin = 0.0;
+    const double overscrollTopMargin = 16.0;
+
+    // Phase 1: Overscroll (when collapseProgress is near 0)
+    // Interpolate from baseTopMargin to overscrollTopMargin based on overscrollFactor
+    if (collapseProgress < 0.1 && overscrollAmount > 0) {
+      return sanitizedLerpDouble(
+        baseTopMargin,
+        overscrollTopMargin,
+        overscrollFactor,
+      );
+    }
+
+    // Phase 2: Collapse (when scrolling down)
+    // Determine starting margin: if we overscrolled, start from overscrollTopMargin, else baseTopMargin
+    final double startTopMargin = overscrollAmount > 0 && overscrollFactor > 0.5
+        ? overscrollTopMargin
+        : baseTopMargin;
+
+    // Interpolate from startTopMargin to baseTopMargin based on collapse progress
+    return sanitizedLerpDouble(
+      startTopMargin,
+      baseTopMargin,
+      collapseProgress,
+    );
+  }
+
   /// Calculates horizontal margin: 8.0 (default) -> 16.0 (overscroll) -> 0.0 (collapsed).
   double _calculateHorizontalMargin({
     required double collapseProgress,
     required double overscrollFactor,
   }) {
     const double baseMargin = 8.0;
-    const double overscrollMargin = 32.0;
+    const double overscrollMargin = 24.0;
     const double collapsedMargin = 0.0;
 
     // Phase 1: Overscroll (when collapseProgress is near 0)
@@ -383,11 +416,6 @@ class _DynamicSliverAppBarDelegate extends SliverPersistentHeaderDelegate {
     if (collapseProgress < 0.1 && overscrollAmount > 0) {
       final double margin =
           sanitizedLerpDouble(baseMargin, overscrollMargin, overscrollFactor);
-      debugPrint(
-        '[Margin] Overscroll: collapseProgress=$collapseProgress, '
-        'overscrollFactor=$overscrollFactor, overscrollAmount=$overscrollAmount, '
-        'margin=$margin',
-      );
       return margin;
     }
 
@@ -398,22 +426,11 @@ class _DynamicSliverAppBarDelegate extends SliverPersistentHeaderDelegate {
         : baseMargin;
 
     // Interpolate from startMargin to collapsedMargin based on collapse progress
-    final double margin = sanitizedLerpDouble(
+    return sanitizedLerpDouble(
       startMargin,
       collapsedMargin,
       collapseProgress,
     );
-
-    // Only log when collapse is actually happening (t > 0.01 to avoid logging at rest)
-    if (collapseProgress > 0.01) {
-      debugPrint(
-        '[Margin] Collapse: collapseProgress=$collapseProgress, '
-        'overscrollFactor=$overscrollFactor, overscrollAmount=$overscrollAmount, '
-        'startMargin=$startMargin, finalMargin=$margin',
-      );
-    }
-
-    return margin;
   }
 
   /// Height increase for stretch effect during overscroll (30% of overscroll + 1px buffer).
@@ -486,7 +503,7 @@ class _DynamicSliverAppBarDelegate extends SliverPersistentHeaderDelegate {
     final double range = maxExtent - minExtent;
     final double t = range == 0 ? 1 : (shrinkOffset / range).clamp(0.0, 1.0);
 
-    final bool canPop = Navigator.canPop(context);
+    final bool canPop = ModalRoute.of(context)?.canPop ?? false;
     final bool isCollapsed = t >= 0.95;
     final double elevation = t * 2.0;
     final double backgroundOpacity = t.clamp(0.0, 1.0);
@@ -507,6 +524,10 @@ class _DynamicSliverAppBarDelegate extends SliverPersistentHeaderDelegate {
     // Accelerate collapse progress (2x) so margin reaches 0 at halfway through collapse
     final double marginCollapseProgress = (t * 2.0).clamp(0.0, 1.0);
     final double horizontalMargin = _calculateHorizontalMargin(
+      collapseProgress: marginCollapseProgress,
+      overscrollFactor: overscrollFactor,
+    );
+    final double topMarginOffset = _calculateTopMargin(
       collapseProgress: marginCollapseProgress,
       overscrollFactor: overscrollFactor,
     );
@@ -558,25 +579,24 @@ class _DynamicSliverAppBarDelegate extends SliverPersistentHeaderDelegate {
         ) ??
         colorScheme.surfaceContainer;
 
-    return Stack(
-      fit: StackFit.expand,
-      children: [
-        if (t < 0.95)
-          Align(
-            alignment: Alignment.topCenter,
-            child: SizedBox(
-              height: expandedHeight + overscrollHeight,
-              child: Opacity(
-                opacity: (1 - t).clamp(0.0, 1.0),
-                child: Transform.scale(
-                  scale: _calculateExpandedWidgetScale(t, pullScale),
-                  alignment: Alignment.topCenter,
-                  child: IgnorePointer(
-                    ignoring: true,
+    return ScrollDynamicElevation(
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          if (t < 0.95)
+            Align(
+              alignment: Alignment.topCenter,
+              child: SizedBox(
+                height: expandedHeight + overscrollHeight,
+                child: Opacity(
+                  opacity: (1 - t).clamp(0.0, 1.0),
+                  child: Transform.scale(
+                    scale: _calculateExpandedWidgetScale(t, pullScale),
+                    alignment: Alignment.topCenter,
                     child: _RoundedExpandedWidget(
                       margin: EdgeInsets.fromLTRB(
                         horizontalMargin,
-                        statusPadding,
+                        statusPadding + topMarginOffset,
                         horizontalMargin,
                         0,
                       ),
@@ -590,78 +610,78 @@ class _DynamicSliverAppBarDelegate extends SliverPersistentHeaderDelegate {
                 ),
               ),
             ),
-          ),
-        Align(
-          alignment: Alignment.topCenter,
-          child: SizedBox(
-            height: minExtent,
-            child: Material(
-              color: Colors.transparent,
-              elevation: elevation,
-              shadowColor:
-                  colorScheme.shadow.withOpacity(0.1 * backgroundOpacity),
-              child: Container(
-                decoration: BoxDecoration(
-                  color: collapsedBackground,
-                  border: Border(
-                    bottom: BorderSide(
-                      color: colorScheme.outline
-                          .withOpacity(0.08 * backgroundOpacity),
-                      width: 0.5,
+          Align(
+            alignment: Alignment.topCenter,
+            child: SizedBox(
+              height: minExtent,
+              child: Material(
+                color: Colors.transparent,
+                elevation: elevation,
+                shadowColor:
+                    colorScheme.shadow.withOpacity(0.1 * backgroundOpacity),
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: collapsedBackground,
+                    border: Border(
+                      bottom: BorderSide(
+                        color: colorScheme.outline
+                            .withOpacity(0.08 * backgroundOpacity),
+                        width: 0.5,
+                      ),
                     ),
                   ),
-                ),
-                child: Opacity(
-                  opacity: t.clamp(0.0, 1.0),
-                  child: SafeArea(
-                    bottom: false,
-                    child: canPop
-                        ? Row(
-                            crossAxisAlignment: CrossAxisAlignment.center,
-                            children: [
-                              Transform.scale(
-                                scale: scale,
-                                alignment: Alignment.center,
-                                child: const BackButton(),
-                              ),
-                              Expanded(
-                                child: Padding(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 12,
-                                    vertical: 4,
-                                  ),
-                                  child: Transform.scale(
-                                    scale: scale,
-                                    alignment: Alignment.centerLeft,
-                                    child: Align(
+                  child: Opacity(
+                    opacity: t.clamp(0.0, 1.0),
+                    child: SafeArea(
+                      bottom: false,
+                      child: canPop
+                          ? Row(
+                              crossAxisAlignment: CrossAxisAlignment.center,
+                              children: [
+                                Transform.scale(
+                                  scale: scale,
+                                  alignment: Alignment.center,
+                                  child: const BackButton(),
+                                ),
+                                Expanded(
+                                  child: Padding(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 12,
+                                      vertical: 4,
+                                    ),
+                                    child: Transform.scale(
+                                      scale: scale,
                                       alignment: Alignment.centerLeft,
-                                      child: collapsedContent,
+                                      child: Align(
+                                        alignment: Alignment.centerLeft,
+                                        child: collapsedContent,
+                                      ),
                                     ),
                                   ),
                                 ),
-                              ),
-                            ],
-                          )
-                        : Center(
-                            child: Transform.scale(
-                              scale: scale,
-                              alignment: Alignment.center,
-                              child: Padding(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 16,
-                                  vertical: 4,
+                              ],
+                            )
+                          : Center(
+                              child: Transform.scale(
+                                scale: scale,
+                                alignment: Alignment.center,
+                                child: Padding(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 16,
+                                    vertical: 4,
+                                  ),
+                                  child: collapsedContent,
                                 ),
-                                child: collapsedContent,
                               ),
                             ),
-                          ),
+                    ),
                   ),
                 ),
               ),
             ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 

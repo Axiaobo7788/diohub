@@ -11,7 +11,6 @@ import 'package:diohub/models/issues/issue_card_data_model.dart';
 import 'package:diohub/models/pull_requests/pull_request_card_data_model.dart';
 import 'package:diohub/models/repositories/repo_card_data_model.dart';
 import 'package:diohub/style/surface_style_theme.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_vector_icons/flutter_vector_icons.dart';
 
@@ -158,7 +157,8 @@ class _YearHighlightItem extends StatelessWidget {
                 if (highlight.totalCommitContributions > 0)
                   ContributionInfoChip.commits(
                     count: highlight.totalCommitContributions,
-                    repoCount: highlight.totalRepositoriesWithContributedCommits,
+                    repoCount:
+                        highlight.totalRepositoriesWithContributedCommits,
                     onTap: onChipTap != null
                         ? () => onChipTap!(ContributionChipType.commits)
                         : null,
@@ -216,27 +216,7 @@ class _YearHighlightItem extends StatelessWidget {
                 highlight.mostReviewedRepository != null ||
                 highlight.joinedGitHub != null) ...[
               const SizedBox(height: 12),
-              Builder(
-                builder: (context) {
-                  if (kDebugMode) {
-                    debugPrint(
-                        '[ContributionHighlights] Year ${highlight.year}:');
-                    debugPrint(
-                        '  - firstIssue: ${highlight.firstIssue?.title ?? "null"}');
-                    debugPrint(
-                        '  - firstPullRequest: ${highlight.firstPullRequest?.title ?? "null"}');
-                    debugPrint(
-                        '  - firstRepository: ${highlight.firstRepository?.title ?? "null"}');
-                    debugPrint(
-                        '  - popularIssue: ${highlight.popularIssue?.title ?? "null"} (commentCount: ${highlight.popularIssue?.commentCount ?? "null"})');
-                    debugPrint(
-                        '  - popularPullRequest: ${highlight.popularPullRequest?.title ?? "null"} (commentCount: ${highlight.popularPullRequest?.commentCount ?? "null"})');
-                    debugPrint(
-                        '  - joinedGitHub: ${highlight.joinedGitHub ?? "null"}');
-                  }
-                  return _buildHighlightCards(context, highlight);
-                },
-              ),
+              _buildHighlightCards(context, highlight),
             ],
           ],
         ],
@@ -252,9 +232,6 @@ class _YearHighlightItem extends StatelessWidget {
 
     // First issue
     if (highlight.firstIssue != null) {
-      if (kDebugMode) {
-        debugPrint('[ContributionHighlights] Adding First issue card');
-      }
       cards.add(_buildHighlightSection(
         context,
         title: 'First issue',
@@ -264,9 +241,6 @@ class _YearHighlightItem extends StatelessWidget {
 
     // First pull request
     if (highlight.firstPullRequest != null) {
-      if (kDebugMode) {
-        debugPrint('[ContributionHighlights] Adding First pull request card');
-      }
       cards.add(_buildHighlightSection(
         context,
         title: 'First pull request',
@@ -276,9 +250,6 @@ class _YearHighlightItem extends StatelessWidget {
 
     // First repository
     if (highlight.firstRepository != null) {
-      if (kDebugMode) {
-        debugPrint('[ContributionHighlights] Adding First repository card');
-      }
       cards.add(_buildHighlightSection(
         context,
         title: 'First repository',
@@ -288,42 +259,24 @@ class _YearHighlightItem extends StatelessWidget {
 
     // Popular issue
     if (highlight.popularIssue != null) {
-      if (kDebugMode) {
-        debugPrint(
-            '[ContributionHighlights] Adding Popular issue card: ${highlight.popularIssue!.title} (${highlight.popularIssue!.commentCount} comments)');
-      }
       cards.add(_buildHighlightSection(
         context,
         title: 'Most commented issue',
         item: highlight.popularIssue!,
       ));
-    } else if (kDebugMode) {
-      debugPrint(
-          '[ContributionHighlights] Popular issue is NULL - not adding card');
     }
 
     // Popular pull request
     if (highlight.popularPullRequest != null) {
-      if (kDebugMode) {
-        debugPrint(
-            '[ContributionHighlights] Adding Popular pull request card: ${highlight.popularPullRequest!.title} (${highlight.popularPullRequest!.commentCount} comments)');
-      }
       cards.add(_buildHighlightSection(
         context,
         title: 'Most commented pull request',
         item: highlight.popularPullRequest!,
       ));
-    } else if (kDebugMode) {
-      debugPrint(
-          '[ContributionHighlights] Popular pull request is NULL - not adding card');
     }
 
     // Most reviewed repository
     if (highlight.mostReviewedRepository != null) {
-      if (kDebugMode) {
-        debugPrint(
-            '[ContributionHighlights] Adding Most reviewed repository card');
-      }
       cards.add(_buildHighlightSection(
         context,
         title: 'Most reviewed repository',

@@ -8,6 +8,7 @@ import 'package:diohub/app/global.dart';
 import 'package:diohub/models/popup/popup_type.dart';
 import 'package:diohub/services/authentication/auth_service.dart';
 import 'package:ferry/ferry.dart';
+import 'package:flutter/foundation.dart';
 import 'package:gql_dio_link/gql_dio_link.dart';
 import 'package:gql_exec/gql_exec.dart' as gql_exec;
 import 'package:path_provider/path_provider.dart';
@@ -202,14 +203,25 @@ class GraphqlHandler extends BaseAPIHandler {
     final OperationRequest<dynamic, dynamic> operationRequest, {
     final bool refreshCache = false,
     final Map<String, dynamic>? requestHeaders,
-  }) async =>
-      _query(
-        operationRequest,
-        requestHeaders: requestHeaders,
-        overrideAPICache: activeCacheOptions.copyWith(
-          cachePolicy: refreshCache ? CachePolicy.refresh : null,
-        ),
-      );
+  }) async {
+    if (kDebugMode) {
+      final timestamp = DateTime.now().millisecondsSinceEpoch;
+      log.d(
+          '[GraphqlHandler] ⚠️ query() CALLED at $timestamp, refreshCache: $refreshCache, operation: ${operationRequest.operation.operationName}');
+    }
+    final response = await _query(
+      operationRequest,
+      requestHeaders: requestHeaders,
+      overrideAPICache: activeCacheOptions.copyWith(
+        cachePolicy: refreshCache ? CachePolicy.refresh : null,
+      ),
+    );
+    if (kDebugMode) {
+      log.d(
+          '[GraphqlHandler] ✅ query() COMPLETED for operation: ${operationRequest.operation.operationName}');
+    }
+    return response;
+  }
 
   @override
   APICache get _defaultCacheOptions => APICache.gql();
@@ -437,8 +449,28 @@ abstract class BaseAPIHandler {
                   ),
                 );
             if (cacheIsBeforeExpiry) {
+              if (kDebugMode) {
+                final timestamp = DateTime.now().millisecondsSinceEpoch;
+                log.d(
+                    '[BaseAPIHandler] ✅ CACHE HIT at $timestamp for URL: ${options.uri}, cache age: ${DateTime.now().difference(cacheData.responseDate).inSeconds}s');
+              }
               // Resolve the request and pass cached data as response.
               return handler.resolve(cacheData.toResponse(options));
+            } else if (cacheData != null) {
+              if (kDebugMode) {
+                log.d(
+                    '[BaseAPIHandler] ⚠️ CACHE EXPIRED for URL: ${options.uri}, cache age: ${DateTime.now().difference(cacheData.responseDate).inSeconds}s, maxAge: ${cache.maxAge!.inSeconds}s');
+              }
+            } else {
+              if (kDebugMode) {
+                log.d(
+                    '[BaseAPIHandler] ⚠️ NO CACHE FOUND for URL: ${options.uri}, making network request');
+              }
+            }
+          } else {
+            if (kDebugMode) {
+              log.d(
+                  '[BaseAPIHandler] ⚠️ CACHE CHECK SKIPPED for URL: ${options.uri}, policy: ${cache.cacheOptions.policy}, maxAge: ${cache.maxAge}');
             }
           }
           handler.next(options);

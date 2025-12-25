@@ -100,24 +100,20 @@ class _PullToExpandIndicatorState extends State<PullToExpandIndicator>
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
 
-    // Scale text from 0 to 1 based on pull progress - makes text 0 size at 0 state
-    final double textScale = widget.pullProgress.clamp(0.0, 1.0);
+    // Scale from 0 to 1 based on pull progress - makes content 0 size at 0 state
+    final double contentScale = widget.pullProgress.clamp(0.0, 1.0);
 
-    // Animate text opacity: start at 0, increase as you pull
-    final double textOpacity = widget.pullProgress.clamp(0.0, 1.0);
+    // Animate opacity: start at 0, increase as you pull
+    final double contentOpacity = widget.pullProgress.clamp(0.0, 1.0);
 
-    // Animate icon opacity: start at 0, increase as you pull
-    final double iconOpacity =
-        0.5 + (widget.pullProgress.clamp(0.0, 1.0) * 0.2); // 0.5 to 0.7
+    // Animate text size from 11 to 12 based on progress
+    final double fontSize = 11.0 + (widget.pullProgress * 1.0);
 
-    // Animate text size from 12 to 13 based on progress
-    final double fontSize = 12.0 + (widget.pullProgress * 1.0);
-
-    // Animate chevron size from 16 to 18 based on progress
-    final double chevronSize = 16.0 + (widget.pullProgress * 2.0);
+    // Animate chevron size from 14 to 16 based on progress
+    final double chevronSize = 14.0 + (widget.pullProgress * 2.0);
 
     // Text and icon color - use onSurface color with opacity for subtle appearance
-    final double colorOpacity = 0.4 + (widget.pullProgress * 0.3); // 0.4 to 0.7
+    final double colorOpacity = 0.3 + (widget.pullProgress * 0.2); // 0.3 to 0.5
 
     return Center(
       child: AnimatedBuilder(
@@ -130,47 +126,44 @@ class _PullToExpandIndicatorState extends State<PullToExpandIndicator>
 
           return Transform.scale(
             scale: scale,
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                SizeTransition(
-                  sizeFactor: AlwaysStoppedAnimation(textScale),
-                  axisAlignment: 0.0,
-                  child: Opacity(
-                    opacity: textOpacity.clamp(0.0, 1.0),
-                    child: Center(
-                      child: Text(
+            child: SizeTransition(
+              sizeFactor: AlwaysStoppedAnimation(contentScale),
+              axisAlignment: 0.5,
+              child: Opacity(
+                opacity: contentOpacity.clamp(0.0, 1.0),
+                child: Center(
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
                         widget.text,
                         textAlign: TextAlign.center,
                         style: theme.textTheme.bodySmall?.copyWith(
                           fontSize: fontSize,
                           color: colorScheme.onSurface
                               .withOpacity(colorOpacity.clamp(0.0, 1.0)),
-                          fontWeight: FontWeight.w500,
+                          fontWeight: FontWeight.w400,
                           letterSpacing: 0.1,
                         ),
                       ),
-                    ),
+                      TweenAnimationBuilder<double>(
+                        tween: Tween<double>(begin: 14.0, end: chevronSize),
+                        duration: const Duration(milliseconds: 150),
+                        curve: Curves.easeOut,
+                        builder: (context, animatedSize, child) {
+                          return Icon(
+                            Icons.keyboard_arrow_down_rounded,
+                            size: animatedSize,
+                            color: colorScheme.onSurface
+                                .withOpacity(colorOpacity.clamp(0.0, 1.0)),
+                          );
+                        },
+                      ),
+                    ],
                   ),
                 ),
-                Opacity(
-                  opacity: iconOpacity.clamp(0.0, 1.0),
-                  child: TweenAnimationBuilder<double>(
-                    tween: Tween<double>(begin: 16.0, end: chevronSize),
-                    duration: const Duration(milliseconds: 150),
-                    curve: Curves.easeOut,
-                    builder: (context, animatedSize, child) {
-                      return Icon(
-                        Icons.keyboard_arrow_down_rounded,
-                        size: animatedSize,
-                        color: colorScheme.onSurface
-                            .withOpacity(colorOpacity.clamp(0.0, 1.0)),
-                      );
-                    },
-                  ),
-                ),
-              ],
+              ),
             ),
           );
         },
@@ -393,6 +386,827 @@ class ExpandableMetadataContent extends StatelessWidget {
   }
 }
 
+/// Represents a single stat item to display in ExpandableStatsContent.
+class StatItem {
+  const StatItem({
+    required this.icon,
+    required this.label,
+    required this.count,
+    this.color,
+    this.formatter,
+  });
+
+  /// Icon to display for this stat
+  final IconData icon;
+
+  /// Label text to display below the count
+  final String label;
+
+  /// Count value to display
+  final int count;
+
+  /// Optional color for the icon. If null, uses theme colors.
+  final Color? color;
+
+  /// Optional custom formatter for the count. If null, uses default formatting.
+  final String Function(int)? formatter;
+}
+
+/// Expanded content widget that displays statistics in a grid layout.
+/// Generic and reusable for any type of stats (stars, forks, watchers, etc.).
+class ExpandableStatsContent extends StatelessWidget {
+  const ExpandableStatsContent({
+    required this.stats,
+    required this.onCollapse,
+    this.title,
+    this.headerColor,
+    super.key,
+  });
+
+  /// List of stat items to display
+  final List<StatItem> stats;
+
+  /// Callback to collapse the expanded content.
+  final VoidCallback onCollapse;
+
+  /// Title to display in the header. If null, defaults to 'Stats'.
+  final String? title;
+
+  /// Optional color for the header accent bar. If null, uses tertiary color.
+  final Color? headerColor;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final surfaceStyle = theme.surfaceStyle;
+
+    final bool isDark = colorScheme.brightness == Brightness.dark;
+    final Color backgroundColor = colorScheme.surfaceContainer;
+
+    return Container(
+      margin: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+      decoration: BoxDecoration(
+        color: backgroundColor,
+        borderRadius: surfaceStyle.borderRadiusLarge(),
+        border: Border.all(
+          color: colorScheme.outlineVariant.withOpacity(isDark ? 0.12 : 0.08),
+          width: 1,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(isDark ? 0.3 : 0.06),
+            blurRadius: 16,
+            offset: const Offset(0, 4),
+            spreadRadius: 0,
+          ),
+          BoxShadow(
+            color: Colors.black.withOpacity(isDark ? 0.2 : 0.03),
+            blurRadius: 6,
+            offset: const Offset(0, 2),
+            spreadRadius: 0,
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // Header section
+          Container(
+            padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+            decoration: BoxDecoration(
+              color: backgroundColor,
+              border: Border(
+                bottom: BorderSide(
+                  color: colorScheme.outlineVariant
+                      .withOpacity(isDark ? 0.2 : 0.12),
+                  width: 1,
+                ),
+              ),
+              borderRadius: surfaceStyle.borderRadiusLarge().copyWith(
+                    bottomLeft: Radius.zero,
+                    bottomRight: Radius.zero,
+                  ),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      width: 4,
+                      height: 20,
+                      decoration: BoxDecoration(
+                        color: (headerColor ?? colorScheme.tertiary)
+                            .withOpacity(0.6),
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Text(
+                      title ?? 'Stats',
+                      style: theme.textTheme.titleSmall?.copyWith(
+                        color: colorScheme.onSurface,
+                        fontWeight: FontWeight.w700,
+                        fontSize: 17,
+                        letterSpacing: -0.3,
+                      ),
+                    ),
+                  ],
+                ),
+                Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                    onTap: onCollapse,
+                    borderRadius: BorderRadius.circular(24),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 14,
+                        vertical: 8,
+                      ),
+                      decoration: BoxDecoration(
+                        color:
+                            colorScheme.surfaceContainerHigh.withOpacity(0.8),
+                        borderRadius: BorderRadius.circular(24),
+                        border: Border.all(
+                          color: colorScheme.outlineVariant.withOpacity(0.3),
+                          width: 1,
+                        ),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.keyboard_arrow_up_rounded,
+                            size: 18,
+                            color: colorScheme.primary.withOpacity(0.9),
+                          ),
+                          const SizedBox(width: 6),
+                          Text(
+                            'Collapse',
+                            style: theme.textTheme.labelSmall?.copyWith(
+                              color: colorScheme.primary.withOpacity(0.9),
+                              fontWeight: FontWeight.w600,
+                              fontSize: 12,
+                              letterSpacing: 0.2,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          // Stats grid - supports multiple rows if more than 3 items
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: backgroundColor,
+              borderRadius: surfaceStyle.borderRadiusLarge().copyWith(
+                    topLeft: Radius.zero,
+                    topRight: Radius.zero,
+                  ),
+            ),
+            child: _buildStatsGrid(context, colorScheme),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStatItem(
+    BuildContext context, {
+    required StatItem stat,
+    required ColorScheme colorScheme,
+  }) {
+    final theme = Theme.of(context);
+    final statColor = stat.color ??
+        [
+          colorScheme.tertiary,
+          colorScheme.secondary,
+          colorScheme.primary,
+        ][stats.indexOf(stat) % 3];
+
+    return Expanded(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: statColor.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Icon(
+              stat.icon,
+              color: statColor,
+              size: 24,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            stat.formatter?.call(stat.count) ?? _formatCount(stat.count),
+            style: theme.textTheme.titleMedium?.copyWith(
+              color: colorScheme.onSurface,
+              fontWeight: FontWeight.w700,
+              fontSize: 18,
+            ),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            stat.label,
+            style: theme.textTheme.labelSmall?.copyWith(
+              color: colorScheme.onSurfaceVariant.withOpacity(0.7),
+              fontSize: 11,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStatsGrid(BuildContext context, ColorScheme colorScheme) {
+    if (stats.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    // Group stats into rows of 3
+    final List<List<StatItem>> rows = [];
+    for (int i = 0; i < stats.length; i += 3) {
+      rows.add(stats.sublist(
+        i,
+        i + 3 > stats.length ? stats.length : i + 3,
+      ));
+    }
+
+    return Column(
+      children: rows.map((row) {
+        return Padding(
+          padding: EdgeInsets.only(
+            bottom: rows.indexOf(row) < rows.length - 1 ? 16 : 0,
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: row
+                .map(
+                  (stat) => _buildStatItem(
+                    context,
+                    stat: stat,
+                    colorScheme: colorScheme,
+                  ),
+                )
+                .toList()
+              ..addAll(
+                List.generate(
+                  3 - row.length,
+                  (_) => const Expanded(child: SizedBox()),
+                ),
+              ),
+          ),
+        );
+      }).toList(),
+    );
+  }
+
+  String _formatCount(int count) {
+    if (count >= 1000000) {
+      return '${(count / 1000000).toStringAsFixed(1)}M';
+    } else if (count >= 1000) {
+      return '${(count / 1000).toStringAsFixed(1)}K';
+    }
+    return count.toString();
+  }
+}
+
+/// Expanded content widget that displays repository information
+/// (language, license, size, privacy status, etc.).
+class ExpandableRepositoryInfoContent extends StatelessWidget {
+  const ExpandableRepositoryInfoContent({
+    required this.onCollapse,
+    this.primaryLanguage,
+    this.licenseInfo,
+    this.diskUsage,
+    this.isPrivate,
+    this.isArchived,
+    this.hasIssuesEnabled,
+    this.hasProjectsEnabled,
+    this.hasWikiEnabled,
+    this.hasDiscussionsEnabled,
+    this.title,
+    super.key,
+  });
+
+  /// Callback to collapse the expanded content.
+  final VoidCallback onCollapse;
+
+  /// Primary programming language
+  final ({String name, String? color})? primaryLanguage;
+
+  /// License information
+  final ({String name, String? spdxId})? licenseInfo;
+
+  /// Disk usage in KB
+  final int? diskUsage;
+
+  /// Whether repository is private
+  final bool? isPrivate;
+
+  /// Whether repository is archived
+  final bool? isArchived;
+
+  /// Whether issues are enabled
+  final bool? hasIssuesEnabled;
+
+  /// Whether projects are enabled
+  final bool? hasProjectsEnabled;
+
+  /// Whether wiki is enabled
+  final bool? hasWikiEnabled;
+
+  /// Whether discussions are enabled
+  final bool? hasDiscussionsEnabled;
+
+  /// Title to display in the header. If null, defaults to 'Repository Info'.
+  final String? title;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final surfaceStyle = theme.surfaceStyle;
+
+    final bool isDark = colorScheme.brightness == Brightness.dark;
+    final Color backgroundColor = colorScheme.surfaceContainer;
+
+    final List<Widget> infoItems = [];
+
+    // Language
+    if (primaryLanguage != null) {
+      infoItems.add(_buildInfoItem(
+        context,
+        icon: Icons.code_rounded,
+        label: 'Language',
+        value: primaryLanguage!.name,
+        color: primaryLanguage!.color != null
+            ? Color(
+                int.parse(primaryLanguage!.color!.replaceFirst('#', '0xFF')))
+            : colorScheme.primary,
+      ));
+    }
+
+    // License
+    if (licenseInfo != null) {
+      infoItems.add(_buildInfoItem(
+        context,
+        icon: Icons.balance_rounded,
+        label: 'License',
+        value: licenseInfo!.name,
+        color: colorScheme.secondary,
+      ));
+    }
+
+    // Size
+    if (diskUsage != null) {
+      infoItems.add(_buildInfoItem(
+        context,
+        icon: Icons.storage_rounded,
+        label: 'Size',
+        value: _formatSize(diskUsage!),
+        color: colorScheme.tertiary,
+      ));
+    }
+
+    // Privacy status
+    if (isPrivate != null) {
+      infoItems.add(_buildInfoItem(
+        context,
+        icon: isPrivate! ? Icons.lock_rounded : Icons.public_rounded,
+        label: 'Visibility',
+        value: isPrivate! ? 'Private' : 'Public',
+        color: isPrivate! ? colorScheme.error : colorScheme.primary,
+      ));
+    }
+
+    // Archived status
+    if (isArchived == true) {
+      infoItems.add(_buildInfoItem(
+        context,
+        icon: Icons.archive_rounded,
+        label: 'Status',
+        value: 'Archived',
+        color: colorScheme.onSurfaceVariant,
+      ));
+    }
+
+    // Features
+    final List<String> enabledFeatures = [];
+    if (hasIssuesEnabled == true) enabledFeatures.add('Issues');
+    if (hasProjectsEnabled == true) enabledFeatures.add('Projects');
+    if (hasWikiEnabled == true) enabledFeatures.add('Wiki');
+    if (hasDiscussionsEnabled == true) enabledFeatures.add('Discussions');
+
+    if (enabledFeatures.isNotEmpty) {
+      infoItems.add(_buildInfoItem(
+        context,
+        icon: Icons.settings_rounded,
+        label: 'Features',
+        value: enabledFeatures.join(', '),
+        color: colorScheme.primary,
+      ));
+    }
+
+    if (infoItems.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    return Container(
+      margin: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+      decoration: BoxDecoration(
+        color: backgroundColor,
+        borderRadius: surfaceStyle.borderRadiusLarge(),
+        border: Border.all(
+          color: colorScheme.outlineVariant.withOpacity(isDark ? 0.12 : 0.08),
+          width: 1,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(isDark ? 0.3 : 0.06),
+            blurRadius: 16,
+            offset: const Offset(0, 4),
+            spreadRadius: 0,
+          ),
+          BoxShadow(
+            color: Colors.black.withOpacity(isDark ? 0.2 : 0.03),
+            blurRadius: 6,
+            offset: const Offset(0, 2),
+            spreadRadius: 0,
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // Header section
+          Container(
+            padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+            decoration: BoxDecoration(
+              color: backgroundColor,
+              border: Border(
+                bottom: BorderSide(
+                  color: colorScheme.outlineVariant
+                      .withOpacity(isDark ? 0.2 : 0.12),
+                  width: 1,
+                ),
+              ),
+              borderRadius: surfaceStyle.borderRadiusLarge().copyWith(
+                    bottomLeft: Radius.zero,
+                    bottomRight: Radius.zero,
+                  ),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      width: 4,
+                      height: 20,
+                      decoration: BoxDecoration(
+                        color: colorScheme.secondary.withOpacity(0.6),
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Text(
+                      title ?? 'Repository Info',
+                      style: theme.textTheme.titleSmall?.copyWith(
+                        color: colorScheme.onSurface,
+                        fontWeight: FontWeight.w700,
+                        fontSize: 17,
+                        letterSpacing: -0.3,
+                      ),
+                    ),
+                  ],
+                ),
+                Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                    onTap: onCollapse,
+                    borderRadius: BorderRadius.circular(24),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 14,
+                        vertical: 8,
+                      ),
+                      decoration: BoxDecoration(
+                        color:
+                            colorScheme.surfaceContainerHigh.withOpacity(0.8),
+                        borderRadius: BorderRadius.circular(24),
+                        border: Border.all(
+                          color: colorScheme.outlineVariant.withOpacity(0.3),
+                          width: 1,
+                        ),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.keyboard_arrow_up_rounded,
+                            size: 18,
+                            color: colorScheme.primary.withOpacity(0.9),
+                          ),
+                          const SizedBox(width: 6),
+                          Text(
+                            'Collapse',
+                            style: theme.textTheme.labelSmall?.copyWith(
+                              color: colorScheme.primary.withOpacity(0.9),
+                              fontWeight: FontWeight.w600,
+                              fontSize: 12,
+                              letterSpacing: 0.2,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          // Info items
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: backgroundColor,
+              borderRadius: surfaceStyle.borderRadiusLarge().copyWith(
+                    topLeft: Radius.zero,
+                    topRight: Radius.zero,
+                  ),
+            ),
+            child: Wrap(
+              spacing: 12,
+              runSpacing: 12,
+              children: infoItems,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildInfoItem(
+    BuildContext context, {
+    required IconData icon,
+    required String label,
+    required String value,
+    required Color color,
+  }) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(
+          color: color.withOpacity(0.2),
+          width: 1,
+        ),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            icon,
+            size: 18,
+            color: color,
+          ),
+          const SizedBox(width: 8),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                label,
+                style: theme.textTheme.labelSmall?.copyWith(
+                  color: colorScheme.onSurfaceVariant.withOpacity(0.7),
+                  fontSize: 10,
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                value,
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: colorScheme.onSurface,
+                  fontWeight: FontWeight.w600,
+                  fontSize: 12,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _formatSize(int kb) {
+    if (kb >= 1024 * 1024) {
+      return '${(kb / (1024 * 1024)).toStringAsFixed(1)} GB';
+    } else if (kb >= 1024) {
+      return '${(kb / 1024).toStringAsFixed(1)} MB';
+    }
+    return '$kb KB';
+  }
+}
+
+/// Expanded content widget that displays interactive action buttons.
+/// Generic and reusable for any type of actions (close/reopen, pin, lock, etc.).
+class ExpandableActionsContent extends StatelessWidget {
+  const ExpandableActionsContent({
+    required this.actions,
+    required this.onCollapse,
+    this.title,
+    this.headerColor,
+    this.actionSpacing = 8.0,
+    this.actionRunSpacing = 8.0,
+    super.key,
+  });
+
+  /// List of action widgets (typically buttons)
+  final List<Widget> actions;
+
+  /// Callback to collapse the expanded content.
+  final VoidCallback onCollapse;
+
+  /// Title to display in the header. If null, defaults to 'Actions'.
+  final String? title;
+
+  /// Optional color for the header accent bar. If null, uses error color.
+  final Color? headerColor;
+
+  /// Spacing between action widgets horizontally. Defaults to 8.0.
+  final double actionSpacing;
+
+  /// Spacing between action widgets vertically. Defaults to 8.0.
+  final double actionRunSpacing;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final surfaceStyle = theme.surfaceStyle;
+
+    if (actions.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    final bool isDark = colorScheme.brightness == Brightness.dark;
+    final Color backgroundColor = colorScheme.surfaceContainer;
+
+    return Container(
+      margin: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+      decoration: BoxDecoration(
+        color: backgroundColor,
+        borderRadius: surfaceStyle.borderRadiusLarge(),
+        border: Border.all(
+          color: colorScheme.outlineVariant.withOpacity(isDark ? 0.12 : 0.08),
+          width: 1,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(isDark ? 0.3 : 0.06),
+            blurRadius: 16,
+            offset: const Offset(0, 4),
+            spreadRadius: 0,
+          ),
+          BoxShadow(
+            color: Colors.black.withOpacity(isDark ? 0.2 : 0.03),
+            blurRadius: 6,
+            offset: const Offset(0, 2),
+            spreadRadius: 0,
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // Header section
+          Container(
+            padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+            decoration: BoxDecoration(
+              color: backgroundColor,
+              border: Border(
+                bottom: BorderSide(
+                  color: colorScheme.outlineVariant
+                      .withOpacity(isDark ? 0.2 : 0.12),
+                  width: 1,
+                ),
+              ),
+              borderRadius: surfaceStyle.borderRadiusLarge().copyWith(
+                    bottomLeft: Radius.zero,
+                    bottomRight: Radius.zero,
+                  ),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      width: 4,
+                      height: 20,
+                      decoration: BoxDecoration(
+                        color:
+                            (headerColor ?? colorScheme.error).withOpacity(0.6),
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Text(
+                      title ?? 'Actions',
+                      style: theme.textTheme.titleSmall?.copyWith(
+                        color: colorScheme.onSurface,
+                        fontWeight: FontWeight.w700,
+                        fontSize: 17,
+                        letterSpacing: -0.3,
+                      ),
+                    ),
+                  ],
+                ),
+                Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                    onTap: onCollapse,
+                    borderRadius: BorderRadius.circular(24),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 14,
+                        vertical: 8,
+                      ),
+                      decoration: BoxDecoration(
+                        color:
+                            colorScheme.surfaceContainerHigh.withOpacity(0.8),
+                        borderRadius: BorderRadius.circular(24),
+                        border: Border.all(
+                          color: colorScheme.outlineVariant.withOpacity(0.3),
+                          width: 1,
+                        ),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.keyboard_arrow_up_rounded,
+                            size: 18,
+                            color: colorScheme.primary.withOpacity(0.9),
+                          ),
+                          const SizedBox(width: 6),
+                          Text(
+                            'Collapse',
+                            style: theme.textTheme.labelSmall?.copyWith(
+                              color: colorScheme.primary.withOpacity(0.9),
+                              fontWeight: FontWeight.w600,
+                              fontSize: 12,
+                              letterSpacing: 0.2,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          // Actions content
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: backgroundColor,
+              borderRadius: surfaceStyle.borderRadiusLarge().copyWith(
+                    topLeft: Radius.zero,
+                    topRight: Radius.zero,
+                  ),
+            ),
+            child: Wrap(
+              spacing: actionSpacing,
+              runSpacing: actionRunSpacing,
+              alignment: WrapAlignment.start,
+              children: actions,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 /// A wrapper widget that uses NotificationListener to detect pull-to-expand gestures.
 ///
 /// This wrapper wraps any scrollable widget and detects overscroll via ScrollNotifications,
@@ -470,13 +1284,6 @@ class _ExpandOnScrollWrapperState extends State<ExpandOnScrollWrapper> {
   double _pullProgress = 0.0;
   bool _isExpanded = false;
   bool _isReadyToExpand = false;
-  static const bool _debugLogging = true; // Set to false to disable logs
-
-  void _log(final String message) {
-    if (_debugLogging) {
-      debugPrint('[ExpandOnScrollWrapper] $message');
-    }
-  }
 
   void _resetPullState() {
     setState(() {
@@ -491,10 +1298,7 @@ class _ExpandOnScrollWrapperState extends State<ExpandOnScrollWrapper> {
     final bool isReady = pullDistance >= widget.expandThreshold;
 
     if (_pullProgress != progress || _isReadyToExpand != isReady) {
-      final double currentProgress = _pullProgress;
       final bool wasReady = _isReadyToExpand;
-      _log(
-          'Updating pull progress: $currentProgress -> $progress, isReadyToExpand: $wasReady -> $isReady');
       setState(() {
         _pullProgress = progress;
         _isReadyToExpand = isReady;
@@ -507,28 +1311,20 @@ class _ExpandOnScrollWrapperState extends State<ExpandOnScrollWrapper> {
   }
 
   bool _handleScrollNotification(final ScrollNotification notification) {
-    _log('Received notification: ${notification.runtimeType}');
-
     // Handle overscroll (pull down) - this is the key!
     if (notification is OverscrollNotification) {
       final ScrollMetrics metrics = notification.metrics;
-      _log('OverscrollNotification: overscroll=${notification.overscroll}, '
-          'pixels=${metrics.pixels}, axis=${metrics.axis}');
 
       // Only handle vertical overscroll
       if (metrics.axis != Axis.vertical) {
-        _log('Ignoring: not vertical axis');
         return false;
       }
 
       // Overscroll.overscroll is negative when pulling down
       final double overscroll = notification.overscroll;
-      _log('Overscroll value: $overscroll');
 
       if (overscroll < 0) {
         final double pullDistance = overscroll.abs();
-        _log(
-            'Pull detected: distance=$pullDistance, threshold=${widget.expandThreshold}');
         _updatePullProgress(pullDistance);
       }
       return false; // Don't consume, let RefreshIndicator work
@@ -537,19 +1333,14 @@ class _ExpandOnScrollWrapperState extends State<ExpandOnScrollWrapper> {
     // Handle scroll updates to detect pull and reset
     if (notification is ScrollUpdateNotification) {
       final ScrollMetrics metrics = notification.metrics;
-      _log('ScrollUpdateNotification: pixels=${metrics.pixels}, '
-          'scrollDelta=${notification.scrollDelta}, '
-          'depth=${notification.depth}');
 
       // Check if we're at the top and pulling down (pixels < 0)
       if (metrics.pixels < 0) {
         final double pullDistance = metrics.pixels.abs();
-        _log('Pull detected (pixels < 0): distance=$pullDistance');
         _updatePullProgress(pullDistance);
       } else if (metrics.pixels >= 0 && _pullProgress > 0 && !_isExpanded) {
         // Only reset pull progress if NOT expanded
         // If expanded, keep it expanded (only collapse via onCollapse callback)
-        _log('Resetting pull progress: pixels >= 0');
         _resetPullState();
       }
       return false;
@@ -557,16 +1348,11 @@ class _ExpandOnScrollWrapperState extends State<ExpandOnScrollWrapper> {
 
     // Handle scroll metrics to reset state when scrolled back to top
     if (notification is ScrollMetricsNotification) {
-      _log('ScrollMetricsNotification: pixels=${notification.metrics.pixels}, '
-          'minScrollExtent=${notification.metrics.minScrollExtent}, '
-          'maxScrollExtent=${notification.metrics.maxScrollExtent}');
-
       // Only reset pull progress if NOT expanded
       // If expanded, keep it expanded (only collapse via onCollapse callback)
       if (notification.metrics.pixels >= 0 &&
           _pullProgress > 0 &&
           !_isExpanded) {
-        _log('Resetting pull progress: pixels >= 0');
         _resetPullState();
       }
       return false;
@@ -574,27 +1360,18 @@ class _ExpandOnScrollWrapperState extends State<ExpandOnScrollWrapper> {
 
     // Handle scroll start
     if (notification is ScrollStartNotification) {
-      final ScrollMetrics metrics = notification.metrics;
-      _log(
-          'ScrollStartNotification: pixels=${metrics.pixels}, depth=${notification.depth}');
       return false;
     }
 
     // Handle scroll end - expand only when user releases at threshold
     if (notification is ScrollEndNotification) {
-      final ScrollMetrics metrics = notification.metrics;
-      _log(
-          'ScrollEndNotification: pixels=${metrics.pixels}, isReadyToExpand=$_isReadyToExpand');
-
       // Only expand if threshold was reached and user releases
       if (_isReadyToExpand && !_isExpanded) {
-        _log('Threshold reached on release! Expanding...');
         setState(() {
           _isExpanded = true;
         });
       } else if (!_isReadyToExpand && _pullProgress > 0 && !_isExpanded) {
         // Reset if user released before reaching threshold
-        _log('Resetting pull progress: released before threshold');
         _resetPullState();
       }
       return false;
@@ -604,7 +1381,6 @@ class _ExpandOnScrollWrapperState extends State<ExpandOnScrollWrapper> {
   }
 
   void _collapse() {
-    _log('Collapsing...');
     setState(() {
       _isExpanded = false;
     });
@@ -612,17 +1388,7 @@ class _ExpandOnScrollWrapperState extends State<ExpandOnScrollWrapper> {
   }
 
   @override
-  void initState() {
-    super.initState();
-    _log('ExpandOnScrollWrapper initialized');
-    _log('Expand threshold: ${widget.expandThreshold}px');
-  }
-
-  @override
   Widget build(final BuildContext context) {
-    _log(
-        'Building with pullProgress: $_pullProgress, isExpanded: $_isExpanded');
-
     // Create the expandable widget with current state
     final _ExpandOnScrollContent expandOnScrollWidget = _ExpandOnScrollContent(
       pullProgress: _pullProgress.clamp(0.0, 1.0),

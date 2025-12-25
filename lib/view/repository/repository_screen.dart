@@ -10,6 +10,9 @@ import 'package:diohub/common/misc/animated_tab_bar.dart';
 import 'package:diohub/common/misc/deep_link_widget.dart';
 import 'package:diohub/common/misc/scaffold_body.dart';
 import 'package:diohub/common/misc/theme_from_image.dart';
+import 'package:diohub/common/misc/detail_tile.dart';
+import 'package:diohub/common/misc/detail_tile_content.dart';
+import 'package:diohub/common/widgets/expandable_scroll_wrapper.dart';
 import 'package:diohub/common/wrappers/dynamic_tabs_parent.dart';
 import 'package:diohub/common/wrappers/provider_loading_progress_wrapper.dart';
 import 'package:diohub/graphql/queries/repositories/__generated__/repo_info.data.gql.dart';
@@ -19,17 +22,17 @@ import 'package:diohub/providers/repository/code_provider.dart';
 import 'package:diohub/providers/repository/readme_provider.dart';
 import 'package:diohub/providers/repository/repository_provider.dart';
 import 'package:diohub/routes/router.gr.dart';
+import 'package:diohub/utils/get_date.dart';
+import 'package:diohub/utils/utils.dart';
 import 'package:diohub/view/repository/readme/repository_readme.dart';
-import 'package:diohub/view/repository/widgets/branch_button.dart';
-import 'package:diohub/view/repository/widgets/repository_tabs.dart';
-import 'package:diohub/view/repository/widgets/repository_header.dart';
 import 'package:diohub/view/repository/widgets/repository_action_buttons.dart';
+import 'package:diohub/view/repository/widgets/repository_header.dart';
+import 'package:diohub/view/repository/widgets/repository_tabs.dart';
 import 'package:diohub/view/repository/widgets/tab_state.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_dynamic_tabs/flutter_dynamic_tabs.dart';
 import 'package:provider/provider.dart';
 import 'package:provider/single_child_widget.dart';
-import 'package:sliver_tools/sliver_tools.dart';
 
 @RoutePage()
 class RepositoryScreen extends DeepLinkWidget {
@@ -68,7 +71,6 @@ class RepositoryScreenState extends DeepLinkWidgetState<RepositoryScreen>
 
   // final ScrollController scrollController = ScrollController();
   late String? initBranch;
- 
 
   @override
   void handleDeepLink(final PathData deepLinkData) {
@@ -98,7 +100,6 @@ class RepositoryScreenState extends DeepLinkWidgetState<RepositoryScreen>
     // is being set in handleDeepLink()!
     _setupProviders();
   }
-
 
   /// Helper method to centralize tab state information
   TabState _getTabState(String currentTab) {
@@ -145,6 +146,224 @@ class RepositoryScreenState extends DeepLinkWidgetState<RepositoryScreen>
       _readmeStateKey,
       tabController,
     );
+  }
+
+  List<Widget> _buildDetailsTiles(
+    BuildContext context,
+    GrepositoryInfoData_repository repo,
+    DynamicTabsController tabController,
+  ) {
+    final List<Widget> tiles = <Widget>[];
+
+    // Owner
+    final ownerLogin = repo.owner.when(
+      user: (u) => u.login,
+      organization: (o) => o.login,
+      orElse: () => null,
+    );
+    final ownerAvatarUrl = repo.owner.when(
+      user: (u) => u.avatarUrl.toString(),
+      organization: (o) => o.avatarUrl.toString(),
+      orElse: () => null,
+    );
+    if (ownerLogin != null) {
+      tiles.add(
+        DetailTile(
+          title: 'Owner',
+          actionType: DetailTileActionType.navigation,
+          onTap: () {
+            // TODO: Navigate to profile
+          },
+          child: DetailTileUser(
+            avatarUrl: ownerAvatarUrl ?? '',
+            login: ownerLogin,
+          ),
+        ),
+      );
+    }
+
+    // Created date
+    tiles.add(
+      DetailTile(
+        title: 'Created',
+        child: DetailTileText(
+          getDate(repo.createdAt.toIso8601String(), shorten: false),
+        ),
+      ),
+    );
+
+    // Updated date
+    tiles.add(
+      DetailTile(
+        title: 'Updated',
+        child: DetailTileText(
+          getDate(repo.updatedAt.toIso8601String(), shorten: false),
+        ),
+      ),
+    );
+
+    // Pushed date
+    if (repo.pushedAt != null) {
+      tiles.add(
+        DetailTile(
+          title: 'Last pushed',
+          child: DetailTileText(
+            getDate(repo.pushedAt!.toIso8601String(), shorten: false),
+          ),
+        ),
+      );
+    }
+
+    return tiles;
+  }
+
+  List<Widget> _buildReleaseTiles(
+    BuildContext context,
+    GrepositoryInfoData_repository_latestRelease release,
+  ) {
+    final List<Widget> tiles = <Widget>[];
+
+    // Release tag/name
+    final releaseName = release.name ?? release.tagName;
+    if (releaseName.isNotEmpty) {
+      tiles.add(
+        DetailTile(
+          title: 'Release',
+          actionType: DetailTileActionType.navigation,
+          onTap: () {
+            // TODO: Navigate to release page
+          },
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (release.isPrerelease)
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  margin: const EdgeInsets.only(right: 8),
+                  decoration: BoxDecoration(
+                    color: context.colorScheme.tertiary.withOpacity(0.2),
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: Text(
+                    'Pre-release',
+                    style: context.textTheme.labelSmall?.copyWith(
+                      color: context.colorScheme.tertiary,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              if (release.isDraft)
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  margin: const EdgeInsets.only(right: 8),
+                  decoration: BoxDecoration(
+                    color:
+                        context.colorScheme.onSurfaceVariant.withOpacity(0.2),
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: Text(
+                    'Draft',
+                    style: context.textTheme.labelSmall?.copyWith(
+                      color: context.colorScheme.onSurfaceVariant,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              Flexible(
+                child: DetailTileText(releaseName),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    // Published date
+    if (release.publishedAt != null) {
+      tiles.add(
+        DetailTile(
+          title: 'Published',
+          child: DetailTileText(
+            getDate(release.publishedAt!.toIso8601String(), shorten: false),
+          ),
+        ),
+      );
+    }
+
+    // Description (if available)
+    if (release.description != null && release.description!.isNotEmpty) {
+      tiles.add(
+        DetailTile(
+          title: 'Description',
+          child: DetailTileText(
+            release.description!,
+          ),
+        ),
+      );
+    }
+
+    return tiles;
+  }
+
+  List<Widget> _buildTopicsTiles(
+    BuildContext context,
+    GrepositoryInfoData_repository_repositoryTopics topics,
+  ) {
+    final edges = topics.edges
+            ?.whereType<GrepositoryInfoData_repository_repositoryTopics_edges>()
+            .toList() ??
+        [];
+    if (edges.isEmpty) return [];
+
+    final topicNames = <String>[];
+    for (final edge in edges) {
+      final node = edge.node;
+      if (node != null) {
+        topicNames.add(node.topic.name);
+      }
+    }
+
+    if (topicNames.isEmpty) return [];
+
+    return [
+      DetailTile(
+        title: 'Topics',
+        actionType: topics.totalCount > topicNames.length
+            ? DetailTileActionType.bottomSheet
+            : DetailTileActionType.none,
+        onTap: topics.totalCount > topicNames.length
+            ? () {
+                // TODO: Show bottom sheet with all topics
+              }
+            : null,
+        child: Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: topicNames.map((topic) {
+            return Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              decoration: BoxDecoration(
+                color: context.colorScheme.primaryContainer.withOpacity(0.3),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(
+                  color: context.colorScheme.primary.withOpacity(0.3),
+                  width: 1,
+                ),
+              ),
+              child: Text(
+                topic,
+                style: context.textTheme.labelSmall?.copyWith(
+                  color: context.colorScheme.primary,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            );
+          }).toList(),
+        ),
+      ),
+    ];
   }
 
   @override
@@ -231,40 +450,121 @@ class RepositoryScreenState extends DeepLinkWidgetState<RepositoryScreen>
                                 subtitle: ownerLogin,
                                 scrollNotificationNotifier:
                                     scrollNotificationNotifier,
-                                onExpandChanged: (isExpanded) {
-                                  
-                                },
+                                onExpandChanged: (isExpanded) {},
                               );
                             },
                           );
                         },
                         child: SafeArea(
-                          child: DynamicTabsParent(
-                            controller: tabController,
+                          child: ExpandOnScrollWrapper(
+                            collapsedWidget: (
+                              final BuildContext context,
+                              final double pullProgress,
+                              final bool isReadyToExpand,
+                            ) =>
+                                PullToExpandIndicator(
+                              pullProgress: pullProgress,
+                              isReadyToExpand: isReadyToExpand,
+                            ),
+                            expandedWidget: (
+                              final BuildContext context,
+                              final VoidCallback onCollapse,
+                            ) =>
+                                Column(
+                              children: [
+                                ExpandableMetadataContent(
+                                  onCollapse: onCollapse,
+                                  title: 'Details',
+                                  children: _buildDetailsTiles(
+                                    context,
+                                    repo,
+                                    tabController,
+                                  ),
+                                ),
+                                if (repo.latestRelease != null)
+                                  ExpandableMetadataContent(
+                                    onCollapse: () {},
+                                    title: 'Latest Release',
+                                    children: _buildReleaseTiles(
+                                      context,
+                                      repo.latestRelease!,
+                                    ),
+                                  ),
+                                if (repo.repositoryTopics.edges?.isNotEmpty ??
+                                    false)
+                                  ExpandableMetadataContent(
+                                    onCollapse: () {},
+                                    title: 'Topics',
+                                    children: _buildTopicsTiles(
+                                      context,
+                                      repo.repositoryTopics,
+                                    ),
+                                  ),
+                                ExpandableRepositoryInfoContent(
+                                  onCollapse: () {},
+                                  primaryLanguage: repo.primaryLanguage != null
+                                      ? (
+                                          name: repo.primaryLanguage!.name,
+                                          color: repo.primaryLanguage!.color,
+                                        )
+                                      : null,
+                                  licenseInfo: repo.licenseInfo != null
+                                      ? (
+                                          name: repo.licenseInfo!.name,
+                                          spdxId: repo.licenseInfo!.spdxId,
+                                        )
+                                      : null,
+                                  diskUsage: repo.diskUsage,
+                                  isPrivate: repo.isPrivate,
+                                  isArchived: repo.isArchived,
+                                  hasIssuesEnabled: repo.hasIssuesEnabled,
+                                  hasProjectsEnabled: repo.hasProjectsEnabled,
+                                  hasWikiEnabled: repo.hasWikiEnabled,
+                                  hasDiscussionsEnabled:
+                                      repo.hasDiscussionsEnabled,
+                                  title: 'Repository Info',
+                                ),
+                              ],
+                            ),
                             builder: (
                               final BuildContext context,
-                              final PreferredSizeWidget tabs,
-                              final WidgetBuilder tabViewBuilder,
+                              final Widget expandOnScrollWidget,
                             ) =>
-                                DynamicScroll(
-                              collapsedWidget:
-                                  buildCollapsedHeader(context, repo),
-                              expandedWidget: buildExpandedHeader(
-                                context,
-                                repo,
-                                tabController.activeIdentifierNotifier,
-                                tabController,
+                                DynamicTabsParent(
+                              controller: tabController,
+                              builder: (
+                                final BuildContext context,
+                                final PreferredSizeWidget tabs,
+                                final WidgetBuilder tabViewBuilder,
+                              ) =>
+                                  DynamicScroll(
+                                collapsedWidget:
+                                    buildCollapsedHeader(context, repo),
+                                expandedWidget: buildExpandedHeader(
+                                  context,
+                                  repo,
+                                  tabController.activeIdentifierNotifier,
+                                  tabController,
+                                ),
+                                actions: <Widget>[
+                                  ShareButton(repo.url.toString())
+                                ],
+                                headerSlivers: [
+                                  SliverToBoxAdapter(
+                                    child: Padding(
+                                      padding: const EdgeInsets.symmetric(
+                                        vertical: 4,
+                                      ),
+                                      child: expandOnScrollWidget,
+                                    ),
+                                  ),
+                                  AnimatedTabBar(
+                                    showTabBar: tabController.activeLength > 1,
+                                    tabBar: tabs,
+                                  ),
+                                ],
+                                bodyBuilder: tabViewBuilder,
                               ),
-                              actions: <Widget>[
-                                ShareButton(repo.url.toString())
-                              ],
-                              headerSlivers: [  AnimatedTabBar(
-                                showTabBar: tabController.activeLength > 1,
-                                tabBar: tabs,
-                                                           
-                              )],
-                              bodyBuilder: tabViewBuilder,
-                                 
                             ),
                           ),
                         ),

@@ -1,5 +1,6 @@
 import 'package:dio/dio.dart';
 import 'package:diohub/app/api_handler/dio.dart';
+import 'package:diohub/app/global.dart';
 import 'package:diohub/graphql/__generated__/schema.schema.gql.dart';
 import 'package:diohub/graphql/queries/users/__generated__/user_contributions.data.gql.dart';
 import 'package:diohub/graphql/queries/users/__generated__/user_contributions.req.gql.dart';
@@ -9,6 +10,7 @@ import 'package:diohub/graphql/queries/viewer/__generated__/viewer.query.data.gq
 import 'package:diohub/graphql/queries/viewer/__generated__/viewer.query.req.gql.dart';
 import 'package:diohub/models/users/user_info_model.dart';
 import 'package:diohub/utils/type_cast.dart';
+import 'package:flutter/foundation.dart';
 
 class UserInfoService {
   UserInfoService(this.login);
@@ -132,6 +134,11 @@ class UserInfoService {
     final DateTime? to,
     final bool refreshCache = false,
   }) async {
+    if (kDebugMode) {
+      final timestamp = DateTime.now().millisecondsSinceEpoch;
+      log.d(
+          '[UserInfoService] ⚠️ getUserContributions CALLED at $timestamp for user "$login", refreshCache: $refreshCache, from: ${from?.toIso8601String()}, to: ${to?.toIso8601String()}');
+    }
     // Default to last year if not specified
     final defaultTo = to ?? DateTime.now();
     final defaultFrom = from ??
@@ -141,18 +148,23 @@ class UserInfoService {
           defaultTo.day,
         );
 
-    return GuserContributionsData.fromJson(
-      (await _gqlHandler.query(
-        GuserContributionsReq(
-          (final GuserContributionsReqBuilder b) => b
-            ..vars.user = login
-            ..vars.from = defaultFrom
-            ..vars.to = defaultTo,
-        ),
-        refreshCache: refreshCache,
-      ))
-          .data!,
-    )!
-        .user!;
+    if (kDebugMode) {
+      log.d(
+          '[UserInfoService] Calling GraphQL query with from: ${defaultFrom.toIso8601String()}, to: ${defaultTo.toIso8601String()}');
+    }
+    final response = await _gqlHandler.query(
+      GuserContributionsReq(
+        (final GuserContributionsReqBuilder b) => b
+          ..vars.user = login
+          ..vars.from = defaultFrom
+          ..vars.to = defaultTo,
+      ),
+      refreshCache: refreshCache,
+    );
+    if (kDebugMode) {
+      log.d(
+          '[UserInfoService] ✅ GraphQL query completed for user "$login"');
+    }
+    return GuserContributionsData.fromJson(response.data!)!.user!;
   }
 }

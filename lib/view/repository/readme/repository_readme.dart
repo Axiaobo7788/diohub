@@ -6,6 +6,7 @@ import 'package:diohub/providers/repository/branch_provider.dart';
 import 'package:diohub/providers/repository/readme_provider.dart';
 import 'package:diohub/providers/repository/repository_provider.dart';
 import 'package:flutter/cupertino.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_scroll_to_top/flutter_scroll_to_top.dart';
 import 'package:provider/provider.dart';
 
@@ -62,6 +63,10 @@ class RepositoryReadmeState extends State<RepositoryReadme>
   @override
   Widget build(final BuildContext context) {
     super.build(context);
+    
+    final SliverOverlapAbsorberHandle overlapHandle =
+        NestedScrollView.sliverOverlapAbsorberHandleFor(context);
+    
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 8),
       child: ProviderLoadingProgressWrapper<RepoReadmeProvider>(
@@ -79,18 +84,23 @@ class RepositoryReadmeState extends State<RepositoryReadme>
               final BuildContext context,
               final ScrollViewProperties properties,
             ) =>
-                SingleChildScrollView(
-              child: MarkdownRenderAPI(
-                value.data!.content!,
-                markdownBodyKey: _markdownBodyKey,
-                repoContext: repoProvider.data.nameWithOwner,
-                branch: Provider.of<RepoBranchProvider>(context).currentSHA,
-                onHeadingsExtracted: (headings) {
-                  // Pass headings to parent callback
-                  widget.onHeadingsExtracted?.call(headings);
-                },
-                onScrollToAnchor: widget.onScrollToAnchor,
-              ),
+                CustomScrollView(
+              slivers: [
+                SliverOverlapInjector(handle: overlapHandle),
+                SliverToBoxAdapter(
+                  child: MarkdownRenderAPI(
+                    value.data!.content!,
+                    markdownBodyKey: _markdownBodyKey,
+                    repoContext: repoProvider.data.nameWithOwner,
+                    branch: Provider.of<RepoBranchProvider>(context).currentSHA,
+                    onHeadingsExtracted: (headings) {
+                      // Pass headings to parent callback
+                      widget.onHeadingsExtracted?.call(headings);
+                    },
+                    onScrollToAnchor: widget.onScrollToAnchor,
+                  ),
+                ),
+              ],
             ),
           );
         },

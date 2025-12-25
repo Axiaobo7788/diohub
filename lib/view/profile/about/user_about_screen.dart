@@ -1,12 +1,8 @@
-import 'package:diohub/common/misc/detail_tile.dart';
-import 'package:diohub/common/misc/detail_tile_content.dart';
-import 'package:diohub/common/misc/shimmer_widget.dart';
-import 'package:diohub/common/widgets/expandable_scroll_wrapper.dart';
+import 'package:diohub/app/global.dart';
 import 'package:diohub/graphql/queries/users/__generated__/user_info.data.gql.dart';
 import 'package:diohub/models/contributions/contribution_chip_type.dart';
 import 'package:diohub/models/contributions/contribution_query_models.dart';
 import 'package:diohub/providers/users/user_contributions_provider.dart';
-import 'package:diohub/utils/get_date.dart';
 import 'package:diohub/view/profile/about/widgets/chip_detail_bottom_sheet.dart';
 import 'package:diohub/view/profile/about/widgets/tabbed_contribution_section.dart';
 import 'package:flutter/foundation.dart';
@@ -17,20 +13,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 class UserAboutScreen extends ConsumerStatefulWidget {
   const UserAboutScreen(
     this.userData, {
-    this.selectedYear,
-    this.customFromDate,
-    this.customToDate,
-    this.useCustomRange = false,
+    required this.contributionQueryKey,
     this.onYearChanged,
     this.onCustomRangeChanged,
     super.key,
   });
 
   final GuserInfoData_user userData;
-  final int? selectedYear;
-  final DateTime? customFromDate;
-  final DateTime? customToDate;
-  final bool useCustomRange;
+  final ContributionQueryKey contributionQueryKey;
   final void Function(int)? onYearChanged;
   final void Function(DateTime?, DateTime?)? onCustomRangeChanged;
 
@@ -58,105 +48,66 @@ class _UserAboutScreenState extends ConsumerState<UserAboutScreen> {
     );
   }
 
-  /// Builds a typed provider key based on selected year or custom date range
-  /// Only recalculates when date range changes, not on every build
-  ContributionQueryKey _getProviderKey() {
-    if (widget.useCustomRange &&
-        widget.customFromDate != null &&
-        widget.customToDate != null) {
-      // Normalize dates to day level for stable keys
-      final DateTime from = DateTime(widget.customFromDate!.year,
-          widget.customFromDate!.month, widget.customFromDate!.day);
-      final DateTime to = DateTime(widget.customToDate!.year,
-          widget.customToDate!.month, widget.customToDate!.day);
-      return ContributionQueryKey.customRange(
-        userName: widget.userData.login,
-        from: from,
-        to: to,
-      );
-    }
-
-    final int? selectedYear = widget.selectedYear;
-    if (selectedYear == null) {
-      // Default: last year from today
-      return ContributionQueryKey.lastYear(widget.userData.login);
-    } else {
-      // Specific year
-      return ContributionQueryKey.year(widget.userData.login, selectedYear);
-    }
-  }
-
-  
-
   @override
   Widget build(final BuildContext context) {
     // Fetch contributions data using Riverpod with typed key
     // Key only changes when date range changes, preventing unnecessary rebuilds
-    final ContributionQueryKey providerKey = _getProviderKey();
+    final ContributionQueryKey providerKey = widget.contributionQueryKey;
+
+    if (kDebugMode) {
+      final timestamp = DateTime.now().millisecondsSinceEpoch;
+      final (from, to) = providerKey.dateRange.dates;
+      log.d(
+          '[UserAboutScreen] 🔄 build() called at $timestamp - widget.userData.login: "${widget.userData.login}", providerKey.userName: "${providerKey.userName}", dateRange: ${providerKey.dateRange.runtimeType}, from: ${from.toIso8601String()}, to: ${to.toIso8601String()}');
+      log.d(
+          '[UserAboutScreen] Watching userContributionsProvider with key hashCode: ${providerKey.hashCode}');
+      if (widget.userData.login != providerKey.userName) {
+        log.w(
+            '[UserAboutScreen] ⚠️ MISMATCH: widget.userData.login ("${widget.userData.login}") != providerKey.userName ("${providerKey.userName}")');
+      }
+    }
 
     final AsyncValue<ContributionCollectionResult> contributionsAsync =
         ref.watch(
       userContributionsProvider(providerKey),
     );
 
-    return contributionsAsync.when(
-      data: (final ContributionCollectionResult result) => _WrappedTabbedContributionSection(
-            contributionResult: result,
-            userName: widget.userData.login,
-            selectedYear: widget.selectedYear,
-            customFromDate: widget.customFromDate,
-            customToDate: widget.customToDate,
-            useCustomRange: widget.useCustomRange,
-            createdAt: widget.userData.createdAt,
-            onChipTap: (final ContributionChipType chipType) => _handleChipTap(
-              context,
-              chipType,
-              providerKey,
-              result,
-            ),
-        
-        ),
-      loading: () => const _ContributionLoadingSkeleton(),
-      error: (final Object error, final StackTrace stackTrace) {
-        if (kDebugMode) {
-          debugPrint('Error loading contribution data: $error');
-          debugPrint('Stack trace: $stackTrace');
-        }
+    if (kDebugMode) {
+      contributionsAsync.when(
+        data: (data) {
+          log.d(
+              '[UserAboutScreen] Provider returned data for "${providerKey.userName}"');
+        },
+        loading: () {
+          log.d(
+              '[UserAboutScreen] Provider loading for "${providerKey.userName}"');
+        },
+        error: (error, stack) {
+          log.e(
+              '[UserAboutScreen] Provider error for "${providerKey.userName}"',
+              error: error,
+              stackTrace: stack);
+        },
+      );
+    }
 
-        return Center(
-          child: Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: <Widget>[
-                Icon(
-                  Icons.error_outline,
-                  size: 48,
-                  color: Theme.of(context).colorScheme.error,
-                ),
-                const SizedBox(height: 16),
-                Text(
-                  'Unable to load contribution data',
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        color: Theme.of(context).colorScheme.error,
-                        fontWeight: FontWeight.w600,
-                      ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  error.toString(),
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: Theme.of(context)
-                            .colorScheme
-                            .onSurfaceVariant
-                            .withOpacity(0.7),
-                      ),
-                  textAlign: TextAlign.center,
-                ),
-              ],
-            ),
-          ),
-        );
+    // Always render TabbedContributionSection so dropdown remains visible
+    // Pass async state so it can handle loading/error internally
+    return _WrappedTabbedContributionSection(
+      contributionsAsync: contributionsAsync,
+      userName: widget.userData.login,
+      createdAt: widget.userData.createdAt,
+      providerKey: providerKey,
+      onChipTap: (final ContributionChipType chipType) {
+        contributionsAsync
+            .whenData((final ContributionCollectionResult result) {
+          _handleChipTap(
+            context,
+            chipType,
+            providerKey,
+            result,
+          );
+        });
       },
     );
   }
@@ -165,269 +116,25 @@ class _UserAboutScreenState extends ConsumerState<UserAboutScreen> {
 /// Wrapper for TabbedContributionSection that integrates with expandable scroll wrapper
 class _WrappedTabbedContributionSection extends StatelessWidget {
   const _WrappedTabbedContributionSection({
-    // required this.expandOnScrollWidget,
-    required this.contributionResult,
+    required this.contributionsAsync,
     required this.userName,
-    required this.selectedYear,
-    required this.customFromDate,
-    required this.customToDate,
-    required this.useCustomRange,
     required this.createdAt,
+    required this.providerKey,
     this.onChipTap,
   });
 
-  // final Widget expandOnScrollWidget;
-  final ContributionCollectionResult contributionResult;
+  final AsyncValue<ContributionCollectionResult> contributionsAsync;
   final String userName;
-  final int? selectedYear;
-  final DateTime? customFromDate;
-  final DateTime? customToDate;
-  final bool useCustomRange;
   final DateTime? createdAt;
+  final ContributionQueryKey providerKey;
   final void Function(ContributionChipType chipType)? onChipTap;
 
   @override
   Widget build(final BuildContext context) => TabbedContributionSection(
-        contributionResult: contributionResult,
+        contributionsAsync: contributionsAsync,
         userName: userName,
-        selectedYear: selectedYear,
-        customFromDate: customFromDate,
-        customToDate: customToDate,
-        useCustomRange: useCustomRange,
         createdAt: createdAt,
+        providerKey: providerKey,
         onChipTap: onChipTap,
-        // topWidget: expandOnScrollWidget,
       );
-}
-
-/// Loading skeleton that mimics the contribution section layout
-class _ContributionLoadingSkeleton extends StatelessWidget {
-  const _ContributionLoadingSkeleton();
-
-  /// Builds a styled divider matching the actual divider style
-  Widget _buildStyledDivider(final BuildContext context) {
-    final ColorScheme colorScheme = Theme.of(context).colorScheme;
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 16),
-      child: Container(
-        height: 1,
-        margin: const EdgeInsets.symmetric(horizontal: 16),
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            colors: <Color>[
-              Colors.transparent,
-              colorScheme.outlineVariant.withOpacity(0.3),
-              Colors.transparent,
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  @override
-  Widget build(final BuildContext context) {
-    final ThemeData theme = Theme.of(context);
-
-    return LayoutBuilder(
-      builder: (final BuildContext context, final BoxConstraints constraints) =>
-          Column(
-        children: <Widget>[
-          // Calendar skeleton
-          Padding(
-            padding: const EdgeInsets.all(8.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: <Widget>[
-                // Title and stats row
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: <Widget>[
-                    ShimmerWidget.container(
-                      height: 20,
-                      width: 150,
-                    ),
-                    ShimmerWidget.container(
-                      height: 20,
-                      width: 100,
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 16),
-                // Calendar grid
-                ShimmerWidget.container(
-                  height: 120,
-                  width: double.infinity,
-                ),
-                const SizedBox(height: 12),
-                // Stats chips
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  children: <Widget>[
-                    ShimmerWidget.container(height: 28, width: 80),
-                    ShimmerWidget.container(height: 28, width: 70),
-                    ShimmerWidget.container(height: 28, width: 75),
-                    ShimmerWidget.container(height: 28, width: 65),
-                  ],
-                ),
-              ],
-            ),
-          ),
-
-          const SizedBox(height: 16),
-
-          // Divider between calendar and activity overview
-          _buildStyledDivider(context),
-
-          const SizedBox(height: 16),
-
-          // Activity overview skeleton (radar chart section)
-          Padding(
-            padding: const EdgeInsets.all(8.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: <Widget>[
-                // Section header skeleton
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(8, 0, 8, 12),
-                  child: ShimmerWidget.container(
-                    height: 24,
-                    width: 180,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                ShimmerWidget.container(
-                  height: 18,
-                  width: 120,
-                ),
-                const SizedBox(height: 16),
-                Row(
-                  children: <Widget>[
-                    // Repositories list
-                    Expanded(
-                      flex: 3,
-                      child: Column(
-                        children: List.generate(
-                          3,
-                          (final int index) => Padding(
-                            padding: const EdgeInsets.only(bottom: 12),
-                            child: Row(
-                              children: <Widget>[
-                                ShimmerWidget.container(
-                                  height: 16,
-                                  width: 16,
-                                ),
-                                const SizedBox(width: 8),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: <Widget>[
-                                      ShimmerWidget.container(
-                                        height: 14,
-                                        width: double.infinity,
-                                      ),
-                                      const SizedBox(height: 4),
-                                      ShimmerWidget.container(
-                                        height: 12,
-                                        width: 80,
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 16),
-                    // Radar chart
-                    Expanded(
-                      flex: 2,
-                      child: Column(
-                        children: <Widget>[
-                          ShimmerWidget.container(
-                            height: 14,
-                            width: 80,
-                          ),
-                          const SizedBox(height: 12),
-                          ShimmerWidget.container(
-                            height: 150,
-                            width: 150,
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-
-          const SizedBox(height: 16),
-
-          // Divider before tabs
-          _buildStyledDivider(context),
-
-          // Tabs skeleton
-          Container(
-            decoration: BoxDecoration(
-              border: Border(
-                bottom: BorderSide(
-                  color: theme.colorScheme.outlineVariant.withOpacity(0.5),
-                  width: 1,
-                ),
-              ),
-            ),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              child: Row(
-                children: <Widget>[
-                  ShimmerWidget.container(height: 16, width: 70),
-                  const SizedBox(width: 24),
-                  ShimmerWidget.container(height: 16, width: 90),
-                  const SizedBox(width: 24),
-                  ShimmerWidget.container(height: 16, width: 60),
-                ],
-              ),
-            ),
-          ),
-
-          // Tab content skeleton - takes remaining space
-          Expanded(
-            child: ListView(
-              padding: const EdgeInsets.all(16),
-              children: List.generate(
-                3,
-                (final int index) => Padding(
-                  padding: const EdgeInsets.only(bottom: 16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: <Widget>[
-                      ShimmerWidget.container(
-                        height: 16,
-                        width: double.infinity,
-                      ),
-                      const SizedBox(height: 8),
-                      ShimmerWidget.container(
-                        height: 14,
-                        width: 150,
-                      ),
-                      const SizedBox(height: 4),
-                      ShimmerWidget.container(
-                        height: 14,
-                        width: 100,
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
 }

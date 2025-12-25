@@ -29,6 +29,7 @@ import 'package:diohub/view/repository/issues/new_issue_screen.dart' as _i8;
 import 'package:diohub/view/repository/repository_screen.dart' as _i11;
 import 'package:diohub/view/repository/wiki/wiki_viewer.dart' as _i15;
 import 'package:diohub/view/search/search.dart' as _i13;
+import 'package:flutter/foundation.dart' as _i20;
 import 'package:flutter/material.dart' as _i17;
 
 /// generated route for
@@ -851,7 +852,7 @@ class SearchRoute extends _i16.PageRouteInfo<void> {
 class UserProfileRoute extends _i16.PageRouteInfo<UserProfileRouteArgs> {
   UserProfileRoute({
     required String login,
-    _i17.Key? key,
+    _i20.Key? key,
     List<_i16.PageRouteInfo>? children,
   }) : super(
           UserProfileRoute.name,
@@ -875,7 +876,7 @@ class UserProfileRouteArgs {
 
   final String login;
 
-  final _i17.Key? key;
+  final _i20.Key? key;
 
   @override
   String toString() {

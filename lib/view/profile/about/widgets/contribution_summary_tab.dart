@@ -1,4 +1,6 @@
 import 'package:diohub/common/animations/fade_animation_widget.dart';
+import 'package:diohub/common/widgets/section_header.dart';
+import 'package:diohub/common/widgets/styled_divider.dart';
 import 'package:diohub/models/contributions/contribution_chip_type.dart';
 import 'package:diohub/models/contributions/contribution_query_models.dart';
 import 'package:diohub/view/profile/about/widgets/activity_overview_section.dart';
@@ -11,59 +13,23 @@ class ContributionSummaryTab extends StatelessWidget {
   const ContributionSummaryTab({
     required this.contributionResult,
     required this.userName,
-    required this.selectedYear,
-    required this.customFromDate,
-    required this.customToDate,
-    required this.useCustomRange,
     required this.createdAt,
+    required this.providerKey,
     this.onChipTap,
     super.key,
   });
 
   final ContributionCollectionResult contributionResult;
   final String userName;
-  final int? selectedYear;
-  final DateTime? customFromDate;
-  final DateTime? customToDate;
-  final bool useCustomRange;
   final DateTime? createdAt;
+  final ContributionQueryKey providerKey;
   final void Function(ContributionChipType chipType)? onChipTap;
 
-  /// Builds a styled section divider with gradient effect
-  Widget _buildSectionDivider(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 16),
-      child: Container(
-        height: 1,
-        margin: const EdgeInsets.symmetric(horizontal: 16),
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            colors: [
-              Colors.transparent,
-              colorScheme.outlineVariant.withOpacity(0.3),
-              Colors.transparent,
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  /// Builds a consistent section header
-  Widget _buildSectionHeader(BuildContext context, String title) {
-    final theme = Theme.of(context);
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 20, 16, 12),
-      child: Text(
-        title,
-        style: theme.textTheme.titleLarge?.copyWith(
-          fontWeight: FontWeight.w700,
-          letterSpacing: -0.5,
-        ),
-      ),
-    );
-  }
+  /// Extract display values from providerKey
+  int? get selectedYear => providerKey.dateRange.displayYear;
+  DateTime? get customFromDate => providerKey.dateRange.displayFromDate;
+  DateTime? get customToDate => providerKey.dateRange.displayToDate;
+  bool get useCustomRange => providerKey.dateRange.isCustomRange;
 
   @override
   Widget build(BuildContext context) {
@@ -81,11 +47,7 @@ class ContributionSummaryTab extends StatelessWidget {
               weeks: viewModel.weeks,
               totalContributions: viewModel.totalContributions,
               colors: viewModel.colors,
-              availableYears: viewModel.contributionYears,
-              selectedYear: selectedYear,
-              customFromDate: customFromDate,
-              customToDate: customToDate,
-              useCustomRange: useCustomRange,
+              providerKey: providerKey,
               createdAt: createdAt,
               commits: viewModel.totalCommitContributions,
               pullRequests: viewModel.totalPullRequestContributions,
@@ -99,27 +61,27 @@ class ContributionSummaryTab extends StatelessWidget {
         ),
 
         // Activity Overview section with header
-        _buildSectionDivider(context),
-
-        _buildSectionHeader(context, 'Activity Overview'),
-
-        FadeAnimationSection(
-          duration: const Duration(milliseconds: 400),
-          child: Padding(
-            padding: const EdgeInsets.all(8.0),
-            child: ActivityOverviewSection(
-              repositories: viewModel.commitContributionsByRepository,
-              commits: viewModel.totalCommitContributions,
-              issues: viewModel.totalIssueContributions,
-              pullRequests: viewModel.totalPullRequestContributions,
-              reviews: viewModel.totalPullRequestReviewContributions,
+        SectionHeader(
+          title: 'Activity Overview',
+          showDivider: true,
+          child: FadeAnimationSection(
+            duration: const Duration(milliseconds: 400),
+            child: Padding(
+              padding: const EdgeInsets.all(8.0),
+              child: ActivityOverviewSection(
+                repositories: viewModel.commitContributionsByRepository,
+                commits: viewModel.totalCommitContributions,
+                issues: viewModel.totalIssueContributions,
+                pullRequests: viewModel.totalPullRequestContributions,
+                reviews: viewModel.totalPullRequestReviewContributions,
+              ),
             ),
           ),
         ),
 
         // Highlights section
         if (highlights.isNotEmpty) ...[
-          _buildSectionDivider(context),
+          StyledDivider(),
           ContributionHighlightsSection(
             yearlyHighlights: highlights,
             userName: userName,

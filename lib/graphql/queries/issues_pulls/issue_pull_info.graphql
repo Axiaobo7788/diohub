@@ -228,6 +228,10 @@ fragment issueInfo on Issue{
     viewerCanUpdate
     viewerCanSubscribe
     viewerSubscription
+    viewerCanClose
+    viewerCanReopen
+    viewerCanDelete
+    stateReason
 }
 
 fragment pullInfo on PullRequest{
@@ -322,6 +326,13 @@ fragment pullInfo on PullRequest{
     merged
     reviewDecision
     viewerCanUpdate
+    viewerCanSubscribe
+    viewerSubscription
+    isDraft
+    viewerCanClose
+    viewerCanReopen
+    mergeable
+    viewerCanMergeAsAdmin
 }
 
 fragment repoInfo on Repository{

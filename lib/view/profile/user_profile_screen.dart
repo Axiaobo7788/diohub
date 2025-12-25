@@ -1,5 +1,6 @@
 import 'package:auto_route/annotations.dart';
 import 'package:auto_route/auto_route.dart';
+import 'package:diohub/app/global.dart';
 import 'package:diohub/common/events/events.dart';
 import 'package:diohub/common/misc/animated_tab_bar.dart';
 import 'package:diohub/common/misc/collapsible_app_bar.dart';
@@ -17,17 +18,17 @@ import 'package:diohub/common/wrappers/dynamic_tabs_parent.dart';
 import 'package:diohub/graphql/queries/users/__generated__/user_info.data.gql.dart';
 import 'package:diohub/models/contributions/contribution_query_models.dart';
 import 'package:diohub/providers/base_provider.dart';
-import 'package:diohub/providers/users/user_contributions_provider.dart';
 import 'package:diohub/providers/users/user_provider.dart';
 import 'package:diohub/routes/router.gr.dart';
 import 'package:diohub/style/surface_style_theme.dart';
+import 'package:diohub/utils/contribution_query_utils.dart';
 import 'package:diohub/utils/get_date.dart';
 import 'package:diohub/utils/utils.dart';
 import 'package:diohub/view/profile/about/user_about_screen.dart';
 import 'package:diohub/view/profile/repositories/user_repositories.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_dynamic_tabs/flutter_dynamic_tabs.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_vector_icons/flutter_vector_icons.dart';
 import 'package:provider/provider.dart' as provider;
 
@@ -46,81 +47,89 @@ class UserProfileScreenState extends State<UserProfileScreen>
   GuserInfoData_user? data;
 
   // Date range state for Activity tab (contribution graph)
-  int? _selectedYear; // null means last year (default)
-  DateTime? _customFromDate;
-  DateTime? _customToDate;
-  bool _useCustomRange = false;
+  // Store ContributionQueryKey as single source of truth
+  late ContributionQueryKey _contributionQueryKey;
+
+  @override
+  void initState() {
+    super.initState();
+    // Initialize to default last year range
+    _contributionQueryKey = ContributionQueryKey.lastYear(widget.login);
+    if (kDebugMode) {
+      final (from, to) = _contributionQueryKey.dateRange.dates;
+      log.d(
+          '[UserProfileScreen] initState() - widget.login: "${widget.login}", created key for user: "${_contributionQueryKey.userName}", dateRange: ${_contributionQueryKey.dateRange.runtimeType}, from: ${from.toIso8601String()}, to: ${to.toIso8601String()}');
+    }
+  }
+
+  /// Gets the current query key
+  ContributionQueryKey _getCurrentQueryKey() {
+    return _contributionQueryKey;
+  }
 
   /// Gets the display label for the current date range selection
   String _getDateRangeLabel() {
-    if (_useCustomRange && _customFromDate != null) {
+    final key = _getCurrentQueryKey();
+    final dateRange = key.dateRange;
+
+    // Check for "Last Year" first (it's a CustomRange with isLastYear flag)
+    if (dateRange.isLastYear) {
+      return 'Last Year';
+    }
+
+    if (dateRange.isCustomRange) {
+      final from = dateRange.displayFromDate;
       final DateTime? createdAt = data?.createdAt;
-      if (createdAt != null) {
-        final bool isSinceJoining = _customFromDate!.year == createdAt.year &&
-            _customFromDate!.month == createdAt.month &&
-            _customFromDate!.day == createdAt.day;
+      if (from != null && createdAt != null) {
+        final bool isSinceJoining = from.year == createdAt.year &&
+            from.month == createdAt.month &&
+            from.day == createdAt.day;
         return isSinceJoining ? 'Since joining' : 'Custom';
       }
       return 'Custom';
     }
-    return _selectedYear?.toString() ?? 'Last Year';
+
+    final year = dateRange.displayYear;
+    return year?.toString() ?? 'Last Year';
   }
 
   /// Handles year selection change
   void _onYearChanged(final int year) {
+    if (kDebugMode) {
+      log.d(
+          '[UserProfileScreen] _onYearChanged() - widget.login: "${widget.login}", year: $year');
+    }
     setState(() {
-      _selectedYear = year;
-      _useCustomRange = false;
-      _customFromDate = null;
-      _customToDate = null;
+      _contributionQueryKey = ContributionQueryKey.year(widget.login, year);
+      if (kDebugMode) {
+        log.d(
+            '[UserProfileScreen] Updated key - userName: "${_contributionQueryKey.userName}"');
+      }
     });
   }
 
   /// Handles custom date range change
   void _onCustomRangeChanged(final DateTime? from, final DateTime? to) {
+    if (kDebugMode) {
+      log.d(
+          '[UserProfileScreen] _onCustomRangeChanged() - widget.login: "${widget.login}", from: ${from?.toIso8601String()}, to: ${to?.toIso8601String()}');
+    }
     setState(() {
       if (from == null && to == null) {
         // Reset to last year
-        _selectedYear = null;
-        _useCustomRange = false;
-        _customFromDate = null;
-        _customToDate = null;
-      } else {
-        _customFromDate = from;
-        _customToDate = to;
-        _useCustomRange = from != null && to != null;
-        if (_useCustomRange) {
-          _selectedYear = null;
-        }
+        _contributionQueryKey = ContributionQueryKey.lastYear(widget.login);
+      } else if (from != null && to != null) {
+        _contributionQueryKey = ContributionQueryKey.customRange(
+          userName: widget.login,
+          from: from,
+          to: to,
+        );
+      }
+      if (kDebugMode) {
+        log.d(
+            '[UserProfileScreen] Updated key - userName: "${_contributionQueryKey.userName}"');
       }
     });
-  }
-
-  /// Builds a provider key for contributions (same logic as UserAboutScreen)
-  ContributionQueryKey _getContributionProviderKey(final String userName) {
-    if (_useCustomRange && _customFromDate != null && _customToDate != null) {
-      final DateTime from = DateTime(
-        _customFromDate!.year,
-        _customFromDate!.month,
-        _customFromDate!.day,
-      );
-      final DateTime to = DateTime(
-        _customToDate!.year,
-        _customToDate!.month,
-        _customToDate!.day,
-      );
-      return ContributionQueryKey.customRange(
-        userName: userName,
-        from: from,
-        to: to,
-      );
-    }
-
-    if (_selectedYear == null) {
-      return ContributionQueryKey.lastYear(userName);
-    } else {
-      return ContributionQueryKey.year(userName, _selectedYear!);
-    }
   }
 
   /// Builds the expanded content for the date range selector
@@ -129,17 +138,13 @@ class UserProfileScreenState extends State<UserProfileScreen>
     final GuserInfoData_user userData,
     final VoidCallback onCollapse,
   ) {
-    // Use a ConsumerWidget wrapper to watch the contributions provider for available years
+    final currentKey = _getCurrentQueryKey();
     return _DateRangeExpandedContent(
       userName: userData.login,
-      selectedYear: _selectedYear,
-      customFromDate: _customFromDate,
-      customToDate: _customToDate,
-      useCustomRange: _useCustomRange,
+      currentQueryKey: currentKey,
       createdAt: userData.createdAt,
       onYearChanged: _onYearChanged,
       onCustomRangeChanged: _onCustomRangeChanged,
-      getProviderKey: _getContributionProviderKey,
       onCollapse: onCollapse,
     );
   }
@@ -790,77 +795,72 @@ class UserProfileScreenState extends State<UserProfileScreen>
   }
 
   @override
-  Widget build(final BuildContext context) =>
-      provider.ChangeNotifierProvider<UserProvider>(
-        create: (final _) => UserProvider(widget.login),
-        builder: (final BuildContext context, final _) => Scaffold(
-          appBar: provider.Provider.of<UserProvider>(context).status !=
-                  Status.loaded
-              ? AppBar(elevation: 0)
-              : null,
-          body: ScaffoldBody(
-            child: ProviderLoadingProgressWrapper<UserProvider>(
-              childBuilder:
-                  (final BuildContext context, final UserProvider value) {
-                data = value.data;
+  Widget build(final BuildContext context) {
+    if (kDebugMode) {
+      log.d(
+          '[UserProfileScreen] build() called - widget.login: "${widget.login}"');
+    }
+    return provider.ChangeNotifierProvider<UserProvider>(
+      create: (final _) {
+        if (kDebugMode) {
+          log.d(
+              '[UserProfileScreen] Creating UserProvider with widget.login: "${widget.login}"');
+        }
+        return UserProvider(widget.login);
+      },
+      builder: (final BuildContext context, final _) => Scaffold(
+        appBar:
+            provider.Provider.of<UserProvider>(context).status != Status.loaded
+                ? AppBar(elevation: 0)
+                : null,
+        body: ScaffoldBody(
+          child: ProviderLoadingProgressWrapper<UserProvider>(
+            childBuilder:
+                (final BuildContext context, final UserProvider value) {
+              data = value.data;
 
-                return _UserProfileTabsContent(
-                  userData: value.data,
-                  parentState: this,
-                  buildCollapsedHeader: _buildCollapsedHeader,
-                  buildExpandedHeader: _buildExpandedHeader,
-                  buildToolbarActions: _buildToolbarActions,
-                  buildActionButtons: _buildActionButtons,
-                  selectedYear: _selectedYear,
-                  customFromDate: _customFromDate,
-                  customToDate: _customToDate,
-                  useCustomRange: _useCustomRange,
-                  onYearChanged: _onYearChanged,
-                  onCustomRangeChanged: _onCustomRangeChanged,
-                );
-              },
-            ),
+              return _UserProfileTabsContent(
+                userData: value.data,
+                parentState: this,
+                buildCollapsedHeader: _buildCollapsedHeader,
+                buildExpandedHeader: _buildExpandedHeader,
+                buildToolbarActions: _buildToolbarActions,
+                buildActionButtons: _buildActionButtons,
+                contributionQueryKey: _getCurrentQueryKey(),
+                onYearChanged: _onYearChanged,
+                onCustomRangeChanged: _onCustomRangeChanged,
+              );
+            },
           ),
         ),
-      );
+      ),
+    );
+  }
 }
 
-/// ConsumerWidget wrapper for date range expanded content
-/// This allows us to watch the contributions provider for available years
-class _DateRangeExpandedContent extends ConsumerWidget {
+/// Widget for date range expanded content
+class _DateRangeExpandedContent extends StatelessWidget {
   const _DateRangeExpandedContent({
     required this.userName,
-    required this.selectedYear,
-    required this.customFromDate,
-    required this.customToDate,
-    required this.useCustomRange,
+    required this.currentQueryKey,
     required this.createdAt,
     required this.onYearChanged,
     required this.onCustomRangeChanged,
-    required this.getProviderKey,
     required this.onCollapse,
   });
 
   final String userName;
-  final int? selectedYear;
-  final DateTime? customFromDate;
-  final DateTime? customToDate;
-  final bool useCustomRange;
+  final ContributionQueryKey currentQueryKey;
   final DateTime? createdAt;
   final void Function(int) onYearChanged;
   final void Function(DateTime?, DateTime?) onCustomRangeChanged;
-  final ContributionQueryKey Function(String) getProviderKey;
   final VoidCallback onCollapse;
 
-  /// Checks if the current custom range matches "Since joining GitHub"
-  bool _isSinceJoining(final DateTime? customFrom, final DateTime? created) {
-    if (!useCustomRange || customFrom == null || created == null) {
-      return false;
-    }
-    return customFrom.year == created.year &&
-        customFrom.month == created.month &&
-        customFrom.day == created.day;
-  }
+  /// Extract display values from query key
+  int? get _selectedYear => currentQueryKey.dateRange.displayYear;
+  DateTime? get _customFromDate => currentQueryKey.dateRange.displayFromDate;
+  DateTime? get _customToDate => currentQueryKey.dateRange.displayToDate;
+  bool get _useCustomRange => currentQueryKey.dateRange.isCustomRange;
 
   Future<void> _showCustomDateRangePicker(
     final BuildContext context,
@@ -868,8 +868,8 @@ class _DateRangeExpandedContent extends ConsumerWidget {
   ) async {
     final DateTime now = DateTime.now();
     final DateTime initialFrom =
-        customFromDate ?? now.subtract(const Duration(days: 365));
-    final DateTime initialTo = customToDate ?? now;
+        _customFromDate ?? now.subtract(const Duration(days: 365));
+    final DateTime initialTo = _customToDate ?? now;
 
     // Use createdAt as earliest date, or default to year 2000 if not available
     final DateTime earliest = earliestDate ?? DateTime(2000);
@@ -899,47 +899,25 @@ class _DateRangeExpandedContent extends ConsumerWidget {
   }
 
   @override
-  Widget build(final BuildContext context, final WidgetRef ref) {
+  Widget build(final BuildContext context) {
     final ThemeData theme = Theme.of(context);
     final ColorScheme colorScheme = theme.colorScheme;
-    final ContributionQueryKey providerKey = getProviderKey(userName);
-    final AsyncValue<ContributionCollectionResult> contributionsAsync =
-        ref.watch(
-      userContributionsProvider(providerKey),
-    );
 
-    // Watch the last year provider separately to get available years
-    // This ensures years list doesn't disappear when current provider is loading
-    final ContributionQueryKey lastYearKey =
-        ContributionQueryKey.lastYear(userName);
-    final AsyncValue<ContributionCollectionResult> lastYearAsync = ref.watch(
-      userContributionsProvider(lastYearKey),
-    );
-
-    // Get available years from the last year provider (which always has all years)
-    // Fall back to current provider if last year provider is not available
-    final List<int> availableYears = lastYearAsync.when(
-      data: (final ContributionCollectionResult result) =>
-          result.viewModel.contributionYears,
-      loading: () => contributionsAsync.when(
-        data: (final ContributionCollectionResult result) =>
-            result.viewModel.contributionYears,
-        loading: () => <int>[],
-        error: (final _, final __) => <int>[],
-      ),
-      error: (final _, final __) => contributionsAsync.when(
-        data: (final ContributionCollectionResult result) =>
-            result.viewModel.contributionYears,
-        loading: () => <int>[],
-        error: (final _, final __) => <int>[],
-      ),
-    );
+    // Generate available years from joined date to current year
+    final List<int> availableYears = generateAvailableYears(createdAt);
 
     // Determine which option is currently selected
-    final bool isLastYearSelected = !useCustomRange && selectedYear == null;
-    final bool isSinceJoiningSelected =
-        useCustomRange && _isSinceJoining(customFromDate, createdAt);
-    final bool isCustomSelected = useCustomRange && !isSinceJoiningSelected;
+    final dateRange = currentQueryKey.dateRange;
+    final bool isLastYearSelected = dateRange.isLastYear;
+    final bool isSinceJoiningSelected = _useCustomRange &&
+        !isLastYearSelected &&
+        isSinceJoining(
+          useCustomRange: _useCustomRange,
+          customFromDate: _customFromDate,
+          createdAt: createdAt,
+        );
+    final bool isCustomSelected =
+        _useCustomRange && !isLastYearSelected && !isSinceJoiningSelected;
 
     // Build all options into a list
     final List<Widget> optionTiles = <Widget>[];
@@ -972,7 +950,7 @@ class _DateRangeExpandedContent extends ConsumerWidget {
             colorScheme: colorScheme,
             icon: Icons.calendar_month,
             title: year.toString(),
-            isSelected: !useCustomRange && selectedYear == year,
+            isSelected: !_useCustomRange && _selectedYear == year,
             onTap: () {
               onYearChanged(year);
               onCollapse();
@@ -1121,10 +1099,7 @@ class _UserProfileTabsContent extends StatefulWidget {
     required this.buildExpandedHeader,
     required this.buildToolbarActions,
     required this.buildActionButtons,
-    required this.selectedYear,
-    required this.customFromDate,
-    required this.customToDate,
-    required this.useCustomRange,
+    required this.contributionQueryKey,
     required this.onYearChanged,
     required this.onCustomRangeChanged,
   });
@@ -1147,10 +1122,7 @@ class _UserProfileTabsContent extends StatefulWidget {
     GuserInfoData_user,
     DynamicTabsController?,
   ) buildActionButtons;
-  final int? selectedYear;
-  final DateTime? customFromDate;
-  final DateTime? customToDate;
-  final bool useCustomRange;
+  final ContributionQueryKey contributionQueryKey;
   final void Function(int) onYearChanged;
   final void Function(DateTime?, DateTime?) onCustomRangeChanged;
 
@@ -1172,20 +1144,32 @@ class _UserProfileTabsContentState extends State<_UserProfileTabsContent>
   void _initializeTabs() {
     final GuserInfoData_user userData = widget.userData;
 
+    if (kDebugMode) {
+      log.d(
+          '[_UserProfileTabsContent] _initializeTabs() - userData.login: "${userData.login}", contributionQueryKey.userName: "${widget.contributionQueryKey.userName}"');
+      if (userData.login != widget.contributionQueryKey.userName) {
+        log.w(
+            '[_UserProfileTabsContent] ⚠️ MISMATCH: userData.login ("${userData.login}") != contributionQueryKey.userName ("${widget.contributionQueryKey.userName}")');
+      }
+    }
+
     final List<DynamicTab> tabs = <DynamicTab>[
       DynamicTab(
         identifier: 'Activity',
         isDismissible: false,
         isFocusedOnInit: true,
-        tabViewBuilder: (final BuildContext context) => UserAboutScreen(
-          userData,
-          selectedYear: widget.selectedYear,
-          customFromDate: widget.customFromDate,
-          customToDate: widget.customToDate,
-          useCustomRange: widget.useCustomRange,
-          onYearChanged: widget.onYearChanged,
-          onCustomRangeChanged: widget.onCustomRangeChanged,
-        ),
+        tabViewBuilder: (final BuildContext context) {
+          if (kDebugMode) {
+            log.d(
+                '[_UserProfileTabsContent] Building UserAboutScreen - userData.login: "${userData.login}", contributionQueryKey.userName: "${widget.contributionQueryKey.userName}"');
+          }
+          return UserAboutScreen(
+            userData,
+            contributionQueryKey: widget.contributionQueryKey,
+            onYearChanged: widget.onYearChanged,
+            onCustomRangeChanged: widget.onCustomRangeChanged,
+          );
+        },
       ),
       DynamicTab(
         identifier: 'Activity Feed',
@@ -1298,7 +1282,7 @@ class _UserProfileTabsContentState extends State<_UserProfileTabsContent>
         },
         child: tabController != null
             ? SafeArea(
-              child: ExpandOnScrollWrapper(
+                child: ExpandOnScrollWrapper(
                   collapsedWidget: (final BuildContext context,
                           final double pullProgress,
                           final bool isReadyToExpand) =>
@@ -1358,7 +1342,7 @@ class _UserProfileTabsContentState extends State<_UserProfileTabsContent>
                     ),
                   ),
                 ),
-            )
+              )
             : const SizedBox.shrink(),
       );
 
