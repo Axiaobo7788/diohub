@@ -11,7 +11,6 @@ import 'package:ferry/ferry.dart';
 import 'package:flutter/foundation.dart';
 import 'package:gql_dio_link/gql_dio_link.dart';
 import 'package:gql_exec/gql_exec.dart' as gql_exec;
-import 'package:path_provider/path_provider.dart';
 import 'package:pretty_dio_logger/pretty_dio_logger.dart';
 import 'package:uuid/uuid.dart';
 
@@ -34,7 +33,6 @@ class RESTHandler extends BaseAPIHandler {
   }) : super(
           addAuthHeader: false,
         );
-
 
   Future<Response<T>> get<T>(
     final String url, {
@@ -234,37 +232,37 @@ class GraphqlHandler extends BaseAPIHandler {
     final AuthRepository authRepo = AuthRepository();
     final String apiBase = await authRepo.getActiveAccountServerUrl();
     return DioLink(
-        '$apiBase/graphql',
-        client: _request(
-          overrideAPICache: overrideAPICache,
-          requestHeaders: requestHeaders,
-        ),
-      )
-          .request(
-            GQLRequest(
-              operation: operationRequest.operation,
-              // ignore: avoid_dynamic_calls
-              variables: operationRequest.vars.toJson(),
-            ),
-          )
-          .first
-          .onError<DioLinkServerException>(
-        (final DioLinkServerException error, final StackTrace stackTrace) {
-          // If data is from cache the header would be 304, hence the value should
-          // be returned.
-          if (error.response.statusCode == 304) {
-            final gql_exec.Response gqlResponse =
-                const ResponseParser().parseResponse(error.response.data);
-            return GQLResponse(
-              data: gqlResponse.data,
-              errors: gqlResponse.errors,
-              response: gqlResponse.response,
-            );
-          } else {
-            throw error;
-          }
-        },
-      );
+      '$apiBase/graphql',
+      client: _request(
+        overrideAPICache: overrideAPICache,
+        requestHeaders: requestHeaders,
+      ),
+    )
+        .request(
+          GQLRequest(
+            operation: operationRequest.operation,
+            // ignore: avoid_dynamic_calls
+            variables: operationRequest.vars.toJson(),
+          ),
+        )
+        .first
+        .onError<DioLinkServerException>(
+      (final DioLinkServerException error, final StackTrace stackTrace) {
+        // If data is from cache the header would be 304, hence the value should
+        // be returned.
+        if (error.response.statusCode == 304) {
+          final gql_exec.Response gqlResponse =
+              const ResponseParser().parseResponse(error.response.data);
+          return GQLResponse(
+            data: gqlResponse.data,
+            errors: gqlResponse.errors,
+            response: gqlResponse.response,
+          );
+        } else {
+          throw error;
+        }
+      },
+    );
   }
 
   @override
@@ -398,9 +396,9 @@ abstract class BaseAPIHandler {
           // Fetch active account's server URL dynamically
           final AuthRepository authRepo = AuthRepository();
           final activeAccountUrl = await authRepo.getActiveAccountServerUrl();
-          final String apiBase = baseUrl ?? activeAccountUrl ;
+          final String apiBase = baseUrl ?? activeAccountUrl;
 
-     // Append path if handler defines one (e.g., '/graphql' for GraphQL)
+          // Append path if handler defines one (e.g., '/graphql' for GraphQL)
           if (path != null) {
             options.baseUrl = '$apiBase$path';
           } else {
@@ -432,12 +430,20 @@ abstract class BaseAPIHandler {
           // TODO(namanshergill): Add better exception handling based on response codes.
           if (error.response == null) {
             handler.next(error);
-          } else if (error.response?.data.runtimeType is Map &&
-              error.response?.data.containsKey('message') &&
-              propagateMessagesToUI) {
-            ResponseHandler.setErrorMessage(
-              AppPopupData(title: error.response!.data['message']),
-            );
+          } else {
+            // Check for "Bad credentials" (invalid/revoked token) and trigger logout
+            if (AuthRepository.isTokenInvalidError(error)) {
+              // Emit a token invalidation signal; app layer handles logout flow.
+              AuthRepository.emitTokenInvalidated();
+            }
+
+            if (error.response?.data.runtimeType is Map &&
+                error.response?.data.containsKey('message') &&
+                propagateMessagesToUI) {
+              ResponseHandler.setErrorMessage(
+                AppPopupData(title: error.response!.data['message']),
+              );
+            }
           }
           handler.next(error);
         },
@@ -506,9 +512,6 @@ abstract class BaseAPIHandler {
   static late final CacheStore _cacheStore;
 
   static Future<void> setupDioAPICache() async {
-    String? directoryPath;
-
-    directoryPath = (await getApplicationDocumentsDirectory()).path;
     _cacheStore = MemCacheStore();
   }
 
@@ -546,6 +549,18 @@ class APILoggingSettings {
         responseHeader = true,
         responseBody = true,
         error = true;
+
+  APILoggingSettings.none({
+    this.maxWidth = 90,
+    this.compact = true,
+    this.logPrint,
+    this.cURL = true,
+  })  : request = false,
+        requestHeader = false,
+        requestBody = false,
+        responseHeader = false,
+        responseBody = false,
+        error = false;
 
   /// Print request [Options]
   final bool request;
