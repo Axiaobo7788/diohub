@@ -8,6 +8,10 @@ import 'package:diohub/adapters/deep_linking_handler.dart';
 import 'package:diohub/app/api_handler/dio.dart';
 import 'package:diohub/app/global.dart';
 import 'package:diohub/app/settings/font.dart';
+import 'package:diohub/app/settings/theme_mode.dart';
+import 'package:diohub/app/theme_settings/api/flex_theme_settings_service.dart';
+import 'package:diohub/utils/material_you_support.dart';
+import 'package:diohub/app/theme_settings/models/flex_theme_settings_model.dart';
 import 'package:diohub/blocs/account_bloc/account_bloc.dart';
 import 'package:diohub/blocs/authentication_bloc/authentication_bloc.dart';
 import 'package:diohub/providers/search_data_provider.dart';
@@ -20,6 +24,7 @@ import 'package:diohub/style/surface_style_theme.dart';
 import 'package:diohub/common/misc/surface_shape_resolver.dart';
 import 'package:diohub/utils/device_display_mode.dart';
 import 'package:dynamic_color/dynamic_color.dart';
+import 'package:flex_color_scheme/flex_color_scheme.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -124,11 +129,18 @@ class MyApp extends StatelessWidget {
                 accountBloc: BlocProvider.of<AccountBloc>(context),
               ),
             ),
+            ChangeNotifierProvider<FlexThemeSettingsService>(
+              lazy: false,
+              create: (final _) => FlexThemeSettingsService(),
+            ),
             ChangeNotifierProvider<SearchDataProvider>(
               create: (final _) => SearchDataProvider(),
             ),
             ChangeNotifierProvider<FontSettings>(
               create: (final _) => FontSettings(),
+            ),
+            ChangeNotifierProvider<ThemeModeSettings>(
+              create: (final _) => ThemeModeSettings(),
             ),
             // ChangeNotifierProvider<PaletteSettings>(
             //   create: (final _) => PaletteSettings(),
@@ -175,52 +187,54 @@ class _RootAppState extends State<RootApp> {
   Widget build(final BuildContext context) => DynamicColorBuilder(
         builder:
             (final ColorScheme? lightDynamic, final ColorScheme? darkDynamic) {
-          ColorScheme? lightScheme;
-          ColorScheme? darkScheme;
-          print('hjbs jhbf s');
-          print(lightDynamic);
-          print(darkDynamic);
-          // if (lightDynamic != null && darkDynamic != null) {
-          //   (lightScheme, darkScheme) =
-          //       _generateDynamicColourSchemes(lightDynamic, darkDynamic);
-          // } else {
-          //   lightScheme = _defaultLightColorScheme;
-          //   darkScheme = _defaultDarkColorScheme;
-          // }
+          final supportsMaterialYou =
+              MaterialYouSupport.isSupported(lightDynamic, darkDynamic);
+
           return riverpod.ProviderScope(
-            child: MaterialApp.router(
-              theme: getTheme(
-                context,
-                brightness: Brightness.light,
-                colorScheme: lightScheme,
+            child: Consumer<ThemeModeSettings>(
+              builder: (context, themeModeSettings, child) =>
+                  Consumer<FlexThemeSettingsService>(
+                builder: (context, themeSettings, child) {
+                  // Only use dynamic colors if Material You is enabled AND device supports it
+                  final useDynamicColors =
+                      themeModeSettings.materialYouEnabled &&
+                          supportsMaterialYou;
+
+                  return MaterialApp.router(
+                    theme: getTheme(
+                      context,
+                      brightness: Brightness.light,
+                      colorScheme: useDynamicColors ? lightDynamic : null,
+                    ),
+                    darkTheme: getTheme(
+                      context,
+                      brightness: Brightness.dark,
+                      colorScheme: useDynamicColors ? darkDynamic : null,
+                    ),
+                    themeMode: themeModeSettings.themeMode,
+                    scrollBehavior: _BouncingScrollBehavior(),
+                    localizationsDelegates: const <LocalizationsDelegate>[
+                      DefaultMaterialLocalizations.delegate,
+                      DefaultCupertinoLocalizations.delegate,
+                      DefaultWidgetsLocalizations.delegate,
+                    ],
+                    routerDelegate: customRouter.delegate(
+                      deepLinkBuilder: (final PlatformDeepLink deepLink) =>
+                          DeepLink(<PageRouteInfo>[
+                        LandingLoadingRoute(
+                          initLink: deepLink.configuration.uri,
+                        ),
+                      ]),
+                      navigatorObservers: () => <NavigatorObserver>[
+                        ChuckerFlutter.navigatorObserver,
+                        AuthStateObserver(context),
+                      ],
+                      rebuildStackOnDeepLink: true,
+                    ),
+                    routeInformationParser: customRouter.defaultRouteParser(),
+                  );
+                },
               ),
-              darkTheme: getTheme(
-                context,
-                brightness: Brightness.dark,
-                colorScheme: darkScheme,
-              ),
-              scrollBehavior: _BouncingScrollBehavior(),
-              localizationsDelegates: const <LocalizationsDelegate>[
-                DefaultMaterialLocalizations.delegate,
-                DefaultCupertinoLocalizations.delegate,
-                DefaultWidgetsLocalizations.delegate,
-              ],
-              // getTheme(context, brightness: Brightness.light),
-              // darkTheme: getTheme(context, brightness: Brightness.dark),
-              routerDelegate: customRouter.delegate(
-                deepLinkBuilder: (final PlatformDeepLink deepLink) =>
-                    DeepLink(<PageRouteInfo>[
-                  LandingLoadingRoute(
-                    initLink: deepLink.configuration.uri,
-                  ),
-                ]),
-                navigatorObservers: () => <NavigatorObserver>[
-                  ChuckerFlutter.navigatorObserver,
-                  AuthStateObserver(context),
-                ],
-                rebuildStackOnDeepLink: true,
-              ),
-              routeInformationParser: customRouter.defaultRouteParser(),
             ),
           );
         },
@@ -232,13 +246,97 @@ ThemeData getTheme(
   required final Brightness brightness,
   required final ColorScheme? colorScheme,
 }) {
-  final ColorScheme? cs = colorScheme;
-  // cs= cs.copyWith(surfaceTint: Colors.transparent);
   const SurfaceStyleTheme surfaceStyle = SurfaceStyleTheme();
-  return ThemeData(
-    useMaterial3: true,
-    brightness: brightness,
-    fontFamily: Provider.of<FontSettings>(context).currentSetting,
+  final String fontFamily = Provider.of<FontSettings>(context).currentSetting;
+
+  // Get theme settings from service
+  final FlexThemeSettingsService? themeSettingsService =
+      Provider.of<FlexThemeSettingsService?>(context);
+  final themeSettings =
+      themeSettingsService?.value ?? FlexThemeSettingsModel.defaults;
+
+  // Check Material You setting - if enabled and colorScheme is provided, ignore scheme/variant
+  final ThemeModeSettings? themeModeSettings =
+      Provider.of<ThemeModeSettings?>(context);
+  final bool isMaterialYouEnabled =
+      themeModeSettings?.materialYouEnabled ?? false;
+  final bool usePureDynamicColors = isMaterialYouEnabled && colorScheme != null;
+
+  // Get scheme from settings or default to materialBaseline
+  // Only use scheme/variant when Material You is disabled or no dynamic colors
+  // When Material You is enabled, set scheme/variant to null to avoid FlexScheme preset influence
+  final FlexScheme? scheme = usePureDynamicColors
+      ? null // Don't use scheme when Material You is enabled
+      : (brightness == Brightness.light
+          ? (themeSettings.lightScheme ??
+              themeSettings.scheme ??
+              FlexScheme.materialBaseline)
+          : (themeSettings.darkScheme ??
+              themeSettings.scheme ??
+              FlexScheme.materialBaseline));
+  final FlexSchemeVariant? variant = usePureDynamicColors
+      ? null // Don't use variant when Material You is enabled
+      : themeSettings.variant;
+  final int blendLevel = themeSettings.blendLevel ?? 25;
+
+  // Default sub-themes configuration
+  // Note: We don't set cardRadius, dialogRadius, bottomSheetRadius, or inputDecoratorRadius
+  // because these are customized via copyWith using SurfaceShapeResolver.
+  // FlexColorScheme may apply its own defaults for these, but copyWith (applied after toTheme)
+  // will override them, so our custom shapes will take precedence.
+  final FlexSubThemesData defaultSubThemesData = brightness == Brightness.light
+      ? const FlexSubThemesData(
+          inputDecoratorIsFilled: true,
+          alignedDropdown: true,
+          tooltipRadius: 4,
+          tooltipSchemeColor: SchemeColor.inverseSurface,
+          tooltipOpacity: 0.9,
+          snackBarElevation: 6,
+          snackBarBackgroundSchemeColor: SchemeColor.inverseSurface,
+          navigationRailUseIndicator: true,
+        )
+      : const FlexSubThemesData(
+          blendOnColors: true,
+          inputDecoratorIsFilled: true,
+          alignedDropdown: true,
+          tooltipRadius: 4,
+          tooltipSchemeColor: SchemeColor.inverseSurface,
+          tooltipOpacity: 0.9,
+          snackBarElevation: 6,
+          snackBarBackgroundSchemeColor: SchemeColor.inverseSurface,
+          navigationRailUseIndicator: true,
+        );
+
+  final FlexColorScheme flexScheme = brightness == Brightness.light
+      ? FlexColorScheme.light(
+          scheme: scheme, // Will be null when Material You enabled
+          colorScheme: colorScheme,
+          variant: variant, // Will be null when Material You enabled
+          blendLevel: blendLevel,
+          fontFamily: fontFamily,
+          subThemesData: defaultSubThemesData,
+          keyColors: const FlexKeyColors(),
+          visualDensity: FlexColorScheme.comfortablePlatformDensity,
+          cupertinoOverrideTheme:
+              const CupertinoThemeData(applyThemeToAll: true),
+        )
+      : FlexColorScheme.dark(
+          scheme: scheme, // Will be null when Material You enabled
+          colorScheme: colorScheme,
+          variant: variant, // Will be null when Material You enabled
+          blendLevel: blendLevel,
+          // darkIsTrueBlack: themeSettings.darkIsTrueBlack ?? false,
+          fontFamily: fontFamily,
+          subThemesData: defaultSubThemesData,
+          keyColors: const FlexKeyColors(),
+          visualDensity: FlexColorScheme.comfortablePlatformDensity,
+          cupertinoOverrideTheme:
+              const CupertinoThemeData(applyThemeToAll: true),
+        );
+
+  // return ThemeData(
+  // brightness: Brightness.dark,
+  return flexScheme.toTheme.copyWith(
     // Card shapes
     cardTheme: CardThemeData(
       shape: SurfaceShapeResolver.medium(context),
@@ -272,68 +370,8 @@ ThemeData getTheme(
         size: BorderRadiusSize.medium,
       ),
     ),
-    colorScheme: cs,
     extensions: <ThemeExtension<dynamic>>[
       surfaceStyle,
     ],
   );
 }
-
-const Color _seedColor = Color(0xff2563eb);
-
-final ColorScheme _defaultLightColorScheme = ColorScheme.fromSeed(
-  seedColor: _seedColor,
-  brightness: Brightness.light,
-);
-
-final ColorScheme _defaultDarkColorScheme = ColorScheme.fromSeed(
-  seedColor: _seedColor,
-  brightness: Brightness.dark,
-);
-
-// Nice dark cs.
-//ColorScheme#b066f(brightness: Brightness.dark, primary: Color(0xffbb86fc), onPrimary: Color(0xff000000), primaryContainer: Color(0xffbb86fc), onPrimaryContainer: Color(0xff000000), error: Color(0xffcf6679), onError: Color(0xff000000), errorContainer: Color(0xffcf6679), onErrorContainer: Color(0xff000000), background: Color(0xff121212), onBackground: Color(0xffffffff), surface: Color(0xff121212), onSurface: Color(0xffffffff), surfaceVariant: Color(0xff121212), onSurfaceVariant: Color(0xffffffff), outline: Color(0xffffffff), outlineVariant: Color(0xffffffff), inverseSurface: Color(0xffffffff), onInverseSurface: Color(0xff121212), inversePrimary: Color(0xff000000), surfaceTint: Color(0xffbb86fc))
-
-// Workaround for https://github.com/material-foundation/flutter-packages/issues/582
-(ColorScheme light, ColorScheme dark) _generateDynamicColourSchemes(
-    final ColorScheme lightDynamic, final ColorScheme darkDynamic) {
-  final ColorScheme lightBase =
-      ColorScheme.fromSeed(seedColor: lightDynamic.primary);
-  final ColorScheme darkBase = ColorScheme.fromSeed(
-      seedColor: darkDynamic.primary, brightness: Brightness.dark);
-
-  final List<Color> lightAdditionalColours =
-      _extractAdditionalColours(lightBase);
-  final List<Color> darkAdditionalColours = _extractAdditionalColours(darkBase);
-
-  final ColorScheme lightScheme =
-      _insertAdditionalColours(lightBase, lightAdditionalColours);
-  final ColorScheme darkScheme =
-      _insertAdditionalColours(darkBase, darkAdditionalColours);
-
-  return (lightScheme.harmonized(), darkScheme.harmonized());
-}
-
-List<Color> _extractAdditionalColours(final ColorScheme scheme) => <Color>[
-      scheme.surface,
-      scheme.surfaceDim,
-      scheme.surfaceBright,
-      scheme.surfaceContainerLowest,
-      scheme.surfaceContainerLow,
-      scheme.surfaceContainer,
-      scheme.surfaceContainerHigh,
-      scheme.surfaceContainerHighest,
-    ];
-
-ColorScheme _insertAdditionalColours(
-        final ColorScheme scheme, final List<Color> additionalColours) =>
-    scheme.copyWith(
-      surface: additionalColours[0],
-      surfaceDim: additionalColours[1],
-      surfaceBright: additionalColours[2],
-      surfaceContainerLowest: additionalColours[3],
-      surfaceContainerLow: additionalColours[4],
-      surfaceContainer: additionalColours[5],
-      surfaceContainerHigh: additionalColours[6],
-      surfaceContainerHighest: additionalColours[7],
-    );
