@@ -161,7 +161,6 @@ class MyWidgetFactory extends WidgetFactory {
           final BuildTree tree,
         ) {
           final String link = tree.element.attributes['href'] ?? '';
-          print(link);
           if (link.startsWith('#')) {
             return InkPot(
               onTap: () async => fetchState()?.scrollToAnchor(

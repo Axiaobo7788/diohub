@@ -201,16 +201,12 @@ class _RoundedExpandedWidget extends StatelessWidget {
     this.margin = const EdgeInsets.symmetric(horizontal: 8),
     this.borderRadius,
     this.overscrollHeight = 0.0,
-    this.showBackButton = false,
-    this.backButtonOpacity = 1.0,
   });
 
   final Widget child;
   final EdgeInsets margin;
   final BorderRadius? borderRadius;
   final double overscrollHeight;
-  final bool showBackButton;
-  final double backButtonOpacity;
 
   @override
   Widget build(BuildContext context) {
@@ -265,23 +261,7 @@ class _RoundedExpandedWidget extends StatelessWidget {
                   ],
                 ),
               ),
-              child: showBackButton
-                  ? Row(
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      children: [
-                        Opacity(
-                          opacity: backButtonOpacity,
-                          child: const BackButton(),
-                        ),
-                        Expanded(
-                          child: SizedBox(
-                            width: double.infinity,
-                            child: child,
-                          ),
-                        ),
-                      ],
-                    )
-                  : Center(
+              child:Center(
                       child: child,
                     ),
             ),
@@ -541,7 +521,7 @@ class _DynamicSliverAppBarDelegate extends SliverPersistentHeaderDelegate {
     final double range = maxExtent - minExtent;
     final double t = range == 0 ? 1 : (shrinkOffset / range).clamp(0.0, 1.0);
 
-    final bool canPop = ModalRoute.of(context)?.canPop ?? false;
+    // final bool canPop = ModalRoute.of(context)?.canPop ?? false;
     final bool isCollapsed = t >= 0.95;
     final double elevation = t * 2.0;
     final double backgroundOpacity = t.clamp(0.0, 1.0);
@@ -603,124 +583,89 @@ class _DynamicSliverAppBarDelegate extends SliverPersistentHeaderDelegate {
           )
         : collapsed;
 
-    final ColorScheme colorScheme = context.colorScheme;
-    final Color collapsedBackground = sanitizedLerpColor(
-          Colors.transparent,
-          colorScheme.surfaceContainer,
-          backgroundOpacity,
-        ) ??
-        colorScheme.surfaceContainer;
+    // final ColorScheme colorScheme = context.colorScheme;
+    // final Color collapsedBackground = sanitizedLerpColor(
+    //       Colors.transparent,
+    //       colorScheme.surfaceContainer,
+    //       backgroundOpacity,
+    //     ) ??
+    //     colorScheme.surfaceContainer;
 
-    return ScrollDynamicElevation(
-      child: Stack(
-        fit: StackFit.expand,
-        children: [
-          if (t < 0.95)
-            Align(
-              alignment: Alignment.topCenter,
-              child: Builder(
-                builder: (builderContext) {
-                  final double builderStatusPadding =
-                      MediaQuery.paddingOf(builderContext).top;
-                  final double sizedBoxHeight =
-                      expandedHeight + overscrollHeight;
-                  return SizedBox(
-                    height: sizedBoxHeight,
-                    child: Opacity(
-                      opacity: (1 - t).clamp(0.0, 1.0),
-                      child: Transform.scale(
-                        scale: _calculateExpandedWidgetScale(t, pullScale),
-                        alignment: Alignment.topCenter,
-                        child: _RoundedExpandedWidget(
-                          margin: EdgeInsets.fromLTRB(
-                            horizontalMargin,
-                            builderStatusPadding + topMarginOffset,
-                            horizontalMargin,
-                            0,
-                          ),
-                          borderRadius: animatedRadius,
-                          overscrollHeight: overscrollHeight,
-                          showBackButton: canPop,
-                          backButtonOpacity: (1 - t).clamp(0.0, 1.0),
+    // Calculate shrinking radius and margin that animate to zero
+    final BorderRadius shrinkingRadius = BorderRadius.lerp(
+      animatedRadius,
+      BorderRadius.zero,
+      t.clamp(0.0, 1.0),
+    )!;
+
+    // Calculate shrinking margin that animates to zero
+    final double builderStatusPadding = MediaQuery.paddingOf(context).top;
+    final EdgeInsets shrinkingMargin = EdgeInsets.lerp(
+      EdgeInsets.fromLTRB(
+        horizontalMargin,
+        builderStatusPadding + topMarginOffset,
+        horizontalMargin,
+        0,
+      ),
+      EdgeInsets.zero,
+      t.clamp(0.0, 1.0),
+    )!;
+
+    // Calculate header height that animates from expanded to collapsed
+    final double headerHeight = lerpDouble(
+      expandedHeight + overscrollHeight,
+      minExtent,
+      t,
+    )!;
+
+    return Align(
+      alignment: Alignment.center,
+      child: SizedBox(
+        height: headerHeight,
+        child: _RoundedExpandedWidget(
+          margin: shrinkingMargin,
+          borderRadius: shrinkingRadius,
+          overscrollHeight: overscrollHeight,
+          child: Row(
+            children: [
+        if(     ModalRoute.canPopOf(context)?? false) const BackButton(),
+              Expanded(
+                child: Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    // Expanded content (fades out)
+                    Align(
+                      alignment: Alignment.center,
+                      child: Opacity(
+                        opacity: (1 - t).clamp(0.0, 1.0),
+                        child: Transform.scale(
+                          scale: _calculateExpandedWidgetScale(t, pullScale),
+                          alignment: Alignment.center,
                           child: expanded,
                         ),
                       ),
                     ),
-                  );
-                },
-              ),
-            ),
-          Align(
-            alignment: Alignment.topCenter,
-            child: SizedBox(
-              height: minExtent,
-              child: Material(
-                color: Colors.transparent,
-                elevation: elevation,
-                shadowColor:
-                    colorScheme.shadow.withOpacity(0.1 * backgroundOpacity),
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: collapsedBackground,
-                    border: Border(
-                      bottom: BorderSide(
-                        color: colorScheme.outline
-                            .withOpacity(0.08 * backgroundOpacity),
-                        width: 0.5,
+                
+                    // Collapsed content (fades in)
+                    IgnorePointer(
+                      ignoring: t<0.95,
+                      child: Opacity(
+                        opacity: t.clamp(0.0, 1.0),
+                        child: Transform.scale(
+                              scale: scale,
+                              // alignment: Alignment.centerLeft,
+                              child: collapsedContent,
+                            ),
                       ),
                     ),
-                  ),
-                  child: Opacity(
-                    opacity: t.clamp(0.0, 1.0),
-                    child: SafeArea(
-                      bottom: false,
-                      child: canPop
-                          ? Row(
-                              crossAxisAlignment: CrossAxisAlignment.center,
-                              children: [
-                                Transform.scale(
-                                  scale: scale,
-                                  alignment: Alignment.center,
-                                  child: const BackButton(),
-                                ),
-                                Expanded(
-                                  child: Padding(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 12,
-                                      vertical: 4,
-                                    ),
-                                    child: Transform.scale(
-                                      scale: scale,
-                                      alignment: Alignment.centerLeft,
-                                      child: Align(
-                                        alignment: Alignment.centerLeft,
-                                        child: collapsedContent,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            )
-                          : Center(
-                              child: Transform.scale(
-                                scale: scale,
-                                alignment: Alignment.center,
-                                child: Padding(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 16,
-                                    vertical: 4,
-                                  ),
-                                  child: collapsedContent,
-                                ),
-                              ),
-                            ),
-                    ),
-                  ),
+                
+                    
+                  ],
                 ),
               ),
-            ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }

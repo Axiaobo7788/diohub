@@ -133,11 +133,6 @@ class MarkdownBodyState extends State<MarkdownBody> {
         // Extract level from tag name (h1 = 1, h2 = 2, etc.)
         final level = int.parse(headingElement.localName!.substring(1));
 
-        print(
-            '[MarkdownBody] Extracted heading: text="$text", id="$id", level=$level');
-        print(
-            '[MarkdownBody] Heading element attributes: ${headingElement.attributes}');
-
         headings.add((text: text, id: id, level: level));
       }
     }
@@ -183,38 +178,16 @@ class MarkdownBodyState extends State<MarkdownBody> {
   HtmlWidgetState? get currentMarkdownState => htmlWidgetKey.currentState;
 
   void scrollToAnchor(String anchorId) {
-    print('[MarkdownBodyState] ====== scrollToAnchor CALLED ======');
-    print('[MarkdownBodyState] anchorId: "$anchorId"');
-    print('[MarkdownBodyState] htmlWidgetKey: ${htmlWidgetKey.toString()}');
-    print(
-        '[MarkdownBodyState] currentMarkdownState (HtmlWidgetState) is ${currentMarkdownState != null ? "not null" : "null"}');
     if (currentMarkdownState != null) {
-      print('[MarkdownBodyState] ✓ HtmlWidgetState found');
-      print(
-          '[MarkdownBodyState] HtmlWidgetState type: ${currentMarkdownState.runtimeType}');
-      print(
-          '[MarkdownBodyState] Calling currentMarkdownState.scrollToAnchor("$anchorId")');
       try {
         currentMarkdownState!.scrollToAnchor(anchorId);
-        print(
-            '[MarkdownBodyState] ✓ scrollToAnchor call to HtmlWidgetState completed successfully');
-      } catch (e, stackTrace) {
-        print('[MarkdownBodyState] ✗ ERROR calling scrollToAnchor: $e');
-        print('[MarkdownBodyState] Stack trace: $stackTrace');
+      } catch (e) {
+        // Error scrolling to anchor
       }
-    } else {
-      print(
-          '[MarkdownBodyState] ✗ ERROR: currentMarkdownState is null, cannot scroll');
-      print(
-          '[MarkdownBodyState] This means HtmlWidget may not be mounted yet or htmlWidgetKey is not attached');
     }
     // Also call callback if provided
     if (_scrollCallback != null) {
-      print(
-          '[MarkdownBodyState] Calling _scrollCallback with anchorId: "$anchorId"');
       _scrollCallback!.call(anchorId);
-    } else {
-      print('[MarkdownBodyState] No _scrollCallback provided');
     }
   }
 

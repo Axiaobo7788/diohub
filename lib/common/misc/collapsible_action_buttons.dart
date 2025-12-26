@@ -240,13 +240,24 @@ sealed class ActionButtonData {
   /// Generates a stable key for this action based on semantic properties
   /// Uses only stable identifiers (not object identity) so widgets persist across rebuilds
   /// Icons are not included in keys as they can change (e.g., checkbox icons based on value)
+  /// 
+  /// [context] is only used for truly separate widget instances (e.g., checkbox AnimatedContainer)
+  /// For actions visible in both collapsed/expanded states, context is ignored to preserve widget instances
   ValueKey getStableKey({
     String?
-        context, // e.g., 'expanded', 'collapsed', 'prominent_expanded', etc.
+        context, // Only used for truly separate instances (e.g., 'checkbox' for AnimatedContainer)
     bool? includeEnabledState, // Whether to include enabled/disabled in key
   }) {
+    // For actions visible in both states, ignore context to preserve widget instances
+    // Context is only used for truly separate widget instances
+    final shouldIncludeContext = context != null && 
+        context != 'expanded' && 
+        context != 'collapsed' &&
+        context != 'prominent_expanded' &&
+        context != 'prominent_collapsed';
+    
     return ValueKey(Object.hash(
-      context ?? '',
+      shouldIncludeContext ? context : null,
       includeEnabledState == true ? (enabled ? 'enabled' : 'disabled') : null,
       category,
       label,
@@ -257,21 +268,22 @@ sealed class ActionButtonData {
   }
 
   /// Convenience method for expanded action keys
-  ValueKey getExpandedKey() => getStableKey(context: 'expanded');
+  /// For actions with visibilityState.both, this returns the same key as getCollapsedKey()
+  ValueKey getExpandedKey() => getStableKey();
 
   /// Convenience method for collapsed action keys
+  /// For actions with visibilityState.both, this returns the same key as getExpandedKey()
   ValueKey getCollapsedKey({bool includeEnabledState = true}) => getStableKey(
-        context: 'collapsed',
         includeEnabledState: includeEnabledState,
       );
 
   /// Convenience method for prominent expanded action keys
-  ValueKey getProminentExpandedKey() =>
-      getStableKey(context: 'prominent_expanded');
+  /// For actions with visibilityState.both, this returns the same key as getProminentCollapsedKey()
+  ValueKey getProminentExpandedKey() => getStableKey();
 
   /// Convenience method for prominent collapsed action keys
-  ValueKey getProminentCollapsedKey() =>
-      getStableKey(context: 'prominent_collapsed');
+  /// For actions with visibilityState.both, this returns the same key as getProminentExpandedKey()
+  ValueKey getProminentCollapsedKey() => getStableKey();
 
   /// Convenience method for checkbox AnimatedContainer keys
   ValueKey getCheckboxKey() => getStableKey(context: 'checkbox');

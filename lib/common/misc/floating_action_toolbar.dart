@@ -4,7 +4,6 @@ import 'package:diohub/common/misc/floating_expandable_widget.dart';
 import 'package:diohub/common/misc/liquid_glass_wrapper.dart';
 import 'package:diohub/common/misc/scroll_based_minimize_controller.dart';
 import 'package:diohub/style/surface_style_theme.dart';
-import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_vector_icons/flutter_vector_icons.dart';
@@ -355,10 +354,6 @@ class _FloatingActionToolbarState extends State<FloatingActionToolbar>
         // Controller wants to minimize - allow regardless of how we got to current state
         // Only skip if already minimized
         if (_state != ToolbarState.minimized) {
-          if (widget.debugLogging && kDebugMode) {
-            print(
-                '[FloatingActionToolbar] _onScrollControllerChanged: Controller state=minimizing, minimizing toolbar. Current state: $_state, _minimizedByScroll: $_minimizedByScroll');
-          }
           _minimizedByScroll = true; // Mark as minimized by scroll
           _minimizeFromScroll();
         }
@@ -374,10 +369,6 @@ class _FloatingActionToolbarState extends State<FloatingActionToolbar>
       case ScrollMinimizeState.restoring:
         // Controller wants to restore - only if minimized by scroll
         if (_minimizedByScroll && _state == ToolbarState.minimized) {
-          if (widget.debugLogging && kDebugMode) {
-            print(
-                '[FloatingActionToolbar] _onScrollControllerChanged: Controller state=restoring, restoring toolbar');
-          }
           _restoreFromScrollMinimize();
         }
         break;
@@ -432,11 +423,6 @@ class _FloatingActionToolbarState extends State<FloatingActionToolbar>
           _buttonPosition = buttonCenter;
           _positionOffset = buttonCenter - toolbarCenter;
         });
-
-        if (widget.debugLogging && kDebugMode) {
-          print(
-              '[FloatingActionToolbar] Measured positions - Toolbar: $_toolbarPosition, Button: $_buttonPosition, Offset: $_positionOffset');
-        }
       }
     }
   }
@@ -479,10 +465,6 @@ class _FloatingActionToolbarState extends State<FloatingActionToolbar>
           0.0; // Ensure animation is at collapsed state
     });
     // Animate restore transition
-    if (widget.debugLogging && kDebugMode) {
-      print(
-          '[FloatingActionToolbar] Restored from minimized to collapsed state');
-    }
     return _minimizeAnimationController.reverse();
   }
 
@@ -505,29 +487,16 @@ class _FloatingActionToolbarState extends State<FloatingActionToolbar>
 
   void _minimizeFromScroll() {
     if (!widget.enableMinimize) {
-      if (widget.debugLogging && kDebugMode) {
-        print(
-            '[FloatingActionToolbar] _minimizeFromScroll: enableMinimize=false, skipping');
-      }
       return;
     }
 
     if (_state == ToolbarState.minimized) {
-      if (widget.debugLogging && kDebugMode) {
-        print(
-            '[FloatingActionToolbar] _minimizeFromScroll: Already minimized (state=$_state), notifying controller');
-      }
       // Already minimized, notify controller that it's complete
       _minimizedByScroll = true;
       final controller =
           widget.scrollMinimizeController ?? _internalScrollController;
       controller?.onMinimizeComplete();
       return;
-    }
-
-    if (widget.debugLogging && kDebugMode) {
-      print(
-          '[FloatingActionToolbar] _minimizeFromScroll: Minimizing from scroll, current state: $_state');
     }
 
     _minimizedByScroll = true;
@@ -543,23 +512,10 @@ class _FloatingActionToolbarState extends State<FloatingActionToolbar>
 
   void _restoreFromScrollMinimize() {
     if (!_minimizedByScroll) {
-      if (widget.debugLogging && kDebugMode) {
-        print(
-            '[FloatingActionToolbar] _restoreFromScrollMinimize: Not minimized by scroll (minimizedByScroll=$_minimizedByScroll), skipping');
-      }
       return;
     }
 
-    if (widget.debugLogging && kDebugMode) {
-      print(
-          '[FloatingActionToolbar] _restoreFromScrollMinimize: Restoring from scroll minimize, current state: $_state');
-    }
-
     if (_state == ToolbarState.minimized) {
-      if (widget.debugLogging && kDebugMode) {
-        print(
-            '[FloatingActionToolbar] _restoreFromScrollMinimize: State is minimized, calling _restoreFromMinimized()');
-      }
       _minimizedByScroll = false;
       _restoreFromMinimized().then((_) {
         // Notify controller when animation completes
@@ -570,10 +526,6 @@ class _FloatingActionToolbarState extends State<FloatingActionToolbar>
         }
       });
     } else {
-      if (widget.debugLogging && kDebugMode) {
-        print(
-            '[FloatingActionToolbar] _restoreFromScrollMinimize: State is not minimized (state=$_state), marking as restored');
-      }
       // Not minimized, so restoration is already complete
       _minimizedByScroll = false;
       final controller =
@@ -634,11 +586,6 @@ class _FloatingActionToolbarState extends State<FloatingActionToolbar>
         (widget.position == FloatingPosition.bottom
             ? FloatingAlignment.right
             : null);
-
-    if (widget.debugLogging && kDebugMode) {
-      print(
-          '[FloatingActionToolbar] build: position=${widget.position}, alignment=${widget.alignment}, effectiveAlignment=$effectiveAlignment, state=$_state');
-    }
 
     // If minimized and animation complete, show only button
     Widget toolbarWidget;

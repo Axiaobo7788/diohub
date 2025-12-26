@@ -119,17 +119,20 @@ class _PullToExpandIndicatorState extends State<PullToExpandIndicator>
         (0.45 + (widget.pullProgress * 0.25)).clamp(0.0, 1.0); // 0.45 → 0.7
 
     const double minHeight = 32;
+    final Duration sizeDuration =
+        disableAnimations ? Duration.zero : const Duration(milliseconds: 180);
+    final double indicatorHeight = disableAnimations
+        ? minHeight
+        : (contentScale * minHeight).clamp(0.0, minHeight);
 
     return Center(
       child: AnimatedBuilder(
         animation: _pulseAnimation,
         builder: (context, child) {
-          // Use pulse animation value during the jump, then 1.0 when ready (after jump completes)
           final double pulseScale = widget.isReadyToExpand && !disableAnimations
               ? (_pulseController.isAnimating ? _pulseAnimation.value : 1.0)
               : 1.0;
 
-          // Keep a reserved height to avoid layout shifts; scale in subtly
           final double revealScale =
               disableAnimations ? 1.0 : (0.85 + (contentScale * 0.15));
           final double effectiveScale = pulseScale * revealScale;
@@ -139,61 +142,72 @@ class _PullToExpandIndicatorState extends State<PullToExpandIndicator>
           final Duration chevronDuration =
               disableAnimations ? Duration.zero : const Duration(milliseconds: 160);
 
-          return SizedBox(
-            height: minHeight,
-            child: AnimatedOpacity(
-              duration: fadeDuration,
+          return ClipRect(
+            child: AnimatedSize(
+              duration: sizeDuration,
               curve: Curves.easeOut,
-              opacity: contentOpacity.clamp(0.0, 1.0),
-              child: Transform.scale(
-                scale: effectiveScale,
-                child: Center(
-                  child: Semantics(
-                    label: widget.text,
-                    value: widget.isReadyToExpand
-                        ? 'Ready to expand'
-                        : 'Pull to expand',
-                    hint: 'Pull down and release to see more details',
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          widget.text,
-                          textAlign: TextAlign.center,
-                          style: theme.textTheme.bodySmall?.copyWith(
-                            fontSize: fontSize,
-                            color: colorScheme.onSurface
-                                .withOpacity(colorOpacity.clamp(0.0, 1.0)),
-                            fontWeight: FontWeight.w400,
-                            letterSpacing: 0.1,
+              alignment: Alignment.topCenter,
+              child: SizedBox(
+                height: indicatorHeight,
+                child: indicatorHeight <= 0
+                    ? const SizedBox.shrink()
+                    : AnimatedOpacity(
+                        duration: fadeDuration,
+                        curve: Curves.easeOut,
+                        opacity: contentOpacity.clamp(0.0, 1.0),
+                        child: Transform.scale(
+                          scale: effectiveScale,
+                          child: Center(
+                            child: Semantics(
+                              label: widget.text,
+                              value: widget.isReadyToExpand
+                                  ? 'Ready to expand'
+                                  : 'Pull to expand',
+                              hint: 'Pull down and release to see more details',
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Text(
+                                    widget.text,
+                                    textAlign: TextAlign.center,
+                                    style: theme.textTheme.bodySmall?.copyWith(
+                                      fontSize: fontSize,
+                                      color: colorScheme.onSurface
+                                          .withOpacity(colorOpacity.clamp(0.0, 1.0)),
+                                      fontWeight: FontWeight.w400,
+                                      letterSpacing: 0.1,
+                                    ),
+                                  ),
+                                  TweenAnimationBuilder<double>(
+                                    tween:
+                                        Tween<double>(begin: 14.0, end: chevronSize),
+                                    duration: fadeDuration,
+                                    curve: Curves.easeOut,
+                                    builder: (context, animatedSize, child) {
+                                      final Color chevronColor = colorScheme.onSurface
+                                          .withOpacity(
+                                              (colorOpacity +
+                                                      (widget.isReadyToExpand ? 0.1 : 0.0))
+                                                  .clamp(0.0, 1.0));
+                                      return AnimatedRotation(
+                                        turns: widget.isReadyToExpand ? -0.25 : 0.0,
+                                        duration: chevronDuration,
+                                        curve: Curves.easeOut,
+                                        child: Icon(
+                                          Icons.keyboard_arrow_down_rounded,
+                                          size: animatedSize,
+                                          color: chevronColor,
+                                        ),
+                                      );
+                                    },
+                                  ),
+                                ],
+                              ),
+                            ),
                           ),
                         ),
-                        TweenAnimationBuilder<double>(
-                          tween: Tween<double>(begin: 14.0, end: chevronSize),
-                          duration: fadeDuration,
-                          curve: Curves.easeOut,
-                          builder: (context, animatedSize, child) {
-                            final Color chevronColor = colorScheme.onSurface
-                                .withOpacity(
-                                    (colorOpacity + (widget.isReadyToExpand ? 0.1 : 0.0))
-                                        .clamp(0.0, 1.0));
-                            return AnimatedRotation(
-                              turns: widget.isReadyToExpand ? -0.25 : 0.0,
-                              duration: chevronDuration,
-                              curve: Curves.easeOut,
-                              child: Icon(
-                                Icons.keyboard_arrow_down_rounded,
-                                size: animatedSize,
-                                color: chevronColor,
-                              ),
-                            );
-                          },
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
+                      ),
               ),
             ),
           );

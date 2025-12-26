@@ -2,6 +2,7 @@ import 'package:diohub/common/wrappers/liquid_pull_to_refresh_wrapper.dart';
 import 'package:diohub/common/wrappers/scroll_to_top_wrapper.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_scroll_to_top/flutter_scroll_to_top.dart';
 import 'package:flutter_scroll_to_top/modified_scroll_view.dart' as scrollview;
 
@@ -189,6 +190,11 @@ class AppCustomScrollView extends StatelessWidget {
     final List<Widget> finalSlivers = <Widget>[
       if (overlapHandle != null)
         SliverOverlapInjector(handle: overlapHandle),
+        SliverLayoutBuilder(
+  builder: (_, SliverConstraints constraints) {
+    return SliverToBoxAdapter(child: SizedBox(height: constraints.overlap),);
+  },
+),
       ...slivers,
     ];
 
