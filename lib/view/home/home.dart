@@ -29,6 +29,8 @@ import 'package:diohub/view/home/home_toolbar_actions_handler.dart';
 import 'package:diohub/view/home/widgets/accounts_tab.dart';
 import 'package:diohub/view/home/widgets/issues_tab.dart';
 import 'package:diohub/view/home/widgets/pulls_tab.dart';
+import 'package:diohub/view/home/widgets/theme_tab.dart';
+import 'package:diohub/view/home/widgets/theme_carousel_tab.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_dynamic_tabs/flutter_dynamic_tabs.dart';
 
@@ -138,6 +140,17 @@ class HomeScreenState extends State<HomeScreen>
           tab: TabBarItem(label: 'Accounts'),
           tabViewBuilder: (final BuildContext context) => const AccountsTab(),
         ),
+        DynamicTab(
+          identifier: 'Theme',
+          tab: TabBarItem(label: 'Theme'),
+          tabViewBuilder: (final BuildContext context) => const ThemeTab(),
+        ),
+        DynamicTab(
+          identifier: 'ThemeCarousel',
+          tab: TabBarItem(label: 'Themes'),
+          tabViewBuilder: (final BuildContext context) =>
+              const ThemeCarouselTab(),
+        ),
       ];
 
   @override
@@ -205,7 +218,7 @@ class HomeScreenState extends State<HomeScreen>
                 ),
               ],
               expandedWidget: buildProfileCard(context),
-              bodyBuilder: tabView,
+              bodyBuilder:(BuildContext context) =>  tabView(context),
             ),
           ),
         ),

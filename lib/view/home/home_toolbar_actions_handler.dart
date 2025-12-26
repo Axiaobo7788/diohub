@@ -413,6 +413,26 @@ class HomeScreenToolbarActionsHandler {
           // tabsController.openTab('repos');
         },
       ),
+      // MinorActionButton(
+      //   icon: Icons.palette_rounded,
+      //   label: 'Theme',
+      //   actionType: ActionButtonActionType.tab,
+      //   category: 'Navigation',
+      //   visibilityState: currentTab == 'Theme'
+      //       ? ActionButtonVisibilityState.none
+      //       : ActionButtonVisibilityState.both,
+      //   onTap: () => tabsController.openTab('Theme'),
+      // ),
+      MinorActionButton(
+        icon: Icons.swipe_rounded,
+        label: 'Themes',
+        actionType: ActionButtonActionType.tab,
+        category: 'Navigation',
+        visibilityState: currentTab == 'ThemeCarousel'
+            ? ActionButtonVisibilityState.none
+            : ActionButtonVisibilityState.expandedOnly,
+        onTap: () => tabsController.openTab('ThemeCarousel'),
+      ),
     ]);
 
     // Account management actions
