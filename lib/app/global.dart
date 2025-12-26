@@ -12,7 +12,6 @@ void setUpRouter(final BuildContext context) {
 
 BuildContext get currentContext => customRouter.navigatorKey.currentContext!;
 
-const String apiBaseURL = 'https://api.github.com';
 
 final Logger _log = Logger();
 Logger get log => _log;

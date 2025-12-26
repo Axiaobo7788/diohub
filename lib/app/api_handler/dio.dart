@@ -25,17 +25,16 @@ class RESTHandler extends BaseAPIHandler {
   RESTHandler({
     super.apiLogSettings,
     super.cacheOptions,
-  }) : super(
-          baseURL: apiBaseURL,
-        );
+  }) : super(baseUrl: null);
 
   RESTHandler.external({
-    required super.baseURL,
+    required String super.baseUrl,
     super.apiLogSettings,
     super.cacheOptions,
   }) : super(
           addAuthHeader: false,
         );
+
 
   Future<Response<T>> get<T>(
     final String url, {
@@ -187,9 +186,10 @@ class GraphqlHandler extends BaseAPIHandler {
   GraphqlHandler({
     super.apiLogSettings,
     super.cacheOptions,
-  }) : super(
-          baseURL: '$apiBaseURL/graphql',
-        );
+  });
+
+  @override
+  String get path => '/graphql';
 
   Future<GQLResponse> mutation(
     final OperationRequest<dynamic, dynamic> operationRequest,
@@ -230,9 +230,11 @@ class GraphqlHandler extends BaseAPIHandler {
     final OperationRequest<dynamic, dynamic> operationRequest, {
     final APICache? overrideAPICache,
     final Map<String, dynamic>? requestHeaders,
-  }) async =>
-      DioLink(
-        '$apiBaseURL/graphql',
+  }) async {
+    final AuthRepository authRepo = AuthRepository();
+    final String apiBase = await authRepo.getActiveAccountServerUrl();
+    return DioLink(
+        '$apiBase/graphql',
         client: _request(
           overrideAPICache: overrideAPICache,
           requestHeaders: requestHeaders,
@@ -263,6 +265,7 @@ class GraphqlHandler extends BaseAPIHandler {
           }
         },
       );
+  }
 
   @override
   Future<void> onResponse(
@@ -284,16 +287,17 @@ class GraphqlHandler extends BaseAPIHandler {
 
 abstract class BaseAPIHandler {
   BaseAPIHandler({
-    required this.baseURL,
     this.cacheOptions,
     this.apiLogSettings,
     this.addAuthHeader = true,
     this.propagateMessagesToUI = true,
+    this.baseUrl,
   });
+
+  final String? baseUrl;
 
   final bool addAuthHeader;
   final APICache? cacheOptions;
-  final String baseURL;
   final bool propagateMessagesToUI;
 
   APICache get _defaultCacheOptions => APICache();
@@ -303,6 +307,9 @@ abstract class BaseAPIHandler {
   final APILoggingSettings? apiLogSettings;
 
   APILoggingSettings? get defaultAPILogSettings => APILoggingSettings();
+
+  /// Optional path to append to the base URL (e.g., '/graphql' for GraphQL handler)
+  String? get path => null;
 
   Future<void> onError(
     final DioException error,
@@ -330,7 +337,7 @@ abstract class BaseAPIHandler {
     // Log the request in the console if `apiLogSettings` is not null.
     final APILoggingSettings? logSettings =
         // apiLogSettings ??
-         defaultAPILogSettings;
+        defaultAPILogSettings;
     dio.interceptors.add(
       ChuckerDioInterceptor(),
     );
@@ -388,7 +395,18 @@ abstract class BaseAPIHandler {
           final RequestOptions options,
           final RequestInterceptorHandler handler,
         ) async {
-          options.baseUrl = baseURL;
+          // Fetch active account's server URL dynamically
+          final AuthRepository authRepo = AuthRepository();
+          final activeAccountUrl = await authRepo.getActiveAccountServerUrl();
+          final String apiBase = baseUrl ?? activeAccountUrl ;
+
+     // Append path if handler defines one (e.g., '/graphql' for GraphQL)
+          if (path != null) {
+            options.baseUrl = '$apiBase$path';
+          } else {
+            options.baseUrl = apiBase;
+          }
+
           options.headers['Accept'] = 'application/json';
           options.headers['setContentType'] = 'application/json';
           options.headers['User-Agent'] = 'com.felix.diohub';

@@ -27,6 +27,8 @@ import 'package:diohub/routes/router.gr.dart';
 import 'package:diohub/services/users/user_info_service.dart';
 import 'package:diohub/utils/utils.dart';
 import 'package:diohub/utils/string_compare.dart';
+import 'package:diohub/common/misc/overlay_menu_widget.dart';
+import 'package:diohub/view/account/account_switcher.dart';
 import 'package:diohub/view/home/widgets/issues_tab.dart';
 import 'package:diohub/view/home/widgets/pulls_tab.dart';
 import 'package:flutter/material.dart';
@@ -49,6 +51,8 @@ class HomeScreenState extends State<HomeScreen>
     with AutomaticKeepAliveClientMixin, TickerProviderStateMixin {
   @override
   bool get wantKeepAlive => true;
+  
+  final OverlayController _accountSwitcherController = OverlayController();
 
   late final DynamicTabsController tabsController = DynamicTabsController(
     vsync: this,
@@ -423,7 +427,7 @@ class HomeScreenState extends State<HomeScreen>
 
                 // Account category - Expanded only actions
                 final currentUserLogin =
-                    context.provider<CurrentUserProvider>().data.login;
+context.provider<CurrentUserProvider>().data.login;
                 allActions.addAll([
                   MinorActionButton(
                     icon: Icons.person_rounded,
@@ -435,6 +439,15 @@ class HomeScreenState extends State<HomeScreen>
                       AutoRouter.of(
                         context,
                       ).push(UserProfileRoute(login: currentUserLogin));
+                    },
+                  ),
+                  MinorActionButton(
+                    icon: Icons.swap_horiz_rounded,
+                    label: 'Manage Accounts',
+                    category: 'Account',
+                    visibilityState: ActionButtonVisibilityState.expandedOnly,
+                    onTap: () {
+                      AutoRouter.of(context).push(const AccountManagementRoute());
                     },
                   ),
                   MinorActionButton(
@@ -545,6 +558,36 @@ class HomeScreenState extends State<HomeScreen>
                   ],
                 ),
               ),
+              OverlayMenuWidget(
+                controller: _accountSwitcherController,
+                heightMultiplier: 0.6,
+                childAnchor: Alignment.bottomRight,
+                portalAnchor: Alignment.topRight,
+                overlay: ConstrainedBox(
+                  constraints: const BoxConstraints(
+                    maxWidth: 400,
+                    maxHeight: 500,
+                  ),
+                    child: Card(
+                      elevation: 8,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: AccountSwitcher(
+                        onClose: () {
+                          _accountSwitcherController.close();
+                        },
+                      ),
+                    ),
+                ),
+                child: IconButton(
+                  icon: const Icon(Icons.swap_horiz_rounded),
+                  tooltip: 'Switch Account',
+                  onPressed: () {
+                    _accountSwitcherController.tapped();
+                  },
+                ),
+              ),
             ],
           ),
           const SizedBox(height: 16),
@@ -568,19 +611,41 @@ class HomeScreenState extends State<HomeScreen>
   Row buildCollapsedAppBar(final BuildContext context) => Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: <Widget>[
-          ClipOval(
-            child: InkPot(
-              onTap: () {
-                // widget.tabNavigators.toProfile();
-              },
-              child: CachedNetworkImage(
-                height: 32,
-                imageUrl: context.viewer.avatarUrl.toString(),
-                placeholder: (final BuildContext context, final _) =>
-                    ShimmerWidget(
-                  child: Container(color: context.colorScheme.surface),
+          OverlayMenuWidget(
+            controller: _accountSwitcherController,
+            heightMultiplier: 0.6,
+            childAnchor: Alignment.bottomCenter,
+            portalAnchor: Alignment.topCenter,
+            overlay: ConstrainedBox(
+              constraints: const BoxConstraints(
+                maxWidth: 400,
+                maxHeight: 500,
+              ),
+                    child: Card(
+                      elevation: 8,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: AccountSwitcher(
+                        onClose: () {
+                          _accountSwitcherController.close();
+                        },
+                      ),
+                    ),
+            ),
+            child: ClipOval(
+              child: InkPot(
+                onTap: () {
+                  _accountSwitcherController.tapped();
+                },
+                child: CachedNetworkImage(
+                  height: 32,
+                  imageUrl: context.viewer.avatarUrl.toString(),
+                  placeholder: (final BuildContext context, final _) =>
+                      ShimmerWidget(
+                    child: Container(color: context.colorScheme.surface),
+                  ),
                 ),
-                // )
               ),
             ),
           ),
@@ -588,6 +653,12 @@ class HomeScreenState extends State<HomeScreen>
           Text(
             context.provider<CurrentUserProvider>().data.login,
             style: context.textTheme.bodyMedium?.asBold(),
+          ),
+          const SizedBox(width: 4),
+          Icon(
+            Icons.arrow_drop_down,
+            size: 20,
+            color: context.colorScheme.onSurfaceVariant,
           ),
         ],
       );

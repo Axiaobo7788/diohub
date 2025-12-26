@@ -6,11 +6,14 @@ import 'package:diohub/app/api_handler/dio.dart';
 import 'package:diohub/app/api_handler/response_handler.dart';
 import 'package:diohub/app/global.dart';
 import 'package:diohub/app/settings/font.dart';
+import 'package:diohub/blocs/account_bloc/account_bloc.dart';
 import 'package:diohub/blocs/authentication_bloc/authentication_bloc.dart';
 import 'package:diohub/providers/search_data_provider.dart';
 import 'package:diohub/providers/users/current_user_provider.dart';
+import 'package:diohub/routes/router.dart';
 import 'package:diohub/routes/router.gr.dart';
 import 'package:diohub/services/authentication/auth_service.dart';
+import 'package:diohub/services/authentication/scope_check_service.dart';
 import 'package:diohub/style/surface_style_theme.dart';
 import 'package:diohub/common/misc/surface_shape_resolver.dart';
 import 'package:diohub/utils/device_display_mode.dart';
@@ -39,7 +42,7 @@ Future<void> debugURLLauncher() async {
 }
 
 void main() async {
-    // debugPaintSizeEnabled = true;
+  // debugPaintSizeEnabled = true;
 
   ChuckerFlutter.showNotification = false;
   // ChuckerFlutter.showOnRelease = true;
@@ -57,36 +60,42 @@ void main() async {
     setHighRefreshRate(),
   ]);
 
-  
-
   // final initLink = await initUniLink();
   uniLinkStream();
-  final bool auth = await AuthRepository().isAuthenticated;
+  // Auth check now happens in AuthenticationBloc on initialization
   // runApp(NewWidget());
   runApp(
-    MyApp(
-      authenticated: auth,
-      // initDeepLink: initLink,
-    ),
+    const MyApp(
+        // initDeepLink: initLink,
+        ),
   );
-  
+
   await debugURLLauncher();
 }
 
-
 class MyApp extends StatelessWidget {
-  const MyApp({required this.authenticated, super.key});
+  const MyApp({super.key});
 
   // final String? initDeepLink;
-  final bool authenticated;
 
   @override
-  Widget build(final BuildContext context) => MultiBlocProvider(
+  Widget build(final BuildContext context) {
+              final AccountBloc accountBloc = AccountBloc(AuthRepository())..add(LoadAccounts());
+
+    return MultiBlocProvider(
         providers: <SingleChildWidget>[
-          // Initialise Authentication Bloc and add event to check auth state.
+          // Initialise Account Bloc first
+          BlocProvider<AccountBloc>(
+            create: (final _) {
+              return accountBloc;
+            },
+            lazy: false,
+          ),
+          // Initialise Authentication Bloc - it will check auth state automatically
           BlocProvider<AuthenticationBloc>(
-            create: (final _) =>
-                AuthenticationBloc(authenticated: authenticated),
+            create: (final BuildContext context) => AuthenticationBloc(
+              accountBloc: accountBloc,
+            ),
             lazy: false,
           ),
         ],
@@ -98,6 +107,7 @@ class MyApp extends StatelessWidget {
                 create: (final _) => CurrentUserProvider(
                   authenticationBloc:
                       BlocProvider.of<AuthenticationBloc>(context),
+                  accountBloc: BlocProvider.of<AccountBloc>(context),
                 ),
               ),
               ChangeNotifierProvider<SearchDataProvider>(
@@ -117,6 +127,14 @@ class MyApp extends StatelessWidget {
           ),
         ),
       );
+  }
+}
+
+/// Custom scroll behavior that uses BouncingScrollPhysics app-wide
+class _BouncingScrollBehavior extends ScrollBehavior {
+  @override
+  ScrollPhysics getScrollPhysics(final BuildContext context) =>
+      const BouncingScrollPhysics();
 }
 
 class RootApp extends StatefulWidget {
@@ -133,6 +151,10 @@ class _RootAppState extends State<RootApp> {
   void initState() {
     setUpRouter(context);
     super.initState();
+    // Check scope after a short delay to ensure context is ready
+    Future<void>.delayed(const Duration(milliseconds: 500), () {
+      ScopeCheckService.checkAndPromptScopeReauth();
+    });
   }
 
   @override
@@ -163,6 +185,7 @@ class _RootAppState extends State<RootApp> {
                 brightness: Brightness.dark,
                 colorScheme: darkScheme,
               ),
+              scrollBehavior: _BouncingScrollBehavior(),
               localizationsDelegates: const <LocalizationsDelegate>[
                 DefaultMaterialLocalizations.delegate,
                 DefaultCupertinoLocalizations.delegate,
@@ -179,6 +202,7 @@ class _RootAppState extends State<RootApp> {
                 ]),
                 navigatorObservers: () => <NavigatorObserver>[
                   ChuckerFlutter.navigatorObserver,
+                  AuthStateObserver(context),
                 ],
                 rebuildStackOnDeepLink: true,
               ),
