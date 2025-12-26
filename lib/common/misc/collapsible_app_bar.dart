@@ -4,6 +4,7 @@ import 'package:diohub/common/misc/scroll_dynamic_elevation.dart';
 import 'package:diohub/style/surface_style_theme.dart';
 import 'package:diohub/utils/utils.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/physics.dart';
 import 'package:sliver_tools/sliver_tools.dart';
 
 class FrostedBackdrop extends StatelessWidget {
@@ -87,34 +88,78 @@ class DynamicScroll extends StatefulWidget {
   State<DynamicScroll> createState() => _DynamicScrollState();
 }
 
-class _DynamicScrollState extends State<DynamicScroll> {
+class _DynamicScrollState extends State<DynamicScroll>
+    with SingleTickerProviderStateMixin {
   final ScrollController _scrollController = ScrollController();
-  final ValueNotifier<double> _overscrollNotifier = ValueNotifier<double>(0.0);
+  late final AnimationController _overscrollController;
+  double _targetOverscroll = 0.0;
+
+  @override
+  void initState() {
+    super.initState();
+    _overscrollController = AnimationController(
+      vsync: this,
+      lowerBound: 0,
+      upperBound: 200,
+      duration: const Duration(milliseconds: 200),
+    );
+  }
 
   @override
   void dispose() {
-    _overscrollNotifier.dispose();
+    _scrollController.dispose();
+    _overscrollController.dispose();
     super.dispose();
+  }
+
+  void _animateToOverscroll(final double target) {
+    final double clampedTarget =
+        target.clamp(0.0, _overscrollController.upperBound);
+    if ((_targetOverscroll - clampedTarget).abs() < 0.1 &&
+        (_overscrollController.value - clampedTarget).abs() < 0.1) {
+      return;
+    }
+
+    _targetOverscroll = clampedTarget;
+    _overscrollController.stop();
+
+    if (clampedTarget == 0.0) {
+      // Spring animation only on release for smooth snap-back
+      _overscrollController.animateWith(
+        SpringSimulation(
+          const SpringDescription(
+            mass: 1,
+            stiffness: 280,
+            damping: 20,
+          ),
+          _overscrollController.value,
+          0.0,
+          0.0,
+        ),
+      );
+    } else {
+      // During pull: set value immediately for responsive following
+      _overscrollController.value = clampedTarget;
+    }
+  }
+
+  bool _handleScrollNotification(final ScrollNotification notification) {
+    if (notification is ScrollUpdateNotification) {
+      final ScrollMetrics metrics = notification.metrics;
+
+      if (metrics.pixels < 0) {
+        _animateToOverscroll(-metrics.pixels);
+      } else if (_overscrollController.value > 0 && metrics.pixels >= 0) {
+        _animateToOverscroll(0.0);
+      }
+    }
+    return false;
   }
 
   @override
   Widget build(final BuildContext context) {
     return NotificationListener<ScrollNotification>(
-      onNotification: (ScrollNotification notification) {
-        if (notification is ScrollUpdateNotification) {
-          final ScrollMetrics metrics = notification.metrics;
-
-          if (metrics.pixels < 0) {
-            final double newOverscroll = -metrics.pixels;
-            if ((_overscrollNotifier.value - newOverscroll).abs() > 0.1) {
-              _overscrollNotifier.value = newOverscroll;
-            }
-          } else if (_overscrollNotifier.value > 0 && metrics.pixels >= 0) {
-            _overscrollNotifier.value = 0.0;
-          }
-        }
-        return false;
-      },
+      onNotification: _handleScrollNotification,
       child: NestedScrollView(
         controller: _scrollController,
         headerSliverBuilder: (final BuildContext context, final bool value) =>
@@ -123,11 +168,14 @@ class _DynamicScrollState extends State<DynamicScroll> {
             handle: NestedScrollView.sliverOverlapAbsorberHandleFor(context),
             sliver: MultiSliver(
               children: <Widget>[
-                DynamicSliverAppBar(
-                  scrollController: _scrollController,
-                  overscrollNotifier: _overscrollNotifier,
-                  expanded: widget.expandedWidget,
-                  collapsed: widget.collapsedWidget,
+                AnimatedBuilder(
+                  animation: _overscrollController,
+                  builder: (context, _) => DynamicSliverAppBar(
+                    scrollController: _scrollController,
+                    overscrollAmount: _overscrollController.value,
+                    expanded: widget.expandedWidget,
+                    collapsed: widget.collapsedWidget,
+                  ),
                 ),
                 if (widget.headerSlivers != null) ...widget.headerSlivers!,
               ],
@@ -175,10 +223,11 @@ class _RoundedExpandedWidget extends StatelessWidget {
 
     return LayoutBuilder(
       builder: (context, constraints) {
+        final double containerHeight = constraints.maxHeight;
         return AnimatedContainer(
           duration: const Duration(milliseconds: 100),
           curve: Curves.easeOut,
-          height: constraints.maxHeight - margin.vertical,
+          height: containerHeight,
           margin: margin,
           decoration: BoxDecoration(
             color: backgroundColor,
@@ -248,7 +297,7 @@ class DynamicSliverAppBar extends StatefulWidget {
     required this.expanded,
     required this.collapsed,
     required this.scrollController,
-    required this.overscrollNotifier,
+    required this.overscrollAmount,
     super.key,
     this.pinned = true,
   });
@@ -256,7 +305,7 @@ class DynamicSliverAppBar extends StatefulWidget {
   final Widget expanded;
   final Widget collapsed;
   final ScrollController scrollController;
-  final ValueNotifier<double> overscrollNotifier;
+  final double overscrollAmount;
   final bool pinned;
 
   @override
@@ -265,27 +314,6 @@ class DynamicSliverAppBar extends StatefulWidget {
 
 class _DynamicSliverAppBarState extends State<DynamicSliverAppBar> {
   double? _expandedHeight;
-  double _overscrollAmount = 0.0;
-
-  @override
-  void initState() {
-    super.initState();
-    widget.overscrollNotifier.addListener(_handleOverscrollChange);
-  }
-
-  @override
-  void dispose() {
-    widget.overscrollNotifier.removeListener(_handleOverscrollChange);
-    super.dispose();
-  }
-
-  void _handleOverscrollChange() {
-    if ((_overscrollAmount - widget.overscrollNotifier.value).abs() > 0.1) {
-      setState(() {
-        _overscrollAmount = widget.overscrollNotifier.value;
-      });
-    }
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -316,7 +344,7 @@ class _DynamicSliverAppBarState extends State<DynamicSliverAppBar> {
         expanded: widget.expanded,
         collapsed: widget.collapsed,
         scrollController: widget.scrollController,
-        overscrollAmount: _overscrollAmount,
+        overscrollAmount: widget.overscrollAmount,
       ),
     );
   }
@@ -346,13 +374,15 @@ class _DynamicSliverAppBarDelegate extends SliverPersistentHeaderDelegate {
     final double pullFactor = _calculateOverscrollFactor();
     final double scaleExtra = _calculateOverscrollScaleExtra(pullFactor);
     final double offsetExtra = _calculateOverscrollOffsetExtra();
-    return expandedHeight + scaleExtra + offsetExtra + 1;
+    final double result = expandedHeight + scaleExtra + offsetExtra + 1;
+    return result;
   }
 
-  /// Normalizes overscroll amount to 0.0-1.0 factor, clamped at 100px.
+  /// Normalizes overscroll amount to 0.0-1.0 factor, eased and clamped.
   double _calculateOverscrollFactor() {
-    const double maxOverscroll = 100.0;
-    return (overscrollAmount / maxOverscroll).clamp(0.0, 1.0);
+    const double maxOverscroll = 140.0;
+    final double raw = (overscrollAmount / maxOverscroll).clamp(0.0, 1.0);
+    return Curves.easeOutQuad.transform(raw);
   }
 
   /// Extra height needed when widget scales up during overscroll (up to 5%).
@@ -456,7 +486,8 @@ class _DynamicSliverAppBarDelegate extends SliverPersistentHeaderDelegate {
     required BorderRadius collapsedRadius,
     required double overscrollFactor,
   }) {
-    final double overscrollRadiusScale = 1.0 + (overscrollFactor * 1.0);
+    final double easedFactor = Curves.easeOutQuad.transform(overscrollFactor);
+    final double overscrollRadiusScale = lerpDouble(1.0, 2.0, easedFactor)!;
     return _scaleBorderRadius(collapsedRadius, overscrollRadiusScale);
   }
 
@@ -484,14 +515,21 @@ class _DynamicSliverAppBarDelegate extends SliverPersistentHeaderDelegate {
   /// Scale factor for pull effect: 1.0 (normal) to 1.05 (5% larger) based on overscroll.
   double _calculatePullScale(final double overscrollFactor) {
     if (overscrollAmount > 0) {
-      return 1.0 + (overscrollFactor * 0.05);
+      final double eased = Curves.easeOut.transform(overscrollFactor);
+      return lerpDouble(1.0, 1.04, eased)!;
     }
     return 1.0;
   }
 
   /// Combined scale: collapse reduces to 0.95, multiplied by pull scale (1.0-1.05).
   double _calculateExpandedWidgetScale(final double t, final double pullScale) {
-    return (1.0 - (t * 0.05)) * pullScale;
+    // Ease the collapse to reduce mid-collapse blur and harshness
+    final double eased = Curves.easeInOutCubic.transform(
+      (t * 2.0).clamp(0.0, 1.0),
+    );
+    const double scaleStart = 1.0;
+    const double scaleEnd = 0.90;
+    return (scaleStart + (scaleEnd - scaleStart) * eased) * pullScale;
   }
 
   @override
@@ -508,17 +546,11 @@ class _DynamicSliverAppBarDelegate extends SliverPersistentHeaderDelegate {
     final double elevation = t * 2.0;
     final double backgroundOpacity = t.clamp(0.0, 1.0);
 
-    // Scale interpolation: starts at 1.0 when expanded, scales down to 0.88 when collapsed
-    final double scaleStart = 1.0;
-    final double scaleEnd = 0.88;
-    // Accelerate scale animation (2x) to match margin animation timing - completes at halfway collapse
-    final double acceleratedScaleProgress = (t * 2.0).clamp(0.0, 1.0);
-    final double scale =
-        scaleStart + (scaleEnd - scaleStart) * acceleratedScaleProgress;
+    // Scale interpolation with easing to reduce blur in fast first half
+    final double scale = _calculateExpandedWidgetScale(t, 1.0);
 
     // Calculate overscroll progress
     final double overscrollFactor = _calculateOverscrollFactor();
-    final double statusPadding = MediaQuery.paddingOf(context).top;
 
     // Calculate margin accounting for overscroll and collapse
     // Accelerate collapse progress (2x) so margin reaches 0 at halfway through collapse
@@ -586,28 +618,36 @@ class _DynamicSliverAppBarDelegate extends SliverPersistentHeaderDelegate {
           if (t < 0.95)
             Align(
               alignment: Alignment.topCenter,
-              child: SizedBox(
-                height: expandedHeight + overscrollHeight,
-                child: Opacity(
-                  opacity: (1 - t).clamp(0.0, 1.0),
-                  child: Transform.scale(
-                    scale: _calculateExpandedWidgetScale(t, pullScale),
-                    alignment: Alignment.topCenter,
-                    child: _RoundedExpandedWidget(
-                      margin: EdgeInsets.fromLTRB(
-                        horizontalMargin,
-                        statusPadding + topMarginOffset,
-                        horizontalMargin,
-                        0,
+              child: Builder(
+                builder: (builderContext) {
+                  final double builderStatusPadding =
+                      MediaQuery.paddingOf(builderContext).top;
+                  final double sizedBoxHeight =
+                      expandedHeight + overscrollHeight;
+                  return SizedBox(
+                    height: sizedBoxHeight,
+                    child: Opacity(
+                      opacity: (1 - t).clamp(0.0, 1.0),
+                      child: Transform.scale(
+                        scale: _calculateExpandedWidgetScale(t, pullScale),
+                        alignment: Alignment.topCenter,
+                        child: _RoundedExpandedWidget(
+                          margin: EdgeInsets.fromLTRB(
+                            horizontalMargin,
+                            builderStatusPadding + topMarginOffset,
+                            horizontalMargin,
+                            0,
+                          ),
+                          borderRadius: animatedRadius,
+                          overscrollHeight: overscrollHeight,
+                          showBackButton: canPop,
+                          backButtonOpacity: (1 - t).clamp(0.0, 1.0),
+                          child: expanded,
+                        ),
                       ),
-                      borderRadius: animatedRadius,
-                      overscrollHeight: overscrollHeight,
-                      showBackButton: canPop,
-                      backButtonOpacity: (1 - t).clamp(0.0, 1.0),
-                      child: expanded,
                     ),
-                  ),
-                ),
+                  );
+                },
               ),
             ),
           Align(

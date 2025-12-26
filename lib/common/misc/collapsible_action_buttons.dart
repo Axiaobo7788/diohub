@@ -173,8 +173,10 @@ sealed class ActionButtonData {
   /// Gets the display icon for this action button
   /// For CheckboxActionButton, returns checked icon when value is true
   IconData get displayIcon {
-    if (this is CheckboxActionButton && (this as CheckboxActionButton).value) {
-      return Icons.check_box_rounded;
+    if (this is CheckboxActionButton) {
+      return (this as CheckboxActionButton).value
+          ? Icons.check_box_rounded
+          : Icons.check_box_outline_blank_rounded;
     }
     return icon;
   }
@@ -234,6 +236,45 @@ sealed class ActionButtonData {
         return false;
     }
   }
+
+  /// Generates a stable key for this action based on semantic properties
+  /// Uses only stable identifiers (not object identity) so widgets persist across rebuilds
+  /// Icons are not included in keys as they can change (e.g., checkbox icons based on value)
+  ValueKey getStableKey({
+    String?
+        context, // e.g., 'expanded', 'collapsed', 'prominent_expanded', etc.
+    bool? includeEnabledState, // Whether to include enabled/disabled in key
+  }) {
+    return ValueKey(Object.hash(
+      context ?? '',
+      includeEnabledState == true ? (enabled ? 'enabled' : 'disabled') : null,
+      category,
+      label,
+      // runtimeType,
+      // Note: NOT using hashCode - only semantic properties
+      // Note: NOT using icon - icons can change (e.g., checkbox icons based on value)
+    ));
+  }
+
+  /// Convenience method for expanded action keys
+  ValueKey getExpandedKey() => getStableKey(context: 'expanded');
+
+  /// Convenience method for collapsed action keys
+  ValueKey getCollapsedKey({bool includeEnabledState = true}) => getStableKey(
+        context: 'collapsed',
+        includeEnabledState: includeEnabledState,
+      );
+
+  /// Convenience method for prominent expanded action keys
+  ValueKey getProminentExpandedKey() =>
+      getStableKey(context: 'prominent_expanded');
+
+  /// Convenience method for prominent collapsed action keys
+  ValueKey getProminentCollapsedKey() =>
+      getStableKey(context: 'prominent_collapsed');
+
+  /// Convenience method for checkbox AnimatedContainer keys
+  ValueKey getCheckboxKey() => getStableKey(context: 'checkbox');
 
   /// Gets the icon color for this action based on its state and type
   /// Used for simple icon buttons in collapsed toolbar
@@ -514,9 +555,9 @@ class ExpandableActionButton extends ActionButtonData {
 }
 
 /// Checkbox action button for toggleable actions
+/// The icon is handled internally based on the value - no need to pass it
 class CheckboxActionButton extends ActionButtonData {
   const CheckboxActionButton({
-    required super.icon,
     required super.label,
     required this.value,
     required this.onChanged,
@@ -531,7 +572,10 @@ class CheckboxActionButton extends ActionButtonData {
     super.visibilityState,
     super.seedColor,
     super.category,
-  });
+  }) : super(
+          // Use a stable icon internally - displayIcon getter handles the actual display
+          icon: Icons.check_box_outline_blank_rounded,
+        );
 
   /// Current checkbox value
   final bool value;
@@ -541,7 +585,6 @@ class CheckboxActionButton extends ActionButtonData {
 
   /// Creates a copy of this CheckboxActionButton with updated properties
   CheckboxActionButton copyWith({
-    IconData? icon,
     String? label,
     bool? value,
     ValueChanged<bool>? onChanged,
@@ -558,7 +601,6 @@ class CheckboxActionButton extends ActionButtonData {
     String? category,
   }) {
     return CheckboxActionButton(
-      icon: icon ?? this.icon,
       label: label ?? this.label,
       value: value ?? this.value,
       onChanged: onChanged ?? this.onChanged,

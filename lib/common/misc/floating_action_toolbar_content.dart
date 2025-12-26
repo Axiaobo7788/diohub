@@ -361,8 +361,7 @@ Widget buildToolbarContent({
                                                                     final action = entry.value;
 
                                                                     return _AnimatedExpandedAction(
-                                                                      key: ValueKey(
-                                                                          'expanded_${action.label}_${action.icon}'),
+                                                                      key: action.getExpandedKey(),
                                                                       action: action,
                                                                       index: index,
                                                                       callbacks:
@@ -451,8 +450,7 @@ Widget buildToolbarContent({
                                             return SizedBox(
                                               width: double.infinity,
                                               child: _AnimatedProminentAction(
-                                                key: ValueKey(
-                                                    'prominent_expanded_${action.label}'),
+                                                key: action.getProminentExpandedKey(),
                                                 action: action,
                                                 prominentActionBuilder:
                                                     prominentActionBuilder ??
@@ -605,7 +603,7 @@ Widget buildCompactProminentButton(
         '  - IconColor: ${colors.iconColor} (hashCode: ${colors.iconColor.hashCode})');
     print(
         '  - TextColor: ${colors.textColor} (hashCode: ${colors.textColor.hashCode})');
-    print('  - AnimatedContainer key: checkbox_${action.label}');
+    print('  - AnimatedContainer key: ${action.getCheckboxKey().value}');
   }
 
   return Material(
@@ -624,7 +622,7 @@ Widget buildCompactProminentButton(
           : null,
       borderRadius: Theme.of(context).surfaceStyle.borderRadiusMedium(),
       child: AnimatedContainer(
-        key: ValueKey('checkbox_${action.label}'),
+        key: action.getCheckboxKey(),
         duration: const Duration(milliseconds: 200),
         curve: Curves.easeInOut,
         width: double.infinity,
@@ -933,7 +931,7 @@ class _AnimatedCollapsedActionsRowState
                 final showDivider = isVisible && nextVisibleAction != null;
 
                 return _AnimatedActionButton(
-                  key: ValueKey('${action.enabled ? 'enabled' : 'disabled'}_${action.label}_${action.icon}'),
+                  key: action.getCollapsedKey(),
                   action: action,
                   spacing: widget.spacing,
                   buildCompactIconButton: widget.buildCompactIconButton,
@@ -983,7 +981,7 @@ class _AnimatedCollapsedActionsRowState
                       // Use _AnimatedActionButton for non-expandable actions
                       if (action is ExpandableActionButton) {
                         return _AnimatedProminentAction(
-                          key: ValueKey('prominent_collapsed_${action.label}'),
+                          key: action.getProminentCollapsedKey(),
                           action: action,
                           prominentActionBuilder:
                               widget.prominentActionBuilder ??
@@ -996,7 +994,7 @@ class _AnimatedCollapsedActionsRowState
                         );
                       } else {
                         return _AnimatedProminentAction(
-                          key: ValueKey('prominent_collapsed_${action.label}'),
+                          key: action.getProminentCollapsedKey(),
                           action: action,
                           prominentActionBuilder: (context, action) =>
                               widget.buildCompactProminentButton(

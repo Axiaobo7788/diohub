@@ -1,4 +1,3 @@
-import 'package:diohub/graphql/queries/repositories/__generated__/repo_info.data.gql.dart';
 import 'package:diohub/style/surface_style_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -59,16 +58,16 @@ class _PullToExpandIndicatorState extends State<PullToExpandIndicator>
     super.initState();
     _pulseController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 250),
+      duration: const Duration(milliseconds: 180),
     );
     _pulseAnimation = TweenSequence<double>([
       TweenSequenceItem(
-        tween: Tween<double>(begin: 1.0, end: 1.12)
+        tween: Tween<double>(begin: 1.0, end: 1.08)
             .chain(CurveTween(curve: Curves.easeOut)),
         weight: 0.5,
       ),
       TweenSequenceItem(
-        tween: Tween<double>(begin: 1.12, end: 1.0)
+        tween: Tween<double>(begin: 1.08, end: 1.0)
             .chain(CurveTween(curve: Curves.easeIn)),
         weight: 0.5,
       ),
@@ -100,8 +99,10 @@ class _PullToExpandIndicatorState extends State<PullToExpandIndicator>
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
+    final bool disableAnimations =
+        MediaQuery.maybeOf(context)?.disableAnimations ?? false;
 
-    // Scale from 0 to 1 based on pull progress - makes content 0 size at 0 state
+    // Scale from 0 to 1 based on pull progress
     final double contentScale = widget.pullProgress.clamp(0.0, 1.0);
 
     // Animate opacity: start at 0, increase as you pull
@@ -113,55 +114,84 @@ class _PullToExpandIndicatorState extends State<PullToExpandIndicator>
     // Animate chevron size from 14 to 16 based on progress
     final double chevronSize = 14.0 + (widget.pullProgress * 2.0);
 
-    // Text and icon color - use onSurface color with opacity for subtle appearance
-    final double colorOpacity = 0.3 + (widget.pullProgress * 0.2); // 0.3 to 0.5
+    // Text and icon color - keep more legible at low pull
+    final double colorOpacity =
+        (0.45 + (widget.pullProgress * 0.25)).clamp(0.0, 1.0); // 0.45 → 0.7
+
+    const double minHeight = 32;
 
     return Center(
       child: AnimatedBuilder(
         animation: _pulseAnimation,
         builder: (context, child) {
           // Use pulse animation value during the jump, then 1.0 when ready (after jump completes)
-          final double scale = widget.isReadyToExpand
+          final double pulseScale = widget.isReadyToExpand && !disableAnimations
               ? (_pulseController.isAnimating ? _pulseAnimation.value : 1.0)
               : 1.0;
 
-          return Transform.scale(
-            scale: scale,
-            child: SizeTransition(
-              sizeFactor: AlwaysStoppedAnimation(contentScale),
-              axisAlignment: 0.5,
-              child: Opacity(
-                opacity: contentOpacity.clamp(0.0, 1.0),
+          // Keep a reserved height to avoid layout shifts; scale in subtly
+          final double revealScale =
+              disableAnimations ? 1.0 : (0.85 + (contentScale * 0.15));
+          final double effectiveScale = pulseScale * revealScale;
+
+          final Duration fadeDuration =
+              disableAnimations ? Duration.zero : const Duration(milliseconds: 120);
+          final Duration chevronDuration =
+              disableAnimations ? Duration.zero : const Duration(milliseconds: 160);
+
+          return SizedBox(
+            height: minHeight,
+            child: AnimatedOpacity(
+              duration: fadeDuration,
+              curve: Curves.easeOut,
+              opacity: contentOpacity.clamp(0.0, 1.0),
+              child: Transform.scale(
+                scale: effectiveScale,
                 child: Center(
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        widget.text,
-                        textAlign: TextAlign.center,
-                        style: theme.textTheme.bodySmall?.copyWith(
-                          fontSize: fontSize,
-                          color: colorScheme.onSurface
-                              .withOpacity(colorOpacity.clamp(0.0, 1.0)),
-                          fontWeight: FontWeight.w400,
-                          letterSpacing: 0.1,
-                        ),
-                      ),
-                      TweenAnimationBuilder<double>(
-                        tween: Tween<double>(begin: 14.0, end: chevronSize),
-                        duration: const Duration(milliseconds: 150),
-                        curve: Curves.easeOut,
-                        builder: (context, animatedSize, child) {
-                          return Icon(
-                            Icons.keyboard_arrow_down_rounded,
-                            size: animatedSize,
+                  child: Semantics(
+                    label: widget.text,
+                    value: widget.isReadyToExpand
+                        ? 'Ready to expand'
+                        : 'Pull to expand',
+                    hint: 'Pull down and release to see more details',
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          widget.text,
+                          textAlign: TextAlign.center,
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            fontSize: fontSize,
                             color: colorScheme.onSurface
                                 .withOpacity(colorOpacity.clamp(0.0, 1.0)),
-                          );
-                        },
-                      ),
-                    ],
+                            fontWeight: FontWeight.w400,
+                            letterSpacing: 0.1,
+                          ),
+                        ),
+                        TweenAnimationBuilder<double>(
+                          tween: Tween<double>(begin: 14.0, end: chevronSize),
+                          duration: fadeDuration,
+                          curve: Curves.easeOut,
+                          builder: (context, animatedSize, child) {
+                            final Color chevronColor = colorScheme.onSurface
+                                .withOpacity(
+                                    (colorOpacity + (widget.isReadyToExpand ? 0.1 : 0.0))
+                                        .clamp(0.0, 1.0));
+                            return AnimatedRotation(
+                              turns: widget.isReadyToExpand ? -0.25 : 0.0,
+                              duration: chevronDuration,
+                              curve: Curves.easeOut,
+                              child: Icon(
+                                Icons.keyboard_arrow_down_rounded,
+                                size: animatedSize,
+                                color: chevronColor,
+                              ),
+                            );
+                          },
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ),

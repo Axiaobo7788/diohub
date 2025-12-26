@@ -266,7 +266,7 @@ Widget buildProminentActionCard(
         '  - IconColor: ${colors.iconColor} (hashCode: ${colors.iconColor.hashCode})');
     print(
         '  - TextColor: ${colors.textColor} (hashCode: ${colors.textColor.hashCode})');
-    print('  - AnimatedContainer key: checkbox_${action.label}');
+    print('  - AnimatedContainer key: ${action.getCheckboxKey().value}');
   }
 
   // Extract badge text from trailing widget or use trailing widget directly
@@ -296,7 +296,7 @@ Widget buildProminentActionCard(
         onTap: action.enabled ? onTap : null,
         borderRadius: Theme.of(context).surfaceStyle.borderRadius(size: size),
         child: AnimatedContainer(
-          key: ValueKey('checkbox_${action.label}'),
+          key: action.getCheckboxKey(),
           duration: const Duration(milliseconds: 600),
           curve: Curves.easeInOut,
           width: double.infinity,
