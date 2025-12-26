@@ -1,9 +1,11 @@
+import 'dart:async';
+import 'dart:developer' as developer;
+import 'dart:developer';
+
 import 'package:auto_route/auto_route.dart';
 import 'package:chucker_flutter/chucker_flutter.dart';
 import 'package:diohub/adapters/deep_linking_handler.dart';
-import 'package:diohub/adapters/internet_connectivity.dart';
 import 'package:diohub/app/api_handler/dio.dart';
-import 'package:diohub/app/api_handler/response_handler.dart';
 import 'package:diohub/app/global.dart';
 import 'package:diohub/app/settings/font.dart';
 import 'package:diohub/blocs/account_bloc/account_bloc.dart';
@@ -60,6 +62,16 @@ void main() async {
     setHighRefreshRate(),
   ]);
 
+  if (kDebugMode) {
+    unawaited(
+      developer.Service.getInfo().then(
+        (final ServiceProtocolInfo value) {
+          debugPrint('DEVTOOLS serverUri: ${value.serverUri}');
+        },
+      ),
+    );
+  }
+
   // final initLink = await initUniLink();
   uniLinkStream();
   // Auth check now happens in AuthenticationBloc on initialization
@@ -80,53 +92,55 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(final BuildContext context) {
-              final AccountBloc accountBloc = AccountBloc(AuthRepository())..add(LoadAccounts());
+    final AuthRepository authRepository = AuthRepository();
+    final AccountBloc accountBloc = AccountBloc(authRepository)
+      ..add(LoadAccounts());
+    final AuthenticationBloc authenticationBloc =
+        AuthenticationBloc(accountBloc: accountBloc);
 
     return MultiBlocProvider(
-        providers: <SingleChildWidget>[
-          // Initialise Account Bloc first
-          BlocProvider<AccountBloc>(
-            create: (final _) {
-              return accountBloc;
-            },
-            lazy: false,
-          ),
-          // Initialise Authentication Bloc - it will check auth state automatically
-          BlocProvider<AuthenticationBloc>(
-            create: (final BuildContext context) => AuthenticationBloc(
-              accountBloc: accountBloc,
+      providers: <SingleChildWidget>[
+        // Initialise Account Bloc first
+        BlocProvider<AccountBloc>(
+          create: (final _) {
+            return accountBloc;
+          },
+          lazy: false,
+        ),
+        // Initialise Authentication Bloc - it will check auth state automatically
+        BlocProvider<AuthenticationBloc>(
+          create: (final BuildContext context) => authenticationBloc,
+          lazy: false,
+        ),
+      ],
+      child: Builder(
+        builder: (final BuildContext context) => MultiProvider(
+          providers: <SingleChildWidget>[
+            ChangeNotifierProvider<CurrentUserProvider>(
+              lazy: false,
+              create: (final _) => CurrentUserProvider(
+                authenticationBloc:
+                    BlocProvider.of<AuthenticationBloc>(context),
+                accountBloc: BlocProvider.of<AccountBloc>(context),
+              ),
             ),
-            lazy: false,
-          ),
-        ],
-        child: Builder(
-          builder: (final BuildContext context) => MultiProvider(
-            providers: <SingleChildWidget>[
-              ChangeNotifierProvider<CurrentUserProvider>(
-                lazy: false,
-                create: (final _) => CurrentUserProvider(
-                  authenticationBloc:
-                      BlocProvider.of<AuthenticationBloc>(context),
-                  accountBloc: BlocProvider.of<AccountBloc>(context),
-                ),
-              ),
-              ChangeNotifierProvider<SearchDataProvider>(
-                create: (final _) => SearchDataProvider(),
-              ),
-              ChangeNotifierProvider<FontSettings>(
-                create: (final _) => FontSettings(),
-              ),
-              // ChangeNotifierProvider<PaletteSettings>(
-              //   create: (final _) => PaletteSettings(),
-              // ),
-            ],
-            builder: (final BuildContext context, final Widget? child) =>
-                const Portal(
-              child: RootApp(),
+            ChangeNotifierProvider<SearchDataProvider>(
+              create: (final _) => SearchDataProvider(),
             ),
+            ChangeNotifierProvider<FontSettings>(
+              create: (final _) => FontSettings(),
+            ),
+            // ChangeNotifierProvider<PaletteSettings>(
+            //   create: (final _) => PaletteSettings(),
+            // ),
+          ],
+          builder: (final BuildContext context, final Widget? child) =>
+              const Portal(
+            child: RootApp(),
           ),
         ),
-      );
+      ),
+    );
   }
 }
 
@@ -153,7 +167,7 @@ class _RootAppState extends State<RootApp> {
     super.initState();
     // Check scope after a short delay to ensure context is ready
     Future<void>.delayed(const Duration(milliseconds: 500), () {
-      ScopeCheckService.checkAndPromptScopeReauth();
+      ScopeCheckService.checkAndPromptScopeReauth(context);
     });
   }
 
