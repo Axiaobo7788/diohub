@@ -8,6 +8,7 @@ import 'package:diohub/common/wrappers/provider_loading_progress_wrapper.dart';
 import 'package:diohub/providers/base_provider.dart';
 import 'package:diohub/providers/users/current_user_provider.dart';
 import 'package:diohub/view/home/home.dart';
+import 'package:diohub/view/home/widgets/home_shimmer_skeleton.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
@@ -56,15 +57,7 @@ class LandingLoadingScreen extends StatelessWidget {
                   },
                   loadingBuilder: (final BuildContext context) => SafeArea(
                     child: Scaffold(
-                      body: Column(
-                        children: <Widget>[
-                          Expanded(child: Container()),
-                          const Expanded(child: LoadingIndicator()),
-                          const Expanded(
-                            child: AppNameWithVersion(),
-                          ),
-                        ],
-                      ),
+                      body: const HomeShimmerSkeleton(),
                     ),
                   ),
                   childBuilder: (final BuildContext context,
