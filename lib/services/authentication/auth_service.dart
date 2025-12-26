@@ -9,7 +9,6 @@ import 'package:diohub/models/authentication/access_token_model.dart';
 import 'package:diohub/models/authentication/account_model.dart';
 import 'package:diohub/models/authentication/device_code_model.dart';
 import 'package:diohub/utils/type_cast.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_appauth/flutter_appauth.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
@@ -37,7 +36,6 @@ class AuthRepository {
     final String? activeAccount = await getActiveAccount();
     if (activeAccount == null) return false;
     final String? token = await getAccessTokenFromDevice();
-    debugPrint('Auth token ${token ?? 'not found.'}');
     if (token != null) {
       return true;
     }
@@ -219,7 +217,6 @@ class AuthRepository {
           .map((dynamic json) => AccountModel.fromJson(json as TypeMap))
           .toList();
     } catch (e) {
-      debugPrint('Error parsing account list: $e');
       return <AccountModel>[];
     }
   }

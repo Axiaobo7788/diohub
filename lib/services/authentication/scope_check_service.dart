@@ -30,8 +30,6 @@ class ScopeCheckService {
 
     if (!_isScopeSubset(requestedScope, grantedScope)) {
       // Requested scopes have grown, need re-auth
-      debugPrint(
-          'Scope mismatch detected. Requested: $requestedScope, Granted: $grantedScope');
       _showScopeReauthDialog(context);
     }
   }

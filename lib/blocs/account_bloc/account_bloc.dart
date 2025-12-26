@@ -17,8 +17,7 @@ class AccountBloc extends Bloc<AccountEvent, AccountState> {
   late final StreamSubscription<void> _tokenInvalidationSub;
 
   AccountBloc(this.authRepository) : super(const AccountUninitialized()) {
-    _tokenInvalidationSub =
-        AuthRepository.tokenInvalidationStream.listen((_) {
+    _tokenInvalidationSub = AuthRepository.tokenInvalidationStream.listen((_) {
       add(HandleInvalidToken());
     });
 
