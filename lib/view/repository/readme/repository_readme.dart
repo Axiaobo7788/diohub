@@ -38,25 +38,8 @@ class RepositoryReadmeState extends State<RepositoryReadme>
 
   // Expose scroll function
   void scrollToAnchor(String anchorId) {
-    print('[RepositoryReadmeState] ====== scrollToAnchor CALLED ======');
-    print('[RepositoryReadmeState] anchorId: "$anchorId"');
-    print(
-        '[RepositoryReadmeState] _markdownBodyKey: ${_markdownBodyKey.toString()}');
-    print(
-        '[RepositoryReadmeState] _markdownBodyKey.currentState is ${_markdownBodyKey.currentState != null ? "not null" : "null"}');
     if (_markdownBodyKey.currentState != null) {
-      print(
-          '[RepositoryReadmeState] ✓ MarkdownBodyState found, calling scrollToAnchor');
-      print(
-          '[RepositoryReadmeState] MarkdownBodyState type: ${_markdownBodyKey.currentState.runtimeType}');
       _markdownBodyKey.currentState!.scrollToAnchor(anchorId);
-      print(
-          '[RepositoryReadmeState] scrollToAnchor call to MarkdownBodyState completed');
-    } else {
-      print(
-          '[RepositoryReadmeState] ✗ ERROR: _markdownBodyKey.currentState is null');
-      print(
-          '[RepositoryReadmeState] This means MarkdownBody widget may not be mounted yet');
     }
   }
 

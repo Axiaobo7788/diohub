@@ -1,5 +1,3 @@
-import 'dart:developer';
-
 import 'package:dio/dio.dart';
 import 'package:diohub/app/api_handler/dio.dart';
 
@@ -20,7 +18,6 @@ class MarkdownService {
         if (context != null) 'context': context,
       },
     );
-    log('markdown', error: res.data);
     return res.data!;
   }
 }
