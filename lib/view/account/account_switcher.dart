@@ -104,8 +104,6 @@ class AccountSwitcher extends StatelessWidget {
                               .add(SwitchAccount(account.username));
                           onClose?.call();
                           Navigator.of(context).maybePop();
-                          // Navigate to LandingLoadingRoute to ensure proper reload
-                          AutoRouter.of(context).replace(LandingLoadingRoute());
                         },
                 );
               },
@@ -169,4 +167,3 @@ class AccountSwitcher extends StatelessWidget {
     );
   }
 }
-
