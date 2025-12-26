@@ -15,14 +15,20 @@ import 'package:flutter/foundation.dart';
 class UserInfoService {
   UserInfoService(this.login);
 
-  static final GraphqlHandler _gqlHandler = GraphqlHandler(apiLogSettings: APILoggingSettings(responseBody: true));
+  static final GraphqlHandler _gqlHandler =
+      GraphqlHandler(apiLogSettings: APILoggingSettings(responseBody: true));
   final String login;
   static final RESTHandler _restHandler = RESTHandler();
 
   // Ref: https://docs.github.com/en/rest/reference/users#get-the-authenticated-user
-  static Future<GviewerInfoData_viewer> getViewerInfo() async {
+  static Future<GviewerInfoData_viewer> getViewerInfo(
+      {String? explicitToken}) async {
+    final Map<String, dynamic>? headers = explicitToken != null
+        ? {'Authorization': 'token $explicitToken'}
+        : null;
     final GQLResponse response = await _gqlHandler.query(
       GviewerInfoReq(),
+      requestHeaders: headers,
     );
     return GviewerInfoData.fromJson(response.data!)!.viewer;
   }
@@ -162,8 +168,7 @@ class UserInfoService {
       refreshCache: refreshCache,
     );
     if (kDebugMode) {
-      log.d(
-          '[UserInfoService] ✅ GraphQL query completed for user "$login"');
+      log.d('[UserInfoService] ✅ GraphQL query completed for user "$login"');
     }
     return GuserContributionsData.fromJson(response.data!)!.user!;
   }
