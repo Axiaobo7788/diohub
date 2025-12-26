@@ -3,9 +3,6 @@ part of 'authentication_bloc.dart';
 @immutable
 abstract class AuthenticationEvent {}
 
-///Check auth state.
-class CheckAuthState extends AuthenticationEvent {}
-
 /// Request Device code for authentication initialisation.
 class RequestDeviceCode extends AuthenticationEvent {}
 

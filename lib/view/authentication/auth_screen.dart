@@ -1,9 +1,10 @@
 import 'package:auto_route/auto_route.dart';
+import 'package:diohub/blocs/account_bloc/account_bloc.dart';
 import 'package:diohub/blocs/authentication_bloc/authentication_bloc.dart';
-import 'package:diohub/common/animations/size_expanded_widget.dart';
+import 'package:diohub/common/animations/fade_animation_widget.dart';
 import 'package:diohub/common/const/app_info.dart';
 import 'package:diohub/common/const/version_info.dart';
-import 'package:diohub/routes/router.gr.dart';
+import 'package:diohub/common/misc/loading_indicator.dart';
 import 'package:diohub/view/authentication/widgets/code_info_box.dart';
 import 'package:diohub/view/authentication/widgets/error_popup.dart';
 import 'package:diohub/view/authentication/widgets/login_popup.dart';
@@ -16,74 +17,177 @@ class AuthScreen extends StatelessWidget {
   final VoidCallback? onAuthenticated;
 
   @override
-  Widget build(final BuildContext context) => SafeArea(
-        child: Scaffold(
-          body: Stack(
-            children: <Widget>[
-              Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: <Widget>[
-                  SizeExpandedSection(
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: <Widget>[
-                        Column(
+  Widget build(final BuildContext context) {
+    final double screenHeight = MediaQuery.of(context).size.height;
+    final double screenWidth = MediaQuery.of(context).size.width;
+
+    return SafeArea(
+      child: Scaffold(
+        body: Stack(
+          children: <Widget>[
+            // Main content
+            SingleChildScrollView(
+              child: ConstrainedBox(
+                constraints: BoxConstraints(
+                  minHeight: screenHeight -
+                      MediaQuery.of(context).padding.top -
+                      MediaQuery.of(context).padding.bottom,
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 32),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: <Widget>[
+                      SizedBox(height: screenHeight * 0.1),
+                      // Logo and app name section with staggered animations
+                      _DelayedFadeAnimation(
+                        delay: const Duration(milliseconds: 100),
+                        child: Column(
                           mainAxisSize: MainAxisSize.min,
+                          crossAxisAlignment: CrossAxisAlignment.center,
                           children: <Widget>[
-                            AppLogoWidget(
-                              size: MediaQuery.of(context).size.width * 0.3,
+                            Center(
+                              child: AppLogoWidget(
+                                size: screenWidth * 0.25,
+                              ),
                             ),
-                            const AppNameWidget(
-                              size: 24,
+                            const SizedBox(height: 16),
+                            _DelayedFadeAnimation(
+                              delay: const Duration(milliseconds: 200),
+                              child: const Center(
+                                child: AppNameWidget(
+                                  size: 28,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            _DelayedFadeAnimation(
+                              delay: const Duration(milliseconds: 300),
+                              child: Center(
+                                child: Text(
+                                  'Sign in to continue',
+                                  style: Theme.of(context)
+                                      .textTheme
+                                      .bodyMedium
+                                      ?.copyWith(
+                                        color: Theme.of(context)
+                                            .colorScheme
+                                            .onSurface
+                                            .withOpacity(0.7),
+                                      ),
+                                ),
+                              ),
                             ),
                           ],
                         ),
-                      ],
-                    ),
-                  ),
-                  Padding(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 32, vertical: 8),
-                    child:
-                        BlocConsumer<AuthenticationBloc, AuthenticationState>(
-                      listener: (
-                        final BuildContext context,
-                        final AuthenticationState state,
-                      ) async {
-                        if (state is AuthenticationSuccessful) {
+                      ),
+                      SizedBox(height: screenHeight * 0.08),
+                      // Login options with fade slide animation
+                      // Listen to AccountBloc for callback invocation
+                      BlocListener<AccountBloc, AccountState>(
+                        listenWhen: (previous, current) =>
+                            current is AccountReady &&
+                            current.activeAccount != null,
+                        listener: (context, state) {
+                          // Invoke callback when account is ready and active
                           if (onAuthenticated != null) {
+                            // Callback handles navigation (e.g., replaceAll to LandingLoadingRoute)
                             onAuthenticated!();
                           } else {
-                            await AutoRouter.of(context).replace(HomeRoute());
+                            // No callback provided (add-account flow) - pop this screen
+                            Navigator.of(context).pop();
                           }
-                        }
-                      },
-                      builder: (
-                        final BuildContext context,
-                        final AuthenticationState state,
-                      ) {
-                        if (state is AuthenticationUnauthenticated) {
-                          return const LoginPopup();
-                        } else if (state is AuthenticationInitialized) {
-                          return CodeInfoBox(state.deviceCodeModel);
-                        } else if (state is AuthenticationError) {
-                          return ErrorPopup(state.error);
-                        }
-                        return Container();
-                      },
-                    ),
+                        },
+                        child: BlocBuilder<AuthenticationBloc,
+                            AuthenticationState>(
+                          builder: (
+                            final BuildContext context,
+                            final AuthenticationState state,
+                          ) {
+                            if (state is AuthenticationUnauthenticated) {
+                              return _DelayedFadeAnimation(
+                                delay: const Duration(milliseconds: 400),
+                                child: const LoginPopup(),
+                              );
+                            } else if (state is AuthenticationChecking ||
+                                state is AuthenticationAccountLinking) {
+                              return const LoadingIndicator();
+                            } else if (state is AuthenticationInitialized) {
+                              return _DelayedFadeAnimation(
+                                delay: const Duration(milliseconds: 100),
+                                child: CodeInfoBox(state.deviceCodeModel),
+                              );
+                            } else if (state is AuthenticationError) {
+                              return _DelayedFadeAnimation(
+                                delay: const Duration(milliseconds: 100),
+                                child: ErrorPopup(state.error),
+                              );
+                            }
+                            return Container();
+                          },
+                        ),
+                      ),
+                      SizedBox(height: screenHeight * 0.1),
+                    ],
                   ),
-                  SizedBox(
-                    height: MediaQuery.of(context).size.height * 0.05,
-                  ),
-                ],
+                ),
               ),
-              const Align(
-                alignment: Alignment.bottomCenter,
+            ),
+            // Version info at bottom
+            const Align(
+              alignment: Alignment.bottomCenter,
+              child: Padding(
+                padding: EdgeInsets.only(bottom: 16),
                 child: VersionInfoWidget(),
               ),
-            ],
-          ),
+            ),
+          ],
         ),
-      );
+      ),
+    );
+  }
+}
+
+/// Wrapper widget that adds delay to FadeAnimationSection
+class _DelayedFadeAnimation extends StatefulWidget {
+  const _DelayedFadeAnimation({
+    required this.child,
+    this.delay = Duration.zero,
+  });
+
+  final Widget child;
+  final Duration delay;
+
+  @override
+  State<_DelayedFadeAnimation> createState() => _DelayedFadeAnimationState();
+}
+
+class _DelayedFadeAnimationState extends State<_DelayedFadeAnimation> {
+  bool _shouldShow = false;
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.delay == Duration.zero) {
+      _shouldShow = true;
+    } else {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        Future.delayed(widget.delay, () {
+          if (mounted) {
+            setState(() {
+              _shouldShow = true;
+            });
+          }
+        });
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return FadeAnimationSection(
+      expand: _shouldShow,
+      child: widget.child,
+    );
+  }
 }
