@@ -32,5 +32,3 @@ class AuthSuccessful extends AuthenticationEvent {
   final AccessTokenModel accessToken;
 }
 
-/// LogOut the user.
-class LogOut extends AuthenticationEvent {}

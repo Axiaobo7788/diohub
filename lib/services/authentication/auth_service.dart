@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:dio/dio.dart';
@@ -15,6 +16,16 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 class AuthRepository {
   static const FlutterSecureStorage _storage = FlutterSecureStorage();
+  static final StreamController<void> _tokenInvalidationController =
+      StreamController<void>.broadcast();
+
+  static Stream<void> get tokenInvalidationStream =>
+      _tokenInvalidationController.stream;
+
+  /// Emit a token invalidation signal to be handled by app layer (blocs/UI).
+  static void emitTokenInvalidated() {
+    _tokenInvalidationController.add(null);
+  }
 
   final RESTHandler _restHandler = RESTHandler.external(
     baseUrl: 'https://github.com/login',

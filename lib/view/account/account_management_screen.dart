@@ -2,7 +2,6 @@ import 'package:auto_route/auto_route.dart';
 import 'package:diohub/blocs/account_bloc/account_bloc.dart';
 import 'package:diohub/models/authentication/account_model.dart';
 import 'package:diohub/routes/router.gr.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
@@ -13,40 +12,22 @@ class AccountManagementScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    debugPrint(
-        '[AccountManagementScreen] build: Building AccountManagementScreen');
     return Scaffold(
       appBar: AppBar(
         title: const Text('Manage Accounts'),
       ),
       body: BlocBuilder<AccountBloc, AccountState>(
         builder: (BuildContext context, AccountState state) {
-          debugPrint(
-              '[AccountManagementScreen] BlocBuilder: State is ${state.runtimeType}');
-
           if (state is AccountUninitialized || state is AccountLoading) {
-            debugPrint(
-                '[AccountManagementScreen] BlocBuilder: Showing loading indicator');
             return const Center(child: CircularProgressIndicator());
           }
 
           if (state is AccountError) {
-            debugPrint(
-                '[AccountManagementScreen] BlocBuilder: AccountError - ${state.message}');
             return Center(child: Text('Error: ${state.message}'));
           }
 
           if (state is! AccountReady) {
-            debugPrint(
-                '[AccountManagementScreen] BlocBuilder: State is not AccountReady, showing error');
             return const Center(child: Text('Unable to load accounts'));
-          }
-
-          debugPrint(
-              '[AccountManagementScreen] BlocBuilder: AccountReady state - ${state.accounts.length} accounts, active: ${state.activeAccount}');
-          for (final account in state.accounts) {
-            debugPrint(
-                '[AccountManagementScreen] BlocBuilder: Account - ${account.username} (${account.displayName}), isActive: ${account.username == state.activeAccount}');
           }
 
           // if (state.accounts.isEmpty) {
@@ -206,9 +187,6 @@ class AccountManagementScreen extends StatelessWidget {
                                     context
                                         .read<AccountBloc>()
                                         .add(SwitchAccount(account.username));
-                                    // Navigate to LandingLoadingRoute to ensure proper reload
-                                    AutoRouter.of(context)
-                                        .replace(LandingLoadingRoute());
                                   } else if (value == 'remove') {
                                     _showRemoveDialog(
                                         context, account.username);
@@ -316,8 +294,6 @@ class AccountManagementScreen extends StatelessWidget {
   }
 
   void _showLogOutAllDialog(BuildContext context) {
-    debugPrint(
-        '[AccountManagementScreen] _showLogOutAllDialog: Showing log out all dialog');
     showDialog<void>(
       context: context,
       builder: (BuildContext dialogContext) {
@@ -335,8 +311,6 @@ class AccountManagementScreen extends StatelessWidget {
             ),
             TextButton(
               onPressed: () {
-                debugPrint(
-                    '[AccountManagementScreen] _showLogOutAllDialog: User confirmed, logging out all accounts');
                 context.read<AccountBloc>().add(LogOutAll());
                 Navigator.of(dialogContext).pop();
               },

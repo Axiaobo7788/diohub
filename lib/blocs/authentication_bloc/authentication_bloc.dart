@@ -21,7 +21,6 @@ class AuthenticationBloc
     on<AuthError>(_authError);
     on<ResetStates>(_resetStates);
     on<AuthSuccessful>(_authSuccessful);
-    on<LogOut>(_logOut);
   }
 
   final AuthRepository authRepository = AuthRepository();
@@ -151,13 +150,6 @@ class AuthenticationBloc
     emit(AuthenticationUnauthenticated());
   }
 
-  Future<void> _logOut(
-    final LogOut event,
-    final Emitter<AuthenticationState> emit,
-  ) async {
-    await authRepository.logOut();
-    emit(AuthenticationUnauthenticated());
-  }
 
   void _authError(
     final AuthError event,

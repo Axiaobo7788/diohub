@@ -25,3 +25,6 @@ class RemoveAccount extends AccountEvent {
 
 class LogOutAll extends AccountEvent {}
 
+/// Handle invalid/revoked token for the active account.
+class HandleInvalidToken extends AccountEvent {}
+
