@@ -190,12 +190,6 @@ class BaseCommentState extends State<BaseComment> {
                 MarkdownBody(
                   widget.bodyHTML!,
                   buildAsync: false,
-                  style: MarkdownBodyStyle(
-                    codeBlockStyle: MarkdownBodyCodeBlockStyle(
-                      elevation: 3,
-                      headerColor: context.colorScheme.surfaceVariant.asHint(),
-                    ),
-                  ),
                 ),
               if (widget.footer != null)
                 Padding(
@@ -284,7 +278,9 @@ class BaseCommentState extends State<BaseComment> {
                             ),
                             decoration: BoxDecoration(
                               color: badgeColor?.withOpacity(0.6),
-                              borderRadius: Theme.of(context).surfaceStyle.borderRadiusSoft(),
+                              borderRadius: Theme.of(context)
+                                  .surfaceStyle
+                                  .borderRadiusSoft(),
                             ),
                             child: Text(
                               str ?? '',
