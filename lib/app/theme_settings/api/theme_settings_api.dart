@@ -38,9 +38,6 @@ abstract class ThemeSettingsApi<T> extends ChangeNotifier {
         }
       }
     } catch (e) {
-      if (kDebugMode) {
-        print('Error loading settings for $storageKey: $e');
-      }
       await _clearStorage();
     }
   }
@@ -55,9 +52,7 @@ abstract class ThemeSettingsApi<T> extends ChangeNotifier {
       await sharedPrefs.setString(storageKey, jsonEncode(data));
       notifyListeners();
     } catch (e) {
-      if (kDebugMode) {
-        print('Error saving settings for $storageKey: $e');
-      }
+      // Error saving settings
     }
   }
 
