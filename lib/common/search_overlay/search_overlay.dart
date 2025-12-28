@@ -1314,17 +1314,12 @@ class SearchData {
   String? get activeQuickFilter {
     final List<String> active = <String>[];
     for (final String element in filterStrings) {
-      // print(filterStrings);
-      // print(quickFilters);
       for (final String e in quickFilters) {
-        // print(e.toString() + 'kjsdbnhj');
-        // print(element);
         if (StringFunctions(e).isStringEqual(element)) {
           active.add(element);
         }
       }
     }
-    // print(active);
     // Return null if more than one.
     if (active.length == 1) {
       return active.first;

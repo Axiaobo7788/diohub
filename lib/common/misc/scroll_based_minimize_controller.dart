@@ -104,10 +104,6 @@ class ScrollBasedMinimizeController extends ChangeNotifier {
     // Ignore scroll notifications during initial layout phase (first 500ms)
     // This prevents programmatic scrolls (like DynamicScroll initialization) from triggering minimize
     if (_initializationStopwatch.elapsedMilliseconds < 500) {
-      if (debugLogging && kDebugMode) {
-        print(
-            '[ScrollBasedMinimizeController] Ignoring scroll during initialization phase (${_initializationStopwatch.elapsedMilliseconds}ms < 500ms)');
-      }
       return false;
     } else {
       _initializationStopwatch.stop();
@@ -116,10 +112,6 @@ class ScrollBasedMinimizeController extends ChangeNotifier {
     // Ignore programmatic scroll jumps (very large deltas indicate jumpTo/animateTo)
     // Normal user scrolling rarely exceeds 50px per frame
     if (scrollDelta.abs() > 100.0) {
-      if (debugLogging && kDebugMode) {
-        print(
-            '[ScrollBasedMinimizeController] Ignoring programmatic scroll jump (delta=${scrollDelta.abs()} > 100px)');
-      }
       return false;
     }
 
@@ -128,18 +120,8 @@ class ScrollBasedMinimizeController extends ChangeNotifier {
     final isScrollingDown = scrollDelta > 0;
     final isScrollingUp = scrollDelta < 0;
 
-    if (debugLogging && kDebugMode) {
-      print(
-          '[ScrollBasedMinimizeController] Scroll notification: pixels=$pixels, scrollDelta=$scrollDelta, axisDirection=${metrics.axisDirection}, isScrollingDown=$isScrollingDown, state=$_state');
-    }
-
     // Check if we're at the top (should restore)
-    if (pixels <= scrollMinimizeOffset && isMinimizedByScroll) {
-      if (debugLogging && kDebugMode) {
-        print(
-            '[ScrollBasedMinimizeController] At top (pixels=$pixels <= threshold=$scrollMinimizeOffset), restoring from scroll minimize');
-      }
-      _transitionToRestoring();
+    if (pixels <= scrollMinimizeOffset && isMinimizedByScroll) {      _transitionToRestoring();
       return false;
     }
 
@@ -170,14 +152,7 @@ class ScrollBasedMinimizeController extends ChangeNotifier {
     _cumulativeScrollUp = 0.0;
 
     // Accumulate scroll down distance
-    _cumulativeScrollDown += scrollDelta;
-
-    if (debugLogging && kDebugMode) {
-      print(
-          '[ScrollBasedMinimizeController] Scrolling DOWN - cumulative=$_cumulativeScrollDown, delta=$scrollDelta, initialThreshold=$scrollInitialOffset, minimizeThreshold=$scrollOffsetUntilMinimize');
-    }
-
-    // Only start tracking after initial offset threshold
+    _cumulativeScrollDown += scrollDelta;    // Only start tracking after initial offset threshold
     if (_cumulativeScrollDown < scrollInitialOffset) {
       return;
     }
@@ -189,12 +164,7 @@ class ScrollBasedMinimizeController extends ChangeNotifier {
     if (scrollPastInitial >= scrollOffsetUntilMinimize) {
       // Only transition if not already minimized or minimizing
       if (_state != ScrollMinimizeState.minimized &&
-          _state != ScrollMinimizeState.minimizing) {
-        if (debugLogging && kDebugMode) {
-          print(
-              '[ScrollBasedMinimizeController] Scrolled down enough (scrollPastInitial=$scrollPastInitial >= $scrollOffsetUntilMinimize), transitioning to minimizing');
-        }
-        _transitionToMinimizing();
+          _state != ScrollMinimizeState.minimizing) {        _transitionToMinimizing();
         // Reset tracking after transitioning
         _cumulativeScrollDown = 0.0;
       }
@@ -213,14 +183,7 @@ class ScrollBasedMinimizeController extends ChangeNotifier {
     _cumulativeScrollDown = 0.0;
 
     // Accumulate scroll up distance (delta is negative, so we add the absolute value)
-    _cumulativeScrollUp += scrollDelta.abs();
-
-    if (debugLogging && kDebugMode) {
-      print(
-          '[ScrollBasedMinimizeController] Scrolling UP - cumulative=$_cumulativeScrollUp, delta=$scrollDelta, initialThreshold=$scrollInitialOffset, restoreThreshold=$scrollOffsetUntilRestore');
-    }
-
-    // Only start tracking after initial offset threshold
+    _cumulativeScrollUp += scrollDelta.abs();    // Only start tracking after initial offset threshold
     if (_cumulativeScrollUp < scrollInitialOffset) {
       return;
     }
@@ -231,18 +194,8 @@ class ScrollBasedMinimizeController extends ChangeNotifier {
     // Check if scrolled enough to restore
     if (scrollPastInitial >= scrollOffsetUntilRestore) {
       // Only restore if currently minimized by scroll
-      if (isMinimizedByScroll) {
-        if (debugLogging && kDebugMode) {
-          print(
-              '[ScrollBasedMinimizeController] Scrolled up enough (scrollPastInitial=$scrollPastInitial >= $scrollOffsetUntilRestore), transitioning to restoring');
-        }
-        _transitionToRestoring();
-      } else {
-        if (debugLogging && kDebugMode) {
-          print(
-              '[ScrollBasedMinimizeController] Not minimized by scroll (state=$_state), skipping restore');
-        }
-        // Reset tracking even if not restoring to prevent issues
+      if (isMinimizedByScroll) {        _transitionToRestoring();
+      } else {        // Reset tracking even if not restoring to prevent issues
         _cumulativeScrollUp = 0.0;
       }
     }
@@ -252,32 +205,13 @@ class ScrollBasedMinimizeController extends ChangeNotifier {
     if (_state == ScrollMinimizeState.minimized ||
         _state == ScrollMinimizeState.minimizing) {
       return; // Already minimized or minimizing
-    }
-
-    if (debugLogging && kDebugMode) {
-      print(
-          '[ScrollBasedMinimizeController] _transitionToMinimizing: Transitioning from $_state to minimizing');
-    }
-
-    _state = ScrollMinimizeState.minimizing;
+    }    _state = ScrollMinimizeState.minimizing;
     notifyListeners();
   }
 
   void _transitionToRestoring() {
-    if (!isMinimizedByScroll) {
-      if (debugLogging && kDebugMode) {
-        print(
-            '[ScrollBasedMinimizeController] _transitionToRestoring: Not minimized by scroll (state=$_state), skipping');
-      }
-      return;
-    }
-
-    if (debugLogging && kDebugMode) {
-      print(
-          '[ScrollBasedMinimizeController] _transitionToRestoring: Transitioning from $_state to restoring');
-    }
-
-    _state = ScrollMinimizeState.restoring;
+    if (!isMinimizedByScroll) {      return;
+    }    _state = ScrollMinimizeState.restoring;
 
     // Reset all scroll tracking accumulators
     _cumulativeScrollDown = 0.0;
@@ -289,12 +223,7 @@ class ScrollBasedMinimizeController extends ChangeNotifier {
   /// Called by the widget when minimize animation completes
   /// This transitions from [ScrollMinimizeState.minimizing] to [ScrollMinimizeState.minimized]
   void onMinimizeComplete() {
-    if (_state == ScrollMinimizeState.minimizing) {
-      if (debugLogging && kDebugMode) {
-        print(
-            '[ScrollBasedMinimizeController] onMinimizeComplete: Transitioning from minimizing to minimized');
-      }
-      _state = ScrollMinimizeState.minimized;
+    if (_state == ScrollMinimizeState.minimizing) {      _state = ScrollMinimizeState.minimized;
       notifyListeners();
     }
   }
@@ -302,12 +231,7 @@ class ScrollBasedMinimizeController extends ChangeNotifier {
   /// Called by the widget when restore animation completes
   /// This transitions from [ScrollMinimizeState.restoring] to [ScrollMinimizeState.visible]
   void onRestoreComplete() {
-    if (_state == ScrollMinimizeState.restoring) {
-      if (debugLogging && kDebugMode) {
-        print(
-            '[ScrollBasedMinimizeController] onRestoreComplete: Transitioning from restoring to visible');
-      }
-      _state = ScrollMinimizeState.visible;
+    if (_state == ScrollMinimizeState.restoring) {      _state = ScrollMinimizeState.visible;
       notifyListeners();
     }
   }

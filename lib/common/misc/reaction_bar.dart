@@ -126,7 +126,6 @@ class _ReactionBarState extends State<ReactionBar> {
         // value.reactors.totalCount++;
       }
     } on Exception catch (e) {
-      debugPrint(e.toString());
       rethrow;
     }
   }
@@ -199,7 +198,7 @@ class _ReactionBarState extends State<ReactionBar> {
                                   try {
                                     await updateReaction(group);
                                   } on Exception catch (e) {
-                                    debugPrint(e.toString());
+                                    // Error updating reaction
                                   }
                                 },
                         ),

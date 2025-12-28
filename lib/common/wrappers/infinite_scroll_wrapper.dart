@@ -391,17 +391,10 @@ class _InfinitePaginationState<T> extends State<_InfinitePagination<T>> {
       return filteredItems
           .map((final T e) => _ListItem<T>(e, refresh: refresh))
           .toList();
-    } on DioException catch (error, s) {
-      log.e(error.response?.data, stackTrace: s);
-      rethrow;
+    } on DioException catch (error, s) {      rethrow;
       // Can't really do anything about this, the widget is not propagating the error above.
       // ignore: avoid_catches_without_on_clauses
-    } catch (error) {
-      log.e(
-        'Pagination exception',
-        error: error,
-      );
-      rethrow;
+    } catch (error) {      rethrow;
     }
   }
 

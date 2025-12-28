@@ -39,8 +39,6 @@ class ReadmeImageClassifier {
 
   /// Fetch + classify ---------------------------------------------------------
   Future<ReadmeImageResult> load(String url) async {
-    debugPrint('[README IMG] Fetching: $url');
-
     final response = await dio.get<List<int>>(
       url,
       options: Options(responseType: ResponseType.bytes),
@@ -49,17 +47,7 @@ class ReadmeImageClassifier {
     final bytes = Uint8List.fromList(response.data!);
     final headers = response.headers.map;
 
-    debugPrint(
-      '[README IMG] Status: ${response.statusCode}, '
-      'Bytes: ${bytes.length}',
-    );
-
     final isSvg = _isSvg(headers, bytes);
-
-    debugPrint(
-      '[README IMG] Final classification: '
-      '${isSvg ? 'SVG' : 'RASTER'}',
-    );
 
     if (isSvg) {
       final svg = _decodeUtf8(bytes);
@@ -79,39 +67,26 @@ class ReadmeImageClassifier {
     // 1. Content-Type header (strong signal)
     final ct = headers['content-type']?.first.toLowerCase();
     if (ct != null) {
-      debugPrint('[README IMG] Content-Type: $ct');
-
       if (ct.contains('image/svg+xml')) {
-        debugPrint('[README IMG] SVG via Content-Type');
         return true;
       }
 
       if (ct.startsWith('image/')) {
-        debugPrint('[README IMG] Raster via Content-Type');
         return false;
       }
-    } else {
-      debugPrint('[README IMG] No Content-Type header');
     }
 
     // 2. Content sniff (fallback)
     if (_looksLikeSvg(bytes)) {
-      debugPrint('[README IMG] SVG via content sniff');
       return true;
     }
 
     // 3. Unknown → raster (fallback B)
-    debugPrint('[README IMG] Unknown → fallback to raster');
     return false;
   }
 
   bool _looksLikeSvg(Uint8List bytes) {
     final prefix = _decodeUtf8(bytes, maxChars: 512).trimLeft();
-
-    debugPrint(
-      '[README IMG] Sniff prefix: '
-      '${prefix.substring(0, prefix.length.clamp(0, 80))}',
-    );
 
     if (prefix.startsWith('<svg')) return true;
     if (prefix.startsWith('<?xml') && prefix.contains('<svg')) {
