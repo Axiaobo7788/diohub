@@ -15,10 +15,11 @@ class CommitsTab extends StatelessWidget {
       create: (_) => CommitGraphProvider(
         repositoryProvider: repositoryProvider,
       ),
-      child: const CommitGraphView(),
+      child:  CommitGraphView(),
     );
   }
 }
+
 
 
 

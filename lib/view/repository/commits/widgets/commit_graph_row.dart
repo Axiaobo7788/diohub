@@ -5,7 +5,6 @@ import 'package:diohub/graphql/queries/repositories/__generated__/commits_list.d
 import 'package:diohub/utils/get_date.dart';
 import 'package:diohub/utils/utils.dart';
 import 'package:diohub/view/repository/commits/models/graph_layout.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 class CommitGraphRow extends StatelessWidget {
@@ -184,7 +183,34 @@ class _CommitRailPainter extends CustomPainter {
     final laneCount = math.max(laneData.maxLanes, 1);
     final centerY = size.height / 2;
     final startX = _railInset + _laneSpacing / 2;
+    final nodeX = startX + laneData.currentLane * _laneSpacing;
 
+    // Draw merge-back curves (lanes collapsing into other lanes)
+    for (final entry in laneData.collapsingLanes.entries) {
+      final fromLane = entry.key;
+      final toLane = entry.value;
+
+      final fromX = startX + fromLane * _laneSpacing;
+      final toX = startX + toLane * _laneSpacing;
+
+      final paint = Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 2
+        ..color = _laneColor(fromLane);
+
+      final path = Path()..moveTo(fromX, centerY);
+      path.cubicTo(
+        fromX,
+        centerY + size.height * 0.25,
+        toX,
+        centerY + size.height * 0.35,
+        toX,
+        size.height,
+      );
+      canvas.drawPath(path, paint);
+    }
+
+    // Draw vertical lane lines
     for (var i = 0; i < laneCount; i++) {
       final x = startX + i * _laneSpacing;
       final beforeActive =
@@ -205,9 +231,7 @@ class _CommitRailPainter extends CustomPainter {
       }
     }
 
-    // Merge curves from the current lane to secondary parent lanes (downward).
-    final nodeX = startX + laneData.currentLane * _laneSpacing;
-
+    // Draw merge curves (downward) - secondary parents
     final mergePaint = Paint()
       ..style = PaintingStyle.stroke
       ..strokeWidth = 2
@@ -216,145 +240,19 @@ class _CommitRailPainter extends CustomPainter {
     for (final target in laneData.mergeTargets) {
       if (target >= laneCount) continue;
       final targetX = startX + target * _laneSpacing;
-
       final path = Path()..moveTo(nodeX, centerY);
-      final midY = centerY + size.height * 0.25;
-      final endY = size.height;
       path.cubicTo(
         nodeX,
-        midY,
+        centerY + size.height * 0.25,
         targetX,
         centerY + size.height * 0.15,
         targetX,
-        endY,
+        size.height,
       );
       canvas.drawPath(path, mergePaint);
     }
 
-    // Incoming curves for lanes that carry this commit into the node.
-    final incomingPaint = Paint()
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 2
-      ..color = _laneColor(laneData.currentLane);
-
-    for (var i = 0; i < laneData.lanesBefore.length; i++) {
-      if (i == laneData.currentLane) {
-        continue;
-      }
-      final upstreamOid = laneData.lanesBefore[i];
-      if (upstreamOid == null || upstreamOid != commitOid) {
-        continue;
-      }
-      // This lane was waiting for this commit - draw incoming curve
-      final fromX = startX + i * _laneSpacing;
-      final path = Path()..moveTo(fromX, 0);
-      path.cubicTo(
-        fromX,
-        centerY * 0.4,
-        nodeX,
-        centerY * 0.6,
-        nodeX,
-        centerY,
-      );
-      canvas.drawPath(path, incomingPaint);
-    }
-
-    // Incoming curve-back lines: check all lanes for curve-back info pointing to this commit
-    final isTargetCommit = commitOid.startsWith('02d1c20');
-    final hasCurveBacks = laneData.curveBacksByLane.isNotEmpty;
-
-    // Only log for commits with curve-backs or the target commit
-    if (isTargetCommit || hasCurveBacks) {
-      debugPrint(
-          '[CommitRailPainter] ${commitOid.substring(0, 7)}: Checking for curve-backs');
-      debugPrint(
-          '[CommitRailPainter]   curveBacksByLane: ${laneData.curveBacksByLane.map((k, v) => MapEntry(k, '${v.parentOid.substring(0, 7)}@lane${v.parentLane}'))}');
-      debugPrint(
-          '[CommitRailPainter]   currentLane: ${laneData.currentLane}, laneCount: $laneCount');
-    }
-
-    // Check all lanes up to maxLanes to see if any have curve-back info pointing to this commit
-    for (var laneIndex = 0; laneIndex < laneCount; laneIndex++) {
-      final curveBackInfo = laneData.curveBacksByLane[laneIndex];
-      if (curveBackInfo == null) {
-        continue; // No curve-back for this lane
-      }
-
-      // Check if this curve-back points to the current commit
-      final oidMatch = curveBackInfo.parentOid == commitOid;
-
-      if (isTargetCommit || oidMatch) {
-        debugPrint(
-            '[CommitRailPainter]   Lane $laneIndex: curve-back to ${curveBackInfo.parentOid.substring(0, 7)}');
-        debugPrint(
-            '[CommitRailPainter]     OID match: $oidMatch (${curveBackInfo.parentOid.substring(0, 7)} == ${commitOid.substring(0, 7)})');
-      }
-
-      if (oidMatch) {
-        // Use the stored parentLane from when the curve-back was detected
-        // This is where the parent WAS when detected, which is what we want to draw to
-        final targetLane = curveBackInfo.parentLane;
-        final currentCommitLane = laneData.currentLane;
-
-        debugPrint('[CommitRailPainter]     ✓ OID MATCH!');
-        debugPrint(
-            '[CommitRailPainter]       Source: lane $laneIndex, Target: lane $targetLane, Current: lane $currentCommitLane');
-
-        // Only draw if source and target are different lanes
-        if (laneIndex != targetLane) {
-          debugPrint(
-              '[CommitRailPainter]       ✓ DRAWING (source $laneIndex != target $targetLane)');
-
-          final targetLaneX = startX + targetLane * _laneSpacing;
-
-          final curveBackPaint = Paint()
-            ..style = PaintingStyle.stroke
-            ..strokeWidth = 2
-            ..color = _laneColor(laneIndex);
-
-          // If source lane == current commit lane, start from commit node (lane mismatch case)
-          // Otherwise, start from source lane top (normal case)
-          final startXCoord = (laneIndex == currentCommitLane
-                  ? startX + currentCommitLane * _laneSpacing
-                  : startX + laneIndex * _laneSpacing)
-              .toDouble();
-          final startYCoord = (laneIndex == currentCommitLane ? centerY : 0.0);
-
-          final path = Path()..moveTo(startXCoord, startYCoord);
-          if (laneIndex == currentCommitLane) {
-            // Start from commit node, curve upward to target lane
-            path.cubicTo(
-              startXCoord,
-              centerY * 0.6, // Control point 1: start curving upward
-              targetLaneX,
-              centerY * 0.4, // Control point 2: move toward target lane
-              targetLaneX,
-              0, // End at top of target lane
-            );
-            debugPrint(
-                '[CommitRailPainter]       ✓ Curve drawn from commit node ($startXCoord, $startYCoord) to ($targetLaneX, 0)');
-          } else {
-            // Start from source lane top, curve down to target lane
-            path.cubicTo(
-              startXCoord,
-              centerY * 0.4, // Control point 1: stay near source lane
-              targetLaneX,
-              centerY * 0.6, // Control point 2: move toward target lane
-              targetLaneX,
-              centerY, // End at the target lane
-            );
-            debugPrint(
-                '[CommitRailPainter]       ✓ Curve drawn from source lane ($startXCoord, $startYCoord) to ($targetLaneX, $centerY)');
-          }
-          canvas.drawPath(path, curveBackPaint);
-        } else {
-          debugPrint(
-              '[CommitRailPainter]       ✗ SKIPPED: source ($laneIndex) == target ($targetLane)');
-        }
-      }
-    }
-
-    // Commit node
+    // Draw commit node
     final nodePaint = Paint()
       ..color = _laneColor(laneData.currentLane)
       ..style = PaintingStyle.fill;
