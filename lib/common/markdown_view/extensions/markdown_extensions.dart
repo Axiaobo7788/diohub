@@ -1,7 +1,5 @@
 import 'package:diohub/common/bottom_sheet/url_actions.dart';
-import 'package:diohub/common/markdown_view/markdown_body.dart';
 import 'package:diohub/common/misc/code_block_view.dart';
-import 'package:diohub/common/misc/image_loader.dart';
 import 'package:diohub/common/misc/info_card.dart';
 import 'package:diohub/common/misc/ink_pot.dart';
 import 'package:diohub/style/surface_style_theme.dart';
@@ -11,16 +9,9 @@ import 'package:diohub/utils/utils.dart';
 import 'package:diohub/view/issues_pulls/widgets/discussion_comment.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_material_design_icons/flutter_material_design_icons.dart';
-import 'package:flutter_svg/svg.dart';
 import 'package:flutter_widget_from_html/flutter_widget_from_html.dart';
 import 'package:html/dom.dart' as dom;
 import 'package:pull_down_button/pull_down_button.dart';
-
-part 'a_extension.dart';
-part 'code_extension.dart';
-part 'div_extension.dart';
-part 'img_extension.dart';
-part 'pre_extension.dart';
 
 extension Tag on dom.Element {
   bool isTag(final String tag) => localName == tag;
@@ -101,10 +92,8 @@ extension on BuildTree {
 class MyWidgetFactory extends WidgetFactory {
   MyWidgetFactory({
     required this.fetchState,
-    // required this.codeBlockStyle,
   });
 
-  // final MarkdownBodyCodeBlockStyle? codeBlockStyle;
   final HtmlWidgetState? Function() fetchState;
 
   @override
@@ -138,7 +127,8 @@ class MyWidgetFactory extends WidgetFactory {
             child: DecoratedBox(
               decoration: BoxDecoration(
                 color: context.colorScheme.surfaceVariant,
-                borderRadius: Theme.of(context).surfaceStyle.borderRadiusMedium(),
+                borderRadius:
+                    Theme.of(context).surfaceStyle.borderRadiusMedium(),
               ),
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 4),
@@ -191,7 +181,6 @@ class MyWidgetFactory extends WidgetFactory {
                 color: context.colorScheme.primary,
                 width: 2,
               ),
-
             ),
           ),
           child: Padding(
@@ -200,127 +189,19 @@ class MyWidgetFactory extends WidgetFactory {
           ),
         ),
       );
-    // ..wrapTaggedWidget(
-    //   tag: 'img',
-    //   newWidgetBuilder: (context, child, tree) => buildImageTag(
-    //     tree.element,
-    //     imgSrcModifiers: null,
-    //   ),
-    // );
     super.parse(meta);
   }
 }
-
-Widget buildImageTag(
-  final dom.Element element, {
-  required final Iterable<MarkdownImgSrcModifiers>? imgSrcModifiers,
-}) {
-  String src = element.attributes['src']!;
-  for (final MarkdownImgSrcModifiers modifier
-      in imgSrcModifiers ?? <MarkdownImgSrcModifiers>[]) {
-    src = modifier.call(
-      MarkdownImgSrcData(src),
-    );
-  }
-  if (src.split('.').last.contains('svg')) {
-    return SvgPicture.network(
-      src,
-    );
-  }
-  return Padding(
-    padding: const EdgeInsets.all(4),
-    child: ImageLoader(
-      src,
-      height: double.tryParse(
-        element.attributes['height'] ?? '',
-      ),
-      width: double.tryParse(
-        element.attributes['width'] ?? '',
-      ),
-      // Some SVGs don't have svg in their URL so will miss the
-      // if check above. They will fail in the image loader
-      // so will build here.
-      errorBuilder: (final BuildContext context) => SvgPicture.network(
-        src,
-      ),
-    ),
-  );
-}
-
-// List<HtmlExtension> markdownTagExtensionsTagExtensions(
-//   final BuildContext context, {
-//   required final List<MarkdownImgSrcModifiers>? imgSrcModifiers,
-// }) =>
-//     <HtmlExtension>[
-//       ..._tagWrapExtensions(context),
-//       ..._tagExtensions(
-//         context,
-//         imgSrcModifiers: imgSrcModifiers,
-//       ),
-//     ];
-
-// List<TagExtension> _tagExtensions(
-//   final BuildContext context, {
-//   required final List<MarkdownImgSrcModifiers>? imgSrcModifiers,
-// }) =>
-//     <TagExtension>[
-//       // _divExtension(context).extension,
-//       // _imgExtension(
-//       //   context,
-//       //   imgSrcModifiers: imgSrcModifiers ?? <MarkdownImgSrcModifiers>[],
-//       // ).extension,
-//       // _preExtension(context).extension,
-//       // _aExtension(context).extension,
-//       // _codeExtension(context).extension,
-//       // TagExtension(tagsToExtend: {'li'}, child: Placeholder()),
-//     ];
-
-// List<TagExtension> _tagWrapExtensions(final BuildContext context) =>
-//     <TagExtension>[
-//       TagExtension(
-//         tagsToExtend: <String>{
-//           'blockquote',
-//         },
-//         builder: (final ExtensionContext p0) => DecoratedBox(
-//           // padding: const EdgeInsets.only(bottom: 40),
-
-// child: Padding(
-//   padding: const EdgeInsets.only(left: 4),
-//   child: p0.child,
-// ),
-//         ),
-//       ),
-//       // TagExtension(
-//       //   tagsToExtend: <String>{
-//       //     'code',
-//       //   },
-//       //   builder: (final ExtensionContext child) => Padding(
-//       //     padding: const EdgeInsets.symmetric(vertical: 1),
-//       //     child: DecoratedBox(
-//       //       decoration: BoxDecoration(
-//       //         // color: context.palette.faded1,
-//       //         borderRadius: smallBorderRadius,
-//       //       ),
-//       //       child: Padding(
-//       //         padding: const EdgeInsets.symmetric(horizontal: 4),
-//       //         child: child.child,
-//       //       ),
-//       //     ),
-//       //   ),
-//       // ),
-//     ];
 
 class CodeView extends StatefulWidget {
   const CodeView(
     this.data, {
     super.key,
     this.language,
-    this.codeBlockStyle,
   });
 
   final String data;
   final String? language;
-  final MarkdownBodyCodeBlockStyle? codeBlockStyle;
 
   @override
   _CodeViewState createState() => _CodeViewState();
@@ -341,8 +222,6 @@ class _CodeViewState extends State<CodeView> {
 
     return MenuInfoCard(
       title: widget.language ?? 'Code',
-      elevation: widget.codeBlockStyle?.elevation,
-      headerColor: widget.codeBlockStyle?.headerColor,
       leading: Container(
         decoration: BoxDecoration(
           color: Color(
@@ -400,56 +279,3 @@ class _CodeViewState extends State<CodeView> {
     );
   }
 }
-
-// abstract class _ExtensionWidget extends StatelessWidget {
-//   const _ExtensionWidget(
-//     this.extensionContext,
-//   );
-//
-//   final ExtensionContext extensionContext;
-//
-//   String? get divClass => extensionContext.elementName;
-//
-//   LinkedHashMap<Object, String>? get attributes =>
-//       extensionContext.element?.attributes;
-//
-//   Widget get defaultChild => extensionContext.child;
-// }
-
-class _MarkdownExtension {
-  // _MarkdownExtension({
-  //   required this.tag,
-  //   this.child,
-  //   this.builder,
-  // }) : assert(
-  //         (child != null) || (builder != null),
-  //         'Either child or builder needs to be provided to TagExtension',
-  //       );
-  //
-  // final String tag;
-  // final Widget? child;
-  // final _ExtensionWidget Function(ExtensionContext extensionContext)? builder;
-  //
-  // TagExtension get extension => TagExtension(
-  //       tagsToExtend: <String>{
-  //         tag,
-  //       },
-  //       builder: builder,
-  //       child: child,
-  //     );
-}
-
-// class FixedTagWrap extends TagWrapExtension {
-//   FixedTagWrap({required super.tagsToWrap, required super.builder});
-//
-//   @override
-//   InlineSpan build(ExtensionContext context) {
-//     final child = CssBoxWidget.withInlineSpanChildren(
-//       children: context.inlineSpanChildren!,
-//       style: context.style!,
-//     );
-//
-//     return child;
-//   }
-// }
-

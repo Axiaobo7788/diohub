@@ -67,11 +67,6 @@ class TrimmableMarkdownContent extends StatelessWidget {
         MarkdownBody(
           content,
           buildAsync: false,
-          style: MarkdownBodyStyle(
-            codeBlockStyle: MarkdownBodyCodeBlockStyle(
-              elevation: 0,
-            ),
-          ),
           textStyle: Theme.of(context).textTheme.bodySmall?.copyWith(
                 color: context.colorScheme.onSurfaceVariant.withOpacity(0.8),
                 height: 1.35,
