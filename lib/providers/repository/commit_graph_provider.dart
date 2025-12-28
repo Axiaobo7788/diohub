@@ -18,6 +18,7 @@ class CommitGraphProvider extends BaseDataProvider<CommitGraphData> {
 
   Map<String, List<String>>? _branchTips;
   List<GbranchesListData_repository_refs_edges>? _allBranches;
+  String? _lastCursor;
 
   Map<String, List<String>>? get branchTips => _branchTips;
   List<String>? get availableBranches =>
@@ -267,6 +268,69 @@ class CommitGraphProvider extends BaseDataProvider<CommitGraphData> {
       }
       error(error: e);
     }
+  }
+
+  /// Load a page of commits for pagination
+  /// 
+  /// [cursor] - Cursor from previous page (null for first page)
+  /// [refresh] - Whether this is a refresh request
+  /// Returns list of commits (20 per page)
+  Future<List<GcommitListItem>> loadCommitsPage({
+    String? cursor,
+    bool refresh = false,
+  }) async {
+    // Reset cursor on refresh
+    if (refresh) {
+      _lastCursor = null;
+    }
+
+    final repo = repositoryProvider.data;
+    final owner = repo.owner.when(
+      user: (u) => u.login,
+      organization: (o) => o.login,
+      orElse: () => throw Exception('Invalid repository owner'),
+    );
+    final repoName = repo.name;
+    final selectedBranch = branchName ?? repo.defaultBranchRef?.name ?? 'main';
+    final fullRefName = selectedBranch.startsWith('refs/') 
+        ? selectedBranch 
+        : 'refs/heads/$selectedBranch';
+
+    // Use provided cursor or last stored cursor
+    final cursorToUse = cursor ?? _lastCursor;
+
+    if (kDebugMode) {
+      log.d('[CommitGraphProvider] loadCommitsPage: cursor=$cursorToUse, refresh=$refresh');
+      log.d('[CommitGraphProvider] Loading from branch: $selectedBranch (fullRef: $fullRefName)');
+    }
+
+    final history = await RepositoryServices.getCommitsListGQL(
+      owner: owner,
+      repo: repoName,
+      ref: fullRefName,
+      first: 20,
+      after: cursorToUse,
+      refresh: refresh,
+    );
+
+    final commits = history.edges
+            ?.map((e) => e?.node)
+            .whereType<GcommitListItem>()
+            .toList() ??
+        [];
+
+    // Store cursor from last edge for next page
+    if (history.edges != null && history.edges!.isNotEmpty) {
+      _lastCursor = history.edges!.last?.cursor;
+    }
+
+    if (kDebugMode) {
+      log.d('[CommitGraphProvider] loadCommitsPage: Loaded ${commits.length} commits');
+      log.d('[CommitGraphProvider] loadCommitsPage: hasNextPage=${history.pageInfo.hasNextPage}');
+      log.d('[CommitGraphProvider] loadCommitsPage: stored cursor=$_lastCursor');
+    }
+
+    return commits;
   }
 }
 

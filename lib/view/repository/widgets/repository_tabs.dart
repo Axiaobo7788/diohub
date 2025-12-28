@@ -56,7 +56,7 @@ List<DynamicTab> createRepositoryTabs({
     ),
     DynamicTab(
       identifier: 'Code',
-      isFocusedOnInit: isDeepLinkCode(pathData),
+      // isFocusedOnInit: isDeepLinkCode(pathData),
       tabViewBuilder: (final BuildContext context) => CodeBrowser(
         showCommitHistory: pathData?.component(2) == 'commits',
       ),

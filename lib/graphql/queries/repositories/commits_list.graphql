@@ -136,7 +136,7 @@ fragment commitListItem on Commit {
       }
     }
   }
-  parents(first: 1) {
+  parents(first: 10) {
     edges {
       node {
         oid
