@@ -41,10 +41,24 @@ Future<void> debugURLLauncher() async {
   // https://github.com/flutter/flutter/issues/120732
   // https://github.com/flutter/flutter/issues/128696
   // url = 'https://github.com/firebase/flutterfire/issues/1041';
+  url = 'https://github.com/namanshergill/flutter_scroll_to_top/commits';
   if (kDebugMode) {
-    await deepLinkNavigate(
-      Uri.parse(url ?? ''),
-    );
+    // Wait for the router to be ready before navigating
+    BuildContext? context;
+    int attempts = 0;
+    while (context == null && attempts < 50) {
+      await Future<void>.delayed(const Duration(milliseconds: 100));
+      context = customRouter.navigatorKey.currentContext;
+      attempts++;
+    }
+
+    if (context != null) {
+      await deepLinkNavigate(
+        Uri.parse(url ?? ''),
+      );
+    } else {
+      debugPrint('Failed to get router context for deep link navigation');
+    }
   }
 }
 
