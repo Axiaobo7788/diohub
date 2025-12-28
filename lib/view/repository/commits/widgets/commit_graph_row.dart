@@ -40,6 +40,7 @@ class CommitGraphRow extends StatelessWidget {
                   painter: _CommitRailPainter(
                     laneData: laneData,
                     colorScheme: Theme.of(context).colorScheme,
+                    commitOid: commit.oid,
                   ),
                 ),
               ),
@@ -170,10 +171,12 @@ class _CommitRailPainter extends CustomPainter {
   _CommitRailPainter({
     required this.laneData,
     required this.colorScheme,
+    required this.commitOid,
   });
 
   final LaneData laneData;
   final ColorScheme colorScheme;
+  final String commitOid;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -224,6 +227,29 @@ class _CommitRailPainter extends CustomPainter {
         endY,
       );
       canvas.drawPath(path, mergePaint);
+    }
+
+    // Incoming curves for lanes that carry this commit into the node.
+    final incomingPaint = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2
+      ..color = _laneColor(laneData.currentLane);
+
+    for (var i = 0; i < laneData.lanesBefore.length; i++) {
+      if (i == laneData.currentLane) continue;
+      final upstreamOid = laneData.lanesBefore[i];
+      if (upstreamOid != commitOid) continue;
+      final fromX = startX + i * _laneSpacing;
+      final path = Path()..moveTo(fromX, 0);
+      path.cubicTo(
+        fromX,
+        centerY * 0.4,
+        nodeX,
+        centerY * 0.6,
+        nodeX,
+        centerY,
+      );
+      canvas.drawPath(path, incomingPaint);
     }
 
     // Commit node

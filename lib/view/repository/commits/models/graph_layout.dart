@@ -88,6 +88,19 @@ class GraphLayoutCalculator {
         mergeTargets.add(mergeLane);
       }
 
+      // Collapse lanes that now converge to the same downstream commit.
+      // Keep the first lane per OID and free duplicates for reuse.
+      final seenParentLane = <String, int>{};
+      for (var i = 0; i < lanesAfter.length; i++) {
+        final oid = lanesAfter[i];
+        if (oid == null) continue;
+        if (seenParentLane.containsKey(oid)) {
+          lanesAfter[i] = null;
+        } else {
+          seenParentLane[oid] = i;
+        }
+      }
+
       // Trim trailing empty lanes while keeping width monotonic via maxLanes.
       while (lanesAfter.isNotEmpty && lanesAfter.last == null) {
         lanesAfter.removeLast();
