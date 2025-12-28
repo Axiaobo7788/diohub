@@ -26,7 +26,7 @@ class CommitGraphRow extends StatelessWidget {
     final branches = branchTips?[commit.oid] ?? const <String>[];
 
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 12),
       child: ConstrainedBox(
         constraints: const BoxConstraints(minHeight: _rowMinHeight),
         child: Row(
@@ -48,7 +48,7 @@ class CommitGraphRow extends StatelessWidget {
             const SizedBox(width: 12),
             Expanded(
               child: Padding(
-                padding: const EdgeInsets.symmetric(vertical: 4),
+                padding: EdgeInsets.zero,
                 child: _CommitContent(
                   commit: commit,
                   branches: branches,
@@ -215,9 +215,9 @@ class _CommitRailPainter extends CustomPainter {
       final path = Path()..moveTo(fromX, centerY);
       path.cubicTo(
         fromX,
-        centerY + size.height * 0.25,
+        centerY + _halfRow * 0.6,
         toX,
-        centerY + size.height * 0.35,
+        centerY + _halfRow * 0.6,
         toX,
         size.height,
       );
@@ -225,36 +225,51 @@ class _CommitRailPainter extends CustomPainter {
     }
 
     // Draw vertical lane lines
-    for (var i = 0; i < laneCount; i++) {
-      final snapshotBefore = i < laneData.lanesBefore.length
-          ? laneData.lanesBefore[i]
-          : null;
-      final snapshotAfter = i < laneData.lanesAfter.length
-          ? laneData.lanesAfter[i]
-          : null;
+    // Iterate by COLUMN, not index (padded arrays mean index != column)
+    for (var col = 0; col < laneCount; col++) {
+      final snapshotBefore = laneData.lanesBefore.firstWhere(
+        (s) => s.column == col,
+        orElse: () => const LaneSnapshot(
+          laneId: '',
+          column: -1,
+          activeBefore: false,
+          activeAfter: false,
+          expectedOid: null,
+        ),
+      );
 
-      if (snapshotBefore == null && snapshotAfter == null) continue;
+      final snapshotAfter = laneData.lanesAfter.firstWhere(
+        (s) => s.column == col,
+        orElse: () => const LaneSnapshot(
+          laneId: '',
+          column: -1,
+          activeBefore: false,
+          activeAfter: false,
+          expectedOid: null,
+        ),
+      );
 
-      final x = startX + i * _laneSpacing;
-      final beforeActive = snapshotBefore?.activeBefore ?? false;
-      final afterActive = snapshotAfter?.activeAfter == true &&
-          (snapshotBefore?.activeBefore == true ||
-              snapshotAfter?.laneId == laneData.currentLaneId);
+      final x = startX + col * _laneSpacing;
 
-      // Use laneId for color (stable identity)
-      // Priority: lanesBefore first (never override identity from lanesAfter)
-      final laneId =
-          snapshotBefore?.laneId ??
-          snapshotAfter?.laneId ??
-          '';
-      
-      // Skip padded lanes (empty laneId)
-      if (laneId.isEmpty) continue;
-      
+      // Resolve laneId ONCE per column (before any drawing)
+      String? resolvedLaneId;
+      if (snapshotBefore.laneId.isNotEmpty) {
+        resolvedLaneId = snapshotBefore.laneId;
+      } else if (snapshotAfter.laneId.isNotEmpty) {
+        resolvedLaneId = snapshotAfter.laneId;
+      }
+
+      if (resolvedLaneId == null) continue;
+
+      final beforeActive = snapshotBefore.activeBefore;
+      final afterActive = snapshotAfter.activeAfter &&
+          (snapshotBefore.activeBefore ||
+              resolvedLaneId == laneData.currentLaneId);
+
       final paint = Paint()
         ..style = PaintingStyle.stroke
         ..strokeWidth = 2
-        ..color = _laneColorById(laneId);
+        ..color = _laneColorById(resolvedLaneId);
 
       if (beforeActive) {
         canvas.drawLine(Offset(x, 0), Offset(x, centerY), paint);
@@ -281,9 +296,9 @@ class _CommitRailPainter extends CustomPainter {
       final path = Path()..moveTo(nodeX, centerY);
       path.cubicTo(
         nodeX,
-        centerY + size.height * 0.25,
+        centerY + _halfRow * 0.6,
         targetX,
-        centerY + size.height * 0.15,
+        centerY + _halfRow * 0.6,
         targetX,
         size.height,
       );
@@ -346,3 +361,4 @@ const double _laneSpacing = 18;
 const double _nodeRadius = 5;
 const double _railInset = 6;
 const double _rowMinHeight = 68;
+const double _halfRow = _rowMinHeight / 2;

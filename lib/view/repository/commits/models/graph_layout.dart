@@ -135,13 +135,14 @@ class GraphLayoutCalculator {
         if (currentLaneIndex != -1) {
           currentLane = lanes[currentLaneIndex];
         } else {
-          // Create new lane
+          // Create new lane with permanent column assignment
           currentLane = Lane(
             id: _generateLaneId(),
             expectedOid: null,
-            column: lanes.length,
+            column: maxLanes, // permanent column
           );
           lanes.add(currentLane);
+          maxLanes = maxLanes + 1; // increment after creation
           currentLaneIndex = lanes.length - 1;
         }
       }
@@ -166,12 +167,14 @@ class GraphLayoutCalculator {
           if (mergeLaneIndex != -1) {
             mergeLane = lanes[mergeLaneIndex];
           } else {
+            // Create new lane with permanent column assignment
             mergeLane = Lane(
               id: _generateLaneId(),
               expectedOid: null,
-              column: lanes.length,
+              column: maxLanes, // permanent column
             );
             lanes.add(mergeLane);
+            maxLanes = maxLanes + 1; // increment after creation
             mergeLaneIndex = lanes.length - 1;
           }
         }
@@ -221,19 +224,8 @@ class GraphLayoutCalculator {
         }
       }
 
-      // Remove dying lanes
-      for (final dyingLane in dyingLanes) {
-        lanes.remove(dyingLane);
-      }
-
-      // Reassign columns to be compact (maintain order, reassign sequentially)
-      lanes.sort((a, b) => a.column.compareTo(b.column));
-      for (var i = 0; i < lanes.length; i++) {
-        lanes[i].column = i;
-      }
-
-      // Update collapsingLanes to use new column positions
-      // (The lane IDs remain stable, columns are just visual positions)
+      // Lanes are NEVER removed - they just become inactive (expectedOid = null)
+      // Columns are NEVER reassigned - they remain permanent once assigned
 
       // Create snapshot of lanesAfter
       final lanesAfter = lanes
@@ -246,22 +238,18 @@ class GraphLayoutCalculator {
               ))
           .toList();
 
-      // Update maxLanes (monotonic width)
-      maxLanes = math.max(
-        maxLanes,
-        math.max(lanes.length, currentLane.column + 1),
-      );
+      // Update maxLanes (monotonic width) - based on actual lane columns
+      for (final lane in lanes) {
+        maxLanes = math.max(maxLanes, lane.column + 1);
+      }
 
-      // Pad to maxLanes for consistent width
-      final paddedBefore = _padLaneSnapshots(lanesBefore, maxLanes);
-      final paddedAfter = _padLaneSnapshots(lanesAfter, maxLanes);
-
+      // Build snapshots ONLY from real lanes (no padding, no fake lanes)
       results.add(
         CommitWithLaneData(
           commit: commit,
           laneData: LaneData(
-            lanesBefore: paddedBefore,
-            lanesAfter: paddedAfter,
+            lanesBefore: lanesBefore,
+            lanesAfter: lanesAfter,
             currentLaneId: currentLane.id,
             mergeTargets: mergeTargets,
             collapsingLanes: collapsingLanes,
@@ -280,21 +268,4 @@ class GraphLayoutCalculator {
           .whereType<String>()
           .toList() ??
       const [];
-
-  List<LaneSnapshot> _padLaneSnapshots(
-    final List<LaneSnapshot> value,
-    final int targetLength,
-  ) {
-    final padded = List<LaneSnapshot>.from(value);
-    while (padded.length < targetLength) {
-      padded.add(LaneSnapshot(
-        laneId: '',
-        column: padded.length,
-        activeBefore: false,
-        activeAfter: false,
-        expectedOid: null,
-      ));
-    }
-    return padded;
-  }
 }
