@@ -300,20 +300,10 @@ class RepositoryServices {
         throw Exception('Commit not found');
       }
 
-      // Log object type for debugging
-      if (kDebugMode) {
-        log.d(
-            '[RepositoryServices] Object OID "$oid" type: ${data.object!.G__typename}');
-      }
-
+      // Log object type for debugging     
       final commit = data.object!.when(
         commit: (c) => c,
-        orElse: () {
-          if (kDebugMode) {
-            log.e(
-                '[RepositoryServices] Object OID "$oid" is not a Commit, type: ${data.object!.G__typename}');
-          }
-          throw Exception(
+        orElse: () {          throw Exception(
               'Object is not a Commit (type: ${data.object!.G__typename})');
         },
       );
@@ -342,35 +332,19 @@ class RepositoryServices {
         throw Exception('Ref not found');
       }
 
-      // Log target type for debugging
-      if (kDebugMode) {
-        log.d(
-            '[RepositoryServices] Branch "$ref" target type: ${data.ref!.target!.G__typename}');
-      }
-
-      // Handle Commit or Tag -> Commit
+      // Log target type for debugging      // Handle Commit or Tag -> Commit
       return data.ref!.target!.when(
         commit: (c) => c.history,
         tag: (t) {
           // Tag.target is also GitObject, need to check if it's a Commit
           return t.target.when(
             commit: (c) => c.history,
-            orElse: () {
-              if (kDebugMode) {
-                log.e(
-                    '[RepositoryServices] Tag target is not a Commit, type: ${t.target.G__typename}');
-              }
-              throw Exception(
+            orElse: () {              throw Exception(
                   'Tag target is not a Commit (type: ${t.target.G__typename})');
             },
           );
         },
-        orElse: () {
-          if (kDebugMode) {
-            log.e(
-                '[RepositoryServices] Branch "$ref" target is not a Commit or Tag, type: ${data.ref!.target!.G__typename}');
-          }
-          throw Exception(
+        orElse: () {          throw Exception(
               'Target is not a Commit or Tag (type: ${data.ref!.target!.G__typename})');
         },
       );
@@ -393,44 +367,22 @@ class RepositoryServices {
         refreshCache: refresh,
       );
       final data = GcommitsListData.fromJson(response.data!)!.repository!;
-      if (data.defaultBranchRef?.target == null) {
-        if (kDebugMode) {
-          log.e('[RepositoryServices] Repository has no default branch');
-        }
-        throw Exception('Repository has no default branch');
+      if (data.defaultBranchRef?.target == null) {        throw Exception('Repository has no default branch');
       }
 
-      // Log default branch info
-      if (kDebugMode) {
-        log.d(
-            '[RepositoryServices] Default branch ref exists: ${data.defaultBranchRef != null}');
-        log.d(
-            '[RepositoryServices] Default branch target type: ${data.defaultBranchRef!.target!.G__typename}');
-      }
-
-      // Handle Commit or Tag -> Commit
+      // Log default branch info      // Handle Commit or Tag -> Commit
       return data.defaultBranchRef!.target!.when(
         commit: (c) => c.history,
         tag: (t) {
           // Tag.target is also GitObject, need to check if it's a Commit
           return t.target.when(
             commit: (c) => c.history,
-            orElse: () {
-              if (kDebugMode) {
-                log.e(
-                    '[RepositoryServices] Tag target is not a Commit, type: ${t.target.G__typename}');
-              }
-              throw Exception(
+            orElse: () {              throw Exception(
                   'Tag target is not a Commit (type: ${t.target.G__typename})');
             },
           );
         },
-        orElse: () {
-          if (kDebugMode) {
-            log.e(
-                '[RepositoryServices] Default branch target is not a Commit or Tag, type: ${data.defaultBranchRef!.target!.G__typename}');
-          }
-          throw Exception(
+        orElse: () {          throw Exception(
               'Target is not a Commit or Tag (type: ${data.defaultBranchRef!.target!.G__typename})');
         },
       );

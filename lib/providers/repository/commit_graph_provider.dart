@@ -28,12 +28,7 @@ class CommitGraphProvider extends BaseDataProvider<CommitGraphData> {
     required String owner,
     required String repoName,
     required String refName,
-  }) async {
-    if (kDebugMode) {
-      log.d('[CommitGraphProvider] Loading commits using ref: $refName');
-    }
-    
-    try {
+  }) async {    try {
       final history = await RepositoryServices.getCommitsListGQL(
         owner: owner,
         repo: repoName,
@@ -41,86 +36,45 @@ class CommitGraphProvider extends BaseDataProvider<CommitGraphData> {
         first: 50,
       );
       
-      if (kDebugMode) {
-        log.d('[CommitGraphProvider] Successfully loaded commits using ref query');
-        log.d('[CommitGraphProvider] History connection edges count: ${history.edges?.length ?? 0}');
-        log.d('[CommitGraphProvider] History connection hasNextPage: ${history.pageInfo.hasNextPage}');
-        if (history.edges != null && history.edges!.isNotEmpty) {
-          log.d('[CommitGraphProvider] First commit OID: ${history.edges!.first?.node?.oid}');
-          log.d('[CommitGraphProvider] First edge node type: ${history.edges!.first?.node?.G__typename ?? "null"}');
-        } else {
-          log.w('[CommitGraphProvider] History edges is null or empty');
-        }
+      if (kDebugMode) {        if (history.edges != null && history.edges!.isNotEmpty) {        } else {        }
       }
       return history;
-    } catch (e) {
-      if (kDebugMode) {
-        log.e('[CommitGraphProvider] Error loading commits from "$refName": $e');
-        log.w('[CommitGraphProvider] Falling back to default branch query');
-      }
-      
-      // Fallback to default branch query
+    } catch (e) {      // Fallback to default branch query
       final history = await RepositoryServices.getCommitsListGQL(
         owner: owner,
         repo: repoName,
         ref: null, // This triggers the default branch query path
         first: 50,
-      );
-      
-      if (kDebugMode) {
-        log.d('[CommitGraphProvider] Successfully loaded commits using default branch query');
-      }
-      return history;
+      );      return history;
     }
   }
 
   @override
   Future<CommitGraphData> setInitData({
     final bool isInitialisation = false,
-  }) async {
-    if (kDebugMode) {
-      log.d('[CommitGraphProvider] setInitData called, branchName: $branchName');
-    }
-
-    final repo = repositoryProvider.data;
+  }) async {    final repo = repositoryProvider.data;
     final owner = repo.owner.when(
       user: (u) => u.login,
       organization: (o) => o.login,
       orElse: () => throw Exception('Invalid repository owner'),
     );
-    final repoName = repo.name;
-
-    if (kDebugMode) {
-      log.d('[CommitGraphProvider] Loading branches for $owner/$repoName');
-    }
-
-    // Load all branches
+    final repoName = repo.name;    // Load all branches
     _allBranches = await RepositoryServices.fetchBranchListGQL(
       owner: owner,
       repo: repoName,
       first: 100,
-    );
-
-    if (kDebugMode) {
-      log.d('[CommitGraphProvider] Loaded ${_allBranches?.length ?? 0} branches');
-    }
-
-    // Build branch tips map
+    );    // Build branch tips map
     _branchTips = {};
     for (final branch in _allBranches!) {
       final target = branch.node?.target;
       final branchName = branch.node?.name;
       
-      if (kDebugMode && branchName != null) {
-        log.d('[CommitGraphProvider] Processing branch: $branchName, target type: ${target?.G__typename ?? "null"}');
-      }
+      if (kDebugMode && branchName != null) {      }
       
       final commitOid = target?.when(
         commit: (c) => c.oid,
         orElse: () {
-          if (kDebugMode && branchName != null) {
-            log.w('[CommitGraphProvider] Branch "$branchName" target is not a Commit (type: ${target.G__typename})');
-          }
+          if (kDebugMode && branchName != null) {          }
           return null;
         },
       );
@@ -130,20 +84,9 @@ class CommitGraphProvider extends BaseDataProvider<CommitGraphData> {
       }
     }
 
-    if (kDebugMode) {
-      log.d('[CommitGraphProvider] Built branch tips map with ${_branchTips!.length} commit OIDs');
-      final totalBranchLabels = _branchTips!.values.fold<int>(0, (sum, list) => sum + list.length);
-      log.d('[CommitGraphProvider] Total branch labels: $totalBranchLabels');
-      
-      // Log the actual contents of the map
-      if (_branchTips!.isNotEmpty) {
-        log.d('[CommitGraphProvider] Branch tips map contents:');
-        for (final entry in _branchTips!.entries) {
-          log.d('[CommitGraphProvider]   OID: ${entry.key}, Branches: ${entry.value}');
-        }
-      } else {
-        log.w('[CommitGraphProvider] Branch tips map is EMPTY - no branches were loaded as Commits');
-      }
+    if (kDebugMode) {      final totalBranchLabels = _branchTips!.values.fold<int>(0, (sum, list) => sum + list.length);      // Log the actual contents of the map
+      if (_branchTips!.isNotEmpty) {        for (final entry in _branchTips!.entries) {        }
+      } else {      }
     }
 
     // Load commits from selected branch or default branch
@@ -151,27 +94,14 @@ class CommitGraphProvider extends BaseDataProvider<CommitGraphData> {
     // Use full ref name format: refs/heads/main
     final fullRefName = selectedBranch.startsWith('refs/') 
         ? selectedBranch 
-        : 'refs/heads/$selectedBranch';
-    
-    if (kDebugMode) {
-      log.d('[CommitGraphProvider] Selected branch: $selectedBranch');
-      log.d('[CommitGraphProvider] Full ref name: $fullRefName');
-      log.d('[CommitGraphProvider] Default branch from repo: ${repo.defaultBranchRef?.name}');
-    }
-
-    // Load history using ref name (always use full ref format)
+        : 'refs/heads/$selectedBranch';    // Load history using ref name (always use full ref format)
     final history = await _loadCommitHistory(
       owner: owner,
       repoName: repoName,
       refName: fullRefName,
     );
 
-    if (kDebugMode) {
-      log.d('[CommitGraphProvider] History edges before conversion: ${history.edges?.length ?? 0}');
-      if (history.edges != null && history.edges!.isNotEmpty) {
-        log.d('[CommitGraphProvider] First edge node type: ${history.edges!.first?.node?.G__typename ?? "null"}');
-        log.d('[CommitGraphProvider] First edge node is GcommitListItem: ${history.edges!.first?.node is GcommitListItem}');
-      }
+    if (kDebugMode) {      if (history.edges != null && history.edges!.isNotEmpty) {      }
     }
 
     // Convert to list of commits
@@ -181,12 +111,7 @@ class CommitGraphProvider extends BaseDataProvider<CommitGraphData> {
             .toList() ??
         [];
 
-    if (kDebugMode) {
-      log.d('[CommitGraphProvider] Converted commits: ${commits.length}');
-      log.d('[CommitGraphProvider] Loaded ${commits.length} commits from $selectedBranch');
-      log.d('[CommitGraphProvider] Graph will have ${commits.length} nodes');
-      
-      // Count edges (parent relationships)
+    if (kDebugMode) {      // Count edges (parent relationships)
       int edgeCount = 0;
       for (final commit in commits) {
         final parentOids = commit.parents.edges
@@ -195,9 +120,7 @@ class CommitGraphProvider extends BaseDataProvider<CommitGraphData> {
                 .toList() ??
             [];
         edgeCount += parentOids.length;
-      }
-      log.d('[CommitGraphProvider] Graph will have $edgeCount edges');
-    }
+      }    }
 
     return CommitGraphData(
       commits: commits,
@@ -206,12 +129,7 @@ class CommitGraphProvider extends BaseDataProvider<CommitGraphData> {
     );
   }
 
-  Future<void> loadBranchCommits(String branch) async {
-    if (kDebugMode) {
-      log.d('[CommitGraphProvider] loadBranchCommits called for branch: $branch');
-    }
-    
-    loading();
+  Future<void> loadBranchCommits(String branch) async {    loading();
     try {
       final repo = repositoryProvider.data;
       final owner = repo.owner.when(
@@ -224,49 +142,27 @@ class CommitGraphProvider extends BaseDataProvider<CommitGraphData> {
       // Use full ref name format: refs/heads/main
       final fullRefName = branch.startsWith('refs/') 
           ? branch 
-          : 'refs/heads/$branch';
-      
-      if (kDebugMode) {
-        log.d('[CommitGraphProvider] Loading commits from branch: $branch (owner: $owner, repo: $repoName)');
-        log.d('[CommitGraphProvider] Using full ref name: $fullRefName');
-      }
-
-      final history = await RepositoryServices.getCommitsListGQL(
+          : 'refs/heads/$branch';      final history = await RepositoryServices.getCommitsListGQL(
         owner: owner,
         repo: repoName,
         ref: fullRefName,
         first: 50,
       );
 
-      if (kDebugMode) {
-        log.d('[CommitGraphProvider] History edges before conversion: ${history.edges?.length ?? 0}');
-        if (history.edges != null && history.edges!.isNotEmpty) {
-          log.d('[CommitGraphProvider] First edge node type: ${history.edges!.first?.node?.G__typename ?? "null"}');
-          log.d('[CommitGraphProvider] First edge node is GcommitListItem: ${history.edges!.first?.node is GcommitListItem}');
-        }
+      if (kDebugMode) {        if (history.edges != null && history.edges!.isNotEmpty) {        }
       }
 
       final commits = history.edges
               ?.map((e) => e?.node)
               .whereType<GcommitListItem>()
               .toList() ??
-          [];
-
-      if (kDebugMode) {
-        log.d('[CommitGraphProvider] Loaded ${commits.length} commits from branch $branch');
-      }
-
-      data = CommitGraphData(
+          [];      data = CommitGraphData(
         commits: commits,
         branchTips: _branchTips ?? {},
         selectedBranch: branch,
       );
       loaded();
-    } catch (e) {
-      if (kDebugMode) {
-        log.e('[CommitGraphProvider] Error loading branch commits: $e');
-      }
-      error(error: e);
+    } catch (e) {      error(error: e);
     }
   }
 
@@ -297,14 +193,7 @@ class CommitGraphProvider extends BaseDataProvider<CommitGraphData> {
         : 'refs/heads/$selectedBranch';
 
     // Use provided cursor or last stored cursor
-    final cursorToUse = cursor ?? _lastCursor;
-
-    if (kDebugMode) {
-      log.d('[CommitGraphProvider] loadCommitsPage: cursor=$cursorToUse, refresh=$refresh');
-      log.d('[CommitGraphProvider] Loading from branch: $selectedBranch (fullRef: $fullRefName)');
-    }
-
-    final history = await RepositoryServices.getCommitsListGQL(
+    final cursorToUse = cursor ?? _lastCursor;    final history = await RepositoryServices.getCommitsListGQL(
       owner: owner,
       repo: repoName,
       ref: fullRefName,
@@ -322,15 +211,7 @@ class CommitGraphProvider extends BaseDataProvider<CommitGraphData> {
     // Store cursor from last edge for next page
     if (history.edges != null && history.edges!.isNotEmpty) {
       _lastCursor = history.edges!.last?.cursor;
-    }
-
-    if (kDebugMode) {
-      log.d('[CommitGraphProvider] loadCommitsPage: Loaded ${commits.length} commits');
-      log.d('[CommitGraphProvider] loadCommitsPage: hasNextPage=${history.pageInfo.hasNextPage}');
-      log.d('[CommitGraphProvider] loadCommitsPage: stored cursor=$_lastCursor');
-    }
-
-    return commits;
+    }    return commits;
   }
 }
 
