@@ -50,7 +50,7 @@ class _ThemeTabState extends State<ThemeTab> {
           final theme = Theme.of(context);
           final colorScheme = theme.colorScheme;
           final FlexScheme currentScheme =
-              settings.value.scheme ?? FlexScheme.materialBaseline;
+              settings.value.scheme ?? FlexScheme.blueM3;
 
           return ListView(
             padding: const EdgeInsets.all(16),

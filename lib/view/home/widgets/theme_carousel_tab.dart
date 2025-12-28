@@ -1,6 +1,10 @@
 import 'package:diohub/app/settings/theme_mode.dart';
 import 'package:diohub/app/theme_settings/api/flex_theme_settings_service.dart';
+import 'package:diohub/common/misc/surface_shape_resolver.dart';
 import 'package:diohub/common/wrappers/app_custom_scroll_view.dart';
+import 'package:diohub/style/surface_style_theme.dart';
+import 'package:diohub/utils/material_you_support.dart';
+import 'package:dynamic_color/dynamic_color.dart';
 import 'package:flex_color_scheme/flex_color_scheme.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -16,8 +20,12 @@ class ThemeCarouselTab extends StatefulWidget {
 
 class _ThemeCarouselTabState extends State<ThemeCarouselTab> {
   // Default values matching main.dart
-  static const FlexScheme _defaultScheme = FlexScheme.materialBaseline;
-  static const int _defaultBlendLevel = 25;
+  static const FlexScheme _defaultScheme = FlexScheme.blueM3;
+  static const int _defaultBlendLevel = 10;
+
+  // Sorted list of all FlexScheme values alphabetically by name
+  static final List<FlexScheme> _sortedSchemes = List.from(FlexScheme.values)
+    ..sort((a, b) => a.name.compareTo(b.name));
 
   String _getFlexSchemeLabel(FlexScheme scheme) {
     return scheme.name
@@ -65,18 +73,6 @@ class _ThemeCarouselTabState extends State<ThemeCarouselTab> {
     }
   }
 
-  Future<void> _resetTheme() async {
-    final settingsService = Provider.of<FlexThemeSettingsService>(
-      context,
-      listen: false,
-    );
-    // Reset to defaults and clear storage
-    await settingsService.reset();
-    if (mounted) {
-      setState(() {});
-    }
-  }
-
   Widget _buildThemeCard(
     FlexScheme scheme,
     bool isSelected,
@@ -86,6 +82,7 @@ class _ThemeCarouselTabState extends State<ThemeCarouselTab> {
   }) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
+    final surfaceStyle = theme.surfaceStyle;
 
     // Generate preview colors with current blend level
     final previewScheme = FlexColorScheme.light(
@@ -95,149 +92,163 @@ class _ThemeCarouselTabState extends State<ThemeCarouselTab> {
     final previewColors = previewScheme.toScheme;
 
     return Card(
-      elevation: isSelected ? 1 : 0,
+      elevation: 0,
       margin: EdgeInsets.zero,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
+      shape: SurfaceShapeResolver.large(
+        context,
         side: isSelected
             ? BorderSide(
                 color: colorScheme.primary,
-                width: 2,
+                width: 2.5,
               )
-            : BorderSide.none,
+            : BorderSide(
+                color: colorScheme.outline.withOpacity(0.12),
+                width: 1,
+              ),
       ),
       child: InkWell(
         onTap: isEnabled ? () => _updateScheme(scheme) : null,
-        borderRadius: BorderRadius.circular(16),
-        child: Padding(
-          padding: const EdgeInsets.all(10),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              // Compact color preview
-              Container(
-                height: 56,
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [
-                      previewColors.primary,
-                      previewColors.primaryContainer,
-                    ],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Stack(
-                  children: [
-                    // Selected indicator
-                    if (isSelected)
-                      Positioned(
-                        top: 6,
-                        right: 6,
-                        child: Container(
-                          padding: const EdgeInsets.all(3),
-                          decoration: BoxDecoration(
-                            color: previewColors.onPrimary,
-                            shape: BoxShape.circle,
+        borderRadius: surfaceStyle.borderRadius(size: BorderRadiusSize.large),
+        child: Container(
+          decoration: BoxDecoration(
+            borderRadius:
+                surfaceStyle.borderRadius(size: BorderRadiusSize.large),
+            color: isSelected
+                ? colorScheme.primaryContainer.withOpacity(0.3)
+                : null,
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(12),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Color preview with gradient
+                Expanded(
+                  child: Container(
+                    width: double.infinity,
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [
+                          previewColors.primary,
+                          previewColors.primaryContainer,
+                          previewColors.secondary,
+                        ],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                      borderRadius: surfaceStyle.borderRadius(
+                          size: BorderRadiusSize.medium),
+                      boxShadow: [
+                        BoxShadow(
+                          color: previewColors.primary.withOpacity(0.3),
+                          blurRadius: 8,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: Stack(
+                      children: [
+                        // Selected indicator badge
+                        if (isSelected)
+                          Positioned(
+                            top: 8,
+                            right: 8,
+                            child: Container(
+                              padding: const EdgeInsets.all(6),
+                              decoration: BoxDecoration(
+                                color: colorScheme.surface,
+                                shape: BoxShape.circle,
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withOpacity(0.1),
+                                    blurRadius: 4,
+                                    offset: const Offset(0, 2),
+                                  ),
+                                ],
+                              ),
+                              child: Icon(
+                                Icons.check_circle_rounded,
+                                color: colorScheme.primary,
+                                size: 18,
+                              ),
+                            ),
                           ),
-                          child: Icon(
-                            Icons.check_rounded,
-                            color: previewColors.primary,
-                            size: 14,
+                        // Color palette preview at bottom
+                        Positioned(
+                          bottom: 8,
+                          left: 8,
+                          right: 8,
+                          child: Row(
+                            children: [
+                              Expanded(
+                                child: Container(
+                                  height: 20,
+                                  decoration: BoxDecoration(
+                                    color: previewColors.primary,
+                                    borderRadius: surfaceStyle.borderRadius(
+                                        size: BorderRadiusSize.soft),
+                                    border: Border.all(
+                                      color: previewColors.onPrimary
+                                          .withOpacity(0.2),
+                                      width: 1,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 4),
+                              Expanded(
+                                child: Container(
+                                  height: 20,
+                                  decoration: BoxDecoration(
+                                    color: previewColors.secondary,
+                                    borderRadius: surfaceStyle.borderRadius(
+                                        size: BorderRadiusSize.soft),
+                                    border: Border.all(
+                                      color: previewColors.onSecondary
+                                          .withOpacity(0.2),
+                                      width: 1,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 4),
+                              Expanded(
+                                child: Container(
+                                  height: 20,
+                                  decoration: BoxDecoration(
+                                    color: previewColors.tertiary,
+                                    borderRadius: surfaceStyle.borderRadius(
+                                        size: BorderRadiusSize.soft),
+                                    border: Border.all(
+                                      color: previewColors.onTertiary
+                                          .withOpacity(0.2),
+                                      width: 1,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
                         ),
-                      ),
-                    // Color swatches at bottom
-                    Positioned(
-                      bottom: 6,
-                      left: 6,
-                      right: 6,
-                      child: Row(
-                        children: [
-                          Expanded(
-                            child: Container(
-                              height: 18,
-                              decoration: BoxDecoration(
-                                color: previewColors.primary,
-                                borderRadius: BorderRadius.circular(4),
-                                border: Border.all(
-                                  color:
-                                      previewColors.onPrimary.withOpacity(0.3),
-                                  width: 0.5,
-                                ),
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 3),
-                          Expanded(
-                            child: Container(
-                              height: 18,
-                              decoration: BoxDecoration(
-                                color: previewColors.secondary,
-                                borderRadius: BorderRadius.circular(4),
-                                border: Border.all(
-                                  color: previewColors.onSecondary
-                                      .withOpacity(0.3),
-                                  width: 0.5,
-                                ),
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 3),
-                          Expanded(
-                            child: Container(
-                              height: 18,
-                              decoration: BoxDecoration(
-                                color: previewColors.tertiary,
-                                borderRadius: BorderRadius.circular(4),
-                                border: Border.all(
-                                  color:
-                                      previewColors.onTertiary.withOpacity(0.3),
-                                  width: 0.5,
-                                ),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
+                      ],
                     ),
-                  ],
+                  ),
                 ),
-              ),
-              const SizedBox(height: 10),
-              // Scheme name - compact
-              Text(
-                _getFlexSchemeLabel(scheme),
-                style: theme.textTheme.labelLarge?.copyWith(
-                  fontWeight: FontWeight.w600,
-                  fontSize: 12,
-                ),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-              if (isSelected) ...[
-                const SizedBox(height: 4),
-                Row(
-                  children: [
-                    Icon(
-                      Icons.check_circle,
-                      size: 12,
-                      color: colorScheme.primary,
-                    ),
-                    const SizedBox(width: 4),
-                    Text(
-                      'Active',
-                      style: theme.textTheme.labelSmall?.copyWith(
-                        color: colorScheme.primary,
-                        fontSize: 10,
-                      ),
-                    ),
-                  ],
+                const SizedBox(height: 12),
+                // Scheme name
+                Text(
+                  _getFlexSchemeLabel(scheme),
+                  style: theme.textTheme.labelLarge?.copyWith(
+                    fontWeight: FontWeight.w600,
+                    fontSize: 13,
+                    letterSpacing: -0.2,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
               ],
-            ],
+            ),
           ),
         ),
       ),
@@ -267,215 +278,209 @@ class _ThemeCarouselTabState extends State<ThemeCarouselTab> {
 
             return AppCustomScrollView(
               slivers: [
-                // Header
+                // Top controls section
                 SliverToBoxAdapter(
                   child: Padding(
-                    padding: const EdgeInsets.fromLTRB(20, 20, 20, 12),
+                    padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
                     child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    'Theme Presets',
-                                    style: theme.textTheme.headlineMedium
-                                        ?.copyWith(
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            IconButton(
-                              icon: const Icon(Icons.refresh_rounded),
-                              tooltip: 'Reset to defaults',
-                              onPressed: () async {
-                                final confirmed = await showDialog<bool>(
-                                  context: context,
-                                  builder: (context) => AlertDialog(
-                                    title: const Text('Reset Themes?'),
-                                    content: const Text(
-                                      'This will reset all theme settings to their default values.',
-                                    ),
-                                    actions: [
-                                      TextButton(
-                                        onPressed: () =>
-                                            Navigator.of(context).pop(false),
-                                        child: const Text('Cancel'),
-                                      ),
-                                      FilledButton(
-                                        onPressed: () =>
-                                            Navigator.of(context).pop(true),
-                                        child: const Text('Reset'),
-                                      ),
-                                    ],
-                                  ),
-                                );
-                                if (confirmed == true) {
-                                  _resetTheme();
-                                }
-                              },
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 12),
                         // Material You Toggle
-                        Card(
-                          child: SwitchListTile(
-                            title: Row(
-                              children: [
-                                Icon(
-                                  Icons.palette_rounded,
-                                  size: 18,
-                                  color: colorScheme.primary,
+                        DynamicColorBuilder(
+                          builder: (lightDynamic, darkDynamic) {
+                            final supportsMaterialYou =
+                                MaterialYouSupport.isSupported(
+                                    lightDynamic, darkDynamic);
+
+                            final surfaceStyle = Theme.of(context).surfaceStyle;
+
+                            return Card(
+                              elevation: 0,
+                              shape: SurfaceShapeResolver.medium(
+                                context,
+                                side: BorderSide(
+                                  color: colorScheme.outline.withOpacity(0.12),
                                 ),
-                                const SizedBox(width: 8),
-                                const Text('Material You'),
-                              ],
-                            ),
-                            subtitle: Text(
-                              isMaterialYouEnabled
-                                  ? 'Using system dynamic colors'
-                                  : 'Using custom theme presets',
-                              style: theme.textTheme.bodySmall?.copyWith(
-                                color: colorScheme.onSurfaceVariant,
                               ),
-                            ),
-                            value: isMaterialYouEnabled,
-                            onChanged: (value) {
-                              themeModeSettings.updateMaterialYou(value);
-                            },
-                          ),
-                        ),
-                        const SizedBox(height: 12),
-                        // App Theme Mode (Light/Dark/System) - below title
-                        SegmentedButton<ThemeMode>(
-                          segments: const [
-                            ButtonSegment<ThemeMode>(
-                              value: ThemeMode.light,
-                              icon: Icon(Icons.light_mode, size: 16),
-                              label: Text('Light'),
-                            ),
-                            ButtonSegment<ThemeMode>(
-                              value: ThemeMode.dark,
-                              icon: Icon(Icons.dark_mode, size: 16),
-                              label: Text('Dark'),
-                            ),
-                            ButtonSegment<ThemeMode>(
-                              value: ThemeMode.system,
-                              icon: Icon(Icons.brightness_auto, size: 16),
-                              label: Text('Auto'),
-                            ),
-                          ],
-                          selected: {themeModeSettings.themeMode},
-                          onSelectionChanged: (Set<ThemeMode> newSelection) {
-                            themeModeSettings
-                                .updateThemeMode(newSelection.first);
+                              child: SwitchListTile(
+                                contentPadding: const EdgeInsets.symmetric(
+                                  horizontal: 20,
+                                  vertical: 4,
+                                ),
+                                title: Row(
+                                  children: [
+                                    Container(
+                                      padding: const EdgeInsets.all(6),
+                                      decoration: BoxDecoration(
+                                        color: colorScheme.primaryContainer
+                                            .withOpacity(0.5),
+                                        borderRadius: surfaceStyle.borderRadius(
+                                            size: BorderRadiusSize.small),
+                                      ),
+                                      child: Icon(
+                                        Icons.palette_rounded,
+                                        size: 18,
+                                        color: colorScheme.primary,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 12),
+                                    const Text(
+                                      'Material You',
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.w600,
+                                        fontSize: 15,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                subtitle: Padding(
+                                  padding: const EdgeInsets.only(
+                                    left: 38,
+                                    top: 4,
+                                  ),
+                                  child: Text(
+                                    !supportsMaterialYou
+                                        ? 'Not supported on this device'
+                                        : isMaterialYouEnabled
+                                            ? 'Using system dynamic colors'
+                                            : 'Using custom theme presets',
+                                    style: theme.textTheme.bodySmall?.copyWith(
+                                      fontSize: 12,
+                                      color: supportsMaterialYou
+                                          ? colorScheme.onSurfaceVariant
+                                          : colorScheme.onSurfaceVariant
+                                              .withOpacity(0.6),
+                                    ),
+                                  ),
+                                ),
+                                value: isMaterialYouEnabled,
+                                onChanged: supportsMaterialYou
+                                    ? (value) {
+                                        themeModeSettings
+                                            .updateMaterialYou(value);
+                                      }
+                                    : null,
+                              ),
+                            );
                           },
                         ),
                       ],
                     ),
                   ),
                 ),
-                const SliverToBoxAdapter(child: SizedBox(height: 12)),
+                const SliverToBoxAdapter(child: SizedBox(height: 16)),
                 // Blend slider section - pinned header
                 SliverPinnedHeader(
                   child: Container(
-                    color: colorScheme.surface,
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-                    child: Card(
-                      elevation: 1,
-                      child: Padding(
-                        padding: const EdgeInsets.all(14),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Row(
-                                  children: [
-                                    Icon(
-                                      Icons.tune_rounded,
-                                      size: 18,
-                                      color: colorScheme.primary,
-                                    ),
-                                    const SizedBox(width: 8),
-                                    Text(
-                                      'Blend Level',
-                                      style:
-                                          theme.textTheme.titleSmall?.copyWith(
-                                        fontWeight: FontWeight.w600,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 10,
-                                    vertical: 4,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: colorScheme.primaryContainer,
-                                    borderRadius: BorderRadius.circular(10),
-                                  ),
-                                  child: Text(
-                                    '$blendLevel',
-                                    style: theme.textTheme.labelLarge?.copyWith(
-                                      color: colorScheme.onPrimaryContainer,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 12),
-                            Slider(
-                              value: blendLevel.toDouble(),
-                              min: 0,
-                              max: 40,
-                              divisions: 40,
-                              label: blendLevel.toString(),
-                              onChanged: (value) {
-                                _updateBlendLevel(value.toInt());
-                              },
-                            ),
-                          ],
+                    decoration: BoxDecoration(
+                      color: colorScheme.surface,
+                      border: Border(
+                        bottom: BorderSide(
+                          color: colorScheme.outline.withOpacity(0.08),
+                          width: 1,
                         ),
                       ),
                     ),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 20,
+                      vertical: 12,
+                    ),
+                    child: Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(6),
+                          decoration: BoxDecoration(
+                            color:
+                                colorScheme.primaryContainer.withOpacity(0.5),
+                            borderRadius: theme.surfaceStyle
+                                .borderRadius(size: BorderRadiusSize.small),
+                          ),
+                          child: Icon(
+                            Icons.tune_rounded,
+                            size: 18,
+                            color: colorScheme.primary,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Text(
+                                    'Blend Level',
+                                    style: theme.textTheme.titleSmall?.copyWith(
+                                      fontWeight: FontWeight.w600,
+                                      fontSize: 14,
+                                    ),
+                                  ),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 10,
+                                      vertical: 4,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: colorScheme.primaryContainer,
+                                      borderRadius: theme.surfaceStyle
+                                          .borderRadius(
+                                              size: BorderRadiusSize.small),
+                                    ),
+                                    child: Text(
+                                      '$blendLevel',
+                                      style:
+                                          theme.textTheme.labelLarge?.copyWith(
+                                        color: colorScheme.onPrimaryContainer,
+                                        fontWeight: FontWeight.w700,
+                                        fontSize: 13,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 8),
+                              Slider(
+                                value: blendLevel.toDouble(),
+                                min: 0,
+                                max: 40,
+                                divisions: 40,
+                                label: blendLevel.toString(),
+                                onChanged: (value) {
+                                  _updateBlendLevel(value.toInt());
+                                },
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
-                const SliverToBoxAdapter(child: SizedBox(height: 12)),
+                const SliverToBoxAdapter(child: SizedBox(height: 8)),
                 // Theme grid
                 SliverPadding(
                   padding: const EdgeInsets.symmetric(horizontal: 20),
                   sliver: SliverLayoutBuilder(
                     builder: (context, constraints) {
-                      // Responsive grid sizing with shorter cards
+                      // Responsive grid sizing
                       final width = constraints.crossAxisExtent;
                       int crossAxisCount;
                       double spacing;
 
                       if (width > 800) {
                         crossAxisCount = 4;
-                        spacing = 12;
+                        spacing = 16;
                       } else if (width > 600) {
                         crossAxisCount = 3;
-                        spacing = 12;
+                        spacing = 16;
                       } else if (width > 400) {
                         crossAxisCount = 2;
-                        spacing = 12;
+                        spacing = 16;
                       } else {
                         crossAxisCount = 2;
-                        spacing = 10;
+                        spacing = 12;
                       }
 
                       return SliverGrid(
@@ -483,14 +488,14 @@ class _ThemeCarouselTabState extends State<ThemeCarouselTab> {
                           crossAxisCount: crossAxisCount,
                           crossAxisSpacing: spacing,
                           mainAxisSpacing: spacing,
-                          childAspectRatio: 1.5,
+                          childAspectRatio: 0.85,
                         ),
                         delegate: SliverChildBuilderDelegate(
                           (context, index) {
-                            final scheme = FlexScheme.values[index];
+                            final scheme = _sortedSchemes[index];
                             final isSelected = scheme == currentScheme;
                             return Opacity(
-                              opacity: isMaterialYouEnabled ? 0.5 : 1.0,
+                              opacity: isMaterialYouEnabled ? 0.4 : 1.0,
                               child: _buildThemeCard(
                                 scheme,
                                 isSelected,
@@ -500,13 +505,13 @@ class _ThemeCarouselTabState extends State<ThemeCarouselTab> {
                               ),
                             );
                           },
-                          childCount: FlexScheme.values.length,
+                          childCount: _sortedSchemes.length,
                         ),
                       );
                     },
                   ),
                 ),
-                const SliverToBoxAdapter(child: SizedBox(height: 20)),
+                const SliverToBoxAdapter(child: SizedBox(height: 24)),
               ],
             );
           },

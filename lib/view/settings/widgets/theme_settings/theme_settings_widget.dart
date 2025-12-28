@@ -96,7 +96,7 @@ class _ThemeSettingsWidgetState extends State<ThemeSettingsWidget> {
               EnumSettingWidget<FlexScheme>(
                 title: 'Scheme',
                 description: 'Predefined color scheme',
-                value: model.scheme ?? FlexScheme.material,
+                value: model.scheme ?? FlexScheme.blueM3,
                 options: FlexScheme.values,
                 labelBuilder: _getFlexSchemeLabel,
                 icon: Icons.color_lens,

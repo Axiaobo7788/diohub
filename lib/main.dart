@@ -262,7 +262,7 @@ ThemeData getTheme(
       themeModeSettings?.materialYouEnabled ?? false;
   final bool usePureDynamicColors = isMaterialYouEnabled && colorScheme != null;
 
-  // Get scheme from settings or default to materialBaseline
+  // Get scheme from settings or default to blueM3
   // Only use scheme/variant when Material You is disabled or no dynamic colors
   // When Material You is enabled, set scheme/variant to null to avoid FlexScheme preset influence
   final FlexScheme? scheme = usePureDynamicColors
@@ -270,14 +270,14 @@ ThemeData getTheme(
       : (brightness == Brightness.light
           ? (themeSettings.lightScheme ??
               themeSettings.scheme ??
-              FlexScheme.materialBaseline)
+              FlexScheme.blueM3)
           : (themeSettings.darkScheme ??
               themeSettings.scheme ??
-              FlexScheme.materialBaseline));
+              FlexScheme.blueM3));
   final FlexSchemeVariant? variant = usePureDynamicColors
       ? null // Don't use variant when Material You is enabled
       : themeSettings.variant;
-  final int blendLevel = themeSettings.blendLevel ?? 25;
+  final int blendLevel = themeSettings.blendLevel ?? 10;
 
   // Default sub-themes configuration
   // Note: We don't set cardRadius, dialogRadius, bottomSheetRadius, or inputDecoratorRadius
