@@ -137,10 +137,12 @@ class _PullToExpandIndicatorState extends State<PullToExpandIndicator>
               disableAnimations ? 1.0 : (0.85 + (contentScale * 0.15));
           final double effectiveScale = pulseScale * revealScale;
 
-          final Duration fadeDuration =
-              disableAnimations ? Duration.zero : const Duration(milliseconds: 120);
-          final Duration chevronDuration =
-              disableAnimations ? Duration.zero : const Duration(milliseconds: 160);
+          final Duration fadeDuration = disableAnimations
+              ? Duration.zero
+              : const Duration(milliseconds: 120);
+          final Duration chevronDuration = disableAnimations
+              ? Duration.zero
+              : const Duration(milliseconds: 160);
 
           return ClipRect(
             child: AnimatedSize(
@@ -173,25 +175,29 @@ class _PullToExpandIndicatorState extends State<PullToExpandIndicator>
                                     textAlign: TextAlign.center,
                                     style: theme.textTheme.bodySmall?.copyWith(
                                       fontSize: fontSize,
-                                      color: colorScheme.onSurface
-                                          .withOpacity(colorOpacity.clamp(0.0, 1.0)),
+                                      color: colorScheme.onSurface.withOpacity(
+                                          colorOpacity.clamp(0.0, 1.0)),
                                       fontWeight: FontWeight.w400,
                                       letterSpacing: 0.1,
                                     ),
                                   ),
                                   TweenAnimationBuilder<double>(
-                                    tween:
-                                        Tween<double>(begin: 14.0, end: chevronSize),
+                                    tween: Tween<double>(
+                                        begin: 14.0, end: chevronSize),
                                     duration: fadeDuration,
                                     curve: Curves.easeOut,
                                     builder: (context, animatedSize, child) {
-                                      final Color chevronColor = colorScheme.onSurface
-                                          .withOpacity(
-                                              (colorOpacity +
-                                                      (widget.isReadyToExpand ? 0.1 : 0.0))
-                                                  .clamp(0.0, 1.0));
+                                      final Color chevronColor = colorScheme
+                                          .onSurface
+                                          .withOpacity((colorOpacity +
+                                                  (widget.isReadyToExpand
+                                                      ? 0.1
+                                                      : 0.0))
+                                              .clamp(0.0, 1.0));
                                       return AnimatedRotation(
-                                        turns: widget.isReadyToExpand ? -0.25 : 0.0,
+                                        turns: widget.isReadyToExpand
+                                            ? -0.25
+                                            : 0.0,
                                         duration: chevronDuration,
                                         curve: Curves.easeOut,
                                         child: Icon(

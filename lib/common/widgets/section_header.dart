@@ -66,7 +66,7 @@ class SectionHeader extends StatelessWidget {
         if (showDivider)
           Padding(
             padding: dividerPadding ?? EdgeInsets.zero,
-            child: StyledDivider(verticalPadding: 16),
+            child: const StyledDivider(),
           ),
         Padding(
           padding: effectiveTitlePadding,
