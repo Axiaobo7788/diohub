@@ -2,36 +2,70 @@ import 'dart:math' as math;
 
 import 'package:diohub/graphql/queries/repositories/__generated__/commits_list.data.gql.dart';
 
+/// A lane with stable identity across rows.
+class Lane {
+  Lane({
+    required this.id,
+    this.expectedOid,
+    required this.column,
+  });
+
+  final String id; // stable identity
+  String? expectedOid; // next commit this lane waits for
+  int column; // visual column (x position)
+
+  @override
+  String toString() => 'Lane(id: $id, oid: $expectedOid, col: $column)';
+}
+
+/// Snapshot of a lane's state at a commit row.
+class LaneSnapshot {
+  const LaneSnapshot({
+    required this.laneId,
+    required this.column,
+    required this.activeBefore,
+    required this.activeAfter,
+    this.expectedOid,
+  });
+
+  final String laneId;
+  final int column;
+  final bool activeBefore;
+  final bool activeAfter;
+  final String?
+      expectedOid; // OID this lane is waiting for (for reconstruction)
+}
+
 /// Snapshot of lane state for a single commit row.
 class LaneData {
   const LaneData({
     required this.lanesBefore,
     required this.lanesAfter,
-    required this.currentLane,
+    required this.currentLaneId,
     required this.mergeTargets,
     required this.maxLanes,
     this.collapsingLanes = const {},
   });
 
-  /// Lanes coming into this row (top half of the painter).
-  final List<String?> lanesBefore;
+  /// Lane snapshots coming into this row (top half of the painter).
+  final List<LaneSnapshot> lanesBefore;
 
-  /// Lanes leaving this row (bottom half of the painter).
-  final List<String?> lanesAfter;
+  /// Lane snapshots leaving this row (bottom half of the painter).
+  final List<LaneSnapshot> lanesAfter;
 
-  /// Lane index where the current commit node is drawn.
-  final int currentLane;
+  /// Lane ID where the current commit node is drawn.
+  final String currentLaneId;
 
-  /// Lane indices for secondary parents (merges) that should be drawn
+  /// Lane IDs for secondary parents (merges) that should be drawn
   /// as curves from this node into the target lane.
-  final List<int> mergeTargets;
+  final List<String> mergeTargets;
 
   /// Running maximum of lanes seen so far (keeps rail width from shrinking).
   final int maxLanes;
 
-  /// Lanes that collapse into other lanes: Map<fromLane, toLane>
+  /// Lanes that collapse into other lanes: Map<fromLaneId, toLaneId>
   /// When duplicate OIDs are detected, the rightmost lane collapses into the leftmost.
-  final Map<int, int> collapsingLanes;
+  final Map<String, String> collapsingLanes;
 }
 
 /// Convenience bundle pairing a commit with its calculated lane data.
@@ -47,96 +81,180 @@ class CommitWithLaneData {
 
 /// Lane router - treats commits as a DAG routing problem, not a tree.
 class GraphLayoutCalculator {
+  // Counter for generating unique lane IDs
+  int _nextLaneId = 0;
+
+  String _generateLaneId() => 'lane_${_nextLaneId++}';
+
   List<CommitWithLaneData> processCommitsIncremental(
     List<GcommitListItem> commits,
     LaneData? previousLaneData,
   ) {
-    // Lane table: lane index → expected next commit OID (or null if free)
-    var lanes = List<String?>.from(previousLaneData?.lanesAfter ?? const []);
+    // Convert previous snapshots back to Lane objects
+    // Reconstruct lanes from previousLaneData.lanesAfter
+    var lanes = <Lane>[];
+    if (previousLaneData != null) {
+      for (final snapshot in previousLaneData.lanesAfter) {
+        if (snapshot.laneId.isNotEmpty) {
+          lanes.add(Lane(
+            id: snapshot.laneId,
+            expectedOid: snapshot.expectedOid,
+            column: snapshot.column,
+          ));
+        }
+      }
+    }
+
     var maxLanes = previousLaneData?.maxLanes ?? lanes.length;
 
     final results = <CommitWithLaneData>[];
 
     for (final commit in commits) {
       final parents = _extractParents(commit);
-      final lanesBefore = List<String?>.from(lanes);
+
+      // Create snapshot of lanesBefore
+      final lanesBefore = lanes
+          .map((lane) => LaneSnapshot(
+                laneId: lane.id,
+                column: lane.column,
+                activeBefore: lane.expectedOid != null,
+                activeAfter: false, // not used for before
+                expectedOid: lane.expectedOid,
+              ))
+          .toList();
 
       // Step A: Pick a lane for this commit
-      var currentLane = lanes.indexOf(commit.oid);
-      if (currentLane == -1) {
+      Lane? currentLane;
+      var currentLaneIndex =
+          lanes.indexWhere((lane) => lane.expectedOid == commit.oid);
+      if (currentLaneIndex != -1) {
+        currentLane = lanes[currentLaneIndex];
+      } else {
         // Not waiting for this commit - find empty lane or create new
-        currentLane = lanes.indexWhere((oid) => oid == null);
-        if (currentLane == -1) {
-          currentLane = lanes.length;
-          lanes.add(null);
+        currentLaneIndex = lanes.indexWhere((lane) => lane.expectedOid == null);
+        if (currentLaneIndex != -1) {
+          currentLane = lanes[currentLaneIndex];
+        } else {
+          // Create new lane
+          currentLane = Lane(
+            id: _generateLaneId(),
+            expectedOid: null,
+            column: lanes.length,
+          );
+          lanes.add(currentLane);
+          currentLaneIndex = lanes.length - 1;
         }
       }
 
       // Step B: Update lane table
-      final lanesAfter = List<String?>.from(lanes);
-
       // Primary parent continues in same lane
       final primaryParent = parents.isNotEmpty ? parents.first : null;
-      lanesAfter[currentLane] = primaryParent;
+      currentLane.expectedOid = primaryParent;
 
       // Secondary parents reserve other lanes
-      final mergeTargets = <int>[];
+      final mergeTargets = <String>[];
       for (final parent in parents.skip(1)) {
-        var mergeLane = lanesAfter.indexOf(parent);
-        if (mergeLane == -1) {
-          // Reserve empty lane for this parent
-          mergeLane = lanesAfter.indexWhere((oid) => oid == null);
-          if (mergeLane == -1) {
-            mergeLane = lanesAfter.length;
-            lanesAfter.add(null);
+        // Find existing lane waiting for this parent
+        var mergeLaneIndex =
+            lanes.indexWhere((lane) => lane.expectedOid == parent);
+        Lane mergeLane;
+        if (mergeLaneIndex != -1) {
+          mergeLane = lanes[mergeLaneIndex];
+        } else {
+          // Find empty lane or create new
+          mergeLaneIndex = lanes.indexWhere((lane) => lane.expectedOid == null);
+          if (mergeLaneIndex != -1) {
+            mergeLane = lanes[mergeLaneIndex];
+          } else {
+            mergeLane = Lane(
+              id: _generateLaneId(),
+              expectedOid: null,
+              column: lanes.length,
+            );
+            lanes.add(mergeLane);
+            mergeLaneIndex = lanes.length - 1;
           }
         }
-        lanesAfter[mergeLane] = parent;
+        mergeLane.expectedOid = parent;
 
         // Only draw node-merge if this parent is NOT already
         // connected to the node via lane continuity
-        final parentLaneBefore = lanesBefore.indexOf(parent);
-        final isVerticallyConnected =
-            parentLaneBefore != -1 && parentLaneBefore == currentLane;
+        // Check if parent was in lanesBefore at the same column as currentLane
+        final parentLaneBeforeIndex = lanesBefore.indexWhere(
+          (snapshot) => snapshot.expectedOid == parent && snapshot.activeBefore,
+        );
+        final isVerticallyConnected = parentLaneBeforeIndex != -1 &&
+            lanesBefore[parentLaneBeforeIndex].column == currentLane.column;
 
         if (!isVerticallyConnected) {
-          mergeTargets.add(mergeLane);
+          mergeTargets.add(mergeLane.id);
         }
       }
 
       // Step C: Deferred lane collapse - keep leftmost, free duplicates
-      // Capture merge-back intent explicitly: fromLane → toLane
-      final seen = <String, int>{};
-      final collapsingLanes = <int, int>{};
-      for (var i = 0; i < lanesAfter.length; i++) {
-        final oid = lanesAfter[i];
+      // Capture merge-back intent explicitly: fromLaneId → toLaneId
+      // Group lanes by expectedOid, then find leftmost (lowest column) for each
+      final lanesByOid = <String, List<Lane>>{};
+      for (final lane in lanes) {
+        final oid = lane.expectedOid;
         if (oid == null) continue;
+        lanesByOid.putIfAbsent(oid, () => []).add(lane);
+      }
 
-        if (!seen.containsKey(oid)) {
-          seen[oid] = i; // survivor lane (leftmost)
-        } else {
-          final targetLane = seen[oid]!;
-          collapsingLanes[i] = targetLane; // lane i collapses into targetLane
-          lanesAfter[i] = null;
+      final collapsingLanes = <String, String>{};
+      final dyingLanes = <Lane>[];
+
+      for (final entry in lanesByOid.entries) {
+        final oidLanes = entry.value;
+        if (oidLanes.length <= 1) continue; // No duplicates
+
+        // Sort by column to find leftmost
+        oidLanes.sort((a, b) => a.column.compareTo(b.column));
+        final survivorLane = oidLanes.first;
+
+        // Mark all others as collapsing
+        for (var i = 1; i < oidLanes.length; i++) {
+          final collapsingLane = oidLanes[i];
+          collapsingLanes[collapsingLane.id] = survivorLane.id;
+          dyingLanes.add(collapsingLane);
+          collapsingLane.expectedOid = null; // mark as dying
         }
       }
 
-      // Trim trailing empty lanes
-      while (lanesAfter.isNotEmpty && lanesAfter.last == null) {
-        lanesAfter.removeLast();
+      // Remove dying lanes
+      for (final dyingLane in dyingLanes) {
+        lanes.remove(dyingLane);
       }
+
+      // Reassign columns to be compact (maintain order, reassign sequentially)
+      lanes.sort((a, b) => a.column.compareTo(b.column));
+      for (var i = 0; i < lanes.length; i++) {
+        lanes[i].column = i;
+      }
+
+      // Update collapsingLanes to use new column positions
+      // (The lane IDs remain stable, columns are just visual positions)
+
+      // Create snapshot of lanesAfter
+      final lanesAfter = lanes
+          .map((lane) => LaneSnapshot(
+                laneId: lane.id,
+                column: lane.column,
+                activeBefore: false, // not used for after
+                activeAfter: lane.expectedOid != null,
+                expectedOid: lane.expectedOid,
+              ))
+          .toList();
 
       // Update maxLanes (monotonic width)
       maxLanes = math.max(
         maxLanes,
-        math.max(lanesAfter.length, currentLane + 1),
+        math.max(lanes.length, currentLane.column + 1),
       );
 
       // Pad to maxLanes for consistent width
-      final paddedBefore = _padTo(lanesBefore, maxLanes);
-      final paddedAfter = _padTo(lanesAfter, maxLanes);
-
-      lanes = paddedAfter;
+      final paddedBefore = _padLaneSnapshots(lanesBefore, maxLanes);
+      final paddedAfter = _padLaneSnapshots(lanesAfter, maxLanes);
 
       results.add(
         CommitWithLaneData(
@@ -144,7 +262,7 @@ class GraphLayoutCalculator {
           laneData: LaneData(
             lanesBefore: paddedBefore,
             lanesAfter: paddedAfter,
-            currentLane: currentLane,
+            currentLaneId: currentLane.id,
             mergeTargets: mergeTargets,
             collapsingLanes: collapsingLanes,
             maxLanes: maxLanes,
@@ -163,10 +281,19 @@ class GraphLayoutCalculator {
           .toList() ??
       const [];
 
-  List<String?> _padTo(final List<String?> value, final int targetLength) {
-    final padded = List<String?>.from(value);
+  List<LaneSnapshot> _padLaneSnapshots(
+    final List<LaneSnapshot> value,
+    final int targetLength,
+  ) {
+    final padded = List<LaneSnapshot>.from(value);
     while (padded.length < targetLength) {
-      padded.add(null);
+      padded.add(LaneSnapshot(
+        laneId: '',
+        column: padded.length,
+        activeBefore: false,
+        activeAfter: false,
+        expectedOid: null,
+      ));
     }
     return padded;
   }

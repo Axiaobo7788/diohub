@@ -183,20 +183,34 @@ class _CommitRailPainter extends CustomPainter {
     final laneCount = math.max(laneData.maxLanes, 1);
     final centerY = size.height / 2;
     final startX = _railInset + _laneSpacing / 2;
-    final nodeX = startX + laneData.currentLane * _laneSpacing;
+
+    // Find current lane column
+    final currentLaneSnapshot = laneData.lanesAfter.firstWhere(
+      (snapshot) => snapshot.laneId == laneData.currentLaneId,
+      orElse: () => laneData.lanesAfter.first,
+    );
+    final nodeX = startX + currentLaneSnapshot.column * _laneSpacing;
 
     // Draw merge-back curves (lanes collapsing into other lanes)
     for (final entry in laneData.collapsingLanes.entries) {
-      final fromLane = entry.key;
-      final toLane = entry.value;
+      final fromLaneId = entry.key;
+      final toLaneId = entry.value;
 
-      final fromX = startX + fromLane * _laneSpacing;
-      final toX = startX + toLane * _laneSpacing;
+      // Find columns for these lanes (merge-back uses lanesBefore for both)
+      final fromSnapshot = laneData.lanesBefore.firstWhere(
+        (snapshot) => snapshot.laneId == fromLaneId,
+      );
+      final toSnapshot = laneData.lanesBefore.firstWhere(
+        (snapshot) => snapshot.laneId == toLaneId,
+      );
+
+      final fromX = startX + fromSnapshot.column * _laneSpacing;
+      final toX = startX + toSnapshot.column * _laneSpacing;
 
       final paint = Paint()
         ..style = PaintingStyle.stroke
         ..strokeWidth = 2
-        ..color = _laneColor(fromLane);
+        ..color = _laneColorById(fromLaneId);
 
       final path = Path()..moveTo(fromX, centerY);
       path.cubicTo(
@@ -212,16 +226,35 @@ class _CommitRailPainter extends CustomPainter {
 
     // Draw vertical lane lines
     for (var i = 0; i < laneCount; i++) {
-      final x = startX + i * _laneSpacing;
-      final beforeActive =
-          i < laneData.lanesBefore.length && laneData.lanesBefore[i] != null;
-      final afterActive =
-          i < laneData.lanesAfter.length && laneData.lanesAfter[i] != null;
+      final snapshotBefore = i < laneData.lanesBefore.length
+          ? laneData.lanesBefore[i]
+          : null;
+      final snapshotAfter = i < laneData.lanesAfter.length
+          ? laneData.lanesAfter[i]
+          : null;
 
+      if (snapshotBefore == null && snapshotAfter == null) continue;
+
+      final x = startX + i * _laneSpacing;
+      final beforeActive = snapshotBefore?.activeBefore ?? false;
+      final afterActive = snapshotAfter?.activeAfter == true &&
+          (snapshotBefore?.activeBefore == true ||
+              snapshotAfter?.laneId == laneData.currentLaneId);
+
+      // Use laneId for color (stable identity)
+      // Priority: lanesBefore first (never override identity from lanesAfter)
+      final laneId =
+          snapshotBefore?.laneId ??
+          snapshotAfter?.laneId ??
+          '';
+      
+      // Skip padded lanes (empty laneId)
+      if (laneId.isEmpty) continue;
+      
       final paint = Paint()
         ..style = PaintingStyle.stroke
         ..strokeWidth = 2
-        ..color = _laneColor(i);
+        ..color = _laneColorById(laneId);
 
       if (beforeActive) {
         canvas.drawLine(Offset(x, 0), Offset(x, centerY), paint);
@@ -232,14 +265,19 @@ class _CommitRailPainter extends CustomPainter {
     }
 
     // Draw merge curves (downward) - secondary parents
-    final mergePaint = Paint()
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 2
-      ..color = _laneColor(laneData.currentLane);
+    for (final targetLaneId in laneData.mergeTargets) {
+      final targetSnapshot = laneData.lanesAfter.firstWhere(
+        (snapshot) => snapshot.laneId == targetLaneId,
+      );
 
-    for (final target in laneData.mergeTargets) {
-      if (target >= laneCount) continue;
-      final targetX = startX + target * _laneSpacing;
+      final paint = Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 2
+        ..color = _laneColorById(targetLaneId);
+
+      final targetColumn = targetSnapshot.column;
+      if (targetColumn >= laneCount) continue;
+      final targetX = startX + targetColumn * _laneSpacing;
       final path = Path()..moveTo(nodeX, centerY);
       path.cubicTo(
         nodeX,
@@ -249,12 +287,23 @@ class _CommitRailPainter extends CustomPainter {
         targetX,
         size.height,
       );
-      canvas.drawPath(path, mergePaint);
+      canvas.drawPath(path, paint);
     }
 
     // Draw commit node
+    // Node color must match the lane that was active before at the node's column
+    final nodeLaneId = () {
+      final col = currentLaneSnapshot.column;
+      for (final snapshot in laneData.lanesBefore) {
+        if (snapshot.column == col && snapshot.activeBefore) {
+          return snapshot.laneId;
+        }
+      }
+      return laneData.currentLaneId;
+    }();
+
     final nodePaint = Paint()
-      ..color = _laneColor(laneData.currentLane)
+      ..color = _laneColorById(nodeLaneId)
       ..style = PaintingStyle.fill;
     canvas.drawCircle(Offset(nodeX, centerY), _nodeRadius, nodePaint);
 
@@ -263,6 +312,13 @@ class _CommitRailPainter extends CustomPainter {
       ..style = PaintingStyle.stroke
       ..strokeWidth = 1.4;
     canvas.drawCircle(Offset(nodeX, centerY), _nodeRadius, stroke);
+  }
+
+  Color _laneColorById(String laneId) {
+    // Stable color mapping based on lane ID
+    // Use hash of laneId to get consistent color
+    final hash = laneId.hashCode;
+    return _laneColor(hash.abs() % 6);
   }
 
   Color _laneColor(int lane) {
