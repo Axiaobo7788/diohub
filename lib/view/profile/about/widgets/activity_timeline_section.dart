@@ -46,14 +46,7 @@ class _ActivityTimelineSectionState
             to,
             args.pageNumber -
                 1, // pageNumber starts at 1, but getYearForPage expects 0-indexed
-          );
-
-          if (kDebugMode) {
-            log.d(
-                '[ActivityTimelineSection] Fetching page ${args.pageNumber} (year $year)');
-          }
-
-          final events = await UserActivityService.getYearEvents(
+          );          final events = await UserActivityService.getYearEvents(
             login: widget.providerKey.userName,
             year: year,
             from: from,
@@ -62,12 +55,7 @@ class _ActivityTimelineSectionState
           );
 
           return events;
-        } catch (e, stackTrace) {
-          if (kDebugMode) {
-            log.e('[ActivityTimelineSection] Error fetching year events',
-                error: e, stackTrace: stackTrace);
-          }
-          rethrow;
+        } catch (e, stackTrace) {          rethrow;
         }
       },
       builder: _buildTimelineItem,

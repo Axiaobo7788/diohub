@@ -294,7 +294,6 @@ class HomeScreenState extends State<HomeScreen>
                   icon: const Icon(Icons.swap_horiz_rounded),
                   tooltip: 'Switch Account',
                   onPressed: () {
-                    print('[Home] Switching account');
                     _accountSwitcherController.open();
                   },
                 ),

@@ -54,19 +54,6 @@ class _UserAboutScreenState extends ConsumerState<UserAboutScreen> {
     // Key only changes when date range changes, preventing unnecessary rebuilds
     final ContributionQueryKey providerKey = widget.contributionQueryKey;
 
-    if (kDebugMode) {
-      final timestamp = DateTime.now().millisecondsSinceEpoch;
-      final (from, to) = providerKey.dateRange.dates;
-      log.d(
-          '[UserAboutScreen] 🔄 build() called at $timestamp - widget.userData.login: "${widget.userData.login}", providerKey.userName: "${providerKey.userName}", dateRange: ${providerKey.dateRange.runtimeType}, from: ${from.toIso8601String()}, to: ${to.toIso8601String()}');
-      log.d(
-          '[UserAboutScreen] Watching userContributionsProvider with key hashCode: ${providerKey.hashCode}');
-      if (widget.userData.login != providerKey.userName) {
-        log.w(
-            '[UserAboutScreen] ⚠️ MISMATCH: widget.userData.login ("${widget.userData.login}") != providerKey.userName ("${providerKey.userName}")');
-      }
-    }
-
     final AsyncValue<ContributionCollectionResult> contributionsAsync =
         ref.watch(
       userContributionsProvider(providerKey),
@@ -74,20 +61,9 @@ class _UserAboutScreenState extends ConsumerState<UserAboutScreen> {
 
     if (kDebugMode) {
       contributionsAsync.when(
-        data: (data) {
-          log.d(
-              '[UserAboutScreen] Provider returned data for "${providerKey.userName}"');
-        },
-        loading: () {
-          log.d(
-              '[UserAboutScreen] Provider loading for "${providerKey.userName}"');
-        },
-        error: (error, stack) {
-          log.e(
-              '[UserAboutScreen] Provider error for "${providerKey.userName}"',
-              error: error,
-              stackTrace: stack);
-        },
+        data: (data) {        },
+        loading: () {        },
+        error: (error, stack) {        },
       );
     }
 

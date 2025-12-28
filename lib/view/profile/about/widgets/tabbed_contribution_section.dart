@@ -166,11 +166,6 @@ class _TabbedContributionSectionState extends State<TabbedContributionSection> {
         },
         loading: () => _buildSummaryLoadingSkeleton(),
         error: (final Object error, final StackTrace stackTrace) {
-          if (kDebugMode) {
-            debugPrint('Error loading contribution data: $error');
-            debugPrint('Stack trace: $stackTrace');
-          }
-
           return SliverToBoxAdapter(
             child: Center(
               child: Padding(

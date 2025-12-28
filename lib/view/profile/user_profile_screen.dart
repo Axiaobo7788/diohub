@@ -56,10 +56,7 @@ class UserProfileScreenState extends State<UserProfileScreen>
     // Initialize to default last year range
     _contributionQueryKey = ContributionQueryKey.lastYear(widget.login);
     if (kDebugMode) {
-      final (from, to) = _contributionQueryKey.dateRange.dates;
-      log.d(
-          '[UserProfileScreen] initState() - widget.login: "${widget.login}", created key for user: "${_contributionQueryKey.userName}", dateRange: ${_contributionQueryKey.dateRange.runtimeType}, from: ${from.toIso8601String()}, to: ${to.toIso8601String()}');
-    }
+      final (from, to) = _contributionQueryKey.dateRange.dates;    }
   }
 
   /// Gets the current query key
@@ -94,27 +91,12 @@ class UserProfileScreenState extends State<UserProfileScreen>
   }
 
   /// Handles year selection change
-  void _onYearChanged(final int year) {
-    if (kDebugMode) {
-      log.d(
-          '[UserProfileScreen] _onYearChanged() - widget.login: "${widget.login}", year: $year');
-    }
-    setState(() {
-      _contributionQueryKey = ContributionQueryKey.year(widget.login, year);
-      if (kDebugMode) {
-        log.d(
-            '[UserProfileScreen] Updated key - userName: "${_contributionQueryKey.userName}"');
-      }
-    });
+  void _onYearChanged(final int year) {    setState(() {
+      _contributionQueryKey = ContributionQueryKey.year(widget.login, year);    });
   }
 
   /// Handles custom date range change
-  void _onCustomRangeChanged(final DateTime? from, final DateTime? to) {
-    if (kDebugMode) {
-      log.d(
-          '[UserProfileScreen] _onCustomRangeChanged() - widget.login: "${widget.login}", from: ${from?.toIso8601String()}, to: ${to?.toIso8601String()}');
-    }
-    setState(() {
+  void _onCustomRangeChanged(final DateTime? from, final DateTime? to) {    setState(() {
       if (from == null && to == null) {
         // Reset to last year
         _contributionQueryKey = ContributionQueryKey.lastYear(widget.login);
@@ -124,12 +106,7 @@ class UserProfileScreenState extends State<UserProfileScreen>
           from: from,
           to: to,
         );
-      }
-      if (kDebugMode) {
-        log.d(
-            '[UserProfileScreen] Updated key - userName: "${_contributionQueryKey.userName}"');
-      }
-    });
+      }    });
   }
 
   /// Builds the expanded content for the date range selector
@@ -795,18 +772,8 @@ class UserProfileScreenState extends State<UserProfileScreen>
   }
 
   @override
-  Widget build(final BuildContext context) {
-    if (kDebugMode) {
-      log.d(
-          '[UserProfileScreen] build() called - widget.login: "${widget.login}"');
-    }
-    return provider.ChangeNotifierProvider<UserProvider>(
-      create: (final _) {
-        if (kDebugMode) {
-          log.d(
-              '[UserProfileScreen] Creating UserProvider with widget.login: "${widget.login}"');
-        }
-        return UserProvider(widget.login);
+  Widget build(final BuildContext context) {    return provider.ChangeNotifierProvider<UserProvider>(
+      create: (final _) {        return UserProvider(widget.login);
       },
       builder: (final BuildContext context, final _) => Scaffold(
         appBar:
@@ -1144,13 +1111,7 @@ class _UserProfileTabsContentState extends State<_UserProfileTabsContent>
   void _initializeTabs() {
     final GuserInfoData_user userData = widget.userData;
 
-    if (kDebugMode) {
-      log.d(
-          '[_UserProfileTabsContent] _initializeTabs() - userData.login: "${userData.login}", contributionQueryKey.userName: "${widget.contributionQueryKey.userName}"');
-      if (userData.login != widget.contributionQueryKey.userName) {
-        log.w(
-            '[_UserProfileTabsContent] ⚠️ MISMATCH: userData.login ("${userData.login}") != contributionQueryKey.userName ("${widget.contributionQueryKey.userName}")');
-      }
+    if (kDebugMode) {      if (userData.login != widget.contributionQueryKey.userName) {      }
     }
 
     final List<DynamicTab> tabs = <DynamicTab>[
@@ -1158,12 +1119,7 @@ class _UserProfileTabsContentState extends State<_UserProfileTabsContent>
         identifier: 'Activity',
         isDismissible: false,
         isFocusedOnInit: true,
-        tabViewBuilder: (final BuildContext context) {
-          if (kDebugMode) {
-            log.d(
-                '[_UserProfileTabsContent] Building UserAboutScreen - userData.login: "${userData.login}", contributionQueryKey.userName: "${widget.contributionQueryKey.userName}"');
-          }
-          return UserAboutScreen(
+        tabViewBuilder: (final BuildContext context) {          return UserAboutScreen(
             userData,
             contributionQueryKey: widget.contributionQueryKey,
             onYearChanged: widget.onYearChanged,

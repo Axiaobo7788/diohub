@@ -31,8 +31,6 @@ class AccountManagementScreen extends StatelessWidget {
           }
 
           // if (state.accounts.isEmpty) {
-          //   debugPrint(
-          //       '[AccountManagementScreen] BlocBuilder: No accounts found');
           //   return Center(
           //     child: Column(
           //       mainAxisAlignment: MainAxisAlignment.center,

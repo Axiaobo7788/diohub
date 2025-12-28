@@ -25,7 +25,6 @@ class AccountsTabState extends State<AccountsTab>
     super.build(context);
     return BlocBuilder<AccountBloc, AccountState>(
       builder: (BuildContext context, AccountState state) {
-        debugPrint('[AccountsTab] BlocBuilder: State is ${state.runtimeType}');
 
         if (state is AccountUninitialized || state is AccountLoading) {
           return const Center(child: CircularProgressIndicator());
