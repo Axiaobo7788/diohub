@@ -147,7 +147,7 @@ class HomeScreenState extends State<HomeScreen>
         ),
         DynamicTab(
           identifier: 'ThemeCarousel',
-          tab: TabBarItem(label: 'Themes'),
+          tab: TabBarItem(label: 'Themes'),keepViewAlive: true,
           tabViewBuilder: (final BuildContext context) =>
               const ThemeCarouselTab(),
         ),
@@ -295,7 +295,7 @@ class HomeScreenState extends State<HomeScreen>
                   tooltip: 'Switch Account',
                   onPressed: () {
                     print('[Home] Switching account');
-                    _accountSwitcherController.tapped();
+                    _accountSwitcherController.open();
                   },
                 ),
               ),

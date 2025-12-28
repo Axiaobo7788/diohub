@@ -1,9 +1,12 @@
 import 'package:auto_route/auto_route.dart';
+import 'package:diohub/app/settings/theme_mode.dart';
+import 'package:diohub/app/theme_settings/api/flex_theme_settings_service.dart';
 import 'package:diohub/blocs/account_bloc/account_bloc.dart';
 import 'package:diohub/common/misc/collapsible_action_buttons.dart';
 import 'package:diohub/common/misc/action_card_builder.dart';
 import 'package:diohub/common/misc/surface_shape_resolver.dart';
 import 'package:diohub/common/search_overlay/search_overlay.dart';
+import 'package:diohub/common/widgets/theme_mode_selector_widget.dart';
 import 'package:diohub/common/wrappers/search_scroll_wrapper.dart';
 import 'package:diohub/providers/base_provider.dart';
 import 'package:diohub/providers/users/current_user_provider.dart';
@@ -15,6 +18,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_dynamic_tabs/flutter_dynamic_tabs.dart';
 import 'package:flutter_vector_icons/flutter_vector_icons.dart';
+import 'package:provider/provider.dart';
 
 /// Handles all toolbar action button creation and management for HomeScreen
 class HomeScreenToolbarActionsHandler {
@@ -47,6 +51,7 @@ class HomeScreenToolbarActionsHandler {
     allActions.addAll(_buildPullsTabActions());
     allActions.addAll(_buildOrganizationsTabActions());
     allActions.addAll(_buildAccountsTabActions());
+    allActions.addAll(_buildThemeCarouselTabActions());
 
     // Shared search actions (works for both Issues and Pulls tabs)
     allActions.add(_buildSharedSearchAction());
@@ -331,6 +336,83 @@ class HomeScreenToolbarActionsHandler {
             : ActionButtonVisibilityState.none,
         onTap: () {
           _showLogOutAllDialog(context);
+        },
+      ),
+    );
+
+    return actions;
+  }
+
+  /// Builds actions specific to the Theme Carousel tab
+  List<ActionButtonData> _buildThemeCarouselTabActions() {
+    final List<ActionButtonData> actions = [];
+    final isThemeCarouselTab = currentTab == 'ThemeCarousel';
+
+    // Helper function to get theme mode label
+    String _getThemeModeLabel(ThemeMode mode) {
+      switch (mode) {
+        case ThemeMode.light:
+          return 'Light';
+        case ThemeMode.dark:
+          return 'Dark';
+        case ThemeMode.system:
+          return 'Auto';
+      }
+    }
+
+    // Theme Mode dropdown
+    final themeModeSettings =
+        Provider.of<ThemeModeSettings>(context, listen: false);
+    actions.add(
+      ExpandableActionButton(
+        icon: Icons.brightness_auto_rounded,
+        label: 'Theme Mode',
+        subtitle: _getThemeModeLabel(themeModeSettings.themeMode),
+        visibilityState: isThemeCarouselTab
+            ? ActionButtonVisibilityState.both
+            : ActionButtonVisibilityState.none,
+        category: 'Theme',
+        expandableWidgetBuilder: (onCollapse) {
+          return ThemeModeSelectorWidget(onCollapse: onCollapse);
+        },
+      ),
+    );
+
+    // Reset themes button
+    actions.add(
+      MajorActionButton(
+        icon: Icons.refresh_rounded,
+        label: 'Reset Theme',
+        visibilityState: isThemeCarouselTab
+            ? ActionButtonVisibilityState.both
+            : ActionButtonVisibilityState.none,
+        category: 'Theme',
+        onTap: () async {
+          final confirmed = await showDialog<bool>(
+            context: context,
+            builder: (context) => AlertDialog(
+              shape: SurfaceShapeResolver.large(context),
+              title: const Text('Reset Theme?'),
+              content: const Text(
+                'This will reset all theme settings to their default values.',
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(false),
+                  child: const Text('Cancel'),
+                ),
+                FilledButton(
+                  onPressed: () => Navigator.of(context).pop(true),
+                  child: const Text('Reset'),
+                ),
+              ],
+            ),
+          );
+          if (confirmed == true) {
+            final settingsService =
+                Provider.of<FlexThemeSettingsService>(context, listen: false);
+            await settingsService.reset();
+          }
         },
       ),
     );
