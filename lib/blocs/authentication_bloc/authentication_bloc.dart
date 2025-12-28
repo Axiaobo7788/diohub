@@ -100,16 +100,12 @@ class AuthenticationBloc
     final AuthSuccessful event,
     final Emitter<AuthenticationState> emit,
   ) async {
-    debugPrint(
-        '[AuthenticationBloc] _authSuccessful: Token acquired, acting as gate only');
     try {
       final AccessTokenModel token = event.accessToken;
 
       // Validate token
       if (token.accessToken == null || token.accessToken!.isEmpty) {
         emit(AuthenticationError('Invalid access token received'));
-        debugPrint(
-            '[AuthenticationBloc] _authSuccessful: Invalid token, aborting');
         return;
       }
 
@@ -121,18 +117,13 @@ class AuthenticationBloc
       if (storedGrantedScope == null ||
           !_isScopeSubset(requestedScope, storedGrantedScope)) {
         await authRepository.setGrantedScope(grantedScope);
-        debugPrint(
-            '[AuthenticationBloc] _authSuccessful: Updated granted scope');
       }
 
       // Dispatch to AccountBloc to handle unified account addition
       // AccountBloc will handle fetching user, persisting, and setting active
       // No AuthenticationAuthenticated emission - AccountBloc drives the flow
-      debugPrint(
-          '[AuthenticationBloc] _authSuccessful: Dispatching AddAccount to AccountBloc');
       accountBloc.add(AddAccount(token));
     } catch (e) {
-      debugPrint('[AuthenticationBloc] _authSuccessful: Error: $e');
       emit(AuthenticationError(e.toString()));
     }
   }

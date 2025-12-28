@@ -202,11 +202,6 @@ class GraphqlHandler extends BaseAPIHandler {
     final bool refreshCache = false,
     final Map<String, dynamic>? requestHeaders,
   }) async {
-    if (kDebugMode) {
-      final timestamp = DateTime.now().millisecondsSinceEpoch;
-      log.d(
-          '[GraphqlHandler] ⚠️ query() CALLED at $timestamp, refreshCache: $refreshCache, operation: ${operationRequest.operation.operationName}');
-    }
     final response = await _query(
       operationRequest,
       requestHeaders: requestHeaders,
@@ -214,10 +209,6 @@ class GraphqlHandler extends BaseAPIHandler {
         cachePolicy: refreshCache ? CachePolicy.refresh : null,
       ),
     );
-    if (kDebugMode) {
-      log.d(
-          '[GraphqlHandler] ✅ query() COMPLETED for operation: ${operationRequest.operation.operationName}');
-    }
     return response;
   }
 
@@ -355,7 +346,7 @@ abstract class BaseAPIHandler {
           error: logSettings.error,
           responseBody: logSettings.responseBody,
           compact: logSettings.compact,
-          logPrint: logSettings.logPrint ?? print,
+          logPrint: logSettings.logPrint ?? (_) {},
           maxWidth: logSettings.maxWidth,
           request: logSettings.request,
         ),
@@ -375,7 +366,6 @@ abstract class BaseAPIHandler {
               options.headers['Authorization'] = 'token $token';
               handler.next(options);
             } on Exception catch (e) {
-              log.e('Could not fetch auth token from device.', error: e);
               handler.reject(
                 DioException(
                   requestOptions: options,
@@ -473,28 +463,8 @@ abstract class BaseAPIHandler {
                   ),
                 );
             if (cacheIsBeforeExpiry) {
-              if (kDebugMode) {
-                final timestamp = DateTime.now().millisecondsSinceEpoch;
-                log.d(
-                    '[BaseAPIHandler] ✅ CACHE HIT at $timestamp for URL: ${options.uri}, cache age: ${DateTime.now().difference(cacheData.responseDate).inSeconds}s');
-              }
               // Resolve the request and pass cached data as response.
               return handler.resolve(cacheData.toResponse(options));
-            } else if (cacheData != null) {
-              if (kDebugMode) {
-                log.d(
-                    '[BaseAPIHandler] ⚠️ CACHE EXPIRED for URL: ${options.uri}, cache age: ${DateTime.now().difference(cacheData.responseDate).inSeconds}s, maxAge: ${cache.maxAge!.inSeconds}s');
-              }
-            } else {
-              if (kDebugMode) {
-                log.d(
-                    '[BaseAPIHandler] ⚠️ NO CACHE FOUND for URL: ${options.uri}, making network request');
-              }
-            }
-          } else {
-            if (kDebugMode) {
-              log.d(
-                  '[BaseAPIHandler] ⚠️ CACHE CHECK SKIPPED for URL: ${options.uri}, policy: ${cache.cacheOptions.policy}, maxAge: ${cache.maxAge}');
             }
           }
           handler.next(options);

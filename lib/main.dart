@@ -1,6 +1,4 @@
 import 'dart:async';
-import 'dart:developer' as developer;
-import 'dart:developer';
 
 import 'package:auto_route/auto_route.dart';
 import 'package:chucker_flutter/chucker_flutter.dart';
@@ -56,8 +54,6 @@ Future<void> debugURLLauncher() async {
       await deepLinkNavigate(
         Uri.parse(url ?? ''),
       );
-    } else {
-      debugPrint('Failed to get router context for deep link navigation');
     }
   }
 }
@@ -81,15 +77,7 @@ void main() async {
     setHighRefreshRate(),
   ]);
 
-  if (kDebugMode) {
-    unawaited(
-      developer.Service.getInfo().then(
-        (final ServiceProtocolInfo value) {
-          debugPrint('DEVTOOLS serverUri: ${value.serverUri}');
-        },
-      ),
-    );
-  }
+  // DevTools info retrieval disabled
 
   // final initLink = await initUniLink();
   uniLinkStream();
