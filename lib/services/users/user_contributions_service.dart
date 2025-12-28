@@ -26,7 +26,25 @@ class UserContributionsService {
           '[UserContributionsService] ⚠️ fetchContributions CALLED at $timestamp for user "${key.userName}", hashCode: ${key.hashCode}, dateRange: ${key.dateRange}');
     }
     try {
-      final (from, to) = key.dateRange.dates;
+      var (from, to) = key.dateRange.dates;
+
+      // Clamp dates to today to prevent future date queries
+      final today = DateTime.now();
+      final todayNormalized = DateTime(today.year, today.month, today.day);
+      if (to.isAfter(todayNormalized)) {
+        if (kDebugMode) {
+          log.w(
+              '[UserContributionsService] Clamping end date from ${to.toIso8601String()} to ${todayNormalized.toIso8601String()}');
+        }
+        to = todayNormalized;
+      }
+      if (from.isAfter(todayNormalized)) {
+        if (kDebugMode) {
+          log.w(
+              '[UserContributionsService] Clamping start date from ${from.toIso8601String()} to ${todayNormalized.toIso8601String()}');
+        }
+        from = todayNormalized;
+      }
 
       // Check if this is a multi-year range
       // Use actual day difference instead of year subtraction to correctly handle
@@ -58,8 +76,8 @@ class UserContributionsService {
         return viewModel;
       }
 
-      // Multi-year range: fetch each year in parallel
-      final yearQueries = <Future<GuserContributionsData_user>>[];
+      // Multi-year range: fetch each year in parallel with error handling
+      final yearQueries = <Future<GuserContributionsData_user?>>[];
       final yearCount = to.year - from.year + 1;
       if (kDebugMode) {
         log.d(
@@ -67,18 +85,27 @@ class UserContributionsService {
       }
 
       for (int year = from.year; year <= to.year; year++) {
-        final yearStart = year == from.year
+        var yearStart = year == from.year
             ? DateTime(year, from.month, from.day)
             : DateTime(year, 1, 1);
-        final yearEnd = year == to.year
+        var yearEnd = year == to.year
             ? DateTime(year, to.month, to.day)
             : DateTime(year, 12, 31);
+
+        // Clamp year dates to today
+        if (yearEnd.isAfter(todayNormalized)) {
+          yearEnd = todayNormalized;
+        }
+        if (yearStart.isAfter(todayNormalized)) {
+          yearStart = todayNormalized;
+        }
 
         if (kDebugMode) {
           log.d(
               '[UserContributionsService] fetchContributions: Adding query for year $year (${yearStart.toIso8601String()} to ${yearEnd.toIso8601String()})');
         }
 
+        // Wrap each query in error handling to prevent one failure from failing all
         yearQueries.add(
           UserInfoService.getUserContributions(
             key.userName,
@@ -88,18 +115,35 @@ class UserContributionsService {
         );
       }
 
-      // Fetch all years in parallel
+      // Fetch all years in parallel (with graceful error handling)
       if (kDebugMode) {
         log.d(
             '[UserContributionsService] fetchContributions: Executing ${yearQueries.length} parallel queries');
       }
-      final results = await Future.wait(yearQueries, eagerError: true);
+      final results = await Future.wait(yearQueries, eagerError: false);
+
+      // Filter out null results (failed years)
+      final successfulResults =
+          results.whereType<GuserContributionsData_user>().toList();
+
+      if (successfulResults.isEmpty) {
+        throw Exception('All year queries failed for user "${key.userName}"');
+      }
+
+      if (successfulResults.length < results.length) {
+        final failedCount = results.length - successfulResults.length;
+        if (kDebugMode) {
+          log.w(
+              '[UserContributionsService] fetchContributions: $failedCount out of ${results.length} year queries failed, continuing with ${successfulResults.length} successful results');
+        }
+      }
+
       if (kDebugMode) {
         log.d(
-            '[UserContributionsService] fetchContributions: All ${results.length} queries completed, combining results');
+            '[UserContributionsService] fetchContributions: ${successfulResults.length} queries completed successfully, combining results');
       }
       // Combine results into unified view model
-      final combined = _combineMultiYearResults(results);
+      final combined = _combineMultiYearResults(successfulResults);
       if (kDebugMode) {
         log.d(
             '[UserContributionsService] fetchContributions: Multi-year combination complete. Total contributions: ${combined.viewModel.totalContributions}, ${combined.yearlyHighlights.length} year highlights');

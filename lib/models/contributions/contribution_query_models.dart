@@ -52,13 +52,29 @@ class ContributionQueryKey {
     required DateTime from,
     required DateTime to,
   }) {
+    // Normalize dates to day level for stable keys
+    // This ensures DateTime instances with same day have same hashCode
+    // Prevents unnecessary Riverpod refetches when DateTime.now() is called
+    final DateTime normalizedFrom = DateTime(
+      from.year,
+      from.month,
+      from.day,
+    );
+    final DateTime normalizedTo = DateTime(
+      to.year,
+      to.month,
+      to.day,
+    );
     if (kDebugMode) {
       log.d(
-          '[ContributionQueryKey.customRange] Creating key for userName: "$userName", from: ${from.toIso8601String()}, to: ${to.toIso8601String()}');
+          '[ContributionQueryKey.customRange] Creating key for userName: "$userName", from: ${normalizedFrom.toIso8601String()}, to: ${normalizedTo.toIso8601String()}');
     }
     return ContributionQueryKey(
       userName: userName,
-      dateRange: ContributionDateRange.custom(from: from, to: to),
+      dateRange: ContributionDateRange.custom(
+        from: normalizedFrom,
+        to: normalizedTo,
+      ),
     );
   }
 

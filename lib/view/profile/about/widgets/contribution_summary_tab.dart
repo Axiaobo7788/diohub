@@ -74,6 +74,7 @@ class ContributionSummaryTab extends StatelessWidget {
                 issues: viewModel.totalIssueContributions,
                 pullRequests: viewModel.totalPullRequestContributions,
                 reviews: viewModel.totalPullRequestReviewContributions,
+                weeks: viewModel.weeks,
               ),
             ),
           ),

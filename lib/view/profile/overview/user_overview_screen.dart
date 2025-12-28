@@ -5,11 +5,12 @@ import 'package:diohub/common/misc/shimmer_widget.dart';
 import 'package:diohub/graphql/queries/users/__generated__/user_info.data.gql.dart';
 import 'package:diohub/models/repositories/repo_card_data_model.dart';
 import 'package:diohub/models/users/user_info_model.dart';
+import 'package:diohub/common/markdown_view/widgets/readme_image_view.dart';
 import 'package:diohub/utils/to_hex_string.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_svg/flutter_svg.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-class UserOverviewScreen extends StatelessWidget {
+class UserOverviewScreen extends ConsumerWidget {
   const UserOverviewScreen(
     this.userInfoModel, {
     this.followInfoData,
@@ -20,7 +21,7 @@ class UserOverviewScreen extends StatelessWidget {
   final GfollowStatusInfoData_user? followInfoData;
 
   @override
-  Widget build(final BuildContext context) => ListView(
+  Widget build(final BuildContext context, WidgetRef ref) => ListView(
         padding: const EdgeInsets.symmetric(horizontal: 16),
         children: <Widget>[
           if (followInfoData != null) ...[
@@ -70,12 +71,9 @@ class UserOverviewScreen extends StatelessWidget {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: <Widget>[
-                  SvgPicture.network(
-                    'http://ghchart.rshah.org/${toHexString(Theme.of(context).colorScheme.primary).substring(2)}/${userInfoModel!.login}',
-                    placeholderBuilder: (final BuildContext context) =>
-                        ShimmerWidget.container(
-                      height: 60,
-                    ),
+                  ReadmeImageView(
+                    url:
+                        'http://ghchart.rshah.org/${toHexString(Theme.of(context).colorScheme.primary).substring(2)}/${userInfoModel!.login}',
                   ),
                   // Row(
                   //   children: [
