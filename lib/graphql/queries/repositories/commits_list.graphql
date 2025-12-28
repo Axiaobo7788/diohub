@@ -1,10 +1,26 @@
 # Query commits from default branch
-query commitsList($owner: String!, $repo: String!, $first: Int!, $after: String, $path: String, $author: CommitAuthor) {
+query commitsList(
+  $owner: String!
+  $repo: String!
+  $first: Int!
+  $after: String
+  $path: String
+  $author: CommitAuthor
+) {
   repository(name: $repo, owner: $owner) {
     defaultBranchRef {
       target {
+        __typename
         ... on Commit {
           ...commitHistory
+        }
+        ... on Tag {
+          target {
+            __typename
+            ... on Commit {
+              ...commitHistory
+            }
+          }
         }
       }
     }
@@ -12,12 +28,29 @@ query commitsList($owner: String!, $repo: String!, $first: Int!, $after: String,
 }
 
 # Query commits from a specific branch/ref
-query commitsListByRef($owner: String!, $repo: String!, $ref: String!, $first: Int!, $after: String, $path: String, $author: CommitAuthor) {
+query commitsListByRef(
+  $owner: String!
+  $repo: String!
+  $ref: String!
+  $first: Int!
+  $after: String
+  $path: String
+  $author: CommitAuthor
+) {
   repository(name: $repo, owner: $owner) {
     ref(qualifiedName: $ref) {
       target {
+        __typename
         ... on Commit {
           ...commitHistory
+        }
+        ... on Tag {
+          target {
+            __typename
+            ... on Commit {
+              ...commitHistory
+            }
+          }
         }
       }
     }
@@ -25,7 +58,15 @@ query commitsListByRef($owner: String!, $repo: String!, $ref: String!, $first: I
 }
 
 # Query commits from a specific commit OID
-query commitsListByOid($owner: String!, $repo: String!, $oid: GitObjectID!, $first: Int!, $after: String, $path: String, $author: CommitAuthor) {
+query commitsListByOid(
+  $owner: String!
+  $repo: String!
+  $oid: GitObjectID!
+  $first: Int!
+  $after: String
+  $path: String
+  $author: CommitAuthor
+) {
   repository(name: $repo, owner: $owner) {
     object(oid: $oid) {
       ... on Commit {
@@ -36,12 +77,7 @@ query commitsListByOid($owner: String!, $repo: String!, $oid: GitObjectID!, $fir
 }
 
 fragment commitHistory on Commit {
-  history(
-    first: $first
-    after: $after
-    path: $path
-    author: $author
-  ) {
+  history(first: $first, after: $after, path: $path, author: $author) {
     ...commitHistoryConnection
   }
 }
@@ -109,4 +145,3 @@ fragment commitListItem on Commit {
     }
   }
 }
-

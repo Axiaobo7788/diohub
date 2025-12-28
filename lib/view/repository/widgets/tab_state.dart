@@ -10,5 +10,6 @@ class TabState {
   bool get isOnReadmeTab => currentTab == 'Readme';
   bool get isOnCodeTab => currentTab == 'Code';
   bool get isOnPullRequestsTab => currentTab == 'Pull Requests';
+  bool get isOnCommitsTab => currentTab == 'Commits';
   bool get isOnMoreTab => currentTab == 'More';
 }

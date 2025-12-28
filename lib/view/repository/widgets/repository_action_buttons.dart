@@ -631,6 +631,15 @@ List<ActionButtonData> buildAllActions(
           : ActionButtonVisibilityState.both,
       onTap: () => tabController.openTab('Pull Requests'),
     ),
+    MinorActionButton(
+      icon: Octicons.git_branch,
+      label: 'Commits',
+      category: 'Navigation',
+      visibilityState: tabState.isOnCommitsTab
+          ? ActionButtonVisibilityState.none
+          : ActionButtonVisibilityState.both,
+      onTap: () => tabController.openTab('Commits'),
+    ),
     // Content - visible in expanded state only
     MinorActionButton(
       icon: Octicons.book,
@@ -703,6 +712,15 @@ Widget buildActionButtons(
           ? ActionButtonVisibilityState.none
           : ActionButtonVisibilityState.both,
       onTap: () => tabController.openTab('Pull Requests'),
+    ),
+    MinorActionButton(
+      icon: Octicons.git_branch,
+      label: 'Commits',
+      actionType: ActionButtonActionType.tab,
+      visibilityState: tabState.isOnCommitsTab
+          ? ActionButtonVisibilityState.none
+          : ActionButtonVisibilityState.both,
+      onTap: () => tabController.openTab('Commits'),
     ),
     MinorActionButton(
       icon: Icons.menu_rounded,
