@@ -23,30 +23,23 @@ class CurrentUserProvider extends BaseDataProvider<GviewerInfoData_viewer> {
         accountBloc.stream.listen((final AccountState accountState) async {
       // If accounts are empty, just reset - guard will handle routing
       if (accountState is AccountReady && accountState.accounts.isEmpty) {
-        debugPrint(
-            '[CurrentUserProvider] No accounts, resetting (guard handles routing)');
         reset();
         return;
       }
 
       // Load when AccountReady with active account
       if (accountState is AccountReady && accountState.activeAccount != null) {
-        debugPrint(
-            '[CurrentUserProvider] AccountReady with active: ${accountState.activeAccount}');
         // Check if active account changed
         if (status == Status.loaded) {
-          debugPrint('[CurrentUserProvider] Active account changed, reloading');
           reset();
         }
         await loadData();
       } else if (accountState is AccountSwitching) {
         // Reset during switch but don't load yet
-        debugPrint('[CurrentUserProvider] Account switching, resetting');
         reset();
       } else if (accountState is AccountReady &&
           accountState.activeAccount == null) {
         // No active account, reset
-        debugPrint('[CurrentUserProvider] No active account, resetting');
         reset();
       }
     });
@@ -54,8 +47,6 @@ class CurrentUserProvider extends BaseDataProvider<GviewerInfoData_viewer> {
     // Load data if account is already ready with active account
     final accountState = accountBloc.state;
     if (accountState is AccountReady && accountState.activeAccount != null) {
-      debugPrint(
-          '[CurrentUserProvider] Init: AccountReady with active, loading');
       loadData();
     }
   }
@@ -74,7 +65,6 @@ class CurrentUserProvider extends BaseDataProvider<GviewerInfoData_viewer> {
   void onError(final Object error) {
     // Logout is now handled centrally in BaseAPIHandler.onError interceptor
     // This ensures all API requests (REST and GraphQL) trigger logout on "Bad credentials"
-    debugPrint('[CurrentUserProvider] onError: $error');
   }
 
   @override

@@ -27,13 +27,7 @@ class UserActivityService {
     required DateTime from,
     required DateTime to,
     bool refreshCache = false,
-  }) async {
-    if (kDebugMode) {
-      log.d(
-          '[UserActivityService] _fetchTimelineChunk: Starting for user "$login" from ${from.toIso8601String()} to ${to.toIso8601String()}, refreshCache: $refreshCache');
-    }
-
-    String? repoAfter;
+  }) async {    String? repoAfter;
     String? prAfter;
     String? issueAfter;
     String? reviewAfter;
@@ -60,12 +54,7 @@ class UserActivityService {
     var paginationIteration = 0;
 
     while (true) {
-      paginationIteration++;
-      if (kDebugMode) {
-        log.d(
-            '[UserActivityService] _fetchTimelineChunk: Pagination iteration $paginationIteration for "$login"');
-      }
-      final response = await _gqlHandler.query(
+      paginationIteration++;      final response = await _gqlHandler.query(
         GuserActivityTimelineFullReq(
           (b) => b
             ..vars.user = login
@@ -102,12 +91,7 @@ class UserActivityService {
       if (repoConnection.nodes != null) {
         final newRepos = repoConnection.nodes!.whereType<
             GuserActivityTimelineFullData_user_contributionsCollection_repositoryContributions_nodes>();
-        repoNodes.addAll(newRepos);
-        if (kDebugMode) {
-          log.d(
-              '[UserActivityService] _fetchTimelineChunk: Added ${newRepos.length} repository contributions (total: ${repoNodes.length})');
-        }
-      }
+        repoNodes.addAll(newRepos);      }
       repoHasNext = repoConnection.pageInfo.hasNextPage;
       repoAfter = repoConnection.pageInfo.endCursor;
 
@@ -115,12 +99,7 @@ class UserActivityService {
       if (prConnection.nodes != null) {
         final newPRs = prConnection.nodes!.whereType<
             GuserActivityTimelineFullData_user_contributionsCollection_pullRequestContributions_nodes>();
-        prNodes.addAll(newPRs);
-        if (kDebugMode) {
-          log.d(
-              '[UserActivityService] _fetchTimelineChunk: Added ${newPRs.length} PR contributions (total: ${prNodes.length})');
-        }
-      }
+        prNodes.addAll(newPRs);      }
       prHasNext = prConnection.pageInfo.hasNextPage;
       prAfter = prConnection.pageInfo.endCursor;
 
@@ -128,12 +107,7 @@ class UserActivityService {
       if (issueConnection.nodes != null) {
         final newIssues = issueConnection.nodes!.whereType<
             GuserActivityTimelineFullData_user_contributionsCollection_issueContributions_nodes>();
-        issueNodes.addAll(newIssues);
-        if (kDebugMode) {
-          log.d(
-              '[UserActivityService] _fetchTimelineChunk: Added ${newIssues.length} issue contributions (total: ${issueNodes.length})');
-        }
-      }
+        issueNodes.addAll(newIssues);      }
       issueHasNext = issueConnection.pageInfo.hasNextPage;
       issueAfter = issueConnection.pageInfo.endCursor;
 
@@ -141,28 +115,12 @@ class UserActivityService {
       if (reviewConnection.nodes != null) {
         final newReviews = reviewConnection.nodes!.whereType<
             GuserActivityTimelineFullData_user_contributionsCollection_pullRequestReviewContributions_nodes>();
-        reviewNodes.addAll(newReviews);
-        if (kDebugMode) {
-          log.d(
-              '[UserActivityService] _fetchTimelineChunk: Added ${newReviews.length} review contributions (total: ${reviewNodes.length})');
-        }
-      }
+        reviewNodes.addAll(newReviews);      }
       reviewHasNext = reviewConnection.pageInfo.hasNextPage;
       reviewAfter = reviewConnection.pageInfo.endCursor;
 
-      commitRepos ??= cc.commitContributionsByRepository;
-      if (kDebugMode) {
-        log.d(
-            '[UserActivityService] _fetchTimelineChunk: Found ${commitRepos.length} commit repositories');
-      }
-
-      final hasMore = repoHasNext || prHasNext || issueHasNext || reviewHasNext;
-      if (!hasMore) {
-        if (kDebugMode) {
-          log.d(
-              '[UserActivityService] _fetchTimelineChunk: Completed pagination for "$login" after $paginationIteration iterations. Collected: ${repoNodes.length} repos, ${prNodes.length} PRs, ${issueNodes.length} issues, ${reviewNodes.length} reviews');
-        }
-        return lastUser.rebuild((b) {
+      commitRepos ??= cc.commitContributionsByRepository;      final hasMore = repoHasNext || prHasNext || issueHasNext || reviewHasNext;
+      if (!hasMore) {        return lastUser.rebuild((b) {
           b.contributionsCollection.update((ccBuilder) {
             ccBuilder.repositoryContributions.update((rcBuilder) {
               rcBuilder.nodes.replace(repoNodes);
@@ -210,20 +168,9 @@ class UserActivityService {
     required DateTime from,
     required DateTime to,
     bool refreshCache = false,
-  }) async* {
-    if (kDebugMode) {
-      log.d(
-          '[UserActivityService] getUserActivityTimelineWithProgress: Starting for user "$login" from ${from.toIso8601String()} to ${to.toIso8601String()}, refreshCache: $refreshCache');
-    }
-    try {
+  }) async* {    try {
       final daysDiff = to.difference(from).inDays;
-      final exceedsOneYear = daysDiff > 365;
-      if (kDebugMode) {
-        log.d(
-            '[UserActivityService] getUserActivityTimelineWithProgress: Date range is $daysDiff days, exceedsOneYear: $exceedsOneYear');
-      }
-
-      if (!exceedsOneYear) {
+      final exceedsOneYear = daysDiff > 365;      if (!exceedsOneYear) {
         yield ActivityTimelineLoading(
           phase: 'loading',
           current: 0,
@@ -239,13 +186,7 @@ class UserActivityService {
           refreshCache: refreshCache,
         );
 
-        final events = ActivityTimelineConverter.convertToEvents(fullData);
-        if (kDebugMode) {
-          log.d(
-              '[UserActivityService] getUserActivityTimelineWithProgress: Converted to ${events.length} events');
-        }
-
-        yield ActivityTimelineLoading(
+        final events = ActivityTimelineConverter.convertToEvents(fullData);        yield ActivityTimelineLoading(
           phase: 'loading',
           current: 90,
           total: 100,
@@ -253,12 +194,7 @@ class UserActivityService {
           eventCount: events.length,
         );
 
-        final timelineData = _buildTimelineData(fullData, from, to);
-        if (kDebugMode) {
-          log.d(
-              '[UserActivityService] getUserActivityTimelineWithProgress: Successfully built timeline with ${timelineData.events.length} events');
-        }
-        yield ActivityTimelineSuccess(timelineData);
+        final timelineData = _buildTimelineData(fullData, from, to);        yield ActivityTimelineSuccess(timelineData);
         return;
       }
 
@@ -267,13 +203,7 @@ class UserActivityService {
       final totalSteps = chunks.length;
       final progressPerStep = 90 / totalSteps;
       var currentProgress = 0.0;
-      var totalEventCount = 0;
-      if (kDebugMode) {
-        log.d(
-            '[UserActivityService] getUserActivityTimelineWithProgress: Split into $totalSteps chunks');
-      }
-
-      yield ActivityTimelineLoading(
+      var totalEventCount = 0;      yield ActivityTimelineLoading(
         phase: 'loading',
         current: 0,
         total: 100,
@@ -308,19 +238,8 @@ class UserActivityService {
 
           final events = ActivityTimelineConverter.convertToEvents(fullData);
           chunkEventLists.add(events);
-          totalEventCount += events.length;
-          if (kDebugMode) {
-            log.d(
-                '[UserActivityService] getUserActivityTimelineWithProgress: Chunk $yearLabel: ${events.length} events (total so far: $totalEventCount)');
-          }
-
-          currentProgress += progressPerStep;
-        } catch (e, stackTrace) {
-          log.e(
-              '[UserActivityService] getUserActivityTimelineWithProgress: Failed to load chunk $yearLabel',
-              error: e,
-              stackTrace: stackTrace);
-          yield ActivityTimelineError(
+          totalEventCount += events.length;          currentProgress += progressPerStep;
+        } catch (e, stackTrace) {          yield ActivityTimelineError(
             message: 'Failed to load activity for $yearLabel',
             error: e,
           );
@@ -338,28 +257,12 @@ class UserActivityService {
 
       final allEvents = chunkEventLists.length == 1
           ? chunkEventLists.first
-          : _mergeSortedChunks(chunkEventLists);
-      if (kDebugMode) {
-        log.d(
-            '[UserActivityService] getUserActivityTimelineWithProgress: Merged ${chunkEventLists.length} chunks into ${allEvents.length} total events');
-      }
-
-      final timelineData = UserActivityTimelineData(
+          : _mergeSortedChunks(chunkEventLists);      final timelineData = UserActivityTimelineData(
         events: allEvents,
         from: from,
         to: to,
-      );
-      if (kDebugMode) {
-        log.d(
-            '[UserActivityService] getUserActivityTimelineWithProgress: Successfully built multi-year timeline');
-      }
-      yield ActivityTimelineSuccess(timelineData);
-    } catch (e, stackTrace) {
-      log.e(
-          '[UserActivityService] getUserActivityTimelineWithProgress: Error fetching timeline for "$login"',
-          error: e,
-          stackTrace: stackTrace);
-      yield ActivityTimelineError(
+      );      yield ActivityTimelineSuccess(timelineData);
+    } catch (e, stackTrace) {      yield ActivityTimelineError(
         message: 'Failed to fetch activity timeline for user "$login": $e',
         error: e,
         stackTrace: stackTrace,
@@ -372,12 +275,7 @@ class UserActivityService {
     required DateTime from,
     required DateTime to,
     bool refreshCache = false,
-  }) async {
-    if (kDebugMode) {
-      log.d(
-          '[UserActivityService] getUserActivityTimeline: Starting for user "$login" from ${from.toIso8601String()} to ${to.toIso8601String()}, refreshCache: $refreshCache');
-    }
-    try {
+  }) async {    try {
       final daysDiff = to.difference(from).inDays;
       final exceedsOneYear = daysDiff > 365;
 
@@ -388,22 +286,11 @@ class UserActivityService {
           to: to,
           refreshCache: refreshCache,
         );
-        final result = _buildTimelineData(fullData, from, to);
-        if (kDebugMode) {
-          log.d(
-              '[UserActivityService] getUserActivityTimeline: Single-year timeline completed with ${result.events.length} events');
-        }
-        return result;
+        final result = _buildTimelineData(fullData, from, to);        return result;
       }
 
       final chunks = _splitDateRangeIntoYearChunks(from, to);
-      final chunkEventLists = <List<ActivityTimelineEvent>>[];
-      if (kDebugMode) {
-        log.d(
-            '[UserActivityService] getUserActivityTimeline: Processing ${chunks.length} chunks');
-      }
-
-      for (final (chunkFrom, chunkTo) in chunks) {
+      final chunkEventLists = <List<ActivityTimelineEvent>>[];      for (final (chunkFrom, chunkTo) in chunks) {
         final fullData = await _fetchTimelineChunk(
           login: login,
           from: chunkFrom,
@@ -411,44 +298,23 @@ class UserActivityService {
           refreshCache: refreshCache,
         );
         final events = ActivityTimelineConverter.convertToEvents(fullData);
-        chunkEventLists.add(events);
-        if (kDebugMode) {
-          log.d(
-              '[UserActivityService] getUserActivityTimeline: Chunk ${chunkFrom.year}-${chunkTo.year}: ${events.length} events');
-        }
-      }
+        chunkEventLists.add(events);      }
 
       final allEvents = chunkEventLists.length == 1
           ? chunkEventLists.first
-          : _mergeSortedChunks(chunkEventLists);
-      if (kDebugMode) {
-        log.d(
-            '[UserActivityService] getUserActivityTimeline: Merged into ${allEvents.length} total events');
-      }
-
-      return UserActivityTimelineData(
+          : _mergeSortedChunks(chunkEventLists);      return UserActivityTimelineData(
         events: allEvents,
         from: from,
         to: to,
       );
-    } catch (e, stackTrace) {
-      log.e(
-          '[UserActivityService] getUserActivityTimeline: Error for user "$login"',
-          error: e,
-          stackTrace: stackTrace);
-      rethrow;
+    } catch (e, stackTrace) {      rethrow;
     }
   }
 
   static List<(DateTime, DateTime)> _splitDateRangeIntoYearChunks(
     DateTime from,
     DateTime to,
-  ) {
-    if (kDebugMode) {
-      log.d(
-          '[UserActivityService] _splitDateRangeIntoYearChunks: Splitting from ${from.toIso8601String()} to ${to.toIso8601String()}');
-    }
-    final chunks = <(DateTime, DateTime)>[];
+  ) {    final chunks = <(DateTime, DateTime)>[];
     var currentFrom = from;
 
     while (currentFrom.isBefore(to) ||
@@ -472,13 +338,7 @@ class UserActivityService {
         );
       }
 
-      chunks.add((currentFrom, chunkTo));
-      if (kDebugMode) {
-        log.d(
-            '[UserActivityService] _splitDateRangeIntoYearChunks: Added chunk ${currentFrom.year}-${chunkTo.year}: ${currentFrom.toIso8601String()} to ${chunkTo.toIso8601String()}');
-      }
-
-      if (chunkTo.year == to.year &&
+      chunks.add((currentFrom, chunkTo));      if (chunkTo.year == to.year &&
           chunkTo.month == to.month &&
           chunkTo.day == to.day) {
         break;
@@ -486,45 +346,24 @@ class UserActivityService {
 
       currentFrom = chunkTo.add(const Duration(days: 1));
 
-      if (chunks.length > 100) {
-        log.e(
-            '[UserActivityService] _splitDateRangeIntoYearChunks: Exceeded maximum chunks (100)');
-        throw Exception(
+      if (chunks.length > 100) {        throw Exception(
           'Date range splitting exceeded maximum chunks (100). Range: $from to $to',
         );
       }
-    }
-
-    if (kDebugMode) {
-      log.d(
-          '[UserActivityService] _splitDateRangeIntoYearChunks: Created ${chunks.length} chunks');
-    }
-    return chunks;
+    }    return chunks;
   }
 
   static List<ActivityTimelineEvent> _mergeSortedChunks(
     List<List<ActivityTimelineEvent>> sortedChunks,
   ) {
-    if (sortedChunks.isEmpty) {
-      if (kDebugMode) {
-        log.d('[UserActivityService] _mergeSortedChunks: No chunks to merge');
-      }
-      return [];
+    if (sortedChunks.isEmpty) {      return [];
     }
-    if (sortedChunks.length == 1) {
-      if (kDebugMode) {
-        log.d(
-            '[UserActivityService] _mergeSortedChunks: Single chunk with ${sortedChunks.first.length} events');
-      }
-      return sortedChunks.first;
+    if (sortedChunks.length == 1) {      return sortedChunks.first;
     }
 
     if (kDebugMode) {
       final totalEvents =
-          sortedChunks.fold<int>(0, (sum, chunk) => sum + chunk.length);
-      log.d(
-          '[UserActivityService] _mergeSortedChunks: Merging ${sortedChunks.length} chunks with $totalEvents total events');
-    }
+          sortedChunks.fold<int>(0, (sum, chunk) => sum + chunk.length);    }
 
     final merged = <ActivityTimelineEvent>[];
     final iterators = sortedChunks.map((chunk) => chunk.iterator).toList();
@@ -560,13 +399,7 @@ class UserActivityService {
           currentValues[newestIndex] = null;
         }
       }
-    }
-
-    if (kDebugMode) {
-      log.d(
-          '[UserActivityService] _mergeSortedChunks: Merged into ${merged.length} events');
-    }
-    return merged;
+    }    return merged;
   }
 
   static UserActivityTimelineData _buildTimelineData(
@@ -574,13 +407,7 @@ class UserActivityService {
     DateTime from,
     DateTime to,
   ) {
-    final events = ActivityTimelineConverter.convertToEvents(fullData);
-    if (kDebugMode) {
-      log.d(
-          '[UserActivityService] _buildTimelineData: Built timeline with ${events.length} events');
-    }
-
-    return UserActivityTimelineData(
+    final events = ActivityTimelineConverter.convertToEvents(fullData);    return UserActivityTimelineData(
       events: events,
       from: from,
       to: to,
@@ -619,26 +446,13 @@ class UserActivityService {
     required DateTime from,
     required DateTime to,
     bool refreshCache = false,
-  }) async {
-    if (kDebugMode) {
-      log.d(
-          '[UserActivityService] getYearEvents: Fetching year $year for user "$login"');
-    }
-
-    // Calculate year boundaries
+  }) async {    // Calculate year boundaries
     final yearStart = DateTime(year, 1, 1);
     final yearEnd = DateTime(year, 12, 31);
 
     // Clamp to actual date range
     final chunkFrom = yearStart.isBefore(from) ? from : yearStart;
-    final chunkTo = yearEnd.isAfter(to) ? to : yearEnd;
-
-    if (kDebugMode) {
-      log.d(
-          '[UserActivityService] getYearEvents: Year $year range: ${chunkFrom.toIso8601String()} to ${chunkTo.toIso8601String()}');
-    }
-
-    final fullData = await _fetchTimelineChunk(
+    final chunkTo = yearEnd.isAfter(to) ? to : yearEnd;    final fullData = await _fetchTimelineChunk(
       login: login,
       from: chunkFrom,
       to: chunkTo,
@@ -650,13 +464,6 @@ class UserActivityService {
       events: events,
       from: chunkFrom,
       to: chunkTo,
-    );
-
-    if (kDebugMode) {
-      log.d(
-          '[UserActivityService] getYearEvents: Year $year returned ${timelineData.events.length} events');
-    }
-
-    return timelineData.events;
+    );    return timelineData.events;
   }
 }

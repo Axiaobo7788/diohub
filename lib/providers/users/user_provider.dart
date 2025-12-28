@@ -7,28 +7,13 @@ import 'package:diohub/services/users/user_info_service.dart';
 import 'package:flutter/foundation.dart';
 
 class UserProvider extends BaseDataProvider<GuserInfoData_user> {
-  UserProvider(this._userName) {
-    if (kDebugMode) {
-      log.d('[UserProvider] Constructor called with _userName: "$_userName"');
-    }
-  }
+  UserProvider(this._userName) {  }
   final String _userName;
 
   @override
   Future<GuserInfoData_user> setInitData(
-          {final bool isInitialisation = false}) async {
-    if (kDebugMode) {
-      log.d(
-          '[UserProvider] setInitData() called for _userName: "$_userName", isInitialisation: $isInitialisation');
-    }
-    final result = await UserInfoService.getUserInfoGraphQL(_userName);
-    if (kDebugMode) {
-      log.d(
-          '[UserProvider] setInitData() completed for _userName: "$_userName", result.login: "${result.login}"');
-      if (_userName != result.login) {
-        log.w(
-            '[UserProvider] ⚠️ MISMATCH: _userName ("$_userName") != result.login ("${result.login}")');
-      }
+          {final bool isInitialisation = false}) async {    final result = await UserInfoService.getUserInfoGraphQL(_userName);
+    if (kDebugMode) {      if (_userName != result.login) {      }
     }
     return result;
   }

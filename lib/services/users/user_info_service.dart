@@ -141,10 +141,7 @@ class UserInfoService {
     final bool refreshCache = false,
   }) async {
     if (kDebugMode) {
-      final timestamp = DateTime.now().millisecondsSinceEpoch;
-      log.d(
-          '[UserInfoService] ⚠️ getUserContributions CALLED at $timestamp for user "$login", refreshCache: $refreshCache, from: ${from?.toIso8601String()}, to: ${to?.toIso8601String()}');
-    }
+      final timestamp = DateTime.now().millisecondsSinceEpoch;    }
     // Default to last year if not specified
     final defaultTo = to ?? DateTime.now();
     final defaultFrom = from ??
@@ -152,13 +149,7 @@ class UserInfoService {
           defaultTo.year - 1,
           defaultTo.month,
           defaultTo.day,
-        );
-
-    if (kDebugMode) {
-      log.d(
-          '[UserInfoService] Calling GraphQL query with from: ${defaultFrom.toIso8601String()}, to: ${defaultTo.toIso8601String()}');
-    }
-    final response = await _gqlHandler.query(
+        );    final response = await _gqlHandler.query(
       GuserContributionsReq(
         (final GuserContributionsReqBuilder b) => b
           ..vars.user = login
@@ -166,10 +157,6 @@ class UserInfoService {
           ..vars.to = defaultTo,
       ),
       refreshCache: refreshCache,
-    );
-    if (kDebugMode) {
-      log.d('[UserInfoService] ✅ GraphQL query completed for user "$login"');
-    }
-    return GuserContributionsData.fromJson(response.data!)!.user!;
+    );    return GuserContributionsData.fromJson(response.data!)!.user!;
   }
 }

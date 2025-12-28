@@ -19,12 +19,7 @@ class ContributionQueryKey {
   factory ContributionQueryKey.lastYear(String userName) {
     final now = DateTime.now();
     final to = DateTime(now.year, now.month, now.day);
-    final from = DateTime(to.year - 1, to.month, to.day);
-    if (kDebugMode) {
-      log.d(
-          '[ContributionQueryKey.lastYear] Creating key for userName: "$userName", from: ${from.toIso8601String()}, to: ${to.toIso8601String()}');
-    }
-    return ContributionQueryKey(
+    final from = DateTime(to.year - 1, to.month, to.day);    return ContributionQueryKey(
       userName: userName,
       dateRange: ContributionDateRange.custom(
         from: from,
@@ -35,12 +30,7 @@ class ContributionQueryKey {
   }
 
   /// Create key for a specific year
-  factory ContributionQueryKey.year(String userName, int year) {
-    if (kDebugMode) {
-      log.d(
-          '[ContributionQueryKey.year] Creating key for userName: "$userName", year: $year');
-    }
-    return ContributionQueryKey(
+  factory ContributionQueryKey.year(String userName, int year) {    return ContributionQueryKey(
       userName: userName,
       dateRange: ContributionDateRange.year(year),
     );
@@ -64,12 +54,7 @@ class ContributionQueryKey {
       to.year,
       to.month,
       to.day,
-    );
-    if (kDebugMode) {
-      log.d(
-          '[ContributionQueryKey.customRange] Creating key for userName: "$userName", from: ${normalizedFrom.toIso8601String()}, to: ${normalizedTo.toIso8601String()}');
-    }
-    return ContributionQueryKey(
+    );    return ContributionQueryKey(
       userName: userName,
       dateRange: ContributionDateRange.custom(
         from: normalizedFrom,
