@@ -16,7 +16,7 @@ class CommitGraphView extends StatefulWidget {
 
 class _CommitGraphViewState extends State<CommitGraphView> {
   late final InfinitePaginationController<CommitWithLaneData> _controller;
-  final GraphLayoutCalculator _calculator = GraphLayoutCalculator();
+  GraphLayoutCalculator? _calculator;
 
   @override
   void initState() {
@@ -104,8 +104,13 @@ class _CommitGraphViewState extends State<CommitGraphView> {
       refresh: args.refresh,
     );
 
+    // Initialize calculator with brightness from theme (once)
+    _calculator ??= GraphLayoutCalculator(
+      brightness: Theme.of(context).brightness,
+    );
+
     // Calculate lanes incrementally - only need state from last commit!
-    final newCommitsWithLaneData = _calculator.processCommitsIncremental(
+    final newCommitsWithLaneData = _calculator!.processCommitsIncremental(
       rawCommits,
       lastCommitLaneData,
       startX: startX,
