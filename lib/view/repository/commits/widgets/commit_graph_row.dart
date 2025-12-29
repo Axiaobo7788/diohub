@@ -35,7 +35,7 @@ class CommitGraphRow extends StatelessWidget {
             SizedBox(
               width: railWidth,
               child: SizedBox(
-                height: _rowMinHeight,
+                height: _rowMinHeight + _rowOverlap,
                 child: CustomPaint(
                   painter: _CommitRailPainter(
                     laneData: laneData,
@@ -181,7 +181,9 @@ class _CommitRailPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final laneCount = math.max(laneData.maxLanes, 1);
-    final centerY = size.height / 2;
+    final centerY = _rowMinHeight / 2;
+    final topY = -_rowOverlap / 2;
+    final bottomY = _rowMinHeight + _rowOverlap / 2;
     final startX = _railInset + _laneSpacing / 2;
 
     // Find current lane column
@@ -219,7 +221,7 @@ class _CommitRailPainter extends CustomPainter {
         toX,
         centerY + _halfRow * 0.6,
         toX,
-        size.height,
+        bottomY,
       );
       canvas.drawPath(path, paint);
     }
@@ -272,10 +274,10 @@ class _CommitRailPainter extends CustomPainter {
         ..color = _laneColorById(resolvedLaneId);
 
       if (beforeActive) {
-        canvas.drawLine(Offset(x, 0), Offset(x, centerY), paint);
+        canvas.drawLine(Offset(x, topY), Offset(x, centerY), paint);
       }
       if (afterActive) {
-        canvas.drawLine(Offset(x, centerY), Offset(x, size.height), paint);
+        canvas.drawLine(Offset(x, centerY), Offset(x, bottomY), paint);
       }
     }
 
@@ -300,7 +302,7 @@ class _CommitRailPainter extends CustomPainter {
         targetX,
         centerY + _halfRow * 0.6,
         targetX,
-        size.height,
+        bottomY,
       );
       canvas.drawPath(path, paint);
     }
@@ -362,3 +364,4 @@ const double _nodeRadius = 5;
 const double _railInset = 6;
 const double _rowMinHeight = 68;
 const double _halfRow = _rowMinHeight / 2;
+const double _rowOverlap = 16;
