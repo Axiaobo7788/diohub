@@ -37,92 +37,79 @@ class LaneSnapshot {
       expectedOid; // OID this lane is waiting for (for reconstruction)
 }
 
+/// Complete state of all lanes for a single commit row.
+class LaneRowState {
+  const LaneRowState({
+    required this.nodeLaneId,
+    required this.before,
+    required this.after,
+    required this.visibleLaneIds,
+    required this.beforeX,
+    required this.afterX,
+    required this.collapsingLaneIds,
+    required this.collapseInto,
+    required this.mergeFromNodeLaneIds,
+    required this.visualLaneCount,
+  });
+
+  /// Lane ID where the commit node is drawn.
+  final String nodeLaneId;
+
+  /// Active lanes entering this row: laneId → snapshot.
+  final Map<String, LaneSnapshot> before;
+
+  /// Active lanes exiting this row: laneId → snapshot.
+  final Map<String, LaneSnapshot> after;
+
+  /// Union of all lane IDs from both before and after.
+  final Set<String> visibleLaneIds;
+
+  /// X coordinates at row top: laneId → x coordinate.
+  final Map<String, double> beforeX;
+
+  /// X coordinates at row bottom: laneId → x coordinate.
+  final Map<String, double> afterX;
+
+  /// Lane IDs that terminate into another lane (for fast membership checks).
+  final Set<String> collapsingLaneIds;
+
+  /// Collapse relationships: fromLaneId → toLaneId.
+  final Map<String, String> collapseInto;
+
+  /// Secondary parents drawn from node (merge curves).
+  final Set<String> mergeFromNodeLaneIds;
+
+  /// Width driver (number of visual lanes).
+  final int visualLaneCount;
+}
+
 /// Snapshot of lane state for a single commit row.
 class LaneData {
   LaneData({
-    required this.lanesBefore,
-    required this.lanesAfter,
-    required this.currentLaneId,
-    required this.mergeTargets,
-    required this.maxLanes,
-    this.collapsingLanes = const {},
-    required double startX,
-    required double laneSpacing,
-  })  : beforeByLaneId = {
-          for (final snapshot in lanesBefore)
-            if (snapshot.activeBefore && snapshot.laneId.isNotEmpty)
-              snapshot.laneId: snapshot
-        },
-        afterByLaneId = {
-          for (final snapshot in lanesAfter)
-            if (snapshot.activeAfter && snapshot.laneId.isNotEmpty)
-              snapshot.laneId: snapshot
-        },
-        allLaneIds = {
-          ...{
-            for (final snapshot in lanesBefore)
-              if (snapshot.activeBefore && snapshot.laneId.isNotEmpty)
-                snapshot.laneId
-          },
-          ...{
-            for (final snapshot in lanesAfter)
-              if (snapshot.activeAfter && snapshot.laneId.isNotEmpty)
-                snapshot.laneId
-          }
-        },
-        beforeXByLaneId = {
-          for (final snapshot in lanesBefore)
-            if (snapshot.activeBefore && snapshot.laneId.isNotEmpty)
-              snapshot.laneId: startX + snapshot.column * laneSpacing
-        },
-        afterXByLaneId = {
-          for (final snapshot in lanesAfter)
-            if (snapshot.activeAfter && snapshot.laneId.isNotEmpty)
-              snapshot.laneId: startX + snapshot.column * laneSpacing
-        },
-        collapsingLaneIds = collapsingLanes.keys.toSet(),
-        mergeTargetLaneIds = mergeTargets.toSet();
+    required this.row,
+  });
 
-  /// Lane snapshots coming into this row (top half of the painter).
-  final List<LaneSnapshot> lanesBefore;
+  /// Complete state of all lanes for this commit row.
+  final LaneRowState row;
 
-  /// Lane snapshots leaving this row (bottom half of the painter).
-  final List<LaneSnapshot> lanesAfter;
+  // Legacy accessors for backward compatibility during migration
+  @Deprecated('Use row.nodeLaneId instead')
+  String get currentLaneId => row.nodeLaneId;
 
-  /// Lane ID where the current commit node is drawn.
-  final String currentLaneId;
+  @Deprecated('Use row.mergeFromNodeLaneIds instead')
+  List<String> get mergeTargets => row.mergeFromNodeLaneIds.toList();
 
-  /// Lane IDs for secondary parents (merges) that should be drawn
-  /// as curves from this node into the target lane.
-  final List<String> mergeTargets;
+  @Deprecated('Use row.visualLaneCount instead')
+  int get maxLanes => row.visualLaneCount;
 
-  /// Running maximum of lanes seen so far (keeps rail width from shrinking).
-  final int maxLanes;
+  @Deprecated('Use row.collapseInto instead')
+  Map<String, String> get collapsingLanes => row.collapseInto;
 
-  /// Lanes that collapse into other lanes: Map<fromLaneId, toLaneId>
-  /// When duplicate OIDs are detected, the rightmost lane collapses into the leftmost.
-  final Map<String, String> collapsingLanes;
+  @Deprecated('Use row.before instead')
+  List<LaneSnapshot> get lanesBefore => row.before.values.toList();
 
-  /// Precomputed lookup map: laneId -> LaneSnapshot for lanesBefore (activeBefore == true).
-  final Map<String, LaneSnapshot> beforeByLaneId;
-
-  /// Precomputed lookup map: laneId -> LaneSnapshot for lanesAfter (activeAfter == true).
-  final Map<String, LaneSnapshot> afterByLaneId;
-
-  /// Union of all lane IDs from both beforeByLaneId and afterByLaneId.
-  final Set<String> allLaneIds;
-
-  /// Precomputed X coordinates for lanesBefore: laneId -> X coordinate.
-  final Map<String, double> beforeXByLaneId;
-
-  /// Precomputed X coordinates for lanesAfter: laneId -> X coordinate.
-  final Map<String, double> afterXByLaneId;
-
-  /// Set of lane IDs that are collapsing into other lanes (for fast membership checks).
-  final Set<String> collapsingLaneIds;
-
-  /// Set of lane IDs that are merge targets (for fast membership checks).
-  final Set<String> mergeTargetLaneIds;
+  @Deprecated('Use row.after instead')
+  List<LaneSnapshot> get lanesAfter => row.after.values.toList();
 }
 
 /// Convenience bundle pairing a commit with its calculated lane data.
@@ -150,10 +137,10 @@ class GraphLayoutCalculator {
     required double laneSpacing,
   }) {
     // Convert previous snapshots back to Lane objects
-    // Reconstruct lanes from previousLaneData.lanesAfter
+    // Reconstruct lanes from previousLaneData.row.after
     var lanes = <Lane>[];
     if (previousLaneData != null) {
-      for (final snapshot in previousLaneData.lanesAfter) {
+      for (final snapshot in previousLaneData.row.after.values) {
         if (snapshot.laneId.isNotEmpty) {
           lanes.add(Lane(
             id: snapshot.laneId,
@@ -166,9 +153,9 @@ class GraphLayoutCalculator {
     // Track previous column assignments for stable sorting
     var previousColumns = <String, int>{};
     if (previousLaneData != null) {
-      for (final snapshot in previousLaneData.lanesAfter) {
-        if (snapshot.laneId.isNotEmpty && snapshot.activeAfter) {
-          previousColumns[snapshot.laneId] = snapshot.column;
+      for (final entry in previousLaneData.row.after.entries) {
+        if (entry.key.isNotEmpty) {
+          previousColumns[entry.key] = entry.value.column;
         }
       }
     }
@@ -380,23 +367,66 @@ class GraphLayoutCalculator {
       // Update previousColumns for next row
       previousColumns = laneToColumnAfter;
 
-      // Compute maxLanes PER ROW (only active lanes)
-      final maxLanes = activeLanesAfter.length;
+      // Compute visualLaneCount PER ROW (only active lanes)
+      final visualLaneCount = activeLanesAfter.length;
+
+      // Build before map (active lanes only)
+      final beforeMap = <String, LaneSnapshot>{
+        for (final snapshot in lanesBefore)
+          if (snapshot.activeBefore && snapshot.laneId.isNotEmpty)
+            snapshot.laneId: snapshot
+      };
+
+      // Build after map (active lanes only)
+      final afterMap = <String, LaneSnapshot>{
+        for (final snapshot in lanesAfter)
+          if (snapshot.activeAfter && snapshot.laneId.isNotEmpty)
+            snapshot.laneId: snapshot
+      };
+
+      // Build visibleLaneIds (union of before + after)
+      final visibleLaneIds = <String>{
+        ...beforeMap.keys,
+        ...afterMap.keys,
+      };
+
+      // Build X coordinate maps
+      final beforeX = <String, double>{
+        for (final entry in beforeMap.entries)
+          entry.key: startX + entry.value.column * laneSpacing
+      };
+
+      final afterX = <String, double>{
+        for (final entry in afterMap.entries)
+          entry.key: startX + entry.value.column * laneSpacing
+      };
+
+      // Build collapsingLaneIds and collapseInto
+      final collapsingLaneIds = collapsingLanes.keys.toSet();
+      final collapseInto = Map<String, String>.from(collapsingLanes);
+
+      // Build mergeFromNodeLaneIds
+      final mergeFromNodeLaneIds = mergeTargets.toSet();
+
+      // Create LaneRowState
+      final rowState = LaneRowState(
+        nodeLaneId: currentLane.id,
+        before: beforeMap,
+        after: afterMap,
+        visibleLaneIds: visibleLaneIds,
+        beforeX: beforeX,
+        afterX: afterX,
+        collapsingLaneIds: collapsingLaneIds,
+        collapseInto: collapseInto,
+        mergeFromNodeLaneIds: mergeFromNodeLaneIds,
+        visualLaneCount: visualLaneCount,
+      );
 
       // Build snapshots ONLY from real lanes (no padding, no fake lanes)
       results.add(
         CommitWithLaneData(
           commit: commit,
-          laneData: LaneData(
-            lanesBefore: lanesBefore,
-            lanesAfter: lanesAfter,
-            currentLaneId: currentLane.id,
-            mergeTargets: mergeTargets,
-            collapsingLanes: collapsingLanes,
-            maxLanes: maxLanes,
-            startX: startX,
-            laneSpacing: laneSpacing,
-          ),
+          laneData: LaneData(row: rowState),
         ),
       );
 

@@ -180,90 +180,93 @@ class _CommitRailPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
+    final row = laneData.row;
+
     // PART 1 — LOG ROW CONTEXT
     debugPrint('--- PAINT ROW ---');
     debugPrint('commitOid=$commitOid');
-    debugPrint('currentLaneId=${laneData.currentLaneId}');
+    debugPrint('nodeLaneId=${row.nodeLaneId}');
 
-    final laneCount = math.max(laneData.maxLanes, 1);
+    final laneCount = math.max(row.visualLaneCount, 1);
     final centerY = _rowMinHeight / 2;
     final topY = -_rowOverlap / 2;
     final bottomY = _rowMinHeight + _rowOverlap / 2;
     final startX = _railInset + _laneSpacing / 2;
 
-    // Find node column from lanesBefore (where commit occurred)
-    // Fallback ONLY if this is a brand new lane (no lanesBefore entry)
-    final nodeColumn =
-        laneData.beforeByLaneId.containsKey(laneData.currentLaneId)
-            ? laneData.beforeByLaneId[laneData.currentLaneId]!.column
-            : laneData.afterByLaneId[laneData.currentLaneId]!.column;
+    // Find node column from before (where commit occurred)
+    // Fallback ONLY if this is a brand new lane (no before entry)
+    final nodeColumn = row.before.containsKey(row.nodeLaneId)
+        ? row.before[row.nodeLaneId]!.column
+        : row.after[row.nodeLaneId]!.column;
 
     final nodeX = startX + nodeColumn * _laneSpacing;
 
     // PART 5 — LOG NODE POSITION
     debugPrint(
-      'NODE: laneId=${laneData.currentLaneId} '
+      'NODE: laneId=${row.nodeLaneId} '
       'column=$nodeColumn centerY=$centerY',
     );
 
     // PART 2 — LOG LANES BEFORE / AFTER
     debugPrint('lanesBefore:');
-    for (final s in laneData.lanesBefore) {
+    for (final entry in row.before.entries) {
+      final s = entry.value;
       debugPrint(
-        '  BEFORE laneId=${s.laneId} col=${s.column} activeBefore=${s.activeBefore} expectedOid=${s.expectedOid}',
+        '  BEFORE laneId=${s.laneId} col=${s.column} expectedOid=${s.expectedOid}',
       );
     }
 
     debugPrint('lanesAfter:');
-    for (final s in laneData.lanesAfter) {
+    for (final entry in row.after.entries) {
+      final s = entry.value;
       debugPrint(
-        '  AFTER  laneId=${s.laneId} col=${s.column} activeAfter=${s.activeAfter} expectedOid=${s.expectedOid}',
+        '  AFTER  laneId=${s.laneId} col=${s.column} expectedOid=${s.expectedOid}',
       );
     }
 
     // PART 3 — LOG COLLAPSING LANES (MERGE-BACK INTENT)
     debugPrint('collapsingLanes:');
-    for (final fromLaneId in laneData.collapsingLaneIds) {
-      final toLaneId = laneData.collapsingLanes[fromLaneId]!;
+    for (final fromLaneId in row.collapsingLaneIds) {
+      final toLaneId = row.collapseInto[fromLaneId]!;
       debugPrint('  from=$fromLaneId → to=$toLaneId');
     }
 
     // Draw merge-back curves (lanes collapsing into other lanes)
-    for (final fromLaneId in laneData.collapsingLaneIds) {
-      final toLaneId = laneData.collapsingLanes[fromLaneId]!;
+    for (final fromLaneId in row.collapsingLaneIds) {
+      final toLaneId = row.collapseInto[fromLaneId]!;
 
       // PART 4 — LOG MERGE-BACK DRAW ATTEMPTS
       debugPrint(
         'MERGE-BACK TRY: fromLaneId=$fromLaneId toLaneId=$toLaneId '
-        'currentLaneId=${laneData.currentLaneId}',
+        'nodeLaneId=${row.nodeLaneId}',
       );
 
-      // Find columns for these lanes (merge-back uses lanesBefore for both)
-      if (!laneData.beforeByLaneId.containsKey(fromLaneId)) {
+      // Find columns for these lanes (merge-back uses before for both)
+      if (!row.before.containsKey(fromLaneId)) {
         debugPrint(
-          '  SKIP: fromLaneId=$fromLaneId not present in lanesBefore',
+          '  SKIP: fromLaneId=$fromLaneId not present in before',
         );
         continue;
       }
 
-      // Find survivor lane's column from lanesBefore (preferred) or lanesAfter (fallback)
-      final hasToLaneBefore = laneData.beforeByLaneId.containsKey(toLaneId);
-      final hasToLaneAfter = laneData.afterByLaneId.containsKey(toLaneId);
+      // Find survivor lane's column from before (preferred) or after (fallback)
+      final hasToLaneBefore = row.before.containsKey(toLaneId);
+      final hasToLaneAfter = row.after.containsKey(toLaneId);
 
       if (!hasToLaneBefore && !hasToLaneAfter) {
         debugPrint(
-          '  SKIP: toLaneId ($toLaneId) not found in lanesBefore or lanesAfter',
+          '  SKIP: toLaneId ($toLaneId) not found in before or after',
         );
         continue;
       }
 
-      final fromSnapshot = laneData.beforeByLaneId[fromLaneId]!;
-      final toSnapshot = hasToLaneBefore
-          ? laneData.beforeByLaneId[toLaneId]!
-          : laneData.afterByLaneId[toLaneId]!;
+      final fromSnapshot = row.before[fromLaneId]!;
+      final toSnapshot =
+          hasToLaneBefore ? row.before[toLaneId]! : row.after[toLaneId]!;
 
-      final fromX = startX + fromSnapshot.column * _laneSpacing;
-      final toLaneNodeX = startX + toSnapshot.column * _laneSpacing;
+      final fromX = row.beforeX[fromLaneId]!;
+      final toLaneNodeX =
+          hasToLaneBefore ? row.beforeX[toLaneId]! : row.afterX[toLaneId]!;
 
       debugPrint(
         '  DRAW MERGE-BACK: fromLaneId=$fromLaneId '
@@ -295,13 +298,13 @@ class _CommitRailPainter extends CustomPainter {
     // Iterate by LANE IDENTITY, not column (columns can change between rows)
 
     // For each laneId, find its column in before and after snapshots
-    for (final laneId in laneData.allLaneIds) {
+    for (final laneId in row.visibleLaneIds) {
       // Skip collapsing lanes - they are fully represented by merge-back curves
-      if (laneData.collapsingLaneIds.contains(laneId)) continue;
+      if (row.collapsingLaneIds.contains(laneId)) continue;
 
       // Check lane existence using maps
-      final hasBefore = laneData.beforeByLaneId.containsKey(laneId);
-      final hasAfter = laneData.afterByLaneId.containsKey(laneId);
+      final hasBefore = row.before.containsKey(laneId);
+      final hasAfter = row.after.containsKey(laneId);
 
       // Skip if lane doesn't exist in either snapshot
       if (!hasBefore && !hasAfter) continue;
@@ -312,12 +315,10 @@ class _CommitRailPainter extends CustomPainter {
         ..color = _laneColorById(laneId);
 
       // Get columns and X coordinates only when lanes exist
-      final beforeColumn =
-          hasBefore ? laneData.beforeByLaneId[laneId]!.column : null;
-      final afterColumn =
-          hasAfter ? laneData.afterByLaneId[laneId]!.column : null;
-      final xBefore = laneData.beforeXByLaneId[laneId];
-      final xAfter = laneData.afterXByLaneId[laneId];
+      final beforeColumn = hasBefore ? row.before[laneId]!.column : null;
+      final afterColumn = hasAfter ? row.after[laneId]!.column : null;
+      final xBefore = row.beforeX[laneId];
+      final xAfter = row.afterX[laneId];
 
       // Drawing rules:
       // - If lane exists before AND after with same column → draw vertical line
@@ -358,7 +359,7 @@ class _CommitRailPainter extends CustomPainter {
       } else if (hasAfter) {
         // Lane exists only after: draw bottom vertical segment
         // Also check if this is the current commit's lane (should be visible)
-        if (laneId == laneData.currentLaneId) {
+        if (laneId == row.nodeLaneId) {
           final xA = xAfter!;
           canvas.drawLine(Offset(xA, centerY), Offset(xA, bottomY), paint);
         }
@@ -366,10 +367,10 @@ class _CommitRailPainter extends CustomPainter {
     }
 
     // Draw merge curves (downward) - secondary parents
-    for (final targetLaneId in laneData.mergeTargetLaneIds) {
-      if (!laneData.afterByLaneId.containsKey(targetLaneId)) continue;
+    for (final targetLaneId in row.mergeFromNodeLaneIds) {
+      if (!row.after.containsKey(targetLaneId)) continue;
 
-      final targetSnapshot = laneData.afterByLaneId[targetLaneId]!;
+      final targetSnapshot = row.after[targetLaneId]!;
       final paint = Paint()
         ..style = PaintingStyle.stroke
         ..strokeWidth = 2
@@ -377,7 +378,7 @@ class _CommitRailPainter extends CustomPainter {
 
       final targetColumn = targetSnapshot.column;
       if (targetColumn >= laneCount) continue;
-      final targetX = startX + targetColumn * _laneSpacing;
+      final targetX = row.afterX[targetLaneId]!;
       final path = Path()..moveTo(nodeX, centerY);
       path.cubicTo(
         nodeX,
@@ -392,10 +393,8 @@ class _CommitRailPainter extends CustomPainter {
 
     // Draw commit node
     // Node color matches the current lane
-    final nodeLaneId = laneData.currentLaneId;
-
     final nodePaint = Paint()
-      ..color = _laneColorById(nodeLaneId)
+      ..color = _laneColorById(row.nodeLaneId)
       ..style = PaintingStyle.fill;
     canvas.drawCircle(Offset(nodeX, centerY), _nodeRadius, nodePaint);
 
