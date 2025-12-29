@@ -1,5 +1,3 @@
-import 'dart:math' as math;
-
 import 'package:diohub/graphql/queries/repositories/__generated__/commits_list.data.gql.dart';
 
 /// A lane with stable identity across rows.
@@ -7,15 +5,13 @@ class Lane {
   Lane({
     required this.id,
     this.expectedOid,
-    required this.column,
   });
 
   final String id; // stable identity
   String? expectedOid; // next commit this lane waits for
-  int column; // visual column (x position)
 
   @override
-  String toString() => 'Lane(id: $id, oid: $expectedOid, col: $column)';
+  String toString() => 'Lane(id: $id, oid: $expectedOid)';
 }
 
 /// Snapshot of a lane's state at a commit row.
@@ -99,50 +95,72 @@ class GraphLayoutCalculator {
           lanes.add(Lane(
             id: snapshot.laneId,
             expectedOid: snapshot.expectedOid,
-            column: snapshot.column,
           ));
         }
       }
     }
 
-    var maxLanes = previousLaneData?.maxLanes ?? lanes.length;
+    // Track previous column assignments for stable sorting
+    var previousColumns = <String, int>{};
+    if (previousLaneData != null) {
+      for (final snapshot in previousLaneData.lanesAfter) {
+        if (snapshot.laneId.isNotEmpty && snapshot.activeAfter) {
+          previousColumns[snapshot.laneId] = snapshot.column;
+        }
+      }
+    }
+
+    // Track pending merge-backs to be emitted on the next row
+    var pendingCollapsingLanes = <String, String>{};
 
     final results = <CommitWithLaneData>[];
 
     for (final commit in commits) {
       final parents = _extractParents(commit);
 
-      // Create snapshot of lanesBefore
-      final lanesBefore = lanes
+      // Create snapshot of lanesBefore using PREVIOUS row's columns
+      // Only include lanes that existed in the previous row (have a previous column)
+      final activeLanesBefore = lanes
+          .where((lane) =>
+              lane.expectedOid != null && previousColumns.containsKey(lane.id))
+          .toList();
+      final lanesBefore = activeLanesBefore
           .map((lane) => LaneSnapshot(
                 laneId: lane.id,
-                column: lane.column,
-                activeBefore: lane.expectedOid != null,
+                column: previousColumns[lane.id]!,
+                activeBefore: true,
                 activeAfter: false, // not used for before
                 expectedOid: lane.expectedOid,
               ))
           .toList();
 
       // Step A: Pick a lane for this commit
+      // Exclude lanes in pendingCollapsingLanes (visual-only, don't participate in routing)
       Lane? currentLane;
-      var currentLaneIndex =
-          lanes.indexWhere((lane) => lane.expectedOid == commit.oid);
+      var currentLaneIndex = lanes.indexWhere(
+        (lane) =>
+            lane.expectedOid == commit.oid &&
+            !pendingCollapsingLanes.containsKey(lane.id),
+      );
       if (currentLaneIndex != -1) {
         currentLane = lanes[currentLaneIndex];
       } else {
         // Not waiting for this commit - find empty lane or create new
-        currentLaneIndex = lanes.indexWhere((lane) => lane.expectedOid == null);
+        // Exclude collapsing lanes from reuse
+        currentLaneIndex = lanes.indexWhere(
+          (lane) =>
+              lane.expectedOid == null &&
+              !pendingCollapsingLanes.containsKey(lane.id),
+        );
         if (currentLaneIndex != -1) {
           currentLane = lanes[currentLaneIndex];
         } else {
-          // Create new lane with permanent column assignment
+          // Create new lane (no column assignment yet)
           currentLane = Lane(
             id: _generateLaneId(),
             expectedOid: null,
-            column: maxLanes, // permanent column
           );
           lanes.add(currentLane);
-          maxLanes = maxLanes + 1; // increment after creation
           currentLaneIndex = lanes.length - 1;
         }
       }
@@ -156,25 +174,32 @@ class GraphLayoutCalculator {
       final mergeTargets = <String>[];
       for (final parent in parents.skip(1)) {
         // Find existing lane waiting for this parent
-        var mergeLaneIndex =
-            lanes.indexWhere((lane) => lane.expectedOid == parent);
+        // Exclude collapsing lanes from reuse
+        var mergeLaneIndex = lanes.indexWhere(
+          (lane) =>
+              lane.expectedOid == parent &&
+              !pendingCollapsingLanes.containsKey(lane.id),
+        );
         Lane mergeLane;
         if (mergeLaneIndex != -1) {
           mergeLane = lanes[mergeLaneIndex];
         } else {
           // Find empty lane or create new
-          mergeLaneIndex = lanes.indexWhere((lane) => lane.expectedOid == null);
+          // Exclude collapsing lanes from reuse
+          mergeLaneIndex = lanes.indexWhere(
+            (lane) =>
+                lane.expectedOid == null &&
+                !pendingCollapsingLanes.containsKey(lane.id),
+          );
           if (mergeLaneIndex != -1) {
             mergeLane = lanes[mergeLaneIndex];
           } else {
-            // Create new lane with permanent column assignment
+            // Create new lane (no column assignment yet)
             mergeLane = Lane(
               id: _generateLaneId(),
               expectedOid: null,
-              column: maxLanes, // permanent column
             );
             lanes.add(mergeLane);
-            maxLanes = maxLanes + 1; // increment after creation
             mergeLaneIndex = lanes.length - 1;
           }
         }
@@ -183,11 +208,21 @@ class GraphLayoutCalculator {
         // Only draw node-merge if this parent is NOT already
         // connected to the node via lane continuity
         // Check if parent was in lanesBefore at the same column as currentLane
-        final parentLaneBeforeIndex = lanesBefore.indexWhere(
+        final currentLaneColumn = previousColumns[currentLane.id];
+        final parentLaneBeforeSnapshot = lanesBefore.firstWhere(
           (snapshot) => snapshot.expectedOid == parent && snapshot.activeBefore,
+          orElse: () => const LaneSnapshot(
+            laneId: '',
+            column: -1,
+            activeBefore: false,
+            activeAfter: false,
+            expectedOid: null,
+          ),
         );
-        final isVerticallyConnected = parentLaneBeforeIndex != -1 &&
-            lanesBefore[parentLaneBeforeIndex].column == currentLane.column;
+        final isVerticallyConnected =
+            parentLaneBeforeSnapshot.laneId.isNotEmpty &&
+                currentLaneColumn != null &&
+                parentLaneBeforeSnapshot.column == currentLaneColumn;
 
         if (!isVerticallyConnected) {
           mergeTargets.add(mergeLane.id);
@@ -204,44 +239,86 @@ class GraphLayoutCalculator {
         lanesByOid.putIfAbsent(oid, () => []).add(lane);
       }
 
-      final collapsingLanes = <String, String>{};
-      final dyingLanes = <Lane>[];
+      // STEP 1 & 2: Defer merge-back by one row - keep collapsing lane active
+      // Store merge-back intent to be emitted on NEXT row (parent commit row)
+      final newPendingCollapsingLanes = <String, String>{};
 
       for (final entry in lanesByOid.entries) {
         final oidLanes = entry.value;
         if (oidLanes.length <= 1) continue; // No duplicates
 
-        // Sort by column to find leftmost
-        oidLanes.sort((a, b) => a.column.compareTo(b.column));
+        // Sort by previous column to find leftmost
+        oidLanes.sort((a, b) {
+          final aCol = previousColumns[a.id];
+          final bCol = previousColumns[b.id];
+          if (aCol != null && bCol != null) {
+            return aCol.compareTo(bCol);
+          }
+          if (aCol != null) return -1;
+          if (bCol != null) return 1;
+          return a.id.compareTo(b.id);
+        });
         final survivorLane = oidLanes.first;
 
-        // Mark all others as collapsing
+        // Store merge-back intent for NEXT row (don't mark as dying yet)
+        // Keep collapsing lane active for one more row
         for (var i = 1; i < oidLanes.length; i++) {
           final collapsingLane = oidLanes[i];
-          collapsingLanes[collapsingLane.id] = survivorLane.id;
-          dyingLanes.add(collapsingLane);
-          collapsingLane.expectedOid = null; // mark as dying
+          newPendingCollapsingLanes[collapsingLane.id] = survivorLane.id;
+          // DO NOT set expectedOid = null here - keep lane active for merge-back curve
         }
       }
 
-      // Lanes are NEVER removed - they just become inactive (expectedOid = null)
-      // Columns are NEVER reassigned - they remain permanent once assigned
+      // Use pending merge-backs from previous row (emitted on THIS row)
+      final collapsingLanes = Map<String, String>.from(pendingCollapsingLanes);
 
-      // Create snapshot of lanesAfter
-      final lanesAfter = lanes
+      // Update pending merge-backs for next row
+      pendingCollapsingLanes = newPendingCollapsingLanes;
+
+      // Assign columns PER ROW AFTER processing commit (only active lanes)
+      // Exclude collapsing lanes from activeLanesAfter (visual-only, don't affect columns)
+      final activeLanesAfter = lanes
+          .where(
+            (lane) =>
+                lane.expectedOid != null &&
+                !collapsingLanes.containsKey(lane.id),
+          )
+          .toList();
+
+      // Sort active lanes by previous column (if existed), then by stable laneId
+      activeLanesAfter.sort((a, b) {
+        final aCol = previousColumns[a.id];
+        final bCol = previousColumns[b.id];
+        if (aCol != null && bCol != null) {
+          return aCol.compareTo(bCol);
+        }
+        if (aCol != null) return -1;
+        if (bCol != null) return 1;
+        return a.id.compareTo(b.id);
+      });
+
+      // Assign columns sequentially to active lanes
+      final laneToColumnAfter = <String, int>{};
+      for (var i = 0; i < activeLanesAfter.length; i++) {
+        laneToColumnAfter[activeLanesAfter[i].id] = i;
+      }
+
+      // Create snapshot of lanesAfter (only active lanes)
+      final lanesAfter = activeLanesAfter
           .map((lane) => LaneSnapshot(
                 laneId: lane.id,
-                column: lane.column,
+                column: laneToColumnAfter[lane.id]!,
                 activeBefore: false, // not used for after
-                activeAfter: lane.expectedOid != null,
+                activeAfter: true,
                 expectedOid: lane.expectedOid,
               ))
           .toList();
 
-      // Update maxLanes (monotonic width) - based on actual lane columns
-      for (final lane in lanes) {
-        maxLanes = math.max(maxLanes, lane.column + 1);
-      }
+      // Update previousColumns for next row
+      previousColumns = laneToColumnAfter;
+
+      // Compute maxLanes PER ROW (only active lanes)
+      final maxLanes = activeLanesAfter.length;
 
       // Build snapshots ONLY from real lanes (no padding, no fake lanes)
       results.add(
@@ -257,6 +334,10 @@ class GraphLayoutCalculator {
           ),
         ),
       );
+
+      // Remove collapsing lanes from lanes list AFTER emitting the row
+      // (they were visual-only for this row, don't participate in routing)
+      lanes.removeWhere((lane) => collapsingLanes.containsKey(lane.id));
     }
 
     return results;
