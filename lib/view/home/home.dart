@@ -147,7 +147,8 @@ class HomeScreenState extends State<HomeScreen>
         ),
         DynamicTab(
           identifier: 'ThemeCarousel',
-          tab: TabBarItem(label: 'Themes'),keepViewAlive: true,
+          tab: TabBarItem(label: 'Themes'),
+          keepViewAlive: true,
           tabViewBuilder: (final BuildContext context) =>
               const ThemeCarouselTab(),
         ),
@@ -218,7 +219,7 @@ class HomeScreenState extends State<HomeScreen>
                 ),
               ],
               expandedWidget: buildProfileCard(context),
-              bodyBuilder:(BuildContext context) =>  tabView(context),
+              bodyBuilder: (BuildContext context) => tabView(context),
             ),
           ),
         ),
@@ -294,6 +295,7 @@ class HomeScreenState extends State<HomeScreen>
                   icon: const Icon(Icons.swap_horiz_rounded),
                   tooltip: 'Switch Account',
                   onPressed: () {
+                    print('[Home] Switching account');
                     _accountSwitcherController.open();
                   },
                 ),

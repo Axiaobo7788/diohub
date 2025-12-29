@@ -367,7 +367,7 @@ class _ThemeCarouselTabState extends State<ThemeCarouselTab> {
                     ),
                   ),
                 ),
-                const SliverToBoxAdapter(child: SizedBox(height: 16)),
+                const SliverPinnedHeader(child: SizedBox(height: kToolbarHeight*2)),
                 // Blend slider section - pinned header
                 SliverPinnedHeader(
                   child: Container(
