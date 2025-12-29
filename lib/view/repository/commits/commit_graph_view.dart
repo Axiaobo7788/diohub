@@ -108,6 +108,8 @@ class _CommitGraphViewState extends State<CommitGraphView> {
     final newCommitsWithLaneData = _calculator.processCommitsIncremental(
       rawCommits,
       lastCommitLaneData,
+      startX: startX,
+      laneSpacing: laneSpacing,
     );
 
     return newCommitsWithLaneData;

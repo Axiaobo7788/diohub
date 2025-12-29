@@ -1,5 +1,10 @@
 import 'package:diohub/graphql/queries/repositories/__generated__/commits_list.data.gql.dart';
 
+/// Constants for lane spacing and rail layout.
+const double laneSpacing = 18;
+const double railInset = 6;
+double get startX => railInset + laneSpacing / 2;
+
 /// A lane with stable identity across rows.
 class Lane {
   Lane({
@@ -34,14 +39,49 @@ class LaneSnapshot {
 
 /// Snapshot of lane state for a single commit row.
 class LaneData {
-  const LaneData({
+  LaneData({
     required this.lanesBefore,
     required this.lanesAfter,
     required this.currentLaneId,
     required this.mergeTargets,
     required this.maxLanes,
     this.collapsingLanes = const {},
-  });
+    required double startX,
+    required double laneSpacing,
+  })  : beforeByLaneId = {
+          for (final snapshot in lanesBefore)
+            if (snapshot.activeBefore && snapshot.laneId.isNotEmpty)
+              snapshot.laneId: snapshot
+        },
+        afterByLaneId = {
+          for (final snapshot in lanesAfter)
+            if (snapshot.activeAfter && snapshot.laneId.isNotEmpty)
+              snapshot.laneId: snapshot
+        },
+        allLaneIds = {
+          ...{
+            for (final snapshot in lanesBefore)
+              if (snapshot.activeBefore && snapshot.laneId.isNotEmpty)
+                snapshot.laneId
+          },
+          ...{
+            for (final snapshot in lanesAfter)
+              if (snapshot.activeAfter && snapshot.laneId.isNotEmpty)
+                snapshot.laneId
+          }
+        },
+        beforeXByLaneId = {
+          for (final snapshot in lanesBefore)
+            if (snapshot.activeBefore && snapshot.laneId.isNotEmpty)
+              snapshot.laneId: startX + snapshot.column * laneSpacing
+        },
+        afterXByLaneId = {
+          for (final snapshot in lanesAfter)
+            if (snapshot.activeAfter && snapshot.laneId.isNotEmpty)
+              snapshot.laneId: startX + snapshot.column * laneSpacing
+        },
+        collapsingLaneIds = collapsingLanes.keys.toSet(),
+        mergeTargetLaneIds = mergeTargets.toSet();
 
   /// Lane snapshots coming into this row (top half of the painter).
   final List<LaneSnapshot> lanesBefore;
@@ -62,6 +102,27 @@ class LaneData {
   /// Lanes that collapse into other lanes: Map<fromLaneId, toLaneId>
   /// When duplicate OIDs are detected, the rightmost lane collapses into the leftmost.
   final Map<String, String> collapsingLanes;
+
+  /// Precomputed lookup map: laneId -> LaneSnapshot for lanesBefore (activeBefore == true).
+  final Map<String, LaneSnapshot> beforeByLaneId;
+
+  /// Precomputed lookup map: laneId -> LaneSnapshot for lanesAfter (activeAfter == true).
+  final Map<String, LaneSnapshot> afterByLaneId;
+
+  /// Union of all lane IDs from both beforeByLaneId and afterByLaneId.
+  final Set<String> allLaneIds;
+
+  /// Precomputed X coordinates for lanesBefore: laneId -> X coordinate.
+  final Map<String, double> beforeXByLaneId;
+
+  /// Precomputed X coordinates for lanesAfter: laneId -> X coordinate.
+  final Map<String, double> afterXByLaneId;
+
+  /// Set of lane IDs that are collapsing into other lanes (for fast membership checks).
+  final Set<String> collapsingLaneIds;
+
+  /// Set of lane IDs that are merge targets (for fast membership checks).
+  final Set<String> mergeTargetLaneIds;
 }
 
 /// Convenience bundle pairing a commit with its calculated lane data.
@@ -84,8 +145,10 @@ class GraphLayoutCalculator {
 
   List<CommitWithLaneData> processCommitsIncremental(
     List<GcommitListItem> commits,
-    LaneData? previousLaneData,
-  ) {
+    LaneData? previousLaneData, {
+    required double startX,
+    required double laneSpacing,
+  }) {
     // Convert previous snapshots back to Lane objects
     // Reconstruct lanes from previousLaneData.lanesAfter
     var lanes = <Lane>[];
@@ -331,6 +394,8 @@ class GraphLayoutCalculator {
             mergeTargets: mergeTargets,
             collapsingLanes: collapsingLanes,
             maxLanes: maxLanes,
+            startX: startX,
+            laneSpacing: laneSpacing,
           ),
         ),
       );

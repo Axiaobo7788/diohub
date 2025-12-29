@@ -192,22 +192,11 @@ class _CommitRailPainter extends CustomPainter {
     final startX = _railInset + _laneSpacing / 2;
 
     // Find node column from lanesBefore (where commit occurred)
-    LaneSnapshot? nodeBeforeSnapshot;
-    for (final snapshot in laneData.lanesBefore) {
-      if (snapshot.laneId == laneData.currentLaneId && snapshot.activeBefore) {
-        nodeBeforeSnapshot = snapshot;
-        break;
-      }
-    }
-
     // Fallback ONLY if this is a brand new lane (no lanesBefore entry)
-    final nodeColumn = nodeBeforeSnapshot != null
-        ? nodeBeforeSnapshot.column
-        : laneData.lanesAfter
-            .firstWhere(
-              (s) => s.laneId == laneData.currentLaneId,
-            )
-            .column;
+    final nodeColumn =
+        laneData.beforeByLaneId.containsKey(laneData.currentLaneId)
+            ? laneData.beforeByLaneId[laneData.currentLaneId]!.column
+            : laneData.afterByLaneId[laneData.currentLaneId]!.column;
 
     final nodeX = startX + nodeColumn * _laneSpacing;
 
@@ -234,14 +223,14 @@ class _CommitRailPainter extends CustomPainter {
 
     // PART 3 — LOG COLLAPSING LANES (MERGE-BACK INTENT)
     debugPrint('collapsingLanes:');
-    laneData.collapsingLanes.forEach((from, to) {
-      debugPrint('  from=$from → to=$to');
-    });
+    for (final fromLaneId in laneData.collapsingLaneIds) {
+      final toLaneId = laneData.collapsingLanes[fromLaneId]!;
+      debugPrint('  from=$fromLaneId → to=$toLaneId');
+    }
 
     // Draw merge-back curves (lanes collapsing into other lanes)
-    for (final entry in laneData.collapsingLanes.entries) {
-      final fromLaneId = entry.key;
-      final toLaneId = entry.value;
+    for (final fromLaneId in laneData.collapsingLaneIds) {
+      final toLaneId = laneData.collapsingLanes[fromLaneId]!;
 
       // PART 4 — LOG MERGE-BACK DRAW ATTEMPTS
       debugPrint(
@@ -250,58 +239,28 @@ class _CommitRailPainter extends CustomPainter {
       );
 
       // Find columns for these lanes (merge-back uses lanesBefore for both)
-      final fromSnapshot = laneData.lanesBefore.firstWhere(
-        (snapshot) => snapshot.laneId == fromLaneId,
-        orElse: () {
-          debugPrint(
-            '  SKIP: fromLaneId=$fromLaneId not present in lanesBefore',
-          );
-          return const LaneSnapshot(
-            laneId: '',
-            column: -1,
-            activeBefore: false,
-            activeAfter: false,
-            expectedOid: null,
-          );
-        },
-      );
-
-      if (fromSnapshot.laneId.isEmpty) continue;
-
-      // Check if survivor lane (toLaneId) exists in lanesBefore and is active
-      final toLaneBefore = laneData.lanesBefore.any(
-        (s) => s.laneId == toLaneId && s.activeBefore,
-      );
-
-      if (!toLaneBefore) {
+      if (!laneData.beforeByLaneId.containsKey(fromLaneId)) {
         debugPrint(
-          '  SKIP: toLaneId ($toLaneId) not active in lanesBefore',
+          '  SKIP: fromLaneId=$fromLaneId not present in lanesBefore',
         );
         continue;
       }
 
       // Find survivor lane's column from lanesBefore (preferred) or lanesAfter (fallback)
-      LaneSnapshot? toSnapshot;
-      for (final snapshot in laneData.lanesBefore) {
-        if (snapshot.laneId == toLaneId && snapshot.activeBefore) {
-          toSnapshot = snapshot;
-          break;
-        }
+      final hasToLaneBefore = laneData.beforeByLaneId.containsKey(toLaneId);
+      final hasToLaneAfter = laneData.afterByLaneId.containsKey(toLaneId);
+
+      if (!hasToLaneBefore && !hasToLaneAfter) {
+        debugPrint(
+          '  SKIP: toLaneId ($toLaneId) not found in lanesBefore or lanesAfter',
+        );
+        continue;
       }
 
-      // Fallback to lanesAfter if not found in lanesBefore
-      if (toSnapshot == null) {
-        try {
-          toSnapshot = laneData.lanesAfter.firstWhere(
-            (s) => s.laneId == toLaneId && s.activeAfter,
-          );
-        } catch (e) {
-          debugPrint(
-            '  SKIP: toLaneId ($toLaneId) not found in lanesAfter either',
-          );
-          continue;
-        }
-      }
+      final fromSnapshot = laneData.beforeByLaneId[fromLaneId]!;
+      final toSnapshot = hasToLaneBefore
+          ? laneData.beforeByLaneId[toLaneId]!
+          : laneData.afterByLaneId[toLaneId]!;
 
       final fromX = startX + fromSnapshot.column * _laneSpacing;
       final toLaneNodeX = startX + toSnapshot.column * _laneSpacing;
@@ -335,56 +294,30 @@ class _CommitRailPainter extends CustomPainter {
     // Draw vertical lane lines
     // Iterate by LANE IDENTITY, not column (columns can change between rows)
 
-    // Collect all unique laneIds from both snapshots
-    final allLaneIds = <String>{};
-    for (final snapshot in laneData.lanesBefore) {
-      if (snapshot.laneId.isNotEmpty) {
-        allLaneIds.add(snapshot.laneId);
-      }
-    }
-    for (final snapshot in laneData.lanesAfter) {
-      if (snapshot.laneId.isNotEmpty) {
-        allLaneIds.add(snapshot.laneId);
-      }
-    }
-
     // For each laneId, find its column in before and after snapshots
-    for (final laneId in allLaneIds) {
+    for (final laneId in laneData.allLaneIds) {
       // Skip collapsing lanes - they are fully represented by merge-back curves
-      if (laneData.collapsingLanes.containsKey(laneId)) continue;
+      if (laneData.collapsingLaneIds.contains(laneId)) continue;
 
-      // Find snapshot in lanesBefore
-      LaneSnapshot? snapshotBefore;
-      for (final snapshot in laneData.lanesBefore) {
-        if (snapshot.laneId == laneId && snapshot.activeBefore) {
-          snapshotBefore = snapshot;
-          break;
-        }
-      }
-
-      // Find snapshot in lanesAfter
-      LaneSnapshot? snapshotAfter;
-      for (final snapshot in laneData.lanesAfter) {
-        if (snapshot.laneId == laneId && snapshot.activeAfter) {
-          snapshotAfter = snapshot;
-          break;
-        }
-      }
+      // Check lane existence using maps
+      final hasBefore = laneData.beforeByLaneId.containsKey(laneId);
+      final hasAfter = laneData.afterByLaneId.containsKey(laneId);
 
       // Skip if lane doesn't exist in either snapshot
-      if (snapshotBefore == null && snapshotAfter == null) continue;
+      if (!hasBefore && !hasAfter) continue;
 
       final paint = Paint()
         ..style = PaintingStyle.stroke
         ..strokeWidth = 2
         ..color = _laneColorById(laneId);
 
-      final beforeColumn = snapshotBefore?.column;
-      final afterColumn = snapshotAfter?.column;
-      final xBefore =
-          beforeColumn != null ? startX + beforeColumn * _laneSpacing : null;
-      final xAfter =
-          afterColumn != null ? startX + afterColumn * _laneSpacing : null;
+      // Get columns and X coordinates only when lanes exist
+      final beforeColumn =
+          hasBefore ? laneData.beforeByLaneId[laneId]!.column : null;
+      final afterColumn =
+          hasAfter ? laneData.afterByLaneId[laneId]!.column : null;
+      final xBefore = laneData.beforeXByLaneId[laneId];
+      final xAfter = laneData.afterXByLaneId[laneId];
 
       // Drawing rules:
       // - If lane exists before AND after with same column → draw vertical line
@@ -392,8 +325,8 @@ class _CommitRailPainter extends CustomPainter {
       // - If lane exists only before → draw top vertical segment
       // - If lane exists only after → draw bottom vertical segment
 
-      if (beforeColumn != null && afterColumn != null) {
-        // Both columns exist - we know xBefore and xAfter are non-null here
+      if (hasBefore && hasAfter) {
+        // Both exist - we know xBefore and xAfter are non-null here
         final xB = xBefore!;
         final xA = xAfter!;
 
@@ -418,28 +351,25 @@ class _CommitRailPainter extends CustomPainter {
           );
           canvas.drawPath(path, paint);
         }
-      } else if (beforeColumn != null) {
+      } else if (hasBefore) {
         // Lane exists only before: draw top vertical segment
-        canvas.drawLine(
-            Offset(xBefore!, topY), Offset(xBefore!, centerY), paint);
-      } else if (afterColumn != null) {
+        final xB = xBefore!;
+        canvas.drawLine(Offset(xB, topY), Offset(xB, centerY), paint);
+      } else if (hasAfter) {
         // Lane exists only after: draw bottom vertical segment
         // Also check if this is the current commit's lane (should be visible)
-        final afterActive = snapshotAfter?.activeAfter == true &&
-            (laneId == laneData.currentLaneId);
-        if (afterActive) {
-          canvas.drawLine(
-              Offset(xAfter!, centerY), Offset(xAfter!, bottomY), paint);
+        if (laneId == laneData.currentLaneId) {
+          final xA = xAfter!;
+          canvas.drawLine(Offset(xA, centerY), Offset(xA, bottomY), paint);
         }
       }
     }
 
     // Draw merge curves (downward) - secondary parents
-    for (final targetLaneId in laneData.mergeTargets) {
-      final targetSnapshot = laneData.lanesAfter.firstWhere(
-        (snapshot) => snapshot.laneId == targetLaneId,
-      );
+    for (final targetLaneId in laneData.mergeTargetLaneIds) {
+      if (!laneData.afterByLaneId.containsKey(targetLaneId)) continue;
 
+      final targetSnapshot = laneData.afterByLaneId[targetLaneId]!;
       final paint = Paint()
         ..style = PaintingStyle.stroke
         ..strokeWidth = 2
