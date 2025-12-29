@@ -39,7 +39,8 @@ Future<void> debugURLLauncher() async {
   // https://github.com/flutter/flutter/issues/120732
   // https://github.com/flutter/flutter/issues/128696
   // url = 'https://github.com/firebase/flutterfire/issues/1041';
-  url = 'https://github.com/pranshuparmar/witr/commits';
+  // url = 'https://github.com/pranshuparmar/witr/commits';
+    url = 'https://github.com/namanshergill/flutter_scroll_to_top/commits';
   if (kDebugMode) {
     // Wait for the router to be ready before navigating
     BuildContext? context;
