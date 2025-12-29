@@ -1,36 +1,28 @@
+import 'dart:math' as math;
+
 import 'package:diohub/graphql/queries/repositories/__generated__/commits_list.data.gql.dart';
 import 'package:flutter/material.dart';
 
-/// Deferred Merge-Back Visualization
+/// Commit Graph Lane Lifecycle
 ///
-/// When multiple lanes wait for the same commit (duplicate OIDs), we defer
-/// merge-back visualization by one row. This ensures correct visual representation:
-///
-/// 1. Timing: Merge-back curves connect the collapsing lane's top position to the
-///    survivor lane's node position. The curve must be drawn on the PARENT commit's
-///    row, not the current commit's row, because the parent commit hasn't been
-///    processed yet.
-///
-/// 2. Lane Lifecycle: Collapsing lanes remain active (expectedOid not set to null)
-///    for one extra row so they appear in row.before/row.after maps. This allows
-///    the painter to access their positions for drawing the merge-back curve.
-///
-/// 3. Routing Exclusion: While visually active, collapsing lanes are excluded from
-///    column assignment and routing decisions. They are visual-only participants
-///    for their final row.
-///
-/// Flow: Detect duplicates → Store intent for NEXT row → NEXT row draws curves → Remove lanes
+/// Lanes terminate immediately when they reach their expected commit:
+/// - A lane terminates when lane.expectedOid == commit.oid
+/// - Terminated lanes are removed from liveLanes immediately
+/// - No deferred termination or merge-back visualization
+/// - Lanes that terminate simply stop drawing at the commit node
 
 /// Visual styling constants for commit graph rendering.
 class CommitGraphStyle {
   const CommitGraphStyle({
-    this.laneSpacing = 18,
+    this.laneSpacing = 12,
     this.railInset = 6,
-    this.nodeRadius = 5,
+    this.nodeRadius = 6,
     this.strokeWidth = 2,
-    this.nodeStrokeWidth = 1.4,
+    this.nodeStrokeWidth = 2.0,
     this.rowHeight = 68,
     this.rowOverlap = 16,
+    this.railOpacity = 0.8,
+    this.curveControlMultiplier = 0.7,
   });
 
   final double laneSpacing;
@@ -40,6 +32,8 @@ class CommitGraphStyle {
   final double nodeStrokeWidth;
   final double rowHeight;
   final double rowOverlap;
+  final double railOpacity;
+  final double curveControlMultiplier;
 
   /// X coordinate where the first lane starts.
   double get startX => railInset + laneSpacing / 2;
@@ -128,10 +122,10 @@ class LaneRowState {
     required this.before,
     required this.after,
     required this.visibleLaneIds,
-    required this.collapsingLaneIds,
-    required this.collapseInto,
     required this.mergeFromNodeLaneIds,
+    required this.mergeIntoNodeLaneIds,
     required this.visualLaneCount,
+    required this.effectiveLaneCount,
   });
 
   /// Lane ID where the commit node is drawn.
@@ -146,17 +140,17 @@ class LaneRowState {
   /// Union of all lane IDs from both before and after.
   final Set<String> visibleLaneIds;
 
-  /// Lane IDs that terminate into another lane (for fast membership checks).
-  final Set<String> collapsingLaneIds;
-
-  /// Collapse relationships: fromLaneId → toLaneId.
-  final Map<String, String> collapseInto;
-
   /// Secondary parents drawn from node (merge curves).
   final Set<String> mergeFromNodeLaneIds;
 
+  /// All lanes that merge into the node (arriving lanes + secondary parents).
+  final Set<String> mergeIntoNodeLaneIds;
+
   /// Width driver (number of visual lanes).
   final int visualLaneCount;
+
+  /// Effective lane count accounting for all visually-present lanes (max column + 1).
+  final int effectiveLaneCount;
 }
 
 /// Snapshot of lane state for a single commit row.
@@ -177,9 +171,6 @@ class LaneData {
 
   @Deprecated('Use row.visualLaneCount instead')
   int get maxLanes => row.visualLaneCount;
-
-  @Deprecated('Use row.collapseInto instead')
-  Map<String, String> get collapsingLanes => row.collapseInto;
 
   @Deprecated('Use row.before instead')
   List<LaneSnapshot> get lanesBefore => row.before.values.toList();
@@ -205,12 +196,10 @@ class _RoutingState {
   _RoutingState({
     required this.liveLanes,
     required this.laneColumnsPrevRow,
-    required this.pendingMergeBacks,
   });
 
   final List<Lane> liveLanes;
   final Map<String, int> laneColumnsPrevRow;
-  final Map<String, String> pendingMergeBacks;
 
   factory _RoutingState.fromPreviousRow(LaneData? previousLaneData) {
     final liveLanes = <Lane>[];
@@ -234,12 +223,9 @@ class _RoutingState {
       }
     }
 
-    final pendingMergeBacks = <String, String>{};
-
     return _RoutingState(
       liveLanes: liveLanes,
       laneColumnsPrevRow: laneColumnsPrevRow,
-      pendingMergeBacks: pendingMergeBacks,
     );
   }
 }
@@ -253,7 +239,6 @@ class GraphLayoutCalculator {
 
   final List<Color> _palette;
   final CommitGraphStyle style;
-  // Counter for generating unique lane IDs
   int _nextLaneId = 0;
 
   String _generateLaneId() => 'lane_${_nextLaneId++}';
@@ -268,6 +253,12 @@ class GraphLayoutCalculator {
 
     for (final commit in commits) {
       final parents = _extractParents(commit);
+
+      // Snapshot lanes arriving at this commit BEFORE any mutations
+      final arrivingLaneIds = state.liveLanes
+          .where((lane) => lane.expectedOid == commit.oid)
+          .map((lane) => lane.id)
+          .toSet();
 
       final activeLanesBefore = state.liveLanes
           .where((lane) =>
@@ -286,18 +277,14 @@ class GraphLayoutCalculator {
       }).toList();
 
       final matchedLaneIndex = state.liveLanes.indexWhere(
-        (lane) =>
-            lane.expectedOid == commit.oid &&
-            !state.pendingMergeBacks.containsKey(lane.id),
+        (lane) => lane.expectedOid == commit.oid,
       );
       final Lane currentLane;
       if (matchedLaneIndex != -1) {
         currentLane = state.liveLanes[matchedLaneIndex];
       } else {
         final reusableLaneIndex = state.liveLanes.indexWhere(
-          (lane) =>
-              lane.expectedOid == null &&
-              !state.pendingMergeBacks.containsKey(lane.id),
+          (lane) => lane.expectedOid == null,
         );
         if (reusableLaneIndex != -1) {
           currentLane = state.liveLanes[reusableLaneIndex];
@@ -318,18 +305,14 @@ class GraphLayoutCalculator {
       final nodeMergeTargets = <String>[];
       for (final parent in parents.skip(1)) {
         var mergeLaneIndex = state.liveLanes.indexWhere(
-          (lane) =>
-              lane.expectedOid == parent &&
-              !state.pendingMergeBacks.containsKey(lane.id),
+          (lane) => lane.expectedOid == parent,
         );
         Lane mergeLane;
         if (mergeLaneIndex != -1) {
           mergeLane = state.liveLanes[mergeLaneIndex];
         } else {
           mergeLaneIndex = state.liveLanes.indexWhere(
-            (lane) =>
-                lane.expectedOid == null &&
-                !state.pendingMergeBacks.containsKey(lane.id),
+            (lane) => lane.expectedOid == null,
           );
           if (mergeLaneIndex != -1) {
             mergeLane = state.liveLanes[mergeLaneIndex];
@@ -367,51 +350,10 @@ class GraphLayoutCalculator {
         }
       }
 
-      // Deferred merge-back (see file-level documentation)
-      final lanesGroupedByExpectedOid = <String, List<Lane>>{};
-      for (final lane in state.liveLanes) {
-        final oid = lane.expectedOid;
-        if (oid == null) continue;
-        lanesGroupedByExpectedOid.putIfAbsent(oid, () => []).add(lane);
-      }
-
-      final deferredMergeBacksNextRow = <String, String>{};
-
-      for (final entry in lanesGroupedByExpectedOid.entries) {
-        final oidLanes = entry.value;
-        if (oidLanes.length <= 1) continue;
-
-        oidLanes.sort((a, b) {
-          final aCol = state.laneColumnsPrevRow[a.id];
-          final bCol = state.laneColumnsPrevRow[b.id];
-          if (aCol != null && bCol != null) {
-            return aCol.compareTo(bCol);
-          }
-          if (aCol != null) return -1;
-          if (bCol != null) return 1;
-          return a.id.compareTo(b.id);
-        });
-        final survivorLane = oidLanes.first;
-
-        for (var i = 1; i < oidLanes.length; i++) {
-          final collapsingLane = oidLanes[i];
-          deferredMergeBacksNextRow[collapsingLane.id] = survivorLane.id;
-        }
-      }
-
-      final mergeBacks = Map<String, String>.from(state.pendingMergeBacks);
-
-      state = _RoutingState(
-        liveLanes: state.liveLanes,
-        laneColumnsPrevRow: state.laneColumnsPrevRow,
-        pendingMergeBacks: deferredMergeBacksNextRow,
-      );
-
       final routableLanes = state.liveLanes
-          .where(
-            (lane) =>
-                lane.expectedOid != null && !mergeBacks.containsKey(lane.id),
-          )
+          .where((lane) =>
+              lane.expectedOid != null &&
+              (!arrivingLaneIds.contains(lane.id) || lane.id == currentLane.id))
           .toList();
 
       routableLanes.sort((a, b) {
@@ -444,7 +386,6 @@ class GraphLayoutCalculator {
       state = _RoutingState(
         liveLanes: state.liveLanes,
         laneColumnsPrevRow: laneToColumnAfter,
-        pendingMergeBacks: state.pendingMergeBacks,
       );
 
       final visualLaneCount = routableLanes.length;
@@ -464,19 +405,31 @@ class GraphLayoutCalculator {
         ...afterMap.keys,
       };
 
-      final collapsingLaneIds = mergeBacks.keys.toSet();
-      final collapseInto = Map<String, String>.from(mergeBacks);
       final mergeFromNodeLaneIds = nodeMergeTargets.toSet();
+      final mergeIntoNodeLaneIds = <String>{
+        ...arrivingLaneIds,
+        ...mergeFromNodeLaneIds,
+      };
+
+      // Compute effectiveLaneCount from max column index in both before and after
+      int maxColumn = -1;
+      for (final snapshot in lanesBefore) {
+        maxColumn = math.max(maxColumn, snapshot.column);
+      }
+      for (final snapshot in lanesAfter) {
+        maxColumn = math.max(maxColumn, snapshot.column);
+      }
+      final effectiveLaneCount = math.max(1, maxColumn + 1);
 
       final rowState = LaneRowState(
         nodeLaneId: currentLane.id,
         before: beforeMap,
         after: afterMap,
         visibleLaneIds: visibleLaneIds,
-        collapsingLaneIds: collapsingLaneIds,
-        collapseInto: collapseInto,
         mergeFromNodeLaneIds: mergeFromNodeLaneIds,
+        mergeIntoNodeLaneIds: mergeIntoNodeLaneIds,
         visualLaneCount: visualLaneCount,
+        effectiveLaneCount: effectiveLaneCount,
       );
 
       results.add(
@@ -487,13 +440,13 @@ class GraphLayoutCalculator {
       );
 
       final updatedLiveLanes = state.liveLanes
-          .where((lane) => !mergeBacks.containsKey(lane.id))
+          .where((lane) =>
+              !arrivingLaneIds.contains(lane.id) || lane.id == currentLane.id)
           .toList();
 
       state = _RoutingState(
         liveLanes: updatedLiveLanes,
         laneColumnsPrevRow: state.laneColumnsPrevRow,
-        pendingMergeBacks: state.pendingMergeBacks,
       );
     }
 

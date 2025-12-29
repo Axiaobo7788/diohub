@@ -7,7 +7,7 @@ import 'package:diohub/utils/utils.dart';
 import 'package:diohub/view/repository/commits/models/graph_layout.dart';
 import 'package:flutter/material.dart';
 
-class CommitGraphRow extends StatelessWidget {
+class CommitGraphRow extends StatefulWidget {
   const CommitGraphRow({
     required this.commitWithLaneData,
     required this.branchTips,
@@ -18,47 +18,78 @@ class CommitGraphRow extends StatelessWidget {
   final Map<String, List<String>>? branchTips;
 
   @override
+  State<CommitGraphRow> createState() => _CommitGraphRowState();
+}
+
+class _CommitGraphRowState extends State<CommitGraphRow> {
+  final _contentKey = GlobalKey();
+  double? _contentHeight;
+
+  @override
   Widget build(BuildContext context) {
-    final commit = commitWithLaneData.commit;
-    final laneData = commitWithLaneData.laneData;
+    final commit = widget.commitWithLaneData.commit;
+    final laneData = widget.commitWithLaneData.laneData;
     final style = CommitGraphStyle();
-    final lanes = math.max(laneData.maxLanes, 1);
+    final lanes = laneData.row.effectiveLaneCount;
     final railWidth = style.laneSpacing * lanes + style.railInset * 2;
-    final branches = branchTips?[commit.oid] ?? const <String>[];
+    final branches = widget.branchTips?[commit.oid] ?? const <String>[];
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 12),
-      child: ConstrainedBox(
-        constraints: BoxConstraints(minHeight: style.rowHeight),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            SizedBox(
-              width: railWidth,
-              child: SizedBox(
-                height: style.rowHeight + style.rowOverlap,
-                child: CustomPaint(
-                  painter: _CommitRailPainter(
-                    laneData: laneData,
-                    colorScheme: Theme.of(context).colorScheme,
-                    commitOid: commit.oid,
-                    style: style,
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (mounted && _contentKey.currentContext != null) {
+              final renderBox =
+                  _contentKey.currentContext!.findRenderObject() as RenderBox?;
+              if (renderBox != null && renderBox.hasSize) {
+                final measuredHeight = renderBox.size.height;
+                final effectiveRowHeight =
+                    math.max(measuredHeight, style.rowHeight);
+                if (_contentHeight != effectiveRowHeight) {
+                  setState(() {
+                    _contentHeight = effectiveRowHeight;
+                  });
+                }
+              }
+            }
+          });
+
+          final effectiveRowHeight =
+              _contentHeight != null ? _contentHeight! : style.rowHeight;
+
+          return IntrinsicHeight(
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                SizedBox(
+                  width: railWidth,
+                  height: effectiveRowHeight + style.rowOverlap,
+                  child: CustomPaint(
+                    painter: _CommitRailPainter(
+                      laneData: laneData,
+                      colorScheme: Theme.of(context).colorScheme,
+                      commitOid: commit.oid,
+                      style: style,
+                      rowHeight: effectiveRowHeight,
+                    ),
                   ),
                 ),
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Padding(
-                padding: EdgeInsets.zero,
-                child: _CommitContent(
-                  commit: commit,
-                  branches: branches,
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Padding(
+                    padding: EdgeInsets.zero,
+                    child: _CommitContent(
+                      key: _contentKey,
+                      commit: commit,
+                      branches: branches,
+                    ),
+                  ),
                 ),
-              ),
+              ],
             ),
-          ],
-        ),
+          );
+        },
       ),
     );
   }
@@ -66,6 +97,7 @@ class CommitGraphRow extends StatelessWidget {
 
 class _CommitContent extends StatelessWidget {
   const _CommitContent({
+    super.key,
     required this.commit,
     required this.branches,
   });
@@ -90,6 +122,7 @@ class _CommitContent extends StatelessWidget {
           style: context.textTheme.titleMedium?.copyWith(
             fontWeight: FontWeight.w700,
           ),
+          softWrap: true,
         ),
         if (branches.isNotEmpty) ...[
           const SizedBox(height: 6),
@@ -175,69 +208,54 @@ class _CommitRailPainter extends CustomPainter {
     required this.colorScheme,
     required this.commitOid,
     required this.style,
+    required this.rowHeight,
   });
 
   final LaneData laneData;
   final ColorScheme colorScheme;
   final String commitOid;
   final CommitGraphStyle style;
+  final double rowHeight;
 
   @override
   void paint(Canvas canvas, Size size) {
     final row = laneData.row;
 
     final laneCount = math.max(row.visualLaneCount, 1);
-    final centerY = style.rowHeight / 2;
+    final centerY = rowHeight / 2;
     final rowTopY = -style.rowOverlap / 2;
-    final rowBottomY = style.rowHeight + style.rowOverlap / 2;
+    final rowBottomY = rowHeight + style.rowOverlap / 2;
 
     final nodeX = row.before.containsKey(row.nodeLaneId)
         ? row.before[row.nodeLaneId]!.x
         : row.after[row.nodeLaneId]!.x;
 
-    final path = Path();
-
-    // Merge-back curves (deferred from previous row)
-    for (final fromLaneId in row.collapsingLaneIds) {
-      final toLaneId = row.collapseInto[fromLaneId]!;
-
-      if (!row.before.containsKey(fromLaneId)) {
-        continue;
+    // Compute deterministic vertical offsets for merging lanes to avoid overlap
+    final mergingLanes = <MapEntry<String, int>>[];
+    for (final laneId in row.mergeIntoNodeLaneIds) {
+      final snapshot = row.before[laneId] ?? row.after[laneId];
+      if (snapshot != null) {
+        mergingLanes.add(MapEntry(laneId, snapshot.column));
       }
-
-      final hasToLaneBefore = row.before.containsKey(toLaneId);
-      final hasToLaneAfter = row.after.containsKey(toLaneId);
-
-      if (!hasToLaneBefore && !hasToLaneAfter) {
-        continue;
-      }
-
-      final collapsingLane = row.before[fromLaneId]!;
-      final fromX = collapsingLane.x;
-      final survivorNodeX =
-          hasToLaneBefore ? row.before[toLaneId]!.x : row.after[toLaneId]!.x;
-      final paint = Paint()
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = style.strokeWidth
-        ..color = collapsingLane.color;
-
-      path.reset();
-      path.moveTo(fromX, rowTopY);
-      path.cubicTo(
-        fromX,
-        centerY - style.halfRowHeight * 0.6,
-        survivorNodeX,
-        centerY,
-        survivorNodeX,
-        centerY,
-      );
-      canvas.drawPath(path, paint);
     }
+    mergingLanes.sort((a, b) => a.value.compareTo(b.value));
+
+    final mergeOffsetMap = <String, double>{};
+    if (mergingLanes.isNotEmpty) {
+      final maxOffset = (rowHeight / 2) * style.curveControlMultiplier * 0.5;
+      final step = mergingLanes.length > 1
+          ? (maxOffset * 2) / (mergingLanes.length - 1)
+          : 0.0;
+      for (var i = 0; i < mergingLanes.length; i++) {
+        final offset = -maxOffset + (i * step);
+        mergeOffsetMap[mergingLanes[i].key] = offset;
+      }
+    }
+
+    final path = Path();
 
     // Vertical continuity or column transitions
     for (final laneId in row.visibleLaneIds) {
-      if (row.collapsingLaneIds.contains(laneId)) continue;
-
       final hasBefore = row.before.containsKey(laneId);
       final hasAfter = row.after.containsKey(laneId);
 
@@ -256,48 +274,79 @@ class _CommitRailPainter extends CustomPainter {
           final paint = Paint()
             ..style = PaintingStyle.stroke
             ..strokeWidth = style.strokeWidth
-            ..color = beforeLane.color;
+            ..color = beforeLane.color.withOpacity(style.railOpacity);
           canvas.drawLine(
               Offset(xBefore, rowTopY), Offset(xBefore, centerY), paint);
           canvas.drawLine(
               Offset(xBefore, centerY), Offset(xBefore, rowBottomY), paint);
         } else {
-          final beforePaint = Paint()
-            ..style = PaintingStyle.stroke
-            ..strokeWidth = style.strokeWidth
-            ..color = beforeLane.color;
-          canvas.drawLine(
-              Offset(xBefore, rowTopY), Offset(xBefore, centerY), beforePaint);
-
           final afterPaint = Paint()
             ..style = PaintingStyle.stroke
             ..strokeWidth = style.strokeWidth
-            ..color = afterLane.color;
+            ..color = afterLane.color.withOpacity(style.railOpacity);
+
+          // Lane-change curve (mirrored merge-style control points)
+          final dx = (xAfter - xBefore).abs();
+          final controlDY = math.min(
+            rowHeight * style.curveControlMultiplier,
+            dx * 0.6,
+          );
+
           path.reset();
-          path.moveTo(xBefore, centerY);
+          path.moveTo(xBefore, rowTopY);
           path.cubicTo(
             xBefore,
-            centerY + style.halfRowHeight * 0.6,
+            centerY - controlDY,
             xAfter,
-            centerY + style.halfRowHeight * 0.6,
+            centerY - controlDY,
             xAfter,
-            rowBottomY,
+            centerY,
           );
           canvas.drawPath(path, afterPaint);
+
+          // Vertical after node
+          canvas.drawLine(
+            Offset(xAfter, centerY),
+            Offset(xAfter, rowBottomY),
+            afterPaint,
+          );
         }
       } else if (hasBefore) {
         final paint = Paint()
           ..style = PaintingStyle.stroke
           ..strokeWidth = style.strokeWidth
-          ..color = beforeLane!.color;
-        canvas.drawLine(Offset(beforeLane.x, rowTopY),
-            Offset(beforeLane.x, centerY), paint);
+          ..color = beforeLane!.color.withOpacity(style.railOpacity);
+        if (row.mergeIntoNodeLaneIds.contains(laneId)) {
+          // Terminating lane that merges into node: draw curve into node
+          final offset = mergeOffsetMap[laneId] ?? 0.0;
+          final dx = (nodeX - beforeLane.x).abs();
+          final controlDY = math.min(
+            rowHeight * style.curveControlMultiplier,
+            dx * 0.6,
+          );
+          final controlY = centerY - controlDY;
+          path.reset();
+          path.moveTo(beforeLane.x, rowTopY);
+          path.cubicTo(
+            beforeLane.x,
+            controlY + offset,
+            nodeX,
+            controlY + offset,
+            nodeX,
+            centerY,
+          );
+          canvas.drawPath(path, paint);
+        } else {
+          // Terminating lane that doesn't merge: draw only vertical line
+          canvas.drawLine(Offset(beforeLane.x, rowTopY),
+              Offset(beforeLane.x, centerY), paint);
+        }
       } else if (hasAfter) {
         if (laneId == row.nodeLaneId) {
           final paint = Paint()
             ..style = PaintingStyle.stroke
             ..strokeWidth = style.strokeWidth
-            ..color = afterLane!.color;
+            ..color = afterLane!.color.withOpacity(style.railOpacity);
           canvas.drawLine(Offset(afterLane.x, centerY),
               Offset(afterLane.x, rowBottomY), paint);
         }
@@ -313,16 +362,23 @@ class _CommitRailPainter extends CustomPainter {
       final paint = Paint()
         ..style = PaintingStyle.stroke
         ..strokeWidth = style.strokeWidth
-        ..color = targetLane.color;
+        ..color = targetLane.color.withOpacity(style.railOpacity);
       if (targetColumn >= laneCount) continue;
       final targetX = targetLane.x;
+      final offset = mergeOffsetMap[targetLaneId] ?? 0.0;
+      final dx = (targetX - nodeX).abs();
+      final controlDY = math.min(
+        rowHeight * style.curveControlMultiplier,
+        dx * 0.6,
+      );
+      final controlY = centerY + controlDY;
       path.reset();
       path.moveTo(nodeX, centerY);
       path.cubicTo(
         nodeX,
-        centerY + style.halfRowHeight * 0.6,
+        controlY + offset,
         targetX,
-        centerY + style.halfRowHeight * 0.6,
+        controlY + offset,
         targetX,
         rowBottomY,
       );
@@ -349,6 +405,7 @@ class _CommitRailPainter extends CustomPainter {
   bool shouldRepaint(covariant _CommitRailPainter oldDelegate) {
     return oldDelegate.laneData != laneData ||
         oldDelegate.colorScheme != colorScheme ||
-        oldDelegate.style != style;
+        oldDelegate.style != style ||
+        oldDelegate.rowHeight != rowHeight;
   }
 }
