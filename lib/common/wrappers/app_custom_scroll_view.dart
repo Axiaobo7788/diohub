@@ -1,3 +1,4 @@
+import 'package:diohub/common/misc/sliver_pinned_overlap_injector.dart';
 import 'package:diohub/common/wrappers/liquid_pull_to_refresh_wrapper.dart';
 import 'package:diohub/common/wrappers/scroll_to_top_wrapper.dart';
 import 'package:flutter/gestures.dart';
@@ -189,12 +190,9 @@ class AppCustomScrollView extends StatelessWidget {
     // Build the slivers list with overlap injector if needed
     final List<Widget> finalSlivers = <Widget>[
       if (overlapHandle != null)
-        SliverOverlapInjector(handle: overlapHandle),
-        SliverLayoutBuilder(
-  builder: (_, SliverConstraints constraints) {
-    return SliverToBoxAdapter(child: SizedBox(height: constraints.overlap),);
-  },
-),
+        SliverPinnedOverlapInjector(handle: overlapHandle),
+      
+
       ...slivers,
     ];
 

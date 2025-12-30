@@ -1,6 +1,5 @@
 import 'dart:ui';
 
-import 'package:diohub/common/misc/scroll_dynamic_elevation.dart';
 import 'package:diohub/style/surface_style_theme.dart';
 import 'package:diohub/utils/utils.dart';
 import 'package:flutter/material.dart';
@@ -261,9 +260,9 @@ class _RoundedExpandedWidget extends StatelessWidget {
                   ],
                 ),
               ),
-              child:Center(
-                      child: child,
-                    ),
+              child: Center(
+                child: child,
+              ),
             ),
           ),
         );
@@ -628,7 +627,7 @@ class _DynamicSliverAppBarDelegate extends SliverPersistentHeaderDelegate {
           overscrollHeight: overscrollHeight,
           child: Row(
             children: [
-        if(     ModalRoute.canPopOf(context)?? false) const BackButton(),
+              if (ModalRoute.canPopOf(context) ?? false) const BackButton(),
               Expanded(
                 child: Stack(
                   fit: StackFit.expand,
@@ -645,21 +644,19 @@ class _DynamicSliverAppBarDelegate extends SliverPersistentHeaderDelegate {
                         ),
                       ),
                     ),
-                
+
                     // Collapsed content (fades in)
                     IgnorePointer(
-                      ignoring: t<0.95,
+                      ignoring: t < 0.95,
                       child: Opacity(
                         opacity: t.clamp(0.0, 1.0),
                         child: Transform.scale(
-                              scale: scale,
-                              // alignment: Alignment.centerLeft,
-                              child: collapsedContent,
-                            ),
+                          scale: scale,
+                          // alignment: Alignment.centerLeft,
+                          child: collapsedContent,
+                        ),
                       ),
                     ),
-                
-                    
                   ],
                 ),
               ),

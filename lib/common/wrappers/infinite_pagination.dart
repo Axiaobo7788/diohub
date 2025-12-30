@@ -3,6 +3,7 @@ import 'package:diohub/app/global.dart';
 import 'package:diohub/common/misc/button.dart';
 import 'package:diohub/common/misc/loading_indicator.dart';
 import 'package:diohub/common/wrappers/infinite_scroll_wrapper.dart';
+import 'package:diohub/common/wrappers/paged_sliver_list_with_slivers.dart';
 import 'package:diohub/utils/utils.dart';
 import 'package:flutter/material.dart';
 import 'package:infinite_scroll_pagination/infinite_scroll_pagination.dart';
@@ -22,7 +23,10 @@ class InfinitePaginationController<T> {
     this.firstPageLoadingBuilder,
     this.emptyBuilder,
     this.enableStaggeredAnimation = true,
-  }) : paddingBuilder = paddingBuilder ?? ((final _) => const EdgeInsets.symmetric(vertical: 16,));
+  }) : paddingBuilder = paddingBuilder ??
+            ((final _) => const EdgeInsets.symmetric(
+                  vertical: 16,
+                ));
 
   final ScrollWrapperFuture<T> future;
   final ScrollWrapperBuilder<T> builder;
@@ -102,8 +106,10 @@ class InfinitePaginationController<T> {
       return filteredItems
           .map((final T e) => _ListItem<T>(e, refresh: _refresh))
           .toList();
-    } on DioException catch (error, s) {      rethrow;
-    } catch (error) {      rethrow;
+    } on DioException catch (error, s) {
+      rethrow;
+    } catch (error) {
+      rethrow;
     }
   }
 
@@ -163,7 +169,10 @@ class InfinitePaginationController<T> {
 
     final EdgeInsets paddingValue = paddingBuilder(context);
     return Padding(
-      padding:  EdgeInsets.only(left: paddingValue.left, right: paddingValue.right,),
+      padding: EdgeInsets.only(
+        left: paddingValue.left,
+        right: paddingValue.right,
+      ),
       child: Column(
         children: <Widget>[
           if (index == 0)
@@ -171,7 +180,8 @@ class InfinitePaginationController<T> {
               height: paddingValue.top,
             ),
           child,
-          if (index == (state.items?.length ?? 0) - 1)  SizedBox(
+          if (index == (state.items?.length ?? 0) - 1)
+            SizedBox(
               height: paddingValue.bottom,
             ),
         ],
@@ -182,85 +192,90 @@ class InfinitePaginationController<T> {
   PagedChildBuilderDelegate<_ListItem<T>> _buildDelegate(
     final BuildContext context,
     final PagingState<int, _ListItem<T>> state,
-  ) => PagedChildBuilderDelegate<_ListItem<T>>(
-      itemBuilder: (final BuildContext context, final _ListItem<T> item, final int index) =>
-          _buildItemBuilder(context, state, item, index),
-      firstPageProgressIndicatorBuilder: firstPageLoadingBuilder ??
-          (final BuildContext context) => const Padding(
-                padding: EdgeInsets.all(32),
-                child: LoadingIndicator(),
-              ),
-      newPageProgressIndicatorBuilder: (final BuildContext context) =>
-          const Padding(
-        padding: EdgeInsets.all(32),
-        child: LoadingIndicator(),
-      ),
-      noItemsFoundIndicatorBuilder: emptyBuilder ??
-          (final BuildContext context) {
-            final EdgeInsets paddingValue = paddingBuilder(context);
-            return Center(
-              child: Column(
-                children: <Widget>[
-                  SizedBox(
-                    height: paddingValue.top,
-                  ),
-                  const Expanded(
-                    child: Center(
-                      child: Padding(
-                        padding: EdgeInsets.all(16),
-                        child: Text(
-                          'Nothing to see here.',
+  ) =>
+      PagedChildBuilderDelegate<_ListItem<T>>(
+        itemBuilder: (final BuildContext context, final _ListItem<T> item,
+                final int index) =>
+            _buildItemBuilder(context, state, item, index),
+        firstPageProgressIndicatorBuilder: firstPageLoadingBuilder ??
+            (final BuildContext context) => const Padding(
+                  padding: EdgeInsets.all(32),
+                  child: LoadingIndicator(),
+                ),
+        newPageProgressIndicatorBuilder: (final BuildContext context) =>
+            const Padding(
+          padding: EdgeInsets.all(32),
+          child: LoadingIndicator(),
+        ),
+        noItemsFoundIndicatorBuilder: emptyBuilder ??
+            (final BuildContext context) {
+              final EdgeInsets paddingValue = paddingBuilder(context);
+              return Center(
+                child: Column(
+                  children: <Widget>[
+                    SizedBox(
+                      height: paddingValue.top,
+                    ),
+                    const Expanded(
+                      child: Center(
+                        child: Padding(
+                          padding: EdgeInsets.all(16),
+                          child: Text(
+                            'Nothing to see here.',
+                          ),
                         ),
                       ),
                     ),
-                  ),
-                ],
-              ),
-            );
-          },
-      noMoreItemsIndicatorBuilder: (final BuildContext context) {
-        final EdgeInsets paddingValue = paddingBuilder(context);
-        return listEndIndicator
-            ? Center(
-                child: Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    children: <Widget>[
-                      Text(
-                        '----*----',
-                        style: context.textTheme.labelSmall?.asHint(),
-                      ),
-                      SizedBox(
-                        height: paddingValue.bottom,
-                      ),
-                    ],
-                  ),
+                  ],
                 ),
-              )
-            : Padding(
-                padding: EdgeInsets.only(bottom: paddingValue.bottom),
-                child: Container(),
               );
-      },
-      firstPageErrorIndicatorBuilder: (final BuildContext context) =>
-          _FirstPageErrorIndicator(
-        onTryAgain: () => _controller.refresh(),
-        error: state.error,
-      ),
-    );
+            },
+        noMoreItemsIndicatorBuilder: (final BuildContext context) {
+          final EdgeInsets paddingValue = paddingBuilder(context);
+          return listEndIndicator
+              ? Center(
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      children: <Widget>[
+                        Text(
+                          '----*----',
+                          style: context.textTheme.labelSmall?.asHint(),
+                        ),
+                        SizedBox(
+                          height: paddingValue.bottom,
+                        ),
+                      ],
+                    ),
+                  ),
+                )
+              : Padding(
+                  padding: EdgeInsets.only(bottom: paddingValue.bottom),
+                  child: Container(),
+                );
+        },
+        firstPageErrorIndicatorBuilder: (final BuildContext context) =>
+            _FirstPageErrorIndicator(
+          onTryAgain: () => _controller.refresh(),
+          error: state.error,
+        ),
+      );
 
   /// Builds a sliver list for use in CustomScrollView.
-  Widget buildSliverList(final BuildContext context, {final Key? key}) => ValueListenableBuilder<PagingState<int, _ListItem<T>>>(
-      valueListenable: _controller,
-      builder: (final BuildContext context, final PagingState<int, _ListItem<T>> state, final _) =>
-          PagedSliverList<int, _ListItem<T>>.separated(
-        key: key,
-        state: state,
-        fetchNextPage: _controller.fetchNextPage,
-        separatorBuilder: separatorBuilder ?? (final _, final __) => Container(),
-        builderDelegate: _buildDelegate(context, state),
-      ),
-    );
+  Widget buildSliverList(final BuildContext context, {final Key? key}) =>
+      ValueListenableBuilder<PagingState<int, _ListItem<T>>>(
+        valueListenable: _controller,
+        builder: (final BuildContext context,
+                final PagingState<int, _ListItem<T>> state, final _) =>
+            PagedSliverList<int, _ListItem<T>>.separated(
+          key: key,
+          state: state,
+          fetchNextPage: _controller.fetchNextPage,
+          separatorBuilder:
+              separatorBuilder ?? (final _, final __) => Container(),
+          builderDelegate: _buildDelegate(context, state),
+        ),
+      );
 
   /// Builds a regular ListView.
   Widget buildListView(
@@ -269,20 +284,124 @@ class InfinitePaginationController<T> {
     final bool shrinkWrap = false,
     final ScrollPhysics? physics,
     final Key? key,
-  }) => ValueListenableBuilder<PagingState<int, _ListItem<T>>>(
-      valueListenable: _controller,
-      builder: (final BuildContext context, final PagingState<int, _ListItem<T>> state, final _) =>
-          PagedListView<int, _ListItem<T>>.separated(
-        key: key,
-        state: state,
-        fetchNextPage: _controller.fetchNextPage,
-        scrollController: scrollController,
-        shrinkWrap: shrinkWrap,
-        physics: physics,
-        separatorBuilder: separatorBuilder ?? (final _, final __) => Container(),
-        builderDelegate: _buildDelegate(context, state),
-      ),
-    );
+  }) =>
+      ValueListenableBuilder<PagingState<int, _ListItem<T>>>(
+        valueListenable: _controller,
+        builder: (final BuildContext context,
+                final PagingState<int, _ListItem<T>> state, final _) =>
+            PagedListView<int, _ListItem<T>>.separated(
+          key: key,
+          state: state,
+          fetchNextPage: _controller.fetchNextPage,
+          scrollController: scrollController,
+          shrinkWrap: shrinkWrap,
+          physics: physics,
+          separatorBuilder:
+              separatorBuilder ?? (final _, final __) => Container(),
+          builderDelegate: _buildDelegate(context, state),
+        ),
+      );
+
+  Widget Function(Widget) _buildAnimationWrapper(
+    final BuildContext context,
+    final PagingState<int, _ListItem<T>> state,
+    final _ListItem<T> item,
+    final int index,
+    final bool isRefresh,
+  ) {
+    if (!enableStaggeredAnimation) {
+      return (final Widget widget) => widget;
+    }
+
+    final bool isFirstPage = index < pageSize;
+    final bool isInitialLoadPhase = _animatedItems.isEmpty ||
+        (_animatedItems.isNotEmpty &&
+            _animatedItems.every((final int i) => i < pageSize));
+
+    final bool shouldAnimate = !_animatedItems.contains(index) &&
+        (isRefresh || (isFirstPage && isInitialLoadPhase));
+
+    if (shouldAnimate) {
+      _animatedItems.add(index);
+      if (!_hasStartedAnimating) {
+        _hasStartedAnimating = true;
+      }
+    }
+
+    if (shouldAnimate) {
+      return (final Widget widget) => _StaggeredAnimatedItem(
+            key: ValueKey('animated_${item.item.hashCode}_$index'),
+            index: index,
+            shouldAnimate: shouldAnimate,
+            child: widget,
+          );
+    }
+
+    return (final Widget widget) => widget;
+  }
+
+  /// Builds a sliver list with slivers for use in CustomScrollView.
+  Widget buildSliverListWithSlivers(
+    final BuildContext context, {
+    final Key? key,
+    required Widget Function(
+      BuildContext,
+      ScrollWrapperBuilderData<T>,
+      Widget Function(Widget),
+    ) itemSliverBuilder,
+  }) =>
+      ValueListenableBuilder<PagingState<int, _ListItem<T>>>(
+        valueListenable: _controller,
+        builder: (final BuildContext context,
+                final PagingState<int, _ListItem<T>> state, final _) =>
+            PagedSliverListWithSlivers<int, _ListItem<T>>(
+          key: key,
+          state: state,
+          fetchNextPage: _controller.fetchNextPage,
+          builderDelegate: _buildDelegate(context, state),
+          shrinkWrapFirstPageIndicators: false,
+          animationWrapperBuilder:
+              (final BuildContext context, final int index) {
+            // Return a wrapper that will be configured with refresh value in itemSliverBuilder
+            // This is a placeholder - the actual wrapper will be built in itemSliverBuilder
+            return (final Widget widget) => widget;
+          },
+          itemSliverBuilder: (
+            final BuildContext context,
+            final _ListItem<T> item,
+            final int index,
+            final Widget Function(Widget) animationWrapper,
+          ) {
+            // Consume refreshChildren exactly like _buildItemBuilder does
+            final bool isRefresh = item.refreshChildren;
+
+            // Build animation wrapper with the consumed refresh value
+            final Widget Function(Widget) actualAnimationWrapper =
+                _buildAnimationWrapper(context, state, item, index, isRefresh);
+
+            final List<_ListItem<T>>? items = state.items;
+            final T? previousItem =
+                index > 0 && items != null ? items[index - 1].item : null;
+            final T? nextItem =
+                index < (items?.length ?? 0) - 1 && items != null
+                    ? items[index + 1].item
+                    : null;
+
+            final ScrollWrapperBuilderData<T> builderData =
+                ScrollWrapperBuilderData<T>(
+              item: item.item,
+              index: index,
+              refresh: isRefresh,
+              isCurrentlyLast: (state.items?.length ?? 0) - 1 == index,
+              previousItem: previousItem,
+              nextItem: nextItem,
+            );
+
+            return itemSliverBuilder(
+                context, builderData, actualAnimationWrapper);
+          },
+        ),
+      );
 }
 
 class _ListItem<T> {
@@ -330,19 +449,19 @@ class _FirstPageExceptionIndicator extends StatelessWidget {
 
   @override
   Widget build(final BuildContext context) => Center(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(
-          vertical: 32,
-          horizontal: 16,
-        ),
-        child: Button(
-          onTap: onTryAgain,
-          child: const Text(
-            'Retry',
+        child: Padding(
+          padding: const EdgeInsets.symmetric(
+            vertical: 32,
+            horizontal: 16,
+          ),
+          child: Button(
+            onTap: onTryAgain,
+            child: const Text(
+              'Retry',
+            ),
           ),
         ),
-      ),
-    );
+      );
 }
 
 /// Widget that animates items in with a staggered delay

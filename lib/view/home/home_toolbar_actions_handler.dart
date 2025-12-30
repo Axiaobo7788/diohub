@@ -1,6 +1,6 @@
 import 'package:auto_route/auto_route.dart';
 import 'package:diohub/app/settings/theme_mode.dart';
-import 'package:diohub/app/theme_settings/api/flex_theme_settings_service.dart';
+import 'package:diohub/app/theme_config/api/flex_theme_settings_service.dart';
 import 'package:diohub/blocs/account_bloc/account_bloc.dart';
 import 'package:diohub/common/misc/collapsible_action_buttons.dart';
 import 'package:diohub/common/misc/action_card_builder.dart';

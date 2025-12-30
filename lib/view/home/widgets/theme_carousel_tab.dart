@@ -1,5 +1,5 @@
 import 'package:diohub/app/settings/theme_mode.dart';
-import 'package:diohub/app/theme_settings/api/flex_theme_settings_service.dart';
+import 'package:diohub/app/theme_config/api/flex_theme_settings_service.dart';
 import 'package:diohub/common/misc/surface_shape_resolver.dart';
 import 'package:diohub/common/wrappers/app_custom_scroll_view.dart';
 import 'package:diohub/style/surface_style_theme.dart';
@@ -367,7 +367,7 @@ class _ThemeCarouselTabState extends State<ThemeCarouselTab> {
                     ),
                   ),
                 ),
-                const SliverPinnedHeader(child: SizedBox(height: kToolbarHeight*2)),
+                const SliverToBoxAdapter(child: SizedBox(height: 16)),
                 // Blend slider section - pinned header
                 SliverPinnedHeader(
                   child: Container(

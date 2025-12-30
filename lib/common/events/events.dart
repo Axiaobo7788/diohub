@@ -167,7 +167,7 @@ late final InfinitePaginationController<EventsModel> infinitePaginationControlle
 
   @override
   Widget build(final BuildContext context) =>
-     infinitePaginationController .buildSliverList(context);
+     infinitePaginationController.buildSliverList(context);
 
   Widget buildTimelineEvent(
     final EventsModel item,

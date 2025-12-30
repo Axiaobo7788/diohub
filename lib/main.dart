@@ -7,9 +7,9 @@ import 'package:diohub/app/api_handler/dio.dart';
 import 'package:diohub/app/global.dart';
 import 'package:diohub/app/settings/font.dart';
 import 'package:diohub/app/settings/theme_mode.dart';
-import 'package:diohub/app/theme_settings/api/flex_theme_settings_service.dart';
+import 'package:diohub/app/theme_config/api/flex_theme_settings_service.dart';
 import 'package:diohub/utils/material_you_support.dart';
-import 'package:diohub/app/theme_settings/models/flex_theme_settings_model.dart';
+import 'package:diohub/app/theme_config/models/flex_theme_settings_model.dart';
 import 'package:diohub/blocs/account_bloc/account_bloc.dart';
 import 'package:diohub/blocs/authentication_bloc/authentication_bloc.dart';
 import 'package:diohub/providers/search_data_provider.dart';
@@ -40,7 +40,7 @@ Future<void> debugURLLauncher() async {
   // https://github.com/flutter/flutter/issues/128696
   // url = 'https://github.com/firebase/flutterfire/issues/1041';
   // url = 'https://github.com/pranshuparmar/witr/commits';
-    // url = 'https://github.com/namanshergill/flutter_scroll_to_top/commits';
+  // url = 'https://github.com/namanshergill/flutter_scroll_to_top/commits';
   if (kDebugMode) {
     // Wait for the router to be ready before navigating
     BuildContext? context;

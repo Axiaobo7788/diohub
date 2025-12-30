@@ -11,6 +11,7 @@ import 'package:diohub/common/misc/floating_toolbar_wrapper.dart';
 import 'package:diohub/common/misc/ink_pot.dart';
 import 'package:diohub/common/misc/profile_banner.dart';
 import 'package:diohub/common/misc/shimmer_widget.dart';
+import 'package:diohub/common/misc/sliver_pinned_overlap_injector.dart';
 import 'package:diohub/common/search_overlay/search_bar.dart';
 import 'package:diohub/common/search_overlay/search_overlay.dart';
 import 'package:diohub/common/wrappers/dynamic_tabs_parent.dart';
@@ -71,7 +72,7 @@ class HomeScreenState extends State<HomeScreen>
           isDismissible: false,
           tabViewBuilder: (final BuildContext context) => CustomScrollView(
             slivers: [
-              SliverOverlapInjector(
+              SliverPinnedOverlapInjector(
                   handle:
                       NestedScrollView.sliverOverlapAbsorberHandleFor(context)),
               Events(),
@@ -202,6 +203,7 @@ class HomeScreenState extends State<HomeScreen>
           },
         ),
         child: SafeArea(
+            bottom: false,
           child: DynamicTabsParent(
             controller: tabsController,
             builder: (
@@ -219,7 +221,13 @@ class HomeScreenState extends State<HomeScreen>
                 ),
               ],
               expandedWidget: buildProfileCard(context),
-              bodyBuilder: (BuildContext context) => tabView(context),
+              bodyBuilder: (BuildContext context) {
+                // Note: Tab views that have pinned headers should use
+                // OverlapAwarePinnedHeader to ensure they appear below the
+                // header pinned tab bar instead of behind it.
+                // Example: OverlapAwarePinnedHeader(child: YourPinnedContent())
+                return tabView(context);
+              },
             ),
           ),
         ),

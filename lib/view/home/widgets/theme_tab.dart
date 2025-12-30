@@ -1,4 +1,4 @@
-import 'package:diohub/app/theme_settings/api/flex_theme_settings_service.dart';
+import 'package:diohub/app/theme_config/api/flex_theme_settings_service.dart';
 import 'package:flex_color_scheme/flex_color_scheme.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
