@@ -77,10 +77,7 @@ class ChipDetailsService {
         endCursor: pageInfo?.endCursor,
         totalCount: collection.totalIssueContributions,
       );
-    } catch (e, stackTrace) {
-      log.e('Error fetching issue contributions',
-          error: e, stackTrace: stackTrace);
-      rethrow;
+    } catch (e, stackTrace) {      rethrow;
     }
   }
 
@@ -143,10 +140,7 @@ class ChipDetailsService {
         endCursor: pageInfo?.endCursor,
         totalCount: collection.totalPullRequestContributions,
       );
-    } catch (e, stackTrace) {
-      log.e('Error fetching pull request contributions',
-          error: e, stackTrace: stackTrace);
-      rethrow;
+    } catch (e, stackTrace) {      rethrow;
     }
   }
 
@@ -209,10 +203,7 @@ class ChipDetailsService {
         endCursor: pageInfo?.endCursor,
         totalCount: collection.totalPullRequestReviewContributions,
       );
-    } catch (e, stackTrace) {
-      log.e('Error fetching review contributions',
-          error: e, stackTrace: stackTrace);
-      rethrow;
+    } catch (e, stackTrace) {      rethrow;
     }
   }
 
@@ -259,10 +250,7 @@ class ChipDetailsService {
         endCursor: repoContributions.pageInfo.endCursor,
         totalCount: repoContributions.totalCount,
       );
-    } catch (e, stackTrace) {
-      log.e('Error fetching created repo contributions',
-          error: e, stackTrace: stackTrace);
-      rethrow;
+    } catch (e, stackTrace) {      rethrow;
     }
   }
 
@@ -283,12 +271,7 @@ class ChipDetailsService {
         repositories: repos,
         totalCount: contributionResult.viewModel.totalCommitContributions,
       );
-    } catch (e, stackTrace) {
-      if (kDebugMode) {
-        log.e('Error extracting commit contributions',
-            error: e, stackTrace: stackTrace);
-      }
-      rethrow;
+    } catch (e, stackTrace) {      rethrow;
     }
   }
 }

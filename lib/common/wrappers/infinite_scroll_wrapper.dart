@@ -361,18 +361,9 @@ class _InfinitePaginationState<T> extends State<_InfinitePagination<T>> {
     _pagingController.refresh();
   }
 
-  // Fetch the data to display.
   Future<List<_ListItem<T>>> _fetchPage(final int pageKey) async {
     try {
-      // Calculate the actual page number from the page key
-      // pageKey starts at 0, so for pageNumber starting at widget.pageNumber:
-      // pageKey 0 -> pageNumber widget.pageNumber
-      // pageKey 1 -> pageNumber widget.pageNumber + 1
-      // etc.
       final int currentPageNumber = widget.pageNumber + pageKey;
-
-      // log.log(Level.debug, 'Fetching page $currentPageNumber, key:$pageKey, $this');
-      // Use the supplied APIs accordingly, based on the *refresh* value.
       final List<T> newItems = await widget.future(
         ScrollWrapperFutureArguments<T>(
           pageNumber: currentPageNumber,
@@ -400,17 +391,10 @@ class _InfinitePaginationState<T> extends State<_InfinitePagination<T>> {
       return filteredItems
           .map((final T e) => _ListItem<T>(e, refresh: refresh))
           .toList();
-    } on DioException catch (error, s) {
-      log.e(error.response?.data, stackTrace: s);
-      rethrow;
+    } on DioException catch (error, s) {      rethrow;
       // Can't really do anything about this, the widget is not propagating the error above.
       // ignore: avoid_catches_without_on_clauses
-    } catch (error) {
-      log.e(
-        'Pagination exception',
-        error: error,
-      );
-      rethrow;
+    } catch (error) {      rethrow;
     }
   }
 

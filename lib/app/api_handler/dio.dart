@@ -8,9 +8,9 @@ import 'package:diohub/app/global.dart';
 import 'package:diohub/models/popup/popup_type.dart';
 import 'package:diohub/services/authentication/auth_service.dart';
 import 'package:ferry/ferry.dart';
+import 'package:flutter/foundation.dart';
 import 'package:gql_dio_link/gql_dio_link.dart';
 import 'package:gql_exec/gql_exec.dart' as gql_exec;
-import 'package:path_provider/path_provider.dart';
 import 'package:pretty_dio_logger/pretty_dio_logger.dart';
 import 'package:uuid/uuid.dart';
 
@@ -24,12 +24,10 @@ class RESTHandler extends BaseAPIHandler {
   RESTHandler({
     super.apiLogSettings,
     super.cacheOptions,
-  }) : super(
-          baseURL: apiBaseURL,
-        );
+  }) : super(baseUrl: null);
 
   RESTHandler.external({
-    required super.baseURL,
+    required String super.baseUrl,
     super.apiLogSettings,
     super.cacheOptions,
   }) : super(
@@ -186,9 +184,10 @@ class GraphqlHandler extends BaseAPIHandler {
   GraphqlHandler({
     super.apiLogSettings,
     super.cacheOptions,
-  }) : super(
-          baseURL: '$apiBaseURL/graphql',
-        );
+  });
+
+  @override
+  String get path => '/graphql';
 
   Future<GQLResponse> mutation(
     final OperationRequest<dynamic, dynamic> operationRequest,
@@ -202,14 +201,16 @@ class GraphqlHandler extends BaseAPIHandler {
     final OperationRequest<dynamic, dynamic> operationRequest, {
     final bool refreshCache = false,
     final Map<String, dynamic>? requestHeaders,
-  }) async =>
-      _query(
-        operationRequest,
-        requestHeaders: requestHeaders,
-        overrideAPICache: activeCacheOptions.copyWith(
-          cachePolicy: refreshCache ? CachePolicy.refresh : null,
-        ),
-      );
+  }) async {
+    final response = await _query(
+      operationRequest,
+      requestHeaders: requestHeaders,
+      overrideAPICache: activeCacheOptions.copyWith(
+        cachePolicy: refreshCache ? CachePolicy.refresh : null,
+      ),
+    );
+    return response;
+  }
 
   @override
   APICache get _defaultCacheOptions => APICache.gql();
@@ -218,39 +219,42 @@ class GraphqlHandler extends BaseAPIHandler {
     final OperationRequest<dynamic, dynamic> operationRequest, {
     final APICache? overrideAPICache,
     final Map<String, dynamic>? requestHeaders,
-  }) async =>
-      DioLink(
-        '$apiBaseURL/graphql',
-        client: _request(
-          overrideAPICache: overrideAPICache,
-          requestHeaders: requestHeaders,
-        ),
-      )
-          .request(
-            GQLRequest(
-              operation: operationRequest.operation,
-              // ignore: avoid_dynamic_calls
-              variables: operationRequest.vars.toJson(),
-            ),
-          )
-          .first
-          .onError<DioLinkServerException>(
-        (final DioLinkServerException error, final StackTrace stackTrace) {
-          // If data is from cache the header would be 304, hence the value should
-          // be returned.
-          if (error.response.statusCode == 304) {
-            final gql_exec.Response gqlResponse =
-                const ResponseParser().parseResponse(error.response.data);
-            return GQLResponse(
-              data: gqlResponse.data,
-              errors: gqlResponse.errors,
-              response: gqlResponse.response,
-            );
-          } else {
-            throw error;
-          }
-        },
-      );
+  }) async {
+    final AuthRepository authRepo = AuthRepository();
+    final String apiBase = await authRepo.getActiveAccountServerUrl();
+    return DioLink(
+      '$apiBase/graphql',
+      client: _request(
+        overrideAPICache: overrideAPICache,
+        requestHeaders: requestHeaders,
+      ),
+    )
+        .request(
+          GQLRequest(
+            operation: operationRequest.operation,
+            // ignore: avoid_dynamic_calls
+            variables: operationRequest.vars.toJson(),
+          ),
+        )
+        .first
+        .onError<DioLinkServerException>(
+      (final DioLinkServerException error, final StackTrace stackTrace) {
+        // If data is from cache the header would be 304, hence the value should
+        // be returned.
+        if (error.response.statusCode == 304) {
+          final gql_exec.Response gqlResponse =
+              const ResponseParser().parseResponse(error.response.data);
+          return GQLResponse(
+            data: gqlResponse.data,
+            errors: gqlResponse.errors,
+            response: gqlResponse.response,
+          );
+        } else {
+          throw error;
+        }
+      },
+    );
+  }
 
   @override
   Future<void> onResponse(
@@ -272,16 +276,17 @@ class GraphqlHandler extends BaseAPIHandler {
 
 abstract class BaseAPIHandler {
   BaseAPIHandler({
-    required this.baseURL,
     this.cacheOptions,
     this.apiLogSettings,
     this.addAuthHeader = true,
     this.propagateMessagesToUI = true,
+    this.baseUrl,
   });
+
+  final String? baseUrl;
 
   final bool addAuthHeader;
   final APICache? cacheOptions;
-  final String baseURL;
   final bool propagateMessagesToUI;
 
   APICache get _defaultCacheOptions => APICache();
@@ -291,6 +296,9 @@ abstract class BaseAPIHandler {
   final APILoggingSettings? apiLogSettings;
 
   APILoggingSettings? get defaultAPILogSettings => APILoggingSettings();
+
+  /// Optional path to append to the base URL (e.g., '/graphql' for GraphQL handler)
+  String? get path => null;
 
   Future<void> onError(
     final DioException error,
@@ -318,7 +326,7 @@ abstract class BaseAPIHandler {
     // Log the request in the console if `apiLogSettings` is not null.
     final APILoggingSettings? logSettings =
         // apiLogSettings ??
-         defaultAPILogSettings;
+        defaultAPILogSettings;
     dio.interceptors.add(
       ChuckerDioInterceptor(),
     );
@@ -338,7 +346,7 @@ abstract class BaseAPIHandler {
           error: logSettings.error,
           responseBody: logSettings.responseBody,
           compact: logSettings.compact,
-          logPrint: logSettings.logPrint ?? print,
+          logPrint: logSettings.logPrint ?? (_) {},
           maxWidth: logSettings.maxWidth,
           request: logSettings.request,
         ),
@@ -358,7 +366,6 @@ abstract class BaseAPIHandler {
               options.headers['Authorization'] = 'token $token';
               handler.next(options);
             } on Exception catch (e) {
-              log.e('Could not fetch auth token from device.', error: e);
               handler.reject(
                 DioException(
                   requestOptions: options,
@@ -376,7 +383,18 @@ abstract class BaseAPIHandler {
           final RequestOptions options,
           final RequestInterceptorHandler handler,
         ) async {
-          options.baseUrl = baseURL;
+          // Fetch active account's server URL dynamically
+          final AuthRepository authRepo = AuthRepository();
+          final activeAccountUrl = await authRepo.getActiveAccountServerUrl();
+          final String apiBase = baseUrl ?? activeAccountUrl;
+
+          // Append path if handler defines one (e.g., '/graphql' for GraphQL)
+          if (path != null) {
+            options.baseUrl = '$apiBase$path';
+          } else {
+            options.baseUrl = apiBase;
+          }
+
           options.headers['Accept'] = 'application/json';
           options.headers['setContentType'] = 'application/json';
           options.headers['User-Agent'] = 'com.felix.diohub';
@@ -402,12 +420,20 @@ abstract class BaseAPIHandler {
           // TODO(namanshergill): Add better exception handling based on response codes.
           if (error.response == null) {
             handler.next(error);
-          } else if (error.response?.data.runtimeType is Map &&
-              error.response?.data.containsKey('message') &&
-              propagateMessagesToUI) {
-            ResponseHandler.setErrorMessage(
-              AppPopupData(title: error.response!.data['message']),
-            );
+          } else {
+            // Check for "Bad credentials" (invalid/revoked token) and trigger logout
+            if (AuthRepository.isTokenInvalidError(error)) {
+              // Emit a token invalidation signal; app layer handles logout flow.
+              AuthRepository.emitTokenInvalidated();
+            }
+
+            if (error.response?.data.runtimeType is Map &&
+                error.response?.data.containsKey('message') &&
+                propagateMessagesToUI) {
+              ResponseHandler.setErrorMessage(
+                AppPopupData(title: error.response!.data['message']),
+              );
+            }
           }
           handler.next(error);
         },
@@ -456,9 +482,6 @@ abstract class BaseAPIHandler {
   static late final CacheStore _cacheStore;
 
   static Future<void> setupDioAPICache() async {
-    String? directoryPath;
-
-    directoryPath = (await getApplicationDocumentsDirectory()).path;
     _cacheStore = MemCacheStore();
   }
 
@@ -496,6 +519,18 @@ class APILoggingSettings {
         responseHeader = true,
         responseBody = true,
         error = true;
+
+  APILoggingSettings.none({
+    this.maxWidth = 90,
+    this.compact = true,
+    this.logPrint,
+    this.cURL = true,
+  })  : request = false,
+        requestHeader = false,
+        requestBody = false,
+        responseHeader = false,
+        responseBody = false,
+        error = false;
 
   /// Print request [Options]
   final bool request;

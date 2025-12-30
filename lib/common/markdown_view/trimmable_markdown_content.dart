@@ -8,7 +8,7 @@ class TrimmableMarkdownContent extends StatelessWidget {
     required this.text,
     this.textHtml,
     this.repo,
-    this.maxLengthForIndicator = 400,
+    this.maxLengthForIndicator = 200,
     super.key,
   });
 
@@ -56,7 +56,7 @@ class TrimmableMarkdownContent extends StatelessWidget {
       content = mdToHtml(text!, repo: repo);
     }
 
-    if (content == null || content.trim().isEmpty) {
+    if (content.trim().isEmpty) {
       return const SizedBox.shrink();
     }
 
@@ -67,11 +67,6 @@ class TrimmableMarkdownContent extends StatelessWidget {
         MarkdownBody(
           content,
           buildAsync: false,
-          style: MarkdownBodyStyle(
-            codeBlockStyle: MarkdownBodyCodeBlockStyle(
-              elevation: 0,
-            ),
-          ),
           textStyle: Theme.of(context).textTheme.bodySmall?.copyWith(
                 color: context.colorScheme.onSurfaceVariant.withOpacity(0.8),
                 height: 1.35,

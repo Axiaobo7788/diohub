@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:diohub/blocs/account_bloc/account_bloc.dart';
 import 'package:diohub/models/authentication/access_token_model.dart';
 import 'package:diohub/models/authentication/device_code_model.dart';
 import 'package:diohub/services/authentication/auth_service.dart';
@@ -12,26 +13,26 @@ part 'authentication_state.dart';
 
 class AuthenticationBloc
     extends Bloc<AuthenticationEvent, AuthenticationState> {
-  AuthenticationBloc({required final bool authenticated})
-      : super(
-          authenticated
-              ? AuthenticationSuccessful()
-              : AuthenticationUnauthenticated(),
-        ) {
+  AuthenticationBloc({
+    required this.accountBloc,
+  }) : super(AuthenticationUnauthenticated()) {
     on<RequestDeviceCode>(_requestDeviceCode);
     on<RequestAccessToken>(_requestAccessToken);
     on<AuthError>(_authError);
     on<ResetStates>(_resetStates);
     on<AuthSuccessful>(_authSuccessful);
-    on<LogOut>(_logOut);
   }
 
   final AuthRepository authRepository = AuthRepository();
+  final AccountBloc accountBloc;
 
   Future<void> _requestDeviceCode(
     final RequestDeviceCode event,
     final Emitter<AuthenticationState> emit,
   ) async {
+    // Emit checking state immediately to show loading indicator
+    emit(AuthenticationChecking());
+
     // Get device code to initiate authentication.
     try {
       final TypeMap map = await authRepository.getDeviceToken();
@@ -99,8 +100,38 @@ class AuthenticationBloc
     final AuthSuccessful event,
     final Emitter<AuthenticationState> emit,
   ) async {
-    await authRepository.storeAccessToken(event.accessToken);
-    emit(AuthenticationSuccessful());
+    try {
+      final AccessTokenModel token = event.accessToken;
+
+      // Validate token
+      if (token.accessToken == null || token.accessToken!.isEmpty) {
+        emit(AuthenticationError('Invalid access token received'));
+        return;
+      }
+
+      // Handle scope tracking (global)
+      final String requestedScope = authRepository.scopeString;
+      final String grantedScope = token.scope ?? requestedScope;
+      final String? storedGrantedScope = await authRepository.getGrantedScope();
+
+      if (storedGrantedScope == null ||
+          !_isScopeSubset(requestedScope, storedGrantedScope)) {
+        await authRepository.setGrantedScope(grantedScope);
+      }
+
+      // Dispatch to AccountBloc to handle unified account addition
+      // AccountBloc will handle fetching user, persisting, and setting active
+      // No AuthenticationAuthenticated emission - AccountBloc drives the flow
+      accountBloc.add(AddAccount(token));
+    } catch (e) {
+      emit(AuthenticationError(e.toString()));
+    }
+  }
+
+  bool _isScopeSubset(String requested, String granted) {
+    final Set<String> requestedSet = requested.split(' ').toSet();
+    final Set<String> grantedSet = granted.split(' ').toSet();
+    return requestedSet.difference(grantedSet).isEmpty;
   }
 
   void _resetStates(
@@ -110,13 +141,6 @@ class AuthenticationBloc
     emit(AuthenticationUnauthenticated());
   }
 
-  Future<void> _logOut(
-    final LogOut event,
-    final Emitter<AuthenticationState> emit,
-  ) async {
-    await authRepository.logOut();
-    emit(AuthenticationUnauthenticated());
-  }
 
   void _authError(
     final AuthError event,

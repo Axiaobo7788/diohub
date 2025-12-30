@@ -1,19 +1,21 @@
 import 'package:auto_route/annotations.dart';
 import 'package:auto_route/auto_route.dart';
-import 'package:diohub/common/animations/size_expanded_widget.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:diohub/common/misc/action_card_builder.dart';
+import 'package:diohub/common/misc/animated_tab_bar.dart';
 import 'package:diohub/common/misc/collapsible_action_buttons.dart';
 import 'package:diohub/common/misc/collapsible_app_bar.dart';
-import 'package:diohub/common/misc/collapsible_detail_tiles.dart';
 import 'package:diohub/common/misc/detail_tile.dart';
 import 'package:diohub/common/misc/detail_tile_content.dart';
 import 'package:diohub/common/misc/file_tree_view.dart';
+import 'package:diohub/common/misc/floating_action_toolbar.dart';
+import 'package:diohub/common/misc/floating_toolbar_wrapper.dart';
+import 'package:diohub/common/widgets/expandable_scroll_wrapper.dart';
 import 'package:diohub/common/wrappers/dynamic_tabs_parent.dart';
 import 'package:diohub/common/wrappers/liquid_pull_to_refresh_wrapper.dart';
 import 'package:diohub/common/wrappers/provider_loading_progress_wrapper.dart';
 import 'package:diohub/graphql/__generated__/schema.schema.gql.dart';
 import 'package:diohub/graphql/queries/repositories/__generated__/commit_info.data.gql.dart';
-import 'package:diohub/models/commits/commit_model.dart';
 import 'package:diohub/providers/base_provider.dart';
 import 'package:diohub/providers/commits/commit_provider.dart';
 import 'package:diohub/routes/router.gr.dart';
@@ -73,27 +75,85 @@ class CommitInfoScreenState extends State<CommitInfoScreen>
       BuildContext context, CommitProvider provider) {
     final commit = provider.data;
 
-    return DynamicTabsParent(
-      controller: dynamicTabsController,
-      builder: (
-        final BuildContext context,
-        final PreferredSizeWidget tabBar,
-        final Widget tabView,
-      ) =>
-          Scaffold(
-        body: PullToRefreshWrapper(
-          onRefresh: () async {
-            await provider.loadData();
+    return FloatingToolbarWrapper(
+      toolbarBuilder: (
+        final ValueNotifier<ScrollNotification?> scrollNotificationNotifier,
+      ) {
+        return ListenableBuilder(
+          listenable: dynamicTabsController,
+          builder: (final BuildContext context, final _) {
+            return FloatingActionToolbar(
+              key: const ValueKey('commit_toolbar'),
+              actions: _buildToolbarActions(commit),
+              actionCardBuilder: (
+                final BuildContext context,
+                final ActionButtonData action,
+              ) =>
+                  buildStandardActionCard(context, action),
+              position: FloatingPosition.bottom,
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              bottomPadding: 0.0,
+              title: commit.abbreviatedOid,
+              subtitle: commit.repository.nameWithOwner,
+              scrollNotificationNotifier: scrollNotificationNotifier,
+              onExpandChanged: (final bool isExpanded) {},
+            );
           },
-          // triggerMode: RefreshIndicatorTriggerMode.anywhere,
-          child: DynamicScroll(
-            collapsedWidget: _buildCollapsedHeader(commit),
-            expandedWidget: _buildExpandedHeader(commit, provider),
-            bottom: SizeExpandedSection(
-              expand: dynamicTabsController.activeLength > 1,
-              child: _buildTabsView(tabBar),
+        );
+      },
+      child: ExpandOnScrollWrapper(
+        collapsedWidget: (
+          final BuildContext context,
+          final double pullProgress,
+          final bool isReadyToExpand,
+        ) =>
+            PullToExpandIndicator(
+          pullProgress: pullProgress,
+          isReadyToExpand: isReadyToExpand,
+        ),
+        expandedWidget: (
+          final BuildContext context,
+          final VoidCallback onCollapse,
+        ) =>
+            ExpandableMetadataContent(
+          onCollapse: onCollapse,
+          children: _buildCommitMetadataTiles(commit, provider),
+        ),
+        builder: (
+          final BuildContext context,
+          final Widget expandOnScrollWidget,
+        ) =>
+            DynamicTabsParent(
+          controller: dynamicTabsController,
+          builder: (
+            final BuildContext context,
+            final PreferredSizeWidget tabBar,
+            final WidgetBuilder tabViewBuilder,
+          ) =>
+              PullToRefreshWrapper(
+            onRefresh: () async {
+              await provider.loadData();
+            },
+            child: DynamicScroll(
+              collapsedWidget: _buildCollapsedHeader(commit),
+              expandedWidget: _buildExpandedHeader(commit, provider),
+              headerSlivers: [
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 4),
+                    child: expandOnScrollWidget,
+                  ),
+                ),
+                AnimatedTabBar(
+                  showTabBar: dynamicTabsController.activeLength > 1,
+                  tabBar: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: _buildTabsView(tabBar),
+                  ),
+                ),
+              ],
+              bodyBuilder: tabViewBuilder,
             ),
-            body: tabView,
           ),
         ),
       ),
@@ -103,23 +163,27 @@ class CommitInfoScreenState extends State<CommitInfoScreen>
   Widget _buildCollapsedHeader(
       GcommitInfoData_repository_object__asCommit commit) {
     final repoName = commit.repository.nameWithOwner;
-    return Row(
-      children: [
-        const Icon(
-          Octicons.git_commit,
-          size: 14,
-        ),
-        const SizedBox(width: 8),
-        Expanded(
-          child: Text(
-            '${commit.abbreviatedOid} • $repoName',
-            style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                  fontWeight: FontWeight.w600,
-                ),
-            overflow: TextOverflow.ellipsis,
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+      child: Row(
+        children: [
+          const Icon(
+            Octicons.git_commit,
+            size: 18,
           ),
-        ),
-      ],
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              '${commit.abbreviatedOid} • $repoName',
+              style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                    fontWeight: FontWeight.w600,
+                    fontSize: 15,
+                  ),
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -127,99 +191,179 @@ class CommitInfoScreenState extends State<CommitInfoScreen>
     GcommitInfoData_repository_object__asCommit commit,
     CommitProvider provider,
   ) {
-    const double leadingWidth = 56.0;
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
+      padding: const EdgeInsets.fromLTRB(16, 20, 16, 16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
         children: [
-          // SHA and verification badge
+          // Repository info row
           Row(
             children: [
-              Padding(
-                padding: const EdgeInsets.only(left: leadingWidth),
-                child: Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 4,
-                      ),
-                      decoration: BoxDecoration(
-                        color: context.colorScheme.surfaceContainerHighest,
-                        borderRadius: Theme.of(context).surfaceStyle.borderRadiusSmall(),
-                      ),
-                      child: Row(
-                        children: [
-                          Icon(
-                            Octicons.git_commit,
-                            size: 12,
-                            color: context.colorScheme.onSurfaceVariant,
-                          ),
-                          const SizedBox(width: 6),
-                          Text(
-                            commit.abbreviatedOid,
-                            style: context.textTheme.labelSmall?.copyWith(
-                              fontFamily: 'monospace',
-                              fontWeight: FontWeight.w600,
-                              color: context.colorScheme.onSurfaceVariant,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    if (commit.signature?.isValid == true) ...[
-                      const SizedBox(width: 8),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 6,
-                          vertical: 4,
-                        ),
-                        decoration: BoxDecoration(
-                          color: Colors.green.withOpacity(0.12),
-                          borderRadius: Theme.of(context).surfaceStyle.borderRadiusSmall(),
-                        ),
-                        child: Row(
-                          children: [
-                            Icon(
-                              Octicons.verified,
-                              size: 12,
-                              color: Colors.green.shade700,
-                            ),
-                            const SizedBox(width: 4),
-                            Text(
-                              'Verified',
-                              style: context.textTheme.labelSmall?.copyWith(
-                                color: Colors.green.shade900,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ],
+              Icon(
+                Octicons.repo,
+                size: 16,
+                color: context.colorScheme.onSurfaceVariant,
+              ),
+              const SizedBox(width: 6),
+              Expanded(
+                child: Text(
+                  commit.repository.nameWithOwner,
+                  style: context.textTheme.bodyMedium?.copyWith(
+                    color: context.colorScheme.onSurfaceVariant,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w500,
+                  ),
+                  overflow: TextOverflow.ellipsis,
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 16),
-          // Detail Tiles
-          _buildDetailTilesSection(commit, provider),
-          const SizedBox(height: 16),
-          // Action Buttons
-          _buildActionButtons(commit),
+          const SizedBox(height: 12),
+          // Commit SHA and verification badge row
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 8,
+                  vertical: 4,
+                ),
+                decoration: BoxDecoration(
+                  color: context.colorScheme.surfaceContainerHighest,
+                  borderRadius: Theme.of(context).surfaceStyle.borderRadiusSmall(),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      Octicons.git_commit,
+                      size: 12,
+                      color: context.colorScheme.onSurfaceVariant,
+                    ),
+                    const SizedBox(width: 6),
+                    Text(
+                      commit.abbreviatedOid,
+                      style: context.textTheme.labelSmall?.copyWith(
+                        fontFamily: 'monospace',
+                        fontWeight: FontWeight.w600,
+                        color: context.colorScheme.onSurfaceVariant,
+                        fontSize: 11,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              if (commit.signature?.isValid == true) ...[
+                const SizedBox(width: 8),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 6,
+                    vertical: 4,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.green.withOpacity(0.12),
+                    borderRadius: Theme.of(context).surfaceStyle.borderRadiusSmall(),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Octicons.verified,
+                        size: 12,
+                        color: Colors.green.shade700,
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        'Verified',
+                        style: context.textTheme.labelSmall?.copyWith(
+                          color: Colors.green.shade900,
+                          fontWeight: FontWeight.w600,
+                          fontSize: 11,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ],
+          ),
+          const SizedBox(height: 12),
+          // Commit message headline
+          Text(
+            commit.messageHeadline,
+            style: context.textTheme.headlineSmall?.copyWith(
+              fontWeight: FontWeight.bold,
+              fontSize: 22,
+              height: 1.3,
+            ),
+            maxLines: 3,
+            overflow: TextOverflow.ellipsis,
+          ),
+          const SizedBox(height: 12),
+          // Author and date row
+          if (commit.author != null) ...[
+            Row(
+              children: [
+                ClipOval(
+                  child: CachedNetworkImage(
+                    imageUrl: commit.author!.avatarUrl.toString(),
+                    width: 16,
+                    height: 16,
+                    fit: BoxFit.cover,
+                    placeholder: (final _, final __) => Container(
+                      width: 16,
+                      height: 16,
+                      color: context.colorScheme.surfaceVariant,
+                    ),
+                    errorWidget: (final _, final __, final ___) => Container(
+                      width: 16,
+                      height: 16,
+                      color: context.colorScheme.surfaceVariant,
+                      child: Icon(
+                        Icons.person,
+                        size: 10,
+                        color: context.colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 6),
+                Text(
+                  commit.author?.user?.login ?? commit.author?.name ?? 'Unknown',
+                  style: context.textTheme.bodySmall?.copyWith(
+                    color: context.colorScheme.onSurfaceVariant,
+                    fontSize: 12,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  '•',
+                  style: context.textTheme.bodySmall?.copyWith(
+                    color: context.colorScheme.onSurfaceVariant.withOpacity(0.5),
+                    fontSize: 12,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  getDate(commit.committedDate.toString(), shorten: true),
+                  style: context.textTheme.bodySmall?.copyWith(
+                    color: context.colorScheme.onSurfaceVariant.withOpacity(0.7),
+                    fontSize: 12,
+                  ),
+                ),
+              ],
+            ),
+          ],
         ],
       ),
     );
   }
 
-  Widget _buildDetailTilesSection(
+  List<Widget> _buildCommitMetadataTiles(
     GcommitInfoData_repository_object__asCommit commit,
     CommitProvider provider,
   ) {
-    final List<Widget> alwaysVisibleTiles = [
+    final List<Widget> tiles = <Widget>[
       if (commit.author != null)
         DetailTile(
           title: 'Author',
@@ -389,9 +533,7 @@ class CommitInfoScreenState extends State<CommitInfoScreen>
         ),
         child: DetailTileText(commit.repository.nameWithOwner),
       ),
-    ];
-
-    final List<Widget> expandableTiles = [
+      // Parents
       if (commit.parents.edges != null && commit.parents.edges!.isNotEmpty)
         DetailTile(
           title: 'Parents',
@@ -451,24 +593,38 @@ class CommitInfoScreenState extends State<CommitInfoScreen>
         ),
     ];
 
-    return CollapsibleDetailTiles(
-      alwaysVisibleTiles: alwaysVisibleTiles,
-      expandableTiles: expandableTiles,
-      visibilityConfig: DetailTilesVisibilityConfig.fixedCount(
-        defaultVisibleCount: 2, // Show 2 tiles by default
-      ),
-      onExpandChanged: (isExpanded) {
-        
-      },
-    );
+    return tiles;
   }
 
-  Widget _buildActionButtons(
+  List<ActionButtonData> _buildToolbarActions(
       GcommitInfoData_repository_object__asCommit commit) {
-    final primaryActions = <ActionButtonData>[
+    final String currentTab = dynamicTabsController.activeIdentifier;
+
+    return <ActionButtonData>[
+      MinorActionButton(
+        icon: Octicons.info,
+        label: 'About',
+        category: 'Primary',
+        actionType: ActionButtonActionType.tab,
+        visibilityState: currentTab == 'About'
+            ? ActionButtonVisibilityState.none
+            : ActionButtonVisibilityState.both,
+        onTap: () => dynamicTabsController.openTab('About'),
+      ),
+      MinorActionButton(
+        icon: Octicons.file_diff,
+        label: 'Files',
+        category: 'Primary',
+        actionType: ActionButtonActionType.tab,
+        visibilityState: currentTab == 'Files'
+            ? ActionButtonVisibilityState.none
+            : ActionButtonVisibilityState.both,
+        onTap: () => dynamicTabsController.openTab('Files'),
+      ),
       MinorActionButton(
         icon: Octicons.code,
         label: 'Browse Files',
+        category: 'Content',
         onTap: () => AutoRouter.of(context).push(
           RepositoryRoute(
             repositoryURL: commit.repository.url.toString(),
@@ -480,6 +636,7 @@ class CommitInfoScreenState extends State<CommitInfoScreen>
       MinorActionButton(
         icon: Octicons.link_external,
         label: 'View on GitHub',
+        category: 'Content',
         onTap: () async {
           final url = commit.commitUrl;
           if (await canLaunchUrl(url)) {
@@ -487,13 +644,11 @@ class CommitInfoScreenState extends State<CommitInfoScreen>
           }
         },
       ),
-    ];
-
-    final secondaryActions = <ActionButtonData>[
       if (commit.comments.totalCount > 0)
         MinorActionButton(
           icon: Octicons.comment,
           label: 'Comments',
+          category: 'Content',
           trailing: buildActionButtonTrailingCount(
             context,
             commit.comments.totalCount,
@@ -503,20 +658,6 @@ class CommitInfoScreenState extends State<CommitInfoScreen>
           },
         ),
     ];
-
-    return CollapsibleActionButtons(
-      primaryActions: primaryActions,
-      secondaryActions: secondaryActions,
-      actionCardBuilder: (context, action) =>
-          buildAppBarActionCard(context, action),
-      visibilityConfig: ActionButtonsVisibilityConfig.fixedCount(
-        defaultVisibleCount:
-            2, // Show 2 actions by default (Browse Files, View on GitHub)
-      ),
-      onExpandChanged: (isExpanded) {
-        
-      },
-    );
   }
 
   List<DynamicTab> _buildTabs(CommitProvider provider) => [
@@ -900,16 +1041,5 @@ class CommitInfoScreenState extends State<CommitInfoScreen>
     );
   }
 
-  Column _buildTabsView(final PreferredSizeWidget tabBar) => Column(
-        children: <Widget>[
-          const SizedBox(height: 8),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: <Widget>[tabBar],
-          ),
-          const Padding(
-            padding: EdgeInsets.symmetric(horizontal: 16),
-          ),
-        ],
-      );
+  Widget _buildTabsView(final PreferredSizeWidget tabBar) => tabBar;
 }

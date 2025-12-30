@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:developer';
 
 import 'package:animations/animations.dart';
 import 'package:dio/dio.dart';
@@ -131,7 +130,6 @@ class APIWrapperState<T> extends State<APIWrapper<T>> {
         );
       }
     } on Exception catch (e) {
-      log('API Snapshot Error', error: e);
       updateSnapshot(
         APISnapshotError<T>(
           e,

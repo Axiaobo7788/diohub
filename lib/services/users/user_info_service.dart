@@ -1,5 +1,6 @@
 import 'package:dio/dio.dart';
 import 'package:diohub/app/api_handler/dio.dart';
+import 'package:diohub/app/global.dart';
 import 'package:diohub/graphql/__generated__/schema.schema.gql.dart';
 import 'package:diohub/graphql/queries/users/__generated__/user_contributions.data.gql.dart';
 import 'package:diohub/graphql/queries/users/__generated__/user_contributions.req.gql.dart';
@@ -9,18 +10,25 @@ import 'package:diohub/graphql/queries/viewer/__generated__/viewer.query.data.gq
 import 'package:diohub/graphql/queries/viewer/__generated__/viewer.query.req.gql.dart';
 import 'package:diohub/models/users/user_info_model.dart';
 import 'package:diohub/utils/type_cast.dart';
+import 'package:flutter/foundation.dart';
 
 class UserInfoService {
   UserInfoService(this.login);
 
-  static final GraphqlHandler _gqlHandler = GraphqlHandler(apiLogSettings: APILoggingSettings(responseBody: true));
+  static final GraphqlHandler _gqlHandler =
+      GraphqlHandler(apiLogSettings: APILoggingSettings(responseBody: true));
   final String login;
   static final RESTHandler _restHandler = RESTHandler();
 
   // Ref: https://docs.github.com/en/rest/reference/users#get-the-authenticated-user
-  static Future<GviewerInfoData_viewer> getViewerInfo() async {
+  static Future<GviewerInfoData_viewer> getViewerInfo(
+      {String? explicitToken}) async {
+    final Map<String, dynamic>? headers = explicitToken != null
+        ? {'Authorization': 'token $explicitToken'}
+        : null;
     final GQLResponse response = await _gqlHandler.query(
       GviewerInfoReq(),
+      requestHeaders: headers,
     );
     return GviewerInfoData.fromJson(response.data!)!.viewer;
   }
@@ -132,6 +140,8 @@ class UserInfoService {
     final DateTime? to,
     final bool refreshCache = false,
   }) async {
+    if (kDebugMode) {
+      final timestamp = DateTime.now().millisecondsSinceEpoch;    }
     // Default to last year if not specified
     final defaultTo = to ?? DateTime.now();
     final defaultFrom = from ??
@@ -139,20 +149,14 @@ class UserInfoService {
           defaultTo.year - 1,
           defaultTo.month,
           defaultTo.day,
-        );
-
-    return GuserContributionsData.fromJson(
-      (await _gqlHandler.query(
-        GuserContributionsReq(
-          (final GuserContributionsReqBuilder b) => b
-            ..vars.user = login
-            ..vars.from = defaultFrom
-            ..vars.to = defaultTo,
-        ),
-        refreshCache: refreshCache,
-      ))
-          .data!,
-    )!
-        .user!;
+        );    final response = await _gqlHandler.query(
+      GuserContributionsReq(
+        (final GuserContributionsReqBuilder b) => b
+          ..vars.user = login
+          ..vars.from = defaultFrom
+          ..vars.to = defaultTo,
+      ),
+      refreshCache: refreshCache,
+    );    return GuserContributionsData.fromJson(response.data!)!.user!;
   }
 }

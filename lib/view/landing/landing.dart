@@ -37,7 +37,7 @@
 //       provider: NetworkImage(
 //           context.read<CurrentUserProvider>().data.avatarUrl.toString()!),
 //     ).then((value) {
-//       print(value);
+//       // Color scheme value
 //     });
 //     super.initState();
 //   }

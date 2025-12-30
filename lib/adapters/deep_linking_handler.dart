@@ -691,7 +691,6 @@ DioHubNavigator? parseGitHubLink(final String link) {
       }
       break;
     default:
-      print('Unsupported GitHub link: $link');
       break;
   }
 

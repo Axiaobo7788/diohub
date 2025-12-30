@@ -240,15 +240,8 @@ class _InfinitePaginationListViewState<T>
       return filteredItems
           .map((final T e) => _ListItem<T>(e, refresh: refresh))
           .toList();
-    } on DioException catch (error, s) {
-      log.e(error.response?.data, stackTrace: s);
-      rethrow;
-    } catch (error) {
-      log.e(
-        'Pagination exception',
-        error: error,
-      );
-      rethrow;
+    } on DioException catch (error, s) {      rethrow;
+    } catch (error) {      rethrow;
     }
   }
 

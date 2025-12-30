@@ -1,33 +1,34 @@
 import 'package:auto_route/annotations.dart';
 import 'package:auto_route/auto_route.dart';
+import 'package:diohub/app/global.dart';
 import 'package:diohub/common/events/events.dart';
+import 'package:diohub/common/misc/animated_tab_bar.dart';
 import 'package:diohub/common/misc/collapsible_app_bar.dart';
 import 'package:diohub/common/misc/collapsible_action_buttons.dart';
-import 'package:diohub/common/misc/collapsible_detail_tiles.dart';
 import 'package:diohub/common/misc/action_card_builder.dart';
 import 'package:diohub/common/misc/detail_tile.dart';
 import 'package:diohub/common/misc/detail_tile_content.dart';
-import 'package:diohub/common/misc/profile_banner.dart';
 import 'package:diohub/common/misc/floating_action_toolbar.dart';
 import 'package:diohub/common/misc/floating_toolbar_wrapper.dart';
 import 'package:diohub/common/misc/scaffold_body.dart';
+import 'package:diohub/common/widgets/expandable_scroll_wrapper.dart';
 import 'package:diohub/common/wrappers/provider_loading_progress_wrapper.dart';
-import 'package:diohub/common/animations/size_expanded_widget.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:diohub/common/wrappers/dynamic_tabs_parent.dart';
 import 'package:diohub/graphql/queries/users/__generated__/user_info.data.gql.dart';
 import 'package:diohub/models/contributions/contribution_query_models.dart';
 import 'package:diohub/providers/base_provider.dart';
-import 'package:diohub/providers/users/user_contributions_provider.dart';
 import 'package:diohub/providers/users/user_provider.dart';
 import 'package:diohub/routes/router.gr.dart';
 import 'package:diohub/style/surface_style_theme.dart';
+import 'package:diohub/utils/contribution_query_utils.dart';
 import 'package:diohub/utils/get_date.dart';
 import 'package:diohub/utils/utils.dart';
 import 'package:diohub/view/profile/about/user_about_screen.dart';
 import 'package:diohub/view/profile/repositories/user_repositories.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_dynamic_tabs/flutter_dynamic_tabs.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_vector_icons/flutter_vector_icons.dart';
 import 'package:provider/provider.dart' as provider;
 
@@ -46,440 +47,252 @@ class UserProfileScreenState extends State<UserProfileScreen>
   GuserInfoData_user? data;
 
   // Date range state for Activity tab (contribution graph)
-  int? _selectedYear; // null means last year (default)
-  DateTime? _customFromDate;
-  DateTime? _customToDate;
-  bool _useCustomRange = false;
+  // Store ContributionQueryKey as single source of truth
+  late ContributionQueryKey _contributionQueryKey;
+
+  @override
+  void initState() {
+    super.initState();
+    // Initialize to default last year range
+    _contributionQueryKey = ContributionQueryKey.lastYear(widget.login);
+    if (kDebugMode) {
+      final (from, to) = _contributionQueryKey.dateRange.dates;    }
+  }
+
+  /// Gets the current query key
+  ContributionQueryKey _getCurrentQueryKey() {
+    return _contributionQueryKey;
+  }
 
   /// Gets the display label for the current date range selection
   String _getDateRangeLabel() {
-    if (_useCustomRange && _customFromDate != null) {
-      final createdAt = data?.createdAt;
-      if (createdAt != null) {
-        final isSinceJoining = _customFromDate!.year == createdAt.year &&
-            _customFromDate!.month == createdAt.month &&
-            _customFromDate!.day == createdAt.day;
+    final key = _getCurrentQueryKey();
+    final dateRange = key.dateRange;
+
+    // Check for "Last Year" first (it's a CustomRange with isLastYear flag)
+    if (dateRange.isLastYear) {
+      return 'Last Year';
+    }
+
+    if (dateRange.isCustomRange) {
+      final from = dateRange.displayFromDate;
+      final DateTime? createdAt = data?.createdAt;
+      if (from != null && createdAt != null) {
+        final bool isSinceJoining = from.year == createdAt.year &&
+            from.month == createdAt.month &&
+            from.day == createdAt.day;
         return isSinceJoining ? 'Since joining' : 'Custom';
       }
       return 'Custom';
     }
-    return _selectedYear?.toString() ?? 'Last Year';
+
+    final year = dateRange.displayYear;
+    return year?.toString() ?? 'Last Year';
   }
 
   /// Handles year selection change
-  void _onYearChanged(int year) {
-    setState(() {
-      _selectedYear = year;
-      _useCustomRange = false;
-      _customFromDate = null;
-      _customToDate = null;
-    });
+  void _onYearChanged(final int year) {    setState(() {
+      _contributionQueryKey = ContributionQueryKey.year(widget.login, year);    });
   }
 
   /// Handles custom date range change
-  void _onCustomRangeChanged(DateTime? from, DateTime? to) {
-    setState(() {
+  void _onCustomRangeChanged(final DateTime? from, final DateTime? to) {    setState(() {
       if (from == null && to == null) {
         // Reset to last year
-        _selectedYear = null;
-        _useCustomRange = false;
-        _customFromDate = null;
-        _customToDate = null;
-      } else {
-        _customFromDate = from;
-        _customToDate = to;
-        _useCustomRange = from != null && to != null;
-        if (_useCustomRange) {
-          _selectedYear = null;
-        }
-      }
-    });
-  }
-
-  /// Builds a provider key for contributions (same logic as UserAboutScreen)
-  ContributionQueryKey _getContributionProviderKey(String userName) {
-    if (_useCustomRange && _customFromDate != null && _customToDate != null) {
-      final from = DateTime(
-          _customFromDate!.year, _customFromDate!.month, _customFromDate!.day);
-      final to = DateTime(
-          _customToDate!.year, _customToDate!.month, _customToDate!.day);
-      return ContributionQueryKey.customRange(
-        userName: userName,
-        from: from,
-        to: to,
-      );
-    }
-
-    if (_selectedYear == null) {
-      return ContributionQueryKey.lastYear(userName);
-    } else {
-      return ContributionQueryKey.year(userName, _selectedYear!);
-    }
+        _contributionQueryKey = ContributionQueryKey.lastYear(widget.login);
+      } else if (from != null && to != null) {
+        _contributionQueryKey = ContributionQueryKey.customRange(
+          userName: widget.login,
+          from: from,
+          to: to,
+        );
+      }    });
   }
 
   /// Builds the expanded content for the date range selector
   Widget _buildDateRangeExpandedContent(
-    BuildContext context,
-    GuserInfoData_user userData,
-    VoidCallback onCollapse,
+    final BuildContext context,
+    final GuserInfoData_user userData,
+    final VoidCallback onCollapse,
   ) {
-    // Use a ConsumerWidget wrapper to watch the contributions provider for available years
+    final currentKey = _getCurrentQueryKey();
     return _DateRangeExpandedContent(
       userName: userData.login,
-      selectedYear: _selectedYear,
-      customFromDate: _customFromDate,
-      customToDate: _customToDate,
-      useCustomRange: _useCustomRange,
+      currentQueryKey: currentKey,
       createdAt: userData.createdAt,
       onYearChanged: _onYearChanged,
       onCustomRangeChanged: _onCustomRangeChanged,
-      getProviderKey: _getContributionProviderKey,
       onCollapse: onCollapse,
     );
   }
 
   Widget _buildCollapsedHeader(
-      BuildContext context, GuserInfoData_user userData) {
-    return Row(
-      children: <Widget>[
-        ProfileTile.avatar(
-          avatarUrl: userData.avatarUrl.toString(),
-          userLogin: userData.login,
-          size: 20,
-        ),
-        const SizedBox(width: 8),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                userData.name ?? userData.login,
-                style: context.textTheme.bodyLarge,
-                overflow: TextOverflow.ellipsis,
-              ),
-              if (userData.name != null)
-                Text(
-                  userData.login,
-                  style: context.textTheme.bodySmall,
-                  overflow: TextOverflow.ellipsis,
+    final BuildContext context,
+    final GuserInfoData_user userData,
+  ) =>
+      Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: <Widget>[
+            ClipOval(
+              child: CachedNetworkImage(
+                imageUrl: userData.avatarUrl.toString(),
+                width: 24,
+                height: 24,
+                fit: BoxFit.cover,
+                placeholder: (final _, final __) => Container(
+                  width: 24,
+                  height: 24,
+                  color: context.colorScheme.surfaceVariant,
                 ),
-            ],
-          ),
+                errorWidget: (final _, final __, final ___) => Container(
+                  width: 24,
+                  height: 24,
+                  color: context.colorScheme.surfaceVariant,
+                  child: Icon(
+                    Icons.person,
+                    size: 16,
+                    color: context.colorScheme.onSurfaceVariant,
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(width: 8),
+            Flexible(
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: <Widget>[
+                  Flexible(
+                    child: Text(
+                      userData.name ?? userData.login,
+                      style: context.textTheme.bodyLarge?.copyWith(
+                        fontWeight: FontWeight.w600,
+                        fontSize: 15,
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                      maxLines: 1,
+                    ),
+                  ),
+                  if (userData.name != null) ...<Widget>[
+                    const SizedBox(width: 6),
+                    Text(
+                      '•',
+                      style: context.textTheme.bodySmall?.copyWith(
+                        color: context.colorScheme.onSurfaceVariant
+                            .withOpacity(0.5),
+                        fontSize: 13,
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    Flexible(
+                      child: Text(
+                        userData.login,
+                        style: context.textTheme.bodySmall?.copyWith(
+                          color: context.colorScheme.onSurfaceVariant,
+                          fontSize: 13,
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                        maxLines: 1,
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ],
         ),
-      ],
-    );
-  }
+      );
 
-  Widget _buildExpandedHeader(BuildContext context, GuserInfoData_user userData,
-      DynamicTabsController? tabController) {
-    const double leadingWidth = 56.0;
+  Widget _buildExpandedHeader(
+    final BuildContext context,
+    final GuserInfoData_user userData,
+    final DynamicTabsController? tabController,
+  ) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
         children: <Widget>[
-          // User name
-          Padding(
-            padding: EdgeInsets.only(left: leadingWidth),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  userData.name ?? userData.login,
-                  overflow: TextOverflow.ellipsis,
-                  style: Theme.of(context).textTheme.headlineSmall!.copyWith(
-                        fontWeight: FontWeight.bold,
+          // User info row with avatar and name
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: <Widget>[
+              // Larger avatar in expanded state
+              ClipOval(
+                child: CachedNetworkImage(
+                  imageUrl: userData.avatarUrl.toString(),
+                  width: 44,
+                  height: 44,
+                  fit: BoxFit.cover,
+                  placeholder: (final _, final __) => Container(
+                    width: 44,
+                    height: 44,
+                    color: context.colorScheme.surfaceVariant,
+                    child: Center(
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: context.colorScheme.primary,
                       ),
+                    ),
+                  ),
+                  errorWidget: (final _, final __, final ___) => Container(
+                    width: 44,
+                    height: 44,
+                    color: context.colorScheme.surfaceVariant,
+                    child: Icon(
+                      Icons.person,
+                      size: 24,
+                      color: context.colorScheme.onSurfaceVariant,
+                    ),
+                  ),
                 ),
-                Text(
-                  userData.login,
-                  style: Theme.of(context).textTheme.bodyMedium,
-                  overflow: TextOverflow.ellipsis,
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: <Widget>[
+                    Text(
+                      userData.name ?? userData.login,
+                      overflow: TextOverflow.ellipsis,
+                      style:
+                          Theme.of(context).textTheme.headlineSmall!.copyWith(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 20,
+                                height: 1.2,
+                              ),
+                      maxLines: 2,
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      userData.login,
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                            color: context.colorScheme.onSurfaceVariant,
+                            fontSize: 13,
+                          ),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
-        //   const SizedBox(height: 16),
-        //   // Detail tiles section
-        //   _buildDetailTilesSection(context, userData),
-        //   const SizedBox(height: 16),
-        //   // Action buttons
-        //   _buildActionButtons(context, userData, tabController),
         ],
       ),
     );
   }
 
-  Widget _buildDetailTilesSection(
-      BuildContext context, GuserInfoData_user userData) {
-    return userData.when(
-      user: (user) => _buildUserDetailTiles(context, user),
-      orElse: () => _buildOrganizationDetailTiles(context, userData),
-    );
-  }
+  Widget _buildActionButtons(
+    final BuildContext context,
+    final GuserInfoData_user userData,
+    final DynamicTabsController? tabController,
+  ) {
+    final bool isViewer = userData.isViewer;
 
-  Widget _buildUserDetailTiles(
-      BuildContext context, GuserInfoData_user__asUser userData) {
-    final List<Widget> alwaysVisibleTiles = [];
-
-    // Bio
-    if (userData.bio != null && userData.bio!.isNotEmpty) {
-      alwaysVisibleTiles.add(
-        DetailTile(
-          title: 'Bio',
-          actionType: DetailTileActionType.none,
-          child: DetailTileText(userData.bio!),
-        ),
-      );
-    }
-
-    // Pronouns
-    if (userData.pronouns != null && userData.pronouns!.isNotEmpty) {
-      alwaysVisibleTiles.add(
-        DetailTile(
-          title: 'Pronouns',
-          actionType: DetailTileActionType.none,
-          child: DetailTileText(userData.pronouns!),
-        ),
-      );
-    }
-
-    // Location
-    if (userData.location != null) {
-      alwaysVisibleTiles.add(
-        DetailTile(
-          title: 'Location',
-          actionType: DetailTileActionType.none,
-          child: DetailTileText(userData.location!),
-        ),
-      );
-    }
-
-    // Company
-    if (userData.company != null) {
-      alwaysVisibleTiles.add(
-        DetailTile(
-          title: 'Company',
-          actionType: DetailTileActionType.none,
-          child: DetailTileText(userData.company!),
-        ),
-      );
-    }
-
-    // Status
-    if (userData.status != null && userData.status!.message != null) {
-      final statusText = userData.status!.emoji != null
-          ? '${userData.status!.emoji} ${userData.status!.message}'
-          : userData.status!.message!;
-      alwaysVisibleTiles.add(
-        DetailTile(
-          title: 'Status',
-          actionType: DetailTileActionType.none,
-          child: DetailTileText(statusText),
-        ),
-      );
-    }
-
-    // Available for hire
-    if (userData.isHireable == true) {
-      alwaysVisibleTiles.add(
-        DetailTile(
-          title: 'Available for hire',
-          actionType: DetailTileActionType.none,
-          child: DetailTileText('Yes'),
-        ),
-      );
-    }
-
-    // Joined date
-    alwaysVisibleTiles.add(
-      DetailTile(
-        title: 'Joined',
-        actionType: DetailTileActionType.none,
-        child: DetailTileText(
-          getDate(userData.createdAt.toString(), shorten: false),
-        ),
-      ),
-    );
-
-    final List<Widget> expandableTiles = [];
-
-    // Email
-    if (userData.email.isNotEmpty) {
-      expandableTiles.add(
-        DetailTile(
-          title: 'Email',
-          actionType: DetailTileActionType.navigation,
-          onTap: () async {
-            // Handle email tap
-          },
-          child: DetailTileText(userData.email),
-        ),
-      );
-    }
-
-    // Twitter
-    if (userData.twitterUsername != null) {
-      expandableTiles.add(
-        DetailTile(
-          title: 'Twitter',
-          actionType: DetailTileActionType.navigation,
-          onTap: () async {
-            // Handle Twitter tap
-          },
-          child: DetailTileText('@${userData.twitterUsername}'),
-        ),
-      );
-    }
-
-    // Blog
-    if (userData.websiteUrl != null) {
-      expandableTiles.add(
-        DetailTile(
-          title: 'Blog',
-          actionType: DetailTileActionType.navigation,
-          onTap: () {
-            // Handle blog tap
-          },
-          child: DetailTileText(userData.websiteUrl!.toString()),
-        ),
-      );
-    }
-
-    // Organizations
-    if (userData.organizations.totalCount > 0) {
-      expandableTiles.add(
-        DetailTile(
-          title: 'Organizations',
-          actionType: DetailTileActionType.navigation,
-          onTap: () {
-            // TODO: Navigate to organizations list
-          },
-          child: DetailTileText(
-            '${userData.organizations.totalCount} ${userData.organizations.totalCount == 1 ? 'organization' : 'organizations'}',
-          ),
-        ),
-      );
-    }
-
-    // Gists
-    if (userData.gists.totalCount > 0) {
-      expandableTiles.add(
-        DetailTile(
-          title: 'Gists',
-          actionType: DetailTileActionType.navigation,
-          onTap: () {
-            // TODO: Navigate to gists list
-          },
-          child: DetailTileText(
-            '${userData.gists.totalCount} ${userData.gists.totalCount == 1 ? 'gist' : 'gists'}',
-          ),
-        ),
-      );
-    }
-
-    if (alwaysVisibleTiles.isEmpty && expandableTiles.isEmpty) {
-      return const SizedBox.shrink();
-    }
-
-    return CollapsibleDetailTiles(
-      alwaysVisibleTiles: alwaysVisibleTiles,
-      expandableTiles: expandableTiles,
-      visibilityConfig: DetailTilesVisibilityConfig.fixedCount(
-        defaultVisibleCount: alwaysVisibleTiles.length.clamp(0, 3),
-      ),
-      onExpandChanged: (isExpanded) {},
-    );
-  }
-
-  Widget _buildOrganizationDetailTiles(
-      BuildContext context, GuserInfoData_user userData) {
-    final List<Widget> alwaysVisibleTiles = [];
-
-    // Bio
-    if (userData.bio != null) {
-      alwaysVisibleTiles.add(
-        DetailTile(
-          title: 'Bio',
-          actionType: DetailTileActionType.none,
-          child: DetailTileText(userData.bio!),
-        ),
-      );
-    }
-
-    // Location
-    if (userData.location != null) {
-      alwaysVisibleTiles.add(
-        DetailTile(
-          title: 'Location',
-          actionType: DetailTileActionType.none,
-          child: DetailTileText(userData.location!),
-        ),
-      );
-    }
-
-    // Created date
-    alwaysVisibleTiles.add(
-      DetailTile(
-        title: 'Created',
-        actionType: DetailTileActionType.none,
-        child: DetailTileText(
-          getDate(userData.createdAt.toString(), shorten: false),
-        ),
-      ),
-    );
-
-    final List<Widget> expandableTiles = [];
-
-    // Twitter
-    if (userData.twitterUsername != null) {
-      expandableTiles.add(
-        DetailTile(
-          title: 'Twitter',
-          actionType: DetailTileActionType.navigation,
-          onTap: () async {
-            // Handle Twitter tap
-          },
-          child: DetailTileText('@${userData.twitterUsername}'),
-        ),
-      );
-    }
-
-    // Blog
-    if (userData.websiteUrl != null) {
-      expandableTiles.add(
-        DetailTile(
-          title: 'Blog',
-          actionType: DetailTileActionType.navigation,
-          onTap: () {
-            // Handle blog tap
-          },
-          child: DetailTileText(userData.websiteUrl!.toString()),
-        ),
-      );
-    }
-
-    if (alwaysVisibleTiles.isEmpty && expandableTiles.isEmpty) {
-      return const SizedBox.shrink();
-    }
-
-    return CollapsibleDetailTiles(
-      alwaysVisibleTiles: alwaysVisibleTiles,
-      expandableTiles: expandableTiles,
-      visibilityConfig: DetailTilesVisibilityConfig.fixedCount(
-        defaultVisibleCount: alwaysVisibleTiles.length.clamp(0, 3),
-      ),
-      onExpandChanged: (isExpanded) {},
-    );
-  }
-
-  Widget _buildActionButtons(BuildContext context, GuserInfoData_user userData,
-      DynamicTabsController? tabController) {
-    final isViewer = userData.isViewer;
-
-    final List<ActionButtonData> primaryActions = [];
+    final List<ActionButtonData> primaryActions = <ActionButtonData>[];
 
     // Follow/Unfollow button (only for other users)
     if (!isViewer && userData.viewerCanFollow) {
@@ -530,7 +343,7 @@ class UserProfileScreenState extends State<UserProfileScreen>
 
     // Following count (only for users, not organizations)
     userData.when(
-      user: (user) {
+      user: (final GuserInfoData_user__asUser user) {
         primaryActions.add(
           MinorActionButton(
             icon: Octicons.person,
@@ -550,7 +363,7 @@ class UserProfileScreenState extends State<UserProfileScreen>
       },
     );
 
-    final List<ActionButtonData> secondaryActions = [];
+    final List<ActionButtonData> secondaryActions = <ActionButtonData>[];
 
     // More actions can go here
     // Note: publicGists is not available in GraphQL user query
@@ -563,7 +376,9 @@ class UserProfileScreenState extends State<UserProfileScreen>
     return CollapsibleActionButtons(
       primaryActions: primaryActions,
       secondaryActions: secondaryActions,
-      actionCardBuilder: (context, action) => buildStandardActionCard(
+      actionCardBuilder:
+          (final BuildContext context, final ActionButtonData action) =>
+              buildStandardActionCard(
         context,
         action,
         iconSize: 16,
@@ -573,26 +388,36 @@ class UserProfileScreenState extends State<UserProfileScreen>
         minPerRow: 2,
         maxPerRow: 4,
       ),
-      onExpandChanged: (isExpanded) {},
+      onExpandChanged: (final bool isExpanded) {},
     );
   }
 
-  List<ActionButtonData> _buildToolbarActions(BuildContext context,
-      GuserInfoData_user userData, DynamicTabsController? tabController) {
-    final currentTab = tabController?.activeIdentifier ?? 'Activity';
+  List<ActionButtonData> _buildToolbarActions(
+    final BuildContext context,
+    final GuserInfoData_user userData,
+    final DynamicTabsController? tabController,
+  ) {
+    final String currentTab = tabController?.activeIdentifier ?? 'Activity';
 
     // Get pinned repositories
-    final pinnedItems = userData.pinnedItems.edges?.toList() ??
-        <GuserInfoData_user_pinnedItems_edges?>[];
-    final pinnedRepos = pinnedItems
-        .map((edge) => edge?.node)
+    final List<GuserInfoData_user_pinnedItems_edges?> pinnedItems =
+        userData.pinnedItems.edges?.toList() ??
+            <GuserInfoData_user_pinnedItems_edges?>[];
+    final List<GrepositoryFields> pinnedRepos = pinnedItems
+        .map((final GuserInfoData_user_pinnedItems_edges? edge) => edge?.node)
         .whereType<GuserInfoData_user_pinnedItems_edges_node>()
-        .where((node) => node.G__typename == 'Repository')
-        .map((node) => node as GrepositoryFields)
+        .where(
+          (final GuserInfoData_user_pinnedItems_edges_node node) =>
+              node.G__typename == 'Repository',
+        )
+        .map(
+          (final GuserInfoData_user_pinnedItems_edges_node node) =>
+              node as GrepositoryFields,
+        )
         .toList();
-    final pinnedReposCount = pinnedRepos.length;
+    final int pinnedReposCount = pinnedRepos.length;
 
-    return [
+    return <ActionButtonData>[
       // Pinned Repos - visible on all tabs
       if (pinnedReposCount > 0)
         ExpandableActionButton(
@@ -604,8 +429,8 @@ class UserProfileScreenState extends State<UserProfileScreen>
           enabled: pinnedReposCount > 0,
           category: 'Primary',
           visibilityState: ActionButtonVisibilityState.both,
-          expandableWidgetBuilder: (onCollapse) => Builder(
-            builder: (context) {
+          expandableWidgetBuilder: (final onCollapse) => Builder(
+            builder: (final BuildContext context) {
               if (pinnedRepos.isEmpty) {
                 return Padding(
                   padding: const EdgeInsets.symmetric(
@@ -627,16 +452,19 @@ class UserProfileScreenState extends State<UserProfileScreen>
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.start,
-                  children: pinnedRepos.asMap().entries.map((entry) {
-                    final index = entry.key;
-                    final repo = entry.value;
-                    final isLast = index == pinnedRepos.length - 1;
+                  children: pinnedRepos
+                      .asMap()
+                      .entries
+                      .map((final MapEntry<int, GrepositoryFields> entry) {
+                    final int index = entry.key;
+                    final GrepositoryFields repo = entry.value;
+                    final bool isLast = index == pinnedRepos.length - 1;
 
-                    final ownerLogin = repo.owner.login;
-                    final repoName = repo.name;
+                    final String ownerLogin = repo.owner.login;
+                    final String repoName = repo.name;
 
                     // Construct repository URL for navigation: owner/repo
-                    final navigationUrl = '$ownerLogin/$repoName';
+                    final String navigationUrl = '$ownerLogin/$repoName';
 
                     return Material(
                       color: Colors.transparent,
@@ -669,12 +497,12 @@ class UserProfileScreenState extends State<UserProfileScreen>
                                   ),
                           ),
                           child: Row(
-                            children: [
+                            children: <Widget>[
                               Expanded(
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   mainAxisSize: MainAxisSize.min,
-                                  children: [
+                                  children: <Widget>[
                                     Text(
                                       repoName,
                                       style: context.textTheme.bodyMedium
@@ -686,7 +514,8 @@ class UserProfileScreenState extends State<UserProfileScreen>
                                       overflow: TextOverflow.ellipsis,
                                     ),
                                     if (repo.description != null &&
-                                        repo.description!.isNotEmpty) ...[
+                                        repo.description!
+                                            .isNotEmpty) ...<Widget>[
                                       const SizedBox(height: 4),
                                       Text(
                                         repo.description!,
@@ -704,11 +533,11 @@ class UserProfileScreenState extends State<UserProfileScreen>
                                   ],
                                 ),
                               ),
-                              if (repo.stargazerCount > 0) ...[
+                              if (repo.stargazerCount > 0) ...<Widget>[
                                 const SizedBox(width: 8),
                                 Row(
                                   mainAxisSize: MainAxisSize.min,
-                                  children: [
+                                  children: <Widget>[
                                     Icon(
                                       Octicons.star,
                                       size: 14,
@@ -751,13 +580,12 @@ class UserProfileScreenState extends State<UserProfileScreen>
         visibilityState: currentTab == 'Activity'
             ? ActionButtonVisibilityState.both
             : ActionButtonVisibilityState.none,
-        expandableWidgetBuilder: (onCollapse) {
-          return _buildDateRangeExpandedContent(
-            context,
-            userData,
-            onCollapse,
-          );
-        },
+        expandableWidgetBuilder: (final onCollapse) =>
+            _buildDateRangeExpandedContent(
+          context,
+          userData,
+          onCollapse,
+        ),
       ),
       // Primary - always visible in collapsed state
       MinorActionButton(
@@ -806,7 +634,8 @@ class UserProfileScreenState extends State<UserProfileScreen>
         label: 'Gists',
         category: 'Primary',
         trailing: userData.when(
-          user: (user) => buildActionButtonTrailingCount(
+          user: (final GuserInfoData_user__asUser user) =>
+              buildActionButtonTrailingCount(
             context,
             user.gists.totalCount,
           ),
@@ -852,7 +681,8 @@ class UserProfileScreenState extends State<UserProfileScreen>
         label: 'Organizations',
         category: 'Content',
         trailing: userData.when(
-          user: (user) => buildActionButtonTrailingCount(
+          user: (final GuserInfoData_user__asUser user) =>
+              buildActionButtonTrailingCount(
             context,
             user.organizations.totalCount,
           ),
@@ -884,7 +714,8 @@ class UserProfileScreenState extends State<UserProfileScreen>
         label: 'Following',
         category: 'Social',
         trailing: userData.when(
-          user: (user) => buildActionButtonTrailingCount(
+          user: (final GuserInfoData_user__asUser user) =>
+              buildActionButtonTrailingCount(
             context,
             user.following.totalCount,
           ),
@@ -941,36 +772,32 @@ class UserProfileScreenState extends State<UserProfileScreen>
   }
 
   @override
-  Widget build(BuildContext context) {
-    return provider.ChangeNotifierProvider<UserProvider>(
-      create: (_) => UserProvider(widget.login),
-      builder: (context, _) => SafeArea(
-        child: Scaffold(
-          appBar: provider.Provider.of<UserProvider>(context).status !=
-                  Status.loaded
-              ? AppBar(elevation: 0)
-              : null,
-          body: ScaffoldBody(
-            child: ProviderLoadingProgressWrapper<UserProvider>(
-              childBuilder: (context, value) {
-                data = value.data;
+  Widget build(final BuildContext context) {    return provider.ChangeNotifierProvider<UserProvider>(
+      create: (final _) {        return UserProvider(widget.login);
+      },
+      builder: (final BuildContext context, final _) => Scaffold(
+        appBar:
+            provider.Provider.of<UserProvider>(context).status != Status.loaded
+                ? AppBar(elevation: 0)
+                : null,
+        body: ScaffoldBody(
+          child: ProviderLoadingProgressWrapper<UserProvider>(
+            childBuilder:
+                (final BuildContext context, final UserProvider value) {
+              data = value.data;
 
-                return _UserProfileTabsContent(
-                  userData: value.data,
-                  parentState: this,
-                  buildCollapsedHeader: _buildCollapsedHeader,
-                  buildExpandedHeader: _buildExpandedHeader,
-                  buildToolbarActions: _buildToolbarActions,
-                  buildActionButtons: _buildActionButtons,
-                  selectedYear: _selectedYear,
-                  customFromDate: _customFromDate,
-                  customToDate: _customToDate,
-                  useCustomRange: _useCustomRange,
-                  onYearChanged: _onYearChanged,
-                  onCustomRangeChanged: _onCustomRangeChanged,
-                );
-              },
-            ),
+              return _UserProfileTabsContent(
+                userData: value.data,
+                parentState: this,
+                buildCollapsedHeader: _buildCollapsedHeader,
+                buildExpandedHeader: _buildExpandedHeader,
+                buildToolbarActions: _buildToolbarActions,
+                buildActionButtons: _buildActionButtons,
+                contributionQueryKey: _getCurrentQueryKey(),
+                onYearChanged: _onYearChanged,
+                onCustomRangeChanged: _onCustomRangeChanged,
+              );
+            },
           ),
         ),
       ),
@@ -978,56 +805,43 @@ class UserProfileScreenState extends State<UserProfileScreen>
   }
 }
 
-/// ConsumerWidget wrapper for date range expanded content
-/// This allows us to watch the contributions provider for available years
-class _DateRangeExpandedContent extends ConsumerWidget {
+/// Widget for date range expanded content
+class _DateRangeExpandedContent extends StatelessWidget {
   const _DateRangeExpandedContent({
     required this.userName,
-    required this.selectedYear,
-    required this.customFromDate,
-    required this.customToDate,
-    required this.useCustomRange,
+    required this.currentQueryKey,
     required this.createdAt,
     required this.onYearChanged,
     required this.onCustomRangeChanged,
-    required this.getProviderKey,
     required this.onCollapse,
   });
 
   final String userName;
-  final int? selectedYear;
-  final DateTime? customFromDate;
-  final DateTime? customToDate;
-  final bool useCustomRange;
+  final ContributionQueryKey currentQueryKey;
   final DateTime? createdAt;
   final void Function(int) onYearChanged;
   final void Function(DateTime?, DateTime?) onCustomRangeChanged;
-  final ContributionQueryKey Function(String) getProviderKey;
   final VoidCallback onCollapse;
 
-  /// Checks if the current custom range matches "Since joining GitHub"
-  bool _isSinceJoining(DateTime? customFrom, DateTime? created) {
-    if (!useCustomRange || customFrom == null || created == null) {
-      return false;
-    }
-    return customFrom.year == created.year &&
-        customFrom.month == created.month &&
-        customFrom.day == created.day;
-  }
+  /// Extract display values from query key
+  int? get _selectedYear => currentQueryKey.dateRange.displayYear;
+  DateTime? get _customFromDate => currentQueryKey.dateRange.displayFromDate;
+  DateTime? get _customToDate => currentQueryKey.dateRange.displayToDate;
+  bool get _useCustomRange => currentQueryKey.dateRange.isCustomRange;
 
   Future<void> _showCustomDateRangePicker(
-    BuildContext context,
-    DateTime? earliestDate,
+    final BuildContext context,
+    final DateTime? earliestDate,
   ) async {
-    final now = DateTime.now();
-    final initialFrom =
-        customFromDate ?? now.subtract(const Duration(days: 365));
-    final initialTo = customToDate ?? now;
+    final DateTime now = DateTime.now();
+    final DateTime initialFrom =
+        _customFromDate ?? now.subtract(const Duration(days: 365));
+    final DateTime initialTo = _customToDate ?? now;
 
     // Use createdAt as earliest date, or default to year 2000 if not available
-    final earliest = earliestDate ?? DateTime(2000);
+    final DateTime earliest = earliestDate ?? DateTime(2000);
 
-    final pickedFrom = await showDatePicker(
+    final DateTime? pickedFrom = await showDatePicker(
       context: context,
       initialDate: initialFrom,
       firstDate: earliest,
@@ -1037,7 +851,7 @@ class _DateRangeExpandedContent extends ConsumerWidget {
 
     if (pickedFrom == null) return;
 
-    final pickedTo = await showDatePicker(
+    final DateTime? pickedTo = await showDatePicker(
       context: context,
       initialDate: pickedFrom.isAfter(initialTo) ? pickedFrom : initialTo,
       firstDate: pickedFrom,
@@ -1052,45 +866,28 @@ class _DateRangeExpandedContent extends ConsumerWidget {
   }
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
-    final providerKey = getProviderKey(userName);
-    final contributionsAsync = ref.watch(
-      userContributionsProvider(providerKey),
-    );
+  Widget build(final BuildContext context) {
+    final ThemeData theme = Theme.of(context);
+    final ColorScheme colorScheme = theme.colorScheme;
 
-    // Watch the last year provider separately to get available years
-    // This ensures years list doesn't disappear when current provider is loading
-    final lastYearKey = ContributionQueryKey.lastYear(userName);
-    final lastYearAsync = ref.watch(
-      userContributionsProvider(lastYearKey),
-    );
-
-    // Get available years from the last year provider (which always has all years)
-    // Fall back to current provider if last year provider is not available
-    final availableYears = lastYearAsync.when(
-      data: (result) => result.viewModel.contributionYears,
-      loading: () => contributionsAsync.when(
-        data: (result) => result.viewModel.contributionYears,
-        loading: () => <int>[],
-        error: (_, __) => <int>[],
-      ),
-      error: (_, __) => contributionsAsync.when(
-        data: (result) => result.viewModel.contributionYears,
-        loading: () => <int>[],
-        error: (_, __) => <int>[],
-      ),
-    );
+    // Generate available years from joined date to current year
+    final List<int> availableYears = generateAvailableYears(createdAt);
 
     // Determine which option is currently selected
-    final isLastYearSelected = !useCustomRange && selectedYear == null;
-    final isSinceJoiningSelected =
-        useCustomRange && _isSinceJoining(customFromDate, createdAt);
-    final isCustomSelected = useCustomRange && !isSinceJoiningSelected;
+    final dateRange = currentQueryKey.dateRange;
+    final bool isLastYearSelected = dateRange.isLastYear;
+    final bool isSinceJoiningSelected = _useCustomRange &&
+        !isLastYearSelected &&
+        isSinceJoining(
+          useCustomRange: _useCustomRange,
+          customFromDate: _customFromDate,
+          createdAt: createdAt,
+        );
+    final bool isCustomSelected =
+        _useCustomRange && !isLastYearSelected && !isSinceJoiningSelected;
 
     // Build all options into a list
-    final List<Widget> optionTiles = [];
+    final List<Widget> optionTiles = <Widget>[];
 
     // Last Year option
     optionTiles.add(
@@ -1110,9 +907,9 @@ class _DateRangeExpandedContent extends ConsumerWidget {
 
     // Year options (sorted in descending order - newest first)
     if (availableYears.isNotEmpty) {
-      final sortedYears = List<int>.from(availableYears)
-        ..sort((a, b) => b.compareTo(a));
-      for (final year in sortedYears) {
+      final List<int> sortedYears = List<int>.from(availableYears)
+        ..sort((final int a, final int b) => b.compareTo(a));
+      for (final int year in sortedYears) {
         optionTiles.add(
           _buildOptionTile(
             context: context,
@@ -1120,7 +917,7 @@ class _DateRangeExpandedContent extends ConsumerWidget {
             colorScheme: colorScheme,
             icon: Icons.calendar_month,
             title: year.toString(),
-            isSelected: !useCustomRange && selectedYear == year,
+            isSelected: !_useCustomRange && _selectedYear == year,
             onTap: () {
               onYearChanged(year);
               onCollapse();
@@ -1141,7 +938,7 @@ class _DateRangeExpandedContent extends ConsumerWidget {
           title: 'Since joining GitHub',
           isSelected: isSinceJoiningSelected,
           onTap: () {
-            final now = DateTime.now();
+            final DateTime now = DateTime.now();
             onCustomRangeChanged(createdAt, now);
             onCollapse();
           },
@@ -1171,10 +968,13 @@ class _DateRangeExpandedContent extends ConsumerWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: optionTiles.asMap().entries.map((entry) {
-            final index = entry.key;
-            final tile = entry.value;
-            final isLast = index == optionTiles.length - 1;
+          children: optionTiles
+              .asMap()
+              .entries
+              .map((final MapEntry<int, Widget> entry) {
+            final int index = entry.key;
+            final Widget tile = entry.value;
+            final bool isLast = index == optionTiles.length - 1;
 
             return Container(
               decoration: BoxDecoration(
@@ -1196,67 +996,66 @@ class _DateRangeExpandedContent extends ConsumerWidget {
   }
 
   Widget _buildOptionTile({
-    required BuildContext context,
-    required ThemeData theme,
-    required ColorScheme colorScheme,
-    required IconData icon,
-    required String title,
-    required bool isSelected,
-    required VoidCallback onTap,
-  }) {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: Theme.of(context).surfaceStyle.borderRadiusMedium(),
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-          decoration: BoxDecoration(
-            color: isSelected
-                ? colorScheme.primaryContainer.withOpacity(0.3)
-                : Colors.transparent,
-            borderRadius: Theme.of(context).surfaceStyle.borderRadiusMedium(),
-            border: isSelected
-                ? Border.all(
-                    color: colorScheme.primary.withOpacity(0.5),
-                    width: 1,
-                  )
-                : null,
-          ),
-          child: Row(
-            children: [
-              Icon(
-                icon,
-                size: 18,
-                color: isSelected
-                    ? colorScheme.primary
-                    : colorScheme.onSurfaceVariant,
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Text(
-                  title,
-                  style: theme.textTheme.bodyMedium?.copyWith(
-                    color: isSelected
-                        ? colorScheme.primary
-                        : colorScheme.onSurface,
-                    fontWeight:
-                        isSelected ? FontWeight.w600 : FontWeight.normal,
+    required final BuildContext context,
+    required final ThemeData theme,
+    required final ColorScheme colorScheme,
+    required final IconData icon,
+    required final String title,
+    required final bool isSelected,
+    required final VoidCallback onTap,
+  }) =>
+      Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: Theme.of(context).surfaceStyle.borderRadiusMedium(),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            decoration: BoxDecoration(
+              color: isSelected
+                  ? colorScheme.primaryContainer.withOpacity(0.3)
+                  : Colors.transparent,
+              borderRadius: Theme.of(context).surfaceStyle.borderRadiusMedium(),
+              border: isSelected
+                  ? Border.all(
+                      color: colorScheme.primary.withOpacity(0.5),
+                      width: 1,
+                    )
+                  : null,
+            ),
+            child: Row(
+              children: <Widget>[
+                Icon(
+                  icon,
+                  size: 18,
+                  color: isSelected
+                      ? colorScheme.primary
+                      : colorScheme.onSurfaceVariant,
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    title,
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      color: isSelected
+                          ? colorScheme.primary
+                          : colorScheme.onSurface,
+                      fontWeight:
+                          isSelected ? FontWeight.w600 : FontWeight.normal,
+                    ),
                   ),
                 ),
-              ),
-              if (isSelected)
-                Icon(
-                  Icons.check_circle,
-                  size: 20,
-                  color: colorScheme.primary,
-                ),
-            ],
+                if (isSelected)
+                  Icon(
+                    Icons.check_circle,
+                    size: 20,
+                    color: colorScheme.primary,
+                  ),
+              ],
+            ),
           ),
         ),
-      ),
-    );
-  }
+      );
 }
 
 class _UserProfileTabsContent extends StatefulWidget {
@@ -1267,10 +1066,7 @@ class _UserProfileTabsContent extends StatefulWidget {
     required this.buildExpandedHeader,
     required this.buildToolbarActions,
     required this.buildActionButtons,
-    required this.selectedYear,
-    required this.customFromDate,
-    required this.customToDate,
-    required this.useCustomRange,
+    required this.contributionQueryKey,
     required this.onYearChanged,
     required this.onCustomRangeChanged,
   });
@@ -1293,10 +1089,7 @@ class _UserProfileTabsContent extends StatefulWidget {
     GuserInfoData_user,
     DynamicTabsController?,
   ) buildActionButtons;
-  final int? selectedYear;
-  final DateTime? customFromDate;
-  final DateTime? customToDate;
-  final bool useCustomRange;
+  final ContributionQueryKey contributionQueryKey;
   final void Function(int) onYearChanged;
   final void Function(DateTime?, DateTime?) onCustomRangeChanged;
 
@@ -1316,27 +1109,28 @@ class _UserProfileTabsContentState extends State<_UserProfileTabsContent>
   }
 
   void _initializeTabs() {
-    final userData = widget.userData;
+    final GuserInfoData_user userData = widget.userData;
 
-    final tabs = <DynamicTab>[
+    if (kDebugMode) {      if (userData.login != widget.contributionQueryKey.userName) {      }
+    }
+
+    final List<DynamicTab> tabs = <DynamicTab>[
       DynamicTab(
         identifier: 'Activity',
         isDismissible: false,
         isFocusedOnInit: true,
-        tabViewBuilder: (context) => UserAboutScreen(
-          userData,
-          selectedYear: widget.selectedYear,
-          customFromDate: widget.customFromDate,
-          customToDate: widget.customToDate,
-          useCustomRange: widget.useCustomRange,
-          onYearChanged: widget.onYearChanged,
-          onCustomRangeChanged: widget.onCustomRangeChanged,
-        ),
+        tabViewBuilder: (final BuildContext context) {          return UserAboutScreen(
+            userData,
+            contributionQueryKey: widget.contributionQueryKey,
+            onYearChanged: widget.onYearChanged,
+            onCustomRangeChanged: widget.onCustomRangeChanged,
+          );
+        },
       ),
       DynamicTab(
         identifier: 'Activity Feed',
         tab: TabBarItem(label: 'Feed'),
-        tabViewBuilder: (context) => Events(
+        tabViewBuilder: (final BuildContext context) => Events(
           privateEvents: false,
           specificUser: userData.login,
         ),
@@ -1344,59 +1138,59 @@ class _UserProfileTabsContentState extends State<_UserProfileTabsContent>
       DynamicTab(
         identifier: 'Repositories',
         // isDismissible: false,
-        tabViewBuilder: (context) => UserRepositories(
+        tabViewBuilder: (final BuildContext context) => UserRepositories(
           userData.login,
           currentUser: userData.isViewer,
         ),
       ),
       DynamicTab(
         identifier: 'Gists',
-        tabViewBuilder: (context) =>
+        tabViewBuilder: (final BuildContext context) =>
             const SizedBox.shrink(), // TODO: Implement Gists tab
       ),
       DynamicTab(
         identifier: 'Organizations',
-        tabViewBuilder: (context) =>
+        tabViewBuilder: (final BuildContext context) =>
             const SizedBox.shrink(), // TODO: Implement Organizations tab
       ),
       DynamicTab(
         identifier: 'Followers',
-        tabViewBuilder: (context) =>
+        tabViewBuilder: (final BuildContext context) =>
             const SizedBox.shrink(), // TODO: Implement Followers tab
       ),
       DynamicTab(
         identifier: 'Following',
-        tabViewBuilder: (context) =>
+        tabViewBuilder: (final BuildContext context) =>
             const SizedBox.shrink(), // TODO: Implement Following tab
       ),
       DynamicTab(
         identifier: 'Stars',
-        tabViewBuilder: (context) =>
+        tabViewBuilder: (final BuildContext context) =>
             const SizedBox.shrink(), // TODO: Implement Stars tab
       ),
       DynamicTab(
         identifier: 'Packages',
-        tabViewBuilder: (context) =>
+        tabViewBuilder: (final BuildContext context) =>
             const SizedBox.shrink(), // TODO: Implement Packages tab
       ),
       DynamicTab(
         identifier: 'Pull Requests',
-        tabViewBuilder: (context) =>
+        tabViewBuilder: (final BuildContext context) =>
             const SizedBox.shrink(), // TODO: Implement Pull Requests tab
       ),
       DynamicTab(
         identifier: 'Issues',
-        tabViewBuilder: (context) =>
+        tabViewBuilder: (final BuildContext context) =>
             const SizedBox.shrink(), // TODO: Implement Issues tab
       ),
       DynamicTab(
         identifier: 'Projects',
-        tabViewBuilder: (context) =>
+        tabViewBuilder: (final BuildContext context) =>
             const SizedBox.shrink(), // TODO: Implement Projects tab
       ),
       DynamicTab(
         identifier: 'Sponsors',
-        tabViewBuilder: (context) =>
+        tabViewBuilder: (final BuildContext context) =>
             const SizedBox.shrink(), // TODO: Implement Sponsors tab
       ),
     ];
@@ -1410,65 +1204,286 @@ class _UserProfileTabsContentState extends State<_UserProfileTabsContent>
   }
 
   @override
-  Widget build(BuildContext context) {
-    return FloatingToolbarWrapper(
-      toolbarBuilder: (scrollNotificationNotifier) {
-        return ListenableBuilder(
-          listenable: tabController ?? ValueNotifier(''),
-          builder: (context, _) {
-            return FloatingActionToolbar(
-              key: const ValueKey('user_profile_toolbar'),
-              actions: widget.buildToolbarActions(
-                context,
-                widget.userData,
-                tabController,
-              ),
-              actionCardBuilder: (context, action) =>
-                  buildStandardActionCard(context, action),
-              position: FloatingPosition.bottom,
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              bottomPadding: 0.0,
-              title: widget.userData.name ?? widget.userData.login,
-              subtitle:
-                  widget.userData.name != null ? widget.userData.login : null,
-              scrollNotificationNotifier: scrollNotificationNotifier,
-              onExpandChanged: (isExpanded) {},
-            );
-          },
-        );
-      },
-      child: tabController != null
-          ? DynamicTabsParent(
-              controller: tabController!,
-              builder: (context, tabBar, tabView) => DynamicScroll(
-                collapsedWidget: widget.buildCollapsedHeader(
-                  context,
-                  widget.userData,
-                ),
-                expandedWidget: widget.buildExpandedHeader(
+  Widget build(final BuildContext context) => FloatingToolbarWrapper(
+        toolbarBuilder: (
+          final ValueNotifier<ScrollNotification?> scrollNotificationNotifier,
+        ) {
+          return ListenableBuilder(
+            listenable: tabController ?? ValueNotifier(''),
+            builder: (final BuildContext context, final _) {
+              return FloatingActionToolbar(
+                key: const ValueKey('user_profile_toolbar'),
+                actions: widget.buildToolbarActions(
                   context,
                   widget.userData,
                   tabController,
                 ),
-                actions: <Widget>[
-                  // Share button can go here
-                ],
-                bottom: SizeExpandedSection(
-                  expand: tabController!.activeLength > 1,
-                  child: Column(
-                    children: <Widget>[
-                      const SizedBox(height: 8),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: <Widget>[tabBar],
+                actionCardBuilder: (
+                  final BuildContext context,
+                  final ActionButtonData action,
+                ) =>
+                    buildStandardActionCard(context, action),
+                position: FloatingPosition.bottom,
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                bottomPadding: 0.0,
+                title: widget.userData.name ?? widget.userData.login,
+                subtitle:
+                    widget.userData.name != null ? widget.userData.login : null,
+                scrollNotificationNotifier: scrollNotificationNotifier,
+                onExpandChanged: (final bool isExpanded) {},
+              );
+            },
+          );
+        },
+        child: tabController != null
+            ? SafeArea(
+              bottom: false,
+                child: ExpandOnScrollWrapper(
+                  collapsedWidget: (final BuildContext context,
+                          final double pullProgress,
+                          final bool isReadyToExpand) =>
+                      PullToExpandIndicator(
+                    pullProgress: pullProgress,
+                    isReadyToExpand: isReadyToExpand,
+                  ),
+                  expandedWidget: (
+                    final BuildContext context,
+                    final VoidCallback onCollapse,
+                  ) =>
+                      ExpandableMetadataContent(
+                    onCollapse: onCollapse,
+                    // title: widget.userData.login,
+                    children: _buildUserMetadataTiles(),
+                  ),
+                  builder: (
+                    final BuildContext context,
+                    final Widget expandOnScrollWidget,
+                  ) =>
+                      DynamicTabsParent(
+                    controller: tabController!,
+                    builder: (
+                      final BuildContext context,
+                      final PreferredSizeWidget tabBar,
+                      final tabView,
+                    ) =>
+                        DynamicScroll(
+                      collapsedWidget: widget.buildCollapsedHeader(
+                        context,
+                        widget.userData,
                       ),
-                    ],
+                      expandedWidget: widget.buildExpandedHeader(
+                        context,
+                        widget.userData,
+                        tabController,
+                      ),
+                      actions: <Widget>[
+                        // Share button can go here
+                      ],
+                      headerSlivers: [
+                        SliverToBoxAdapter(
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 4),
+                            child: expandOnScrollWidget,
+                          ),
+                        ),
+                        AnimatedTabBar(
+                          showTabBar: tabController!.activeLength > 1,
+                          tabBar: Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 16),
+                            child: tabBar,
+                          ),
+                        ),
+                      ],
+                      bodyBuilder: tabView,
+                    ),
                   ),
                 ),
-                body: tabView,
-              ),
-            )
-          : const SizedBox.shrink(),
+              )
+            : const SizedBox.shrink(),
+      );
+
+  /// Builds metadata tiles for the user
+  List<Widget> _buildUserMetadataTiles() {
+    final List<Widget> tiles = <Widget>[];
+
+    return widget.userData.when(
+      user: (final GuserInfoData_user__asUser user) {
+        // Bio
+        if (user.bio != null && user.bio!.isNotEmpty) {
+          tiles.add(
+            DetailTile(
+              title: 'Bio',
+              actionType: DetailTileActionType.none,
+              child: DetailTileText(user.bio!),
+            ),
+          );
+        }
+
+        // Pronouns
+        if (user.pronouns != null && user.pronouns!.isNotEmpty) {
+          tiles.add(
+            DetailTile(
+              title: 'Pronouns',
+              actionType: DetailTileActionType.none,
+              child: DetailTileText(user.pronouns!),
+            ),
+          );
+        }
+
+        // Location
+        if (user.location != null) {
+          tiles.add(
+            DetailTile(
+              title: 'Location',
+              actionType: DetailTileActionType.none,
+              child: DetailTileText(user.location!),
+            ),
+          );
+        }
+
+        // Company
+        if (user.company != null) {
+          tiles.add(
+            DetailTile(
+              title: 'Company',
+              actionType: DetailTileActionType.none,
+              child: DetailTileText(user.company!),
+            ),
+          );
+        }
+
+        // Status
+        if (user.status != null && user.status!.message != null) {
+          final String statusText = user.status!.emoji != null
+              ? '${user.status!.emoji} ${user.status!.message}'
+              : user.status!.message!;
+          tiles.add(
+            DetailTile(
+              title: 'Status',
+              actionType: DetailTileActionType.none,
+              child: DetailTileText(statusText),
+            ),
+          );
+        }
+
+        // Available for hire
+        if (user.isHireable == true) {
+          tiles.add(
+            DetailTile(
+              title: 'Available for hire',
+              actionType: DetailTileActionType.none,
+              child: DetailTileText('Yes'),
+            ),
+          );
+        }
+
+        // Email
+        if (user.email.isNotEmpty) {
+          tiles.add(
+            DetailTile(
+              title: 'Email',
+              actionType: DetailTileActionType.navigation,
+              onTap: () {
+                // Handle email tap
+              },
+              child: DetailTileText(user.email),
+            ),
+          );
+        }
+
+        // Twitter
+        if (user.twitterUsername != null) {
+          tiles.add(
+            DetailTile(
+              title: 'Twitter',
+              actionType: DetailTileActionType.navigation,
+              onTap: () {
+                // Handle Twitter tap
+              },
+              child: DetailTileText('@${user.twitterUsername}'),
+            ),
+          );
+        }
+
+        // Website
+        if (user.websiteUrl != null) {
+          tiles.add(
+            DetailTile(
+              title: 'Website',
+              actionType: DetailTileActionType.navigation,
+              onTap: () {
+                // Handle website tap
+              },
+              child: DetailTileText(user.websiteUrl!.toString()),
+            ),
+          );
+        }
+
+        // Joined date
+        tiles.add(
+          DetailTile(
+            title: 'Joined',
+            actionType: DetailTileActionType.none,
+            child: DetailTileText(
+              getDate(user.createdAt.toString(), shorten: false),
+            ),
+          ),
+        );
+
+        return tiles;
+      },
+      orElse: () {
+        // Organization metadata
+        // Bio
+        if (widget.userData.bio != null) {
+          tiles.add(
+            DetailTile(
+              title: 'Bio',
+              actionType: DetailTileActionType.none,
+              child: DetailTileText(widget.userData.bio!),
+            ),
+          );
+        }
+
+        // Location
+        if (widget.userData.location != null) {
+          tiles.add(
+            DetailTile(
+              title: 'Location',
+              actionType: DetailTileActionType.none,
+              child: DetailTileText(widget.userData.location!),
+            ),
+          );
+        }
+
+        // Website
+        if (widget.userData.websiteUrl != null) {
+          tiles.add(
+            DetailTile(
+              title: 'Website',
+              actionType: DetailTileActionType.navigation,
+              onTap: () {
+                // Handle website tap
+              },
+              child: DetailTileText(widget.userData.websiteUrl!.toString()),
+            ),
+          );
+        }
+
+        // Created date
+        tiles.add(
+          DetailTile(
+            title: 'Created',
+            actionType: DetailTileActionType.none,
+            child: DetailTileText(
+              getDate(widget.userData.createdAt.toString(), shorten: false),
+            ),
+          ),
+        );
+
+        return tiles;
+      },
     );
   }
 }

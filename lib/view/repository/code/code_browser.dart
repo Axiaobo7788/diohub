@@ -49,133 +49,140 @@ class CodeBrowserState extends State<CodeBrowser>
   @override
   Widget build(final BuildContext context) {
     super.build(context);
-    return SingleChildScrollView(
-      child: Column(
-        // physics: const NeverScrollableScrollPhysics(),
-        // shrinkWrap: true,
-        children: <Widget>[
-          const SizedBox(
-            height: 16,
-          ),
-          Consumer<CodeProvider>(
-            builder: (
-              final BuildContext context,
-              final CodeProvider value,
-              final _,
-            ) =>
-                Column(
-              children: <Widget>[
-                if (context.read<RepoBranchProvider>().isCommit &&
-                    value.tree.isNotEmpty)
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 16),
-                    child: _buildPathWidget(value, context),
-                  ),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: value.status == Status.loaded
-                      ? _buildCommitButton(context, value)
-                      : Container(
-                          padding: const EdgeInsets.symmetric(
-                            vertical: 16,
-                            horizontal: 16,
-                          ),
-                          decoration: SurfaceShapeResolver.boxDecoration(
-                            context,
-                            size: BorderRadiusSize.medium,
-                            color: context.colorScheme.surfaceContainerHigh,
-                          ),
-                          child: const LoadingIndicator(),
-                        ),
-                ),
-                const SizedBox(height: 16),
-              ],
-            ),
-          ),
-          ProviderLoadingProgressWrapper<CodeProvider>(
-            childBuilder:
-                (final BuildContext context, final CodeProvider value) =>
+    
+    final SliverOverlapAbsorberHandle overlapHandle =
+        NestedScrollView.sliverOverlapAbsorberHandleFor(context);
+    
+    return CustomScrollView(
+      slivers: [
+        SliverOverlapInjector(handle: overlapHandle),
+        SliverToBoxAdapter(
+          child: Column(
+            children: <Widget>[
+              const SizedBox(
+                height: 16,
+              ),
+              Consumer<CodeProvider>(
+                builder: (
+                  final BuildContext context,
+                  final CodeProvider value,
+                  final _,
+                ) =>
                     Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: <Widget>[
-                Visibility(
-                  visible: value.tree.length > 1,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: <Widget>[
+                  children: <Widget>[
+                    if (context.read<RepoBranchProvider>().isCommit &&
+                        value.tree.isNotEmpty)
                       Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 16),
-                        child: HighlightedContainer(
-                          highlightColor: context.colorScheme.primary,
-                          size: BorderRadiusSize.medium,
-                          child: Container(
-                            height: 40,
-                            decoration: SurfaceShapeResolver.boxDecoration(
-                              context,
-                              size: BorderRadiusSize.medium,
-                              color: context.colorScheme.surfaceContainerHigh,
-                            ),
-                            padding: const EdgeInsets.symmetric(horizontal: 12),
-                            child: ListView.separated(
-                              physics: const BouncingScrollPhysics(),
-                              shrinkWrap: true,
-                              scrollDirection: Axis.horizontal,
-                              itemCount: value.tree.length,
-                              separatorBuilder: (final BuildContext context,
-                                      final int index) =>
-                                  Padding(
-                                padding:
-                                    const EdgeInsets.symmetric(horizontal: 4),
-                                child: Icon(
-                                  Icons.chevron_right_rounded,
-                                  size: 16,
-                                  color: context.colorScheme.onSurfaceVariant
-                                      .withOpacity(0.5),
-                                ),
+                        padding: const EdgeInsets.only(bottom: 16),
+                        child: _buildPathWidget(value, context),
+                      ),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      child: value.status == Status.loaded
+                          ? _buildCommitButton(context, value)
+                          : Container(
+                              padding: const EdgeInsets.symmetric(
+                                vertical: 16,
+                                horizontal: 16,
                               ),
-                              itemBuilder: (final BuildContext context,
-                                      final int index) =>
-                                  Material(
-                                color: Colors.transparent,
-                                child: InkWell(
-                                  onTap: () {
-                                    if (index != value.tree.length - 1) {
-                                      Provider.of<CodeProvider>(
-                                        context,
-                                        listen: false,
-                                      ).popTreeUntil(value.tree[index]);
-                                    }
-                                  },
-                                  borderRadius: Theme.of(context)
-                                      .surfaceStyle
-                                      .borderRadius(size: BorderRadiusSize.small),
-                                  child: Padding(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 10,
-                                      vertical: 8,
+                              decoration: SurfaceShapeResolver.boxDecoration(
+                                context,
+                                size: BorderRadiusSize.medium,
+                                color: context.colorScheme.surfaceContainerHigh,
+                              ),
+                              child: const LoadingIndicator(),
+                            ),
+                    ),
+                    const SizedBox(height: 16),
+                  ],
+                ),
+              ),
+              ProviderLoadingProgressWrapper<CodeProvider>(
+                childBuilder:
+                    (final BuildContext context, final CodeProvider value) =>
+                        Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    Visibility(
+                      visible: value.tree.length > 1,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: <Widget>[
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 16),
+                            child: HighlightedContainer(
+                              highlightColor: context.colorScheme.primary,
+                              size: BorderRadiusSize.medium,
+                              child: Container(
+                                height: 40,
+                                decoration: SurfaceShapeResolver.boxDecoration(
+                                  context,
+                                  size: BorderRadiusSize.medium,
+                                  color: context.colorScheme.surfaceContainerHigh,
+                                ),
+                                padding: const EdgeInsets.symmetric(horizontal: 12),
+                                child: ListView.separated(
+                                  physics: const BouncingScrollPhysics(),
+                                  shrinkWrap: true,
+                                  scrollDirection: Axis.horizontal,
+                                  itemCount: value.tree.length,
+                                  separatorBuilder: (final BuildContext context,
+                                          final int index) =>
+                                      Padding(
+                                    padding:
+                                        const EdgeInsets.symmetric(horizontal: 4),
+                                    child: Icon(
+                                      Icons.chevron_right_rounded,
+                                      size: 16,
+                                      color: context.colorScheme.onSurfaceVariant
+                                          .withOpacity(0.5),
                                     ),
-                                    child: Center(
-                                      child: Text(
-                                        index == 0
-                                            ? Provider.of<RepositoryProvider>(
-                                                    context)
-                                                .data
-                                                .name!
-                                            : value
-                                                .tree[index - 1]
-                                                .tree![
-                                                    value.pathIndex[index - 1]]
-                                                .path!,
-                                        style: context.textTheme.bodyMedium
-                                            ?.copyWith(
-                                          color: index == value.tree.length - 1
-                                              ? context.colorScheme.primary
-                                              : context
-                                                  .colorScheme.onSurfaceVariant,
-                                          fontWeight:
-                                              index == value.tree.length - 1
-                                                  ? FontWeight.w600
-                                                  : FontWeight.w500,
+                                  ),
+                                  itemBuilder: (final BuildContext context,
+                                          final int index) =>
+                                      Material(
+                                    color: Colors.transparent,
+                                    child: InkWell(
+                                      onTap: () {
+                                        if (index != value.tree.length - 1) {
+                                          Provider.of<CodeProvider>(
+                                            context,
+                                            listen: false,
+                                          ).popTreeUntil(value.tree[index]);
+                                        }
+                                      },
+                                      borderRadius: Theme.of(context)
+                                          .surfaceStyle
+                                          .borderRadius(size: BorderRadiusSize.small),
+                                      child: Padding(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 10,
+                                          vertical: 8,
+                                        ),
+                                        child: Center(
+                                          child: Text(
+                                            index == 0
+                                                ? Provider.of<RepositoryProvider>(
+                                                        context)
+                                                    .data
+                                                    .name!
+                                                : value
+                                                    .tree[index - 1]
+                                                    .tree![
+                                                        value.pathIndex[index - 1]]
+                                                    .path!,
+                                            style: context.textTheme.bodyMedium
+                                                ?.copyWith(
+                                              color: index == value.tree.length - 1
+                                                  ? context.colorScheme.primary
+                                                  : context
+                                                      .colorScheme.onSurfaceVariant,
+                                              fontWeight:
+                                                  index == value.tree.length - 1
+                                                      ? FontWeight.w600
+                                                      : FontWeight.w500,
+                                            ),
+                                          ),
                                         ),
                                       ),
                                     ),
@@ -184,60 +191,60 @@ class CodeBrowserState extends State<CodeBrowser>
                               ),
                             ),
                           ),
-                        ),
+                          const SizedBox(
+                            height: 16,
+                          ),
+                        ],
                       ),
-                      const SizedBox(
-                        height: 16,
-                      ),
-                    ],
-                  ),
-                ),
-                SizeExpandedSection(
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    child: HighlightedContainer(
-                      highlightColor: context.colorScheme.primary,
-                      size: BorderRadiusSize.large,
-                      child: Container(
-                        decoration: SurfaceShapeResolver.boxDecoration(
-                          context,
+                    ),
+                    SizeExpandedSection(
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        child: HighlightedContainer(
+                          highlightColor: context.colorScheme.primary,
                           size: BorderRadiusSize.large,
-                          color: context.colorScheme.surfaceContainerHigh,
-                        ),
-                        child: ListView.separated(
-                          physics: const NeverScrollableScrollPhysics(),
-                          shrinkWrap: true,
-                          padding: const EdgeInsets.symmetric(vertical: 4),
-                          itemBuilder:
-                              (final BuildContext context, final int index) =>
-                                  BrowserListTile(
-                            value.tree.last.tree![index],
-                            Provider.of<RepositoryProvider>(
+                          child: Container(
+                            decoration: SurfaceShapeResolver.boxDecoration(
                               context,
-                              listen: false,
-                            ).data.url.toString(),
-                            index,
+                              size: BorderRadiusSize.large,
+                              color: context.colorScheme.surfaceContainerHigh,
+                            ),
+                            child: ListView.separated(
+                              physics: const NeverScrollableScrollPhysics(),
+                              shrinkWrap: true,
+                              padding: const EdgeInsets.symmetric(vertical: 4),
+                              itemBuilder:
+                                  (final BuildContext context, final int index) =>
+                                      BrowserListTile(
+                                value.tree.last.tree![index],
+                                Provider.of<RepositoryProvider>(
+                                  context,
+                                  listen: false,
+                                ).data.url.toString(),
+                                index,
+                              ),
+                              separatorBuilder:
+                                  (final BuildContext context, final int index) =>
+                                      Divider(
+                                height: 1,
+                                thickness: 0.5,
+                                indent: 60,
+                                color: context.colorScheme.surfaceContainerHighest,
+                              ),
+                              itemCount: value.tree.last.tree!.length,
+                            ),
                           ),
-                          separatorBuilder:
-                              (final BuildContext context, final int index) =>
-                                  Divider(
-                            height: 1,
-                            thickness: 0.5,
-                            indent: 60,
-                            color: context.colorScheme.surfaceContainerHighest,
-                          ),
-                          itemCount: value.tree.last.tree!.length,
                         ),
                       ),
                     ),
-                  ),
+                  ],
                 ),
-              ],
-            ),
-            loadingBuilder: (final BuildContext context) => Container(),
+                loadingBuilder: (final BuildContext context) => Container(),
+              ),
+            ],
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 

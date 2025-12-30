@@ -1,12 +1,13 @@
-import 'package:diohub/common/animations/size_expanded_widget.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:diohub/common/misc/animated_tab_bar.dart';
 import 'package:diohub/common/misc/collapsible_app_bar.dart';
-import 'package:diohub/common/misc/collapsible_detail_tiles.dart';
 import 'package:diohub/common/misc/collapsible_action_buttons.dart';
 import 'package:diohub/common/misc/action_card_builder.dart';
 import 'package:diohub/common/misc/detail_tile.dart';
 import 'package:diohub/common/misc/detail_tile_content.dart';
-import 'package:diohub/common/misc/highlighted_container.dart';
+import 'package:diohub/common/misc/floating_action_toolbar.dart';
+import 'package:diohub/common/misc/floating_toolbar_wrapper.dart';
+import 'package:diohub/common/widgets/expandable_scroll_wrapper.dart';
 import 'package:diohub/style/surface_style_theme.dart';
 import 'package:diohub/common/misc/theme_from_image.dart';
 import 'package:diohub/common/wrappers/dynamic_tabs_parent.dart';
@@ -17,16 +18,12 @@ import 'package:diohub/common/misc/info_card.dart';
 import 'package:diohub/common/misc/profile_banner.dart';
 import 'package:diohub/common/wrappers/infinite_scroll_wrapper.dart';
 import 'package:diohub/common/wrappers/liquid_pull_to_refresh_wrapper.dart';
-import 'package:diohub/graphql/__generated__/schema.schema.gql.dart';
 import 'package:diohub/graphql/queries/issues_pulls/__generated__/issue_pull_info.data.gql.dart';
 import 'package:diohub/graphql/queries/issues_pulls/__generated__/timeline.data.gql.dart';
 import 'package:diohub/providers/issue_pulls/comment_provider.dart';
 import 'package:diohub/providers/issue_pulls/issue_provider.dart';
-import 'package:diohub/routes/router.gr.dart';
 import 'package:diohub/adapters/deep_linking_handler.dart';
 import 'package:diohub/view/issues_pulls/issue_pull_screen.dart';
-import 'dart:developer';
-
 import 'package:diohub/utils/get_date.dart';
 import 'package:diohub/utils/utils.dart';
 import 'package:diohub/view/issues_pulls/models/issue_pull_state.dart';
@@ -63,6 +60,8 @@ class IssuePullInfoTemplate extends StatefulWidget {
     this.linkedIssues,
     this.linkedIssuesTrackedIn,
     this.linkedPullRequests,
+    this.viewerCanUpdate = false,
+    this.actionButtons = const <Widget>[],
   });
 
   final GassigneeInfo assigneesInfo;
@@ -88,6 +87,8 @@ class IssuePullInfoTemplate extends StatefulWidget {
   final GissueInfo_trackedIssues? linkedIssues;
   final GissueInfo_trackedInIssues? linkedIssuesTrackedIn;
   final GpullInfo_closingIssuesReferences? linkedPullRequests;
+  final bool viewerCanUpdate;
+  final List<Widget> actionButtons;
 
   @override
   State<IssuePullInfoTemplate> createState() => IssuePullInfoTemplateState();
@@ -105,7 +106,6 @@ class IssuePullInfoTemplateState extends State<IssuePullInfoTemplate>
   late EditingController<List<Glabel?>> labelsEditingController;
 
   late EditingController<String> titleEditingController;
- 
 
   @override
   void initState() {
@@ -125,14 +125,42 @@ class IssuePullInfoTemplateState extends State<IssuePullInfoTemplate>
     super.initState();
   }
 
-  
   @override
   Widget build(final BuildContext context) => ThemeFromImage(
         builder: (
           final BuildContext context,
         ) {
-          return SafeArea(
-            child: buildDynamicTabsParent(),
+          return FloatingToolbarWrapper(
+            toolbarBuilder: (
+              final ValueNotifier<ScrollNotification?>
+                  scrollNotificationNotifier,
+            ) {
+              return ListenableBuilder(
+                listenable: dynamicTabsController,
+                builder: (final BuildContext context, final _) {
+                  return FloatingActionToolbar(
+                    key: const ValueKey('issue_pull_toolbar'),
+                    actions: _buildToolbarActions(context),
+                    actionCardBuilder: (
+                      final BuildContext context,
+                      final ActionButtonData action,
+                    ) =>
+                        buildStandardActionCard(context, action),
+                    position: FloatingPosition.bottom,
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 16, vertical: 12),
+                    bottomPadding: 0.0,
+                    title: '#${widget.number}',
+                    subtitle: widget.repoInfo.name,
+                    scrollNotificationNotifier: scrollNotificationNotifier,
+                    onExpandChanged: (final bool isExpanded) {},
+                  );
+                },
+              );
+            },
+            child: SafeArea(
+              child: buildDynamicTabsParent(),
+            ),
           );
         },
       );
@@ -140,121 +168,183 @@ class IssuePullInfoTemplateState extends State<IssuePullInfoTemplate>
   // Collapsible App Bar Methods
 
   Widget _buildCollapsedHeader(BuildContext context) {
-    return Row(
-      children: [
-        widget.state.icon(size: 16),
-        const SizedBox(width: 8),
-        Expanded(
-          child: Text(
-            '#${widget.number} • ${widget.repoInfo.name}',
-            style: context.textTheme.titleSmall?.copyWith(
-              fontWeight: FontWeight.w600,
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+      child: Row(
+        children: [
+          // State icon
+          widget.state.icon(size: 18),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              '#${widget.number} • ${widget.repoInfo.name}',
+              style: context.textTheme.titleSmall?.copyWith(
+                fontWeight: FontWeight.w600,
+                fontSize: 15,
+              ),
+              overflow: TextOverflow.ellipsis,
             ),
-            overflow: TextOverflow.ellipsis,
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 
   Widget _buildExpandedHeader(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
+      padding: const EdgeInsets.fromLTRB(20, 24, 20, 20),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
+        crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
         children: [
-          // State badge, number, and date at the top
-          _buildTopMetadataRow(context),
-          const SizedBox(height: 16),
-          // Detail tiles
-          _buildDetailTilesSection(context),
-          const SizedBox(height: 16),
-          // Action buttons (includes expand button)
-          _buildActionButtons(context),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildTopMetadataRow(BuildContext context) {
-    // Account for app bar leading button (back button) - typically 56dp
-    final double leadingWidth = 56.0;
-    return Padding(
-      padding: EdgeInsets.only(left: leadingWidth),
-      child: Row(
-        children: [
-          // State badge
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-            decoration: BoxDecoration(
-              color: widget.state.color.withOpacity(0.12),
-              borderRadius: Theme.of(context).surfaceStyle.borderRadiusSmall(),
-              border: Border.all(
-                color: widget.state.color.withOpacity(0.3),
-                width: 1,
+          // Top row: State badge and number
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              // State badge
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 8,
+                ),
+                decoration: BoxDecoration(
+                  color: widget.state.color.withOpacity(0.15),
+                  borderRadius:
+                      Theme.of(context).surfaceStyle.borderRadiusMedium(),
+                  border: Border.all(
+                    color: widget.state.color.withOpacity(0.4),
+                    width: 1.5,
+                  ),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    widget.state.icon(size: 16),
+                    const SizedBox(width: 8),
+                    Text(
+                      widget.state.text,
+                      style: context.textTheme.labelLarge?.copyWith(
+                        color: widget.state.color,
+                        fontWeight: FontWeight.w700,
+                        fontSize: 13,
+                        letterSpacing: 0.2,
+                      ),
+                    ),
+                  ],
+                ),
               ),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                widget.state.icon(size: 12),
-                const SizedBox(width: 4),
-                Text(
-                  widget.state.text,
-                  style: context.textTheme.labelSmall?.copyWith(
-                    color: widget.state.color,
-                    fontWeight: FontWeight.w600,
-                    fontSize: 11,
+              const SizedBox(width: 16),
+              // Issue number
+              Text(
+                '${widget.number}',
+                style: context.textTheme.headlineSmall?.copyWith(
+                  color: context.colorScheme.onSurface,
+                  fontWeight: FontWeight.w700,
+                  fontSize: 24,
+                  height: 1.2,
+                ),
+              ),
+              if (widget.isPinned) ...[
+                const SizedBox(width: 12),
+                Container(
+                  padding: const EdgeInsets.all(6),
+                  decoration: BoxDecoration(
+                    color: context.colorScheme.tertiary.withOpacity(0.15),
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: Icon(
+                    Octicons.pin,
+                    size: 16,
+                    color: context.colorScheme.tertiary,
                   ),
                 ),
               ],
-            ),
+            ],
           ),
-          const SizedBox(width: 8),
-          // Issue number
+          const SizedBox(height: 20),
+          // Repository info section
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Owner avatar
+              ClipOval(
+                child: CachedNetworkImage(
+                  imageUrl: widget.repoInfo.owner.avatarUrl.toString(),
+                  width: 32,
+                  height: 32,
+                  fit: BoxFit.cover,
+                  placeholder: (final _, final __) => Container(
+                    width: 32,
+                    height: 32,
+                    color: context.colorScheme.surfaceVariant,
+                  ),
+                  errorWidget: (final _, final __, final ___) => Container(
+                    width: 32,
+                    height: 32,
+                    color: context.colorScheme.surfaceVariant,
+                    child: Icon(
+                      Icons.person,
+                      size: 18,
+                      color: context.colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              // Owner and repo info
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // Owner name
+                    Text(
+                      widget.repoInfo.owner.login,
+                      style: context.textTheme.titleMedium?.copyWith(
+                        color: context.colorScheme.onSurface,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        height: 1.3,
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 6),
+                    // Repository name
+                    Text(
+                      widget.repoInfo.name,
+                      style: context.textTheme.bodyLarge?.copyWith(
+                        color: context.colorScheme.onSurfaceVariant,
+                        fontSize: 15,
+                        fontWeight: FontWeight.w500,
+                        height: 1.3,
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 18),
+          // Date
           Text(
-            '#${widget.number}',
-            style: context.textTheme.labelMedium?.copyWith(
-              color: context.colorScheme.onSurfaceVariant,
-              fontWeight: FontWeight.w600,
+            getDate(widget.createdAt.toString(), shorten: true),
+            style: context.textTheme.bodyMedium?.copyWith(
+              color: context.colorScheme.onSurfaceVariant.withOpacity(0.75),
+              fontSize: 14,
+              fontWeight: FontWeight.w500,
             ),
           ),
-          if (widget.isPinned) ...[
-            const SizedBox(width: 8),
-            Icon(
-              Octicons.pin,
-              size: 14,
-              color: context.colorScheme.tertiary,
-            ),
-          ],
         ],
       ),
     );
   }
 
-  Widget _buildDetailTilesSection(BuildContext context) {
-    // Always visible tiles (essential information)
-    final List<Widget> alwaysVisibleTiles = [
-      // Repository
-      DetailTile(
-        title: 'Repository',
-        actionType: DetailTileActionType.navigation,
-        onTap: () async {
-          await context.router.push(
-            RepositoryRoute(
-              repositoryURL:
-                  '${widget.repoInfo.owner.login}/${widget.repoInfo.name}',
-            ),
-          );
-        },
-        child: DetailTileRepository(
-          ownerAvatarUrl: widget.repoInfo.owner.avatarUrl.toString(),
-          ownerLogin: widget.repoInfo.owner.login,
-          repoName: widget.repoInfo.name,
-        ),
-      ),
-      // Created date
+  List<Widget> _buildMetadataTiles(BuildContext context) {
+    final List<Widget> tiles = <Widget>[];
+
+    // Created date
+    tiles.add(
       DetailTile(
         title: 'Created',
         actionType: DetailTileActionType.none,
@@ -262,8 +352,11 @@ class IssuePullInfoTemplateState extends State<IssuePullInfoTemplate>
           getDate(widget.createdAt.toString(), shorten: false),
         ),
       ),
-      // Author
-      if (widget.createdBy != null)
+    );
+
+    // Author
+    if (widget.createdBy != null) {
+      tiles.add(
         DetailTile(
           title: 'Author',
           actionType: DetailTileActionType.navigation,
@@ -278,35 +371,29 @@ class IssuePullInfoTemplateState extends State<IssuePullInfoTemplate>
             login: widget.createdBy!.login,
           ),
         ),
-      // Assignees
-      if (widget.assigneesInfo.edges?.isNotEmpty ?? false)
-        _buildAssigneeDetailTile(context),
-    ];
+      );
+    }
 
-    // Expandable tiles (less relevant information)
-    final List<Widget> expandableTiles = [
-      // Participants
-      if (widget.participantsInfo.totalCount > 1)
-        _buildParticipantsDetailTile(context),
-      // Linked issues
-      ..._buildLinkedIssuesDetailTiles(context),
-      // Linked PRs
-      ..._buildLinkedPullRequestsDetailTiles(context),
-      // Additional detail tiles (PR-specific)
-      ...widget.additionalDetailTiles,
-    ];
+    // Assignees
+    if (widget.assigneesInfo.edges?.isNotEmpty ?? false) {
+      tiles.add(_buildAssigneeDetailTile(context));
+    }
 
-    return CollapsibleDetailTiles(
-      alwaysVisibleTiles: alwaysVisibleTiles,
-      expandableTiles: expandableTiles,
-      visibilityConfig: DetailTilesVisibilityConfig.fixedCount(
-        defaultVisibleCount:
-            2, // Show 2 tiles by default (Assignee, Participants)
-      ),
-      onExpandChanged: (isExpanded) {
-       
-      },
-    );
+    // Participants
+    if (widget.participantsInfo.totalCount > 1) {
+      tiles.add(_buildParticipantsDetailTile(context));
+    }
+
+    // Linked issues
+    tiles.addAll(_buildLinkedIssuesDetailTiles(context));
+
+    // Linked PRs
+    tiles.addAll(_buildLinkedPullRequestsDetailTiles(context));
+
+    // Additional detail tiles (PR-specific)
+    tiles.addAll(widget.additionalDetailTiles);
+
+    return tiles;
   }
 
   Widget _buildAssigneeDetailTile(BuildContext context) {
@@ -641,100 +728,106 @@ class IssuePullInfoTemplateState extends State<IssuePullInfoTemplate>
         ),
       ];
 
-  Widget _buildActionButtons(BuildContext context) {
-    // Primary actions - always visible when enabled
-    final primaryActions = <ActionButtonData>[
+  List<ActionButtonData> _buildToolbarActions(BuildContext context) {
+    final String currentTab = dynamicTabsController.activeIdentifier;
+
+    return <ActionButtonData>[
       MinorActionButton(
-        icon: (widget.state.state == GIssueState.OPEN ||
-                widget.state.state == GPullRequestState.OPEN)
-            ? Octicons.issue_closed
-            : Octicons.issue_reopened,
-        label: (widget.state.state == GIssueState.OPEN ||
-                widget.state.state == GPullRequestState.OPEN)
-            ? 'Close'
-            : 'Reopen',
-        enabled: widget.viewerCanReact,
-        isDestructive: (widget.state.state == GIssueState.OPEN ||
-            widget.state.state == GPullRequestState.OPEN),
-        isPositive: (widget.state.state != GIssueState.OPEN &&
-            widget.state.state != GPullRequestState.OPEN),
-        onTap: () {},
+        icon: Octicons.info,
+        label: 'About',
+        category: 'Primary',
+        actionType: ActionButtonActionType.tab,
+        visibilityState: currentTab == 'About'
+            ? ActionButtonVisibilityState.none
+            : ActionButtonVisibilityState.both,
+        onTap: () => dynamicTabsController.openTab('About'),
       ),
       MinorActionButton(
-        icon: Octicons.pencil,
-        label: 'Edit',
-        enabled: widget.viewerCanReact,
-        onTap: () {},
+        icon: Octicons.comment_discussion,
+        label: 'Conversation',
+        category: 'Primary',
+        trailing: widget.commentCount > 0
+            ? buildActionButtonTrailingCount(context, widget.commentCount)
+            : null,
+        actionType: ActionButtonActionType.tab,
+        visibilityState: currentTab == 'Conversation'
+            ? ActionButtonVisibilityState.none
+            : ActionButtonVisibilityState.both,
+        onTap: () => dynamicTabsController.openTab('Conversation'),
       ),
     ];
-
-    // Secondary actions - only visible when expanded
-    final secondaryActions = <ActionButtonData>[
-      MinorActionButton(
-        icon: Octicons.lock,
-        label: 'Lock',
-        enabled: widget.viewerCanReact,
-        onTap: () {},
-      ),
-      MinorActionButton(
-        icon: Octicons.pin,
-        label: widget.isPinned ? 'Unpin' : 'Pin',
-        enabled: widget.viewerCanReact,
-        onTap: () {},
-      ),
-    ];
-
-    return CollapsibleActionButtons(
-      primaryActions: primaryActions,
-      secondaryActions: secondaryActions,
-      actionCardBuilder: (context, action) =>
-          buildCompactActionCard(context, action),
-      visibilityConfig: ActionButtonsVisibilityConfig.fixedCount(
-        defaultVisibleCount:
-            2, // Show 2 actions by default (Close/Reopen, Edit)
-      ),
-      onExpandChanged: (isExpanded) {
-      
-      },
-    );
   }
 
-  Widget _buildConversationButton(BuildContext context) {
-    // Use a StatefulWidget that listens to tab changes including swipes
-    return _ConversationButtonWidget(
-      dynamicTabsController: dynamicTabsController,
-      commentCount: widget.commentCount,
-    );
-  }
-
-  Widget buildDynamicTabsParent() => DynamicTabsParent(
-        controller: dynamicTabsController,
-        builder: (
-          final BuildContext context,
-          final PreferredSizeWidget tabBar,
-          final Widget tabView,
-        ) =>
-            EditingWrapper(
-          onSave: () {},
-          editingControllers: <EditingController<dynamic>>[
-            titleEditingController,
-            labelsEditingController,
-            descEditingController,
-            assigneeEditingController,
-          ],
-          builder: (final BuildContext context) => Scaffold(
-            body: PullToRefreshWrapper(
+  Widget buildDynamicTabsParent() => EditingWrapper(
+        onSave: () {},
+        editingControllers: <EditingController<dynamic>>[
+          titleEditingController,
+          labelsEditingController,
+          descEditingController,
+          assigneeEditingController,
+        ],
+        builder: (final BuildContext context) => ExpandOnScrollWrapper(
+          collapsedWidget: (
+            final BuildContext context,
+            final double pullProgress,
+            final bool isReadyToExpand,
+          ) =>
+              PullToExpandIndicator(
+            pullProgress: pullProgress,
+            isReadyToExpand: isReadyToExpand,
+          ),
+          expandedWidget: (
+            final BuildContext context,
+            final VoidCallback onCollapse,
+          ) =>
+              Column(
+            children: [
+              ExpandableSection(
+                title: 'Details',
+                onCollapse: onCollapse,
+                children: _buildMetadataTiles(context),
+              ),
+              if (widget.viewerCanUpdate && widget.actionButtons.isNotEmpty)
+                ExpandableSection(
+                  title: 'Actions',
+                  headerColor: context.colorScheme.error,
+                  onCollapse: () {},
+                  children: widget.actionButtons,
+                ),
+            ],
+          ),
+          builder: (
+            final BuildContext context,
+            final Widget expandOnScrollWidget,
+          ) =>
+              DynamicTabsParent(
+            controller: dynamicTabsController,
+            builder: (
+              final BuildContext context,
+              final PreferredSizeWidget tabBar,
+              final WidgetBuilder tabViewBuilder,
+            ) =>
+                PullToRefreshWrapper(
               onRefresh: widget.onRefresh,
-              // triggerMode: RefreshIndicatorTriggerMode.anywhere,
               child: DynamicScroll(
                 collapsedWidget: _buildCollapsedHeader(context),
                 expandedWidget: _buildExpandedHeader(context),
-                // pinnedWidget: _buildConversationButton(context),
-                bottom: AnimatedTabBar(
-                  showTabBar: dynamicTabsController.activeLength > 1,
-                  tabBar: buildTabsView(tabBar),
-                ),
-                body: tabView,
+                headerSlivers: [
+                  SliverToBoxAdapter(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 4),
+                      child: expandOnScrollWidget,
+                    ),
+                  ),
+                  AnimatedTabBar(
+                    showTabBar: dynamicTabsController.activeLength > 1,
+                    tabBar: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      child: buildTabsView(tabBar),
+                    ),
+                  ),
+                ],
+                bodyBuilder: tabViewBuilder,
               ),
             ),
           ),
@@ -781,165 +874,5 @@ class IssuePullInfoTemplateState extends State<IssuePullInfoTemplate>
         ),
       );
 
-  Column buildTabsView(final PreferredSizeWidget tabBar) => Column(
-        children: <Widget>[
-          const SizedBox(
-            height: 8,
-          ),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: <Widget>[
-              tabBar,
-            ],
-          ),
-          const Padding(
-            padding: EdgeInsets.symmetric(horizontal: 16),
-          ),
-        ],
-      );
-}
-
-/// Widget that listens to tab changes including swipe gestures
-class _ConversationButtonWidget extends StatefulWidget {
-  const _ConversationButtonWidget({
-    required this.dynamicTabsController,
-    required this.commentCount,
-  });
-
-  final DynamicTabsController dynamicTabsController;
-  final int commentCount;
-
-  @override
-  State<_ConversationButtonWidget> createState() =>
-      _ConversationButtonWidgetState();
-}
-
-class _ConversationButtonWidgetState extends State<_ConversationButtonWidget> {
-  String? _lastActiveIdentifier;
-
-  @override
-  void initState() {
-    super.initState();
-    _lastActiveIdentifier = widget.dynamicTabsController.activeIdentifier;
-    widget.dynamicTabsController.addListener(_onControllerChanged);
-    // Schedule periodic checks to catch tab swipes
-    _scheduleCheck();
-  }
-
-  @override
-  void didUpdateWidget(_ConversationButtonWidget oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (oldWidget.dynamicTabsController != widget.dynamicTabsController) {
-      oldWidget.dynamicTabsController.removeListener(_onControllerChanged);
-      widget.dynamicTabsController.addListener(_onControllerChanged);
-      _lastActiveIdentifier = widget.dynamicTabsController.activeIdentifier;
-    }
-  }
-
-  @override
-  void dispose() {
-    widget.dynamicTabsController.removeListener(_onControllerChanged);
-    super.dispose();
-  }
-
-  void _onControllerChanged() {
-    final current = widget.dynamicTabsController.activeIdentifier;
-    if (_lastActiveIdentifier != current && mounted) {
-      setState(() {
-        _lastActiveIdentifier = current;
-      });
-    }
-  }
-
-  void _scheduleCheck() {
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
-      final current = widget.dynamicTabsController.activeIdentifier;
-      if (_lastActiveIdentifier != current) {
-        setState(() {
-          _lastActiveIdentifier = current;
-        });
-      }
-      // Schedule next check
-      _scheduleCheck();
-    });
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final bool isConversationActive =
-        widget.dynamicTabsController.activeIdentifier == 'Conversation';
-
-    return SizeExpandedSection(
-      expand: !isConversationActive,
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-        child: HighlightedContainer(
-          highlightColor: context.colorScheme.primary,
-          size: BorderRadiusSize.medium,
-          child: Material(
-            color: context.colorScheme.primaryContainer,
-            borderRadius: Theme.of(context).surfaceStyle.borderRadiusMedium(),
-            child: InkWell(
-              onTap: () {
-                try {
-                  widget.dynamicTabsController.openTab('Conversation');
-                } catch (e, s) {
-                  log(e.toString(), stackTrace: s);
-                }
-              },
-              borderRadius: Theme.of(context).surfaceStyle.borderRadiusMedium(),
-              child: Padding(
-                padding: const EdgeInsets.all(12),
-                child: Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(6),
-                      decoration: BoxDecoration(
-                        color: context.colorScheme.onPrimaryContainer
-                            .withOpacity(0.1),
-                        borderRadius: Theme.of(context).surfaceStyle.borderRadiusSmall(),
-                      ),
-                      child: Icon(
-                        Octicons.comment_discussion,
-                        size: 16,
-                        color: context.colorScheme.onPrimaryContainer,
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Thread',
-                            style: context.textTheme.labelMedium?.copyWith(
-                              color: context.colorScheme.onPrimaryContainer,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                          Text(
-                            '${widget.commentCount} ${widget.commentCount == 1 ? 'reply' : 'replies'}',
-                            style: context.textTheme.labelSmall?.copyWith(
-                              color: context.colorScheme.onPrimaryContainer
-                                  .withOpacity(0.8),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    Icon(
-                      Icons.arrow_forward_ios_rounded,
-                      size: 16,
-                      color: context.colorScheme.onPrimaryContainer,
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
+  Widget buildTabsView(final PreferredSizeWidget tabBar) => tabBar;
 }

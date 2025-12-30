@@ -5,6 +5,7 @@ import 'package:diohub/common/misc/repository_card.dart';
 import 'package:diohub/common/search_overlay/filters.dart';
 import 'package:diohub/common/search_overlay/search_bar.dart';
 import 'package:diohub/common/wrappers/api_wrapper_widget.dart';
+import 'package:diohub/common/wrappers/app_custom_scroll_view.dart';
 import 'package:diohub/common/wrappers/search_scroll_wrapper.dart';
 import 'package:diohub/models/repositories/repo_card_data_model.dart';
 import 'package:diohub/models/repositories/repository_model.dart';
@@ -31,14 +32,16 @@ class SearchScreenState extends State<SearchScreen>
     super.build(context);
     final SearchDataProvider search = Provider.of<SearchDataProvider>(context);
     return search.searchData.searchFilters != null
-        ? SearchScrollWrapper(
-            search.searchData,
-            key: ValueKey<String>(search.searchData.toQuery),
-            onChanged: search.updateSearchData,
-            // searchBarColor: Provider.of<PaletteSettings>(context).currentSetting.onBackground,
-            searchHeroTag: 'searchScreen',
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-          )
+        ? AppCustomScrollView(
+          slivers: [ SearchScrollWrapper(
+              search.searchData,
+              key: ValueKey<String>(search.searchData.toQuery),
+              onChanged: search.updateSearchData,
+              // searchBarColor: Provider.of<PaletteSettings>(context).currentSetting.onBackground,
+              searchHeroTag: 'searchScreen',
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            ),
+        ],)
         : SizeExpandedSection(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -58,7 +61,8 @@ class SearchScreenState extends State<SearchScreen>
                   child: AppSearchBar(
                     // backgroundColor: Provider.of<PaletteSettings>(context)
                     //     .currentSetting
-                    //     .primary,
+                    //     .primary,- itemSliverBuilder returns EXACTLY ONE sliver per item.
+
                     heroTag: 'searchScreen',
                     onSubmit: search.updateSearchData,
                   ),

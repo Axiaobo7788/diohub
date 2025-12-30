@@ -1,6 +1,10 @@
+// NOTE: After updating GraphQL fragments, run: flutter pub run build_runner build
+// to regenerate types with new repository fields (stargazerCount, forkCount, watchers, etc.)
+
 import 'package:diohub/common/misc/detail_tile.dart';
 import 'package:diohub/common/misc/detail_tile_content.dart';
 import 'package:diohub/common/misc/info_card.dart';
+import 'package:diohub/graphql/__generated__/schema.schema.gql.dart';
 import 'package:diohub/graphql/queries/issues_pulls/__generated__/issue_pull_info.data.gql.dart';
 import 'package:diohub/graphql/queries/issues_pulls/__generated__/timeline.data.gql.dart';
 import 'package:diohub/utils/get_date.dart';
@@ -51,6 +55,8 @@ class PullScreenState extends State<PullScreen>
   @override
   Widget build(final BuildContext context) {
     final GpullInfo data = widget.pullInfo;
+    final repo = data.repository;
+
     return IssuePullInfoTemplate(
       key: _templateKey,
       number: data.number,
@@ -59,7 +65,7 @@ class PullScreenState extends State<PullScreen>
       reactionGroups: data.reactionGroups!.toList(),
       viewerCanReact: data.viewerCanReact,
       commentCount: data.comments.totalCount,
-      repoInfo: data.repository,
+      repoInfo: repo,
       state: IssuePullState(data.state),
       bodyHTML: data.bodyHTML,
       assigneesInfo: data.assignees,
@@ -127,6 +133,56 @@ class PullScreenState extends State<PullScreen>
             ),
           ),
       ],
+      viewerCanUpdate: data.viewerCanUpdate ?? false,
+      actionButtons: _buildActionButtons(context, data),
     );
+  }
+
+  List<Widget> _buildActionButtons(
+    final BuildContext context,
+    final GpullInfo data,
+  ) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final isOpen = data.state == GPullRequestState.OPEN;
+    final isLocked = data.locked ?? false;
+
+    return [
+      // Close/Reopen button
+      if (data.viewerCanUpdate ?? false)
+        ElevatedButton.icon(
+          onPressed: () {
+            // TODO: Implement close/reopen action
+          },
+          icon: Icon(
+            isOpen ? Octicons.git_pull_request_closed : Octicons.issue_reopened,
+            size: 16,
+          ),
+          label: Text(isOpen ? 'Close' : 'Reopen'),
+          style: ElevatedButton.styleFrom(
+            backgroundColor:
+                isOpen ? colorScheme.error : colorScheme.primaryContainer,
+            foregroundColor:
+                isOpen ? colorScheme.onError : colorScheme.onPrimaryContainer,
+          ),
+        ),
+      // Lock/Unlock button
+      if (data.viewerCanUpdate ?? false)
+        OutlinedButton.icon(
+          onPressed: () {
+            // TODO: Implement lock/unlock action
+          },
+          icon: Icon(
+            Octicons.lock,
+            size: 16,
+            color: isLocked ? colorScheme.error : colorScheme.onSurfaceVariant,
+          ),
+          label: Text(isLocked ? 'Unlock' : 'Lock'),
+          style: OutlinedButton.styleFrom(
+            foregroundColor:
+                isLocked ? colorScheme.error : colorScheme.onSurfaceVariant,
+          ),
+        ),
+    ];
   }
 }

@@ -2,12 +2,10 @@ import 'dart:async';
 
 import 'package:diohub/app/api_handler/response_handler.dart';
 import 'package:diohub/blocs/authentication_bloc/authentication_bloc.dart';
-import 'package:diohub/common/animations/scale_expanded_widget.dart';
+import 'package:diohub/common/animations/fade_animation_widget.dart';
 import 'package:diohub/common/bottom_sheet/url_actions.dart';
-import 'package:diohub/common/misc/button.dart';
 import 'package:diohub/models/authentication/device_code_model.dart';
 import 'package:diohub/models/popup/popup_type.dart';
-import 'package:diohub/utils/utils.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -60,120 +58,103 @@ class CodeInfoBoxState extends State<CodeInfoBox> {
   }
 
   @override
-  Widget build(final BuildContext context) => ScaleExpandedSection(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: <Widget>[
-            Center(
-              child: CountdownTimer(
-                controller: timerController,
-                endWidget: const Text('Time Expired.'),
-                widgetBuilder: (final _, final CurrentRemainingTime? time) =>
-                    Column(
-                  children: <Widget>[
-                    const Divider(
-                      height: 32,
-                    ),
-                    Text(
-                      'Verification'.toUpperCase(),
-                      style: Theme.of(context)
-                          .textTheme
-                          .headlineSmall!
-                          .copyWith(fontWeight: FontWeight.bold),
-                    ),
-                    const Divider(
-                      height: 32,
-                    ),
-                    Center(
-                      child: Text(
-                        'Expires in ${time!.min ?? '00'}:${time.sec! < 10 ? '0' : ''}${time.sec}',
-                      ),
-                    ),
-                    Padding(
-                      padding: const EdgeInsets.all(8),
-                      child: LinearProgressIndicator(
-                        // backgroundColor: Provider.of<PaletteSettings>(context)
-                        //     .currentSetting
-                        //     .faded1,
-                        // valueColor: AlwaysStoppedAnimation<Color>(
-                        //   Provider.of<PaletteSettings>(context)
-                        //       .currentSetting
-                        //       .faded3,
-                        // ),
-                        value: ((time.min ?? 0) * 60 + time.sec!) /
-                            ((widget.deviceCodeModel.expiresIn! -
-                                    widget.deviceCodeModel.parsedOn!) /
-                                1000),
-                      ),
-                    ),
-                  ],
-                ),
+  Widget build(final BuildContext context) {
+    final ColorScheme colorScheme = Theme.of(context).colorScheme;
+    final TextTheme textTheme = Theme.of(context).textTheme;
+
+    return FadeAnimationSection(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: <Widget>[
+          CountdownTimer(
+            controller: timerController,
+            endWidget: Text(
+              'Time Expired.',
+              style: textTheme.bodyMedium?.copyWith(
+                color: colorScheme.error,
               ),
             ),
-            const SizedBox(
-              height: 8,
+            widgetBuilder: (final _, final CurrentRemainingTime? time) =>
+                Column(
+              children: <Widget>[
+                Text(
+                  'Verification Code',
+                  style: textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Center(
+                  child: Text(
+                    'Expires in ${time!.min ?? '00'}:${time.sec! < 10 ? '0' : ''}${time.sec}',
+                    style: textTheme.bodyMedium?.copyWith(
+                      color: colorScheme.onSurface.withOpacity(0.7),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 32),
+                  child: LinearProgressIndicator(
+                    value: ((time.min ?? 0) * 60 + time.sec!) /
+                        ((widget.deviceCodeModel.expiresIn! -
+                                widget.deviceCodeModel.parsedOn!) /
+                            1000),
+                  ),
+                ),
+              ],
             ),
-            Center(
-              child: Button(
-                onTap: () async {
-                  await copyCode();
-                  setState(() {
-                    copied = true;
-                  });
-                  await Future<void>.delayed(const Duration(seconds: 4));
-                  setState(() {
-                    copied = false;
-                  });
-                },
-                enabled: !copied,
-                padding: const EdgeInsets.all(24),
-                // color: Provider.of<PaletteSettings>(context)
-                //     .currentSetting
-                //     .secondary,
+          ),
+          const SizedBox(height: 24),
+          Material(
+            color: colorScheme.surfaceContainerHighest,
+            borderRadius: BorderRadius.circular(12),
+            child: InkWell(
+              onTap: copied
+                  ? null
+                  : () async {
+                      await copyCode();
+                      setState(() {
+                        copied = true;
+                      });
+                      await Future<void>.delayed(const Duration(seconds: 4));
+                      if (mounted) {
+                        setState(() {
+                          copied = false;
+                        });
+                      }
+                    },
+              borderRadius: BorderRadius.circular(12),
+              child: Container(
+                padding:
+                    const EdgeInsets.symmetric(vertical: 24, horizontal: 32),
                 child: Column(
                   children: <Widget>[
                     Text(
                       widget.deviceCodeModel.userCode!,
-                      style: Theme.of(context)
-                          .textTheme
-                          .headlineSmall!
-                          .copyWith(fontWeight: FontWeight.bold),
+                      style: textTheme.headlineMedium?.copyWith(
+                        fontWeight: FontWeight.bold,
+                        letterSpacing: 2,
+                      ),
                     ),
-                    const SizedBox(
-                      height: 8,
-                    ),
+                    const SizedBox(height: 12),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: <Widget>[
-                        Visibility(
-                          visible: !copied,
-                          replacement: const Icon(
-                            Icons.check,
-                            // color: grey,
-                            size: 13,
-                          ),
-                          child: const Icon(
-                            Icons.copy,
-                            // color: grey,
-                            size: 13,
-                          ),
+                        Icon(
+                          copied ? Icons.check_circle : Icons.copy,
+                          size: 16,
+                          color: copied
+                              ? colorScheme.primary
+                              : colorScheme.onSurface.withOpacity(0.6),
                         ),
-                        const SizedBox(
-                          width: 5,
-                        ),
-                        Visibility(
-                          visible: !copied,
-                          replacement: Text(
-                            'COPIED',
-                            style: TextStyle(
-                              color: context.colorScheme.onSurface.asHint(),
-                            ),
-                          ),
-                          child: Text(
-                            'TAP TO COPY',
-                            style: TextStyle(
-                              color: context.colorScheme.onSurface.asHint(),
-                            ),
+                        const SizedBox(width: 8),
+                        Text(
+                          copied ? 'Copied' : 'Tap to copy',
+                          style: textTheme.bodySmall?.copyWith(
+                            color: copied
+                                ? colorScheme.primary
+                                : colorScheme.onSurface.withOpacity(0.6),
                           ),
                         ),
                       ],
@@ -182,81 +163,63 @@ class CodeInfoBoxState extends State<CodeInfoBox> {
                 ),
               ),
             ),
-            const SizedBox(
-              height: 16,
+          ),
+          const SizedBox(height: 24),
+          Text(
+            'Enter this code on:',
+            style: textTheme.bodyMedium?.copyWith(
+              color: colorScheme.onSurface.withOpacity(0.7),
             ),
-            Center(
-              child: Text(
-                'Input the code on the following link.',
-                style: Theme.of(context).textTheme.bodyLarge,
-                textAlign: TextAlign.center,
-              ),
-            ),
-            const SizedBox(
-              height: 8,
-            ),
-            Flexible(
-              child: Card(
-                // shape: RoundedRectangleBorder(
-                //   borderRadius: Theme.of(context).surfaceStyle.borderRadiusMedium(),
-                // ),
-                // color: Provider.of<PaletteSettings>(context)
-                //     .currentSetting
-                //     .secondary,
-                // elevation: 2,
-                child: Builder(
-                  builder: (final BuildContext context) {
-                    final URLActions urlActions = URLActions(
-                      uri: Uri.parse(widget.deviceCodeModel.verificationUri!),
-                      shareDescription:
-                          'Enter the code ${widget.deviceCodeModel.userCode} on:',
-                    );
-                    return GestureDetector(
-                      // borderRadius: Theme.of(context).surfaceStyle.borderRadiusMedium(),
-                      onTap: urlActions.launchURL,
-                      onLongPress: () async {
-                        await urlActions.showMenu(context);
-                      },
-                      child: Padding(
-                        padding: const EdgeInsets.all(16),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: <Widget>[
-                            Flexible(
-                              child: Text(
-                                widget.deviceCodeModel.verificationUri!,
-                                style: TextStyle(
-                                  color: context.colorScheme.primary,
-                                  decoration: TextDecoration.underline,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    );
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 12),
+          Builder(
+            builder: (final BuildContext context) {
+              final URLActions urlActions = URLActions(
+                uri: Uri.parse(widget.deviceCodeModel.verificationUri!),
+                shareDescription:
+                    'Enter the code ${widget.deviceCodeModel.userCode} on:',
+              );
+              return Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  onTap: urlActions.launchURL,
+                  onLongPress: () async {
+                    await urlActions.showMenu(context);
                   },
-                ),
-              ),
-            ),
-            const Divider(
-              height: 32,
-            ),
-            Center(
-              child: MaterialButton(
-                onPressed: () {
-                  BlocProvider.of<AuthenticationBloc>(context)
-                      .add(ResetStates());
-                },
-                child: const Padding(
-                  padding: EdgeInsets.all(8),
-                  child: Text(
-                    'Tap here to cancel',
+                  borderRadius: BorderRadius.circular(8),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                      vertical: 12,
+                      horizontal: 16,
+                    ),
+                    child: Text(
+                      widget.deviceCodeModel.verificationUri!,
+                      style: textTheme.bodyMedium?.copyWith(
+                        color: colorScheme.primary,
+                        decoration: TextDecoration.underline,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
                   ),
                 ),
+              );
+            },
+          ),
+          const SizedBox(height: 24),
+          TextButton(
+            onPressed: () {
+              BlocProvider.of<AuthenticationBloc>(context).add(ResetStates());
+            },
+            child: Text(
+              'Cancel',
+              style: textTheme.bodySmall?.copyWith(
+                color: colorScheme.onSurface.withOpacity(0.6),
               ),
             ),
-          ],
-        ),
-      );
+          ),
+        ],
+      ),
+    );
+  }
 }

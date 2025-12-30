@@ -11,11 +11,15 @@ import 'package:diohub/common/timeline/unified_timeline_item.dart';
 import 'package:diohub/common/timeline_content/timeline_commit_content.dart';
 import 'package:diohub/common/timeline_content/timeline_issue_content.dart';
 import 'package:diohub/common/timeline_content/timeline_pull_request_content.dart';
+import 'package:diohub/common/wrappers/infinite_pagination.dart';
 import 'package:diohub/common/wrappers/infinite_scroll_wrapper.dart';
 import 'package:diohub/models/commits/commit_card_data_model.dart';
 import 'package:diohub/models/events/events_model.dart' hide Key, State;
 import 'package:diohub/models/issues/issue_card_data_model.dart';
 import 'package:diohub/models/issues/issue_model.dart';
+import 'package:diohub/models/pull_requests/pull_request_model.dart';
+import 'package:diohub/models/repositories/repository_model.dart';
+import 'package:diohub/models/users/user_info_model.dart';
 import 'package:diohub/providers/users/current_user_provider.dart';
 import 'package:diohub/services/activity/events_service.dart';
 import 'package:diohub/utils/utils.dart';
@@ -23,8 +27,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_vector_icons/flutter_vector_icons.dart';
 import 'package:provider/provider.dart';
 
-class Events extends StatelessWidget {
-  const Events({
+class Events extends StatefulWidget {
+   Events({
     this.privateEvents = true,
     this.specificUser,
     super.key,
@@ -33,156 +37,147 @@ class Events extends StatelessWidget {
   final bool privateEvents;
   final String? specificUser;
 
-  // Spacing constants for consistent user group separation
-  static const double itemSpacing = 8.0; // Between items from same user
-  static const double groupSpacing = 8.0; // Between user groups
-
   @override
-  Widget build(final BuildContext context) {
-    final CurrentUserProvider user = Provider.of<CurrentUserProvider>(context);
-    // Add bottom padding to account for SafeArea/system UI
-    final bottomPadding = MediaQuery.of(context).padding.bottom;
-    return InfiniteScrollWrapper<EventsModel>(
-      // header: (final BuildContext context) => Padding(
-      //   padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-      //   child: Text(
-      //     'Feed',
-      //     style: context.textTheme.headlineSmall?.copyWith(
-      //       fontWeight: FontWeight.bold,
-      //     ),
-      //   ),
-      // ),
-      padding: EdgeInsets.only(
-        top: 16,
-        bottom: 16 + bottomPadding, // Add SafeArea bottom padding
-      ),
-      firstPageLoadingBuilder: (final BuildContext context) => _KeepAlive(
-        child: TimelineShimmerList(
-          itemCount: 5,
-          showAvatar: false,
-          showUserHeaders: true,
-          padding: EdgeInsets.only(
-            top: 16,
-            bottom: 16 + bottomPadding,
+  State<Events> createState() => _EventsState();
+}
+
+class _EventsState extends State<Events> {
+  // Spacing constants for consistent user group separation
+  Future<List<EventsModel>> _fetchEvents(
+    final BuildContext context,
+    final ScrollWrapperFutureArguments<EventsModel> data,
+  ) async {
+    if (widget.specificUser != null) {
+      return EventsService.getUserEvents(
+        widget.specificUser,
+        page: data.pageNumber,
+        perPage: data.pageSize,
+        refresh: data.refresh,
+      );
+    } else if (widget.privateEvents) {
+      return EventsService.getReceivedEvents(
+        context.read<CurrentUserProvider>().data.login,
+        page: data.pageNumber,
+        perPage: data.pageSize,
+        refresh: data.refresh,
+      );
+    } else {
+      return EventsService.getPublicEvents(
+        page: data.pageNumber,
+        perPage: data.pageSize,
+        refresh: data.refresh,
+      );
+    }
+  }
+
+  List<EventsModel> _filterEvents(final List<EventsModel> items) {
+    final List<EventsModel> temp = <EventsModel>[];
+    for (final EventsModel item in items) {
+      if (<EventsType>{
+        // EventsType.CommitCommentEvent,
+        EventsType.CreateEvent,
+        EventsType.DeleteEvent,
+        EventsType.ForkEvent,
+        // EventsType.GollumEvent,
+        EventsType.IssueCommentEvent,
+        EventsType.IssuesEvent,
+        EventsType.MemberEvent,
+        EventsType.PublicEvent,
+        EventsType.PullRequestEvent,
+        // EventsType.PullRequestReviewCommentEvent,
+        EventsType.PushEvent,
+        // EventsType.ReleaseEvent,
+        // EventsType.SponsorshipEvent,
+        EventsType.WatchEvent,
+      }.contains(item.type)) {
+        temp.add(item);
+      }
+    }
+
+    return temp;
+  }
+
+  Widget _buildEventItem(
+    final BuildContext context,
+    final ScrollWrapperBuilderData<EventsModel> data,
+  ) {
+    final EventsModel item = data.item;
+
+    // Determine if timeline should break based on user changes
+    final String? currentUser = item.actor?.login;
+    final String? previousUser = data.previousItem?.actor?.login;
+    final String? nextUser = data.nextItem?.actor?.login;
+    final bool shouldShowUserHeader = widget.specificUser == null;
+
+    final bool isFirstInUserGroup = previousUser != currentUser || data.index == 0;
+    final bool isLastInUserGroup = nextUser != currentUser || data.isCurrentlyLast;
+
+    return Column(
+      children: <Widget>[
+        // User group header (only show for first item in group)
+        if (shouldShowUserHeader && isFirstInUserGroup)
+          _buildUserGroupHeader(
+            context,
+            item.actor,
+            isFirst: data.index == 0,
+          ),
+        // Timeline event
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: buildTimelineEvent(
+            item,
+            data,
+            context,
+            isFirstInUserGroup: isFirstInUserGroup,
+            isLastInUserGroup: isLastInUserGroup,
           ),
         ),
-      ),
-      filterFn: (final List<EventsModel> items) {
-        final List<EventsModel> temp = <EventsModel>[];
-        for (final EventsModel item in items) {
-          if (<EventsType>{
-            // EventsType.CommitCommentEvent,
-            EventsType.CreateEvent,
-            EventsType.DeleteEvent,
-            EventsType.ForkEvent,
-            // EventsType.GollumEvent,
-            EventsType.IssueCommentEvent,
-            EventsType.IssuesEvent,
-            EventsType.MemberEvent,
-            EventsType.PublicEvent,
-            EventsType.PullRequestEvent,
-            // EventsType.PullRequestReviewCommentEvent,
-            EventsType.PushEvent,
-            // EventsType.ReleaseEvent,
-            // EventsType.SponsorshipEvent,
-            EventsType.WatchEvent,
-          }.contains(item.type)) {
-            temp.add(item);
-          }
-        }
-
-        return temp;
-      },
-      future: (
-        final ScrollWrapperFutureArguments<EventsModel> data,
-      ) async {
-        if (specificUser != null) {
-          return EventsService.getUserEvents(
-            specificUser,
-            page: data.pageNumber,
-            perPage: data.pageSize,
-            refresh: data.refresh,
-          );
-        } else if (privateEvents) {
-          return EventsService.getReceivedEvents(
-            user.data.login,
-            page: data.pageNumber,
-            perPage: data.pageSize,
-            refresh: data.refresh,
-          );
-        } else {
-          return EventsService.getPublicEvents(
-            page: data.pageNumber,
-            perPage: data.pageSize,
-            refresh: data.refresh,
-          );
-        }
-      },
-      builder: (
-        final BuildContext context,
-        final ScrollWrapperBuilderData<EventsModel> data,
-      ) {
-        final EventsModel item = data.item;
-
-        // Determine if timeline should break based on user changes
-        final currentUser = item.actor?.login;
-        final previousUser = data.previousItem?.actor?.login;
-        final nextUser = data.nextItem?.actor?.login;
-        final bool shouldShowUserHeader = specificUser == null;
-
-        final isFirstInUserGroup =
-            previousUser != currentUser || data.index == 0;
-        final isLastInUserGroup =
-            nextUser != currentUser || data.isCurrentlyLast;
-
-        return Column(
-          children: [
-            // Divider between groups (not for first item)
-            // if (isFirstInUserGroup && data.index > 0)
-            //   Padding(
-            //     padding: EdgeInsets.symmetric(
-            //       horizontal: MediaQuery.of(context).size.width * 0.05,
-            //       // vertical: groupSpacing / 2,
-            //     ).copyWith(top: 16),
-            //     child: Divider(
-            //       height: 1,
-            //       thickness: 1,
-            //       color: context.colorScheme.outlineVariant.withOpacity(0.2),
-            //     ),
-            //   ),
-            // User group header (only show for first item in group)
-            if (shouldShowUserHeader && isFirstInUserGroup)
-              _buildUserGroupHeader(
-                context,
-                item.actor,
-                isFirst: data.index == 0,
-              ),
-            // Timeline event
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: buildTimelineEvent(
-                item,
-                data,
-                context,
-                isFirstInUserGroup: isFirstInUserGroup,
-                isLastInUserGroup: isLastInUserGroup,
-              ),
-            ),
-          ],
-        );
-      },
+      ],
     );
   }
+
+late final InfinitePaginationController<EventsModel> infinitePaginationController =InfinitePaginationController<EventsModel>(
+        future: (final ScrollWrapperFutureArguments<EventsModel> data) => _fetchEvents(context, data),
+        builder: _buildEventItem,
+        filterFn: _filterEvents,
+        // Calculate padding dynamically with SafeArea support
+        paddingBuilder: (final BuildContext context) {
+          final double bottomPadding = MediaQuery.of(context).padding.bottom;
+          return EdgeInsets.only(
+            // top: 8,
+            bottom: 16 + bottomPadding,
+          );
+        },
+        firstPageLoadingBuilder: (final BuildContext context) {
+          // Calculate bottom padding at build time when context is available
+          final double bottomPadding = MediaQuery.of(context).padding.bottom;
+          return _KeepAlive(
+            child: TimelineShimmerList(
+              itemCount: 5,
+              showAvatar: false,
+              showUserHeaders: true,
+              padding: EdgeInsets.only(
+                top: 16,
+                bottom: 16 + bottomPadding,
+              ),
+            ),
+          );
+        },
+      );
+
+  @override
+  Widget build(final BuildContext context) =>
+     infinitePaginationController.buildSliverList(context);
 
   Widget buildTimelineEvent(
     final EventsModel item,
     final ScrollWrapperBuilderData<EventsModel> data,
     final BuildContext context, {
-    required bool isFirstInUserGroup,
-    required bool isLastInUserGroup,
+    required final bool isFirstInUserGroup,
+    required final bool isLastInUserGroup,
   }) {
-    final date = item.createdAt;
-    final eventType = item.type;
+    final DateTime? date = item.createdAt;
+    final EventsType? eventType = item.type;
 
     String actionText;
     Widget content;
@@ -190,12 +185,12 @@ class Events extends StatelessWidget {
     switch (item.type) {
       case EventsType.PushEvent:
         actionText = 'pushed commits';
-        final commitData = CommitCardDataModel.fromPushEvent(item);
+        final CommitCardDataModel commitData = CommitCardDataModel.fromPushEvent(item);
         // Extract branch name from ref (e.g., "refs/heads/main" -> "main")
         // for RepoCardLoading which shows it in the card
-        final branchName = item.payload?.ref?.split('/').last;
+        final String? branchName = item.payload?.ref?.split('/').last;
         // Pass commit SHA (head) as ref - this is the latest commit SHA
-        final commitSha = item.payload?.head;
+        final String? commitSha = item.payload?.head;
         content = _KeepAlive(
           child: TimelineCommitContent(
             commitData: commitData,
@@ -214,7 +209,7 @@ class Events extends StatelessWidget {
         );
 
       case EventsType.ForkEvent:
-        final forkee = item.payload?.forkee;
+        final RepositoryModel? forkee = item.payload?.forkee;
         actionText = 'forked repository';
         content = _KeepAlive(
           child: TimelineForkContent(
@@ -226,8 +221,8 @@ class Events extends StatelessWidget {
         );
 
       case EventsType.CreateEvent:
-        final refType = item.payload?.refType;
-        final ref = item.payload?.ref;
+        final RefType? refType = item.payload?.refType;
+        final String? ref = item.payload?.ref;
 
         if (refType == RefType.REPOSITORY) {
           actionText = 'created a repository';
@@ -249,7 +244,7 @@ class Events extends StatelessWidget {
             ),
           );
         } else {
-          final refTypeName = refTypeValues.reverse![refType] ?? 'tag';
+          final String refTypeName = refTypeValues.reverse![refType] ?? 'tag';
           actionText = 'created a $refTypeName';
           content = _KeepAlive(
             child: TimelineCreateContent(
@@ -262,10 +257,10 @@ class Events extends StatelessWidget {
         }
 
       case EventsType.DeleteEvent:
-        final refType = item.payload?.refType;
-        final ref = item.payload?.ref;
-        final refTypeName = refTypeValues.reverse![refType] ?? 'branch';
-        final refName = ref?.split('/').last ?? '';
+        final RefType? refType = item.payload?.refType;
+        final String? ref = item.payload?.ref;
+        final String refTypeName = refTypeValues.reverse![refType] ?? 'branch';
+        final String refName = ref?.split('/').last ?? '';
 
         actionText = 'deleted a $refTypeName';
 
@@ -288,8 +283,8 @@ class Events extends StatelessWidget {
         );
 
       case EventsType.MemberEvent:
-        final member = item.payload?.member;
-        final action = item.payload?.action ?? 'added';
+        final UserInfoModel? member = item.payload?.member;
+        final String action = item.payload?.action ?? 'added';
         actionText = '$action a member';
         content = _KeepAlive(
           child: TimelineMemberContent(
@@ -301,16 +296,16 @@ class Events extends StatelessWidget {
         );
 
       case EventsType.IssuesEvent:
-        final issue = item.payload?.issue;
-        final action = item.payload?.action ?? 'opened';
+        final IssueModel? issue = item.payload?.issue;
+        final String action = item.payload?.action ?? 'opened';
         actionText = '$action an issue';
         content = TimelineIssueContent(
           issueData: IssueCardDataModel.fromIssueModel(issue!),
         );
 
       case EventsType.IssueCommentEvent:
-        final issue = item.payload?.issue;
-        final comment = item.payload?.comment;
+        final IssueModel? issue = item.payload?.issue;
+        final Comment? comment = item.payload?.comment;
         actionText = 'commented on issue';
         content = TimelineIssueContent(
           issueData: IssueCardDataModel.fromIssueModel(issue!),
@@ -319,8 +314,8 @@ class Events extends StatelessWidget {
         );
 
       case EventsType.PullRequestEvent:
-        final pr = item.payload?.pullRequest;
-        final action = item.payload?.action ?? 'opened';
+        final PullRequestModel? pr = item.payload?.pullRequest;
+        final String action = item.payload?.action ?? 'opened';
         final bool isMergedAction = action
             .toLowerCase()
             .contains('merged'); // payload can be "merged a pull request"
@@ -333,10 +328,10 @@ class Events extends StatelessWidget {
           actionText = '$action a pull request';
         }
         // Extract head (from) and base (to) branch refs
-        final fromRef = pr?.head?.ref; // Source branch
-        final toRef = pr?.base?.ref; // Target/base branch
+        final String? fromRef = pr?.head?.ref; // Source branch
+        final String? toRef = pr?.base?.ref; // Target/base branch
         // Use PR URL to fetch full data via SimplePullLoadingCard
-        final prUrl = pr?.htmlUrl ?? pr?.url ?? '';
+        final String prUrl = pr?.htmlUrl ?? pr?.url ?? '';
         content = _KeepAlive(
           child: TimelinePullRequestContent(
             prUrl: prUrl,
@@ -369,12 +364,12 @@ class Events extends StatelessWidget {
   }
 
   IconData _getEventIcon(
-      EventsType? type, EventsModel item, String actionText) {
+      final EventsType? type, final EventsModel item, final String actionText) {
     switch (type) {
       case EventsType.PushEvent:
         return Octicons.git_commit;
       case EventsType.PullRequestEvent:
-        final actionLower = actionText.toLowerCase();
+        final String actionLower = actionText.toLowerCase();
         // Icon based on action text only (not current state)
         if (actionLower.contains('merged')) {
           return Octicons.git_merge;
@@ -386,7 +381,7 @@ class Events extends StatelessWidget {
           return Octicons.git_pull_request;
         }
       case EventsType.IssuesEvent:
-        final actionLower = actionText.toLowerCase();
+        final String actionLower = actionText.toLowerCase();
         // Icon based on action text only (not current state)
         if (actionLower.contains('closed')) {
           return Octicons.issue_closed;
@@ -412,14 +407,14 @@ class Events extends StatelessWidget {
     }
   }
 
-  Color _getEventIconColor(BuildContext context, EventsType? type,
-      EventsModel item, String actionText) {
-    final colorScheme = context.colorScheme;
+  Color _getEventIconColor(final BuildContext context, final EventsType? type,
+      final EventsModel item, final String actionText) {
+    final ColorScheme colorScheme = context.colorScheme;
     switch (type) {
       case EventsType.PushEvent:
         return const Color(0xFF2196F3); // Blue
       case EventsType.PullRequestEvent:
-        final actionLower = actionText.toLowerCase();
+        final String actionLower = actionText.toLowerCase();
         // Color based on action text only (not current state)
         if (actionLower.contains('merged')) {
           return Colors.deepPurple; // Purple for merged
@@ -431,7 +426,7 @@ class Events extends StatelessWidget {
           return Colors.green; // Green for open
         }
       case EventsType.IssuesEvent:
-        final actionLower = actionText.toLowerCase();
+        final String actionLower = actionText.toLowerCase();
         // Color based on action text only (not current state)
         if (actionLower.contains('closed')) {
           return Colors.red; // Red for closed
@@ -458,9 +453,9 @@ class Events extends StatelessWidget {
   }
 
   Widget _buildUserGroupHeader(
-    BuildContext context,
-    Actor? actor, {
-    required bool isFirst,
+    final BuildContext context,
+    final Actor? actor, {
+    required final bool isFirst,
   }) {
     if (actor == null || actor.login == null) {
       return const SizedBox.shrink();
@@ -468,7 +463,7 @@ class Events extends StatelessWidget {
 
     return Container(
       margin: EdgeInsets.only(
-        top: isFirst ? 0 : groupSpacing,
+        top: isFirst ? 0 : 8,
       ),
       child: Material(
         color: Colors.transparent,
@@ -487,7 +482,7 @@ class Events extends StatelessWidget {
               0,
             ),
             child: Row(
-              children: [
+              children: <Widget>[
                 UserAvatar(
                   avatarUrl: actor.avatarUrl,
                   size: 24,

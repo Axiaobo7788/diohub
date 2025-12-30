@@ -6,6 +6,7 @@ import 'package:diohub/models/popup/popup_type.dart';
 import 'package:diohub/providers/repository/repository_provider.dart';
 import 'package:diohub/routes/router.gr.dart';
 import 'package:diohub/view/repository/code/code_browser.dart';
+import 'package:diohub/view/repository/commits/commits_tab.dart';
 import 'package:diohub/view/repository/issues/issues_list.dart';
 import 'package:diohub/view/repository/pulls/pulls_list.dart';
 import 'package:diohub/view/repository/readme/repository_readme.dart';
@@ -55,7 +56,7 @@ List<DynamicTab> createRepositoryTabs({
     ),
     DynamicTab(
       identifier: 'Code',
-      isFocusedOnInit: isDeepLinkCode(pathData),
+      // isFocusedOnInit: isDeepLinkCode(pathData),
       tabViewBuilder: (final BuildContext context) => CodeBrowser(
         showCommitHistory: pathData?.component(2) == 'commits',
       ),
@@ -71,6 +72,12 @@ List<DynamicTab> createRepositoryTabs({
       isFocusedOnInit: isDeepLinkComp('pulls'),
       keepViewAlive: true,
       tabViewBuilder: (final BuildContext context) => const PullsList(),
+    ),
+    DynamicTab(
+      identifier: 'Commits',
+      isFocusedOnInit: isDeepLinkComp('commits'),
+      keepViewAlive: true,
+      tabViewBuilder: (final BuildContext context) => const CommitsTab(),
     ),
     DynamicTab(
       identifier: 'More',

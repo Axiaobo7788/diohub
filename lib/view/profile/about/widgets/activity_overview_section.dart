@@ -1,5 +1,6 @@
 import 'package:diohub/common/bottom_sheet/bottom_sheets.dart';
-import 'package:diohub/common/charts/radar_chart_widget.dart';
+import 'package:diohub/common/charts/chart_carousel_widget.dart';
+import 'package:diohub/common/charts/contribution_calendar_widget.dart';
 import 'package:diohub/common/misc/bordered_container.dart';
 import 'package:diohub/common/misc/repository_card.dart';
 import 'package:diohub/common/misc/shimmer_widget.dart';
@@ -66,6 +67,7 @@ class ActivityOverviewSection extends StatelessWidget {
     required this.commits,
     required this.issues,
     required this.pullRequests,
+    required this.weeks,
     this.reviews,
     this.onRepositoryTap,
     super.key,
@@ -85,6 +87,9 @@ class ActivityOverviewSection extends StatelessWidget {
 
   /// Optional number of reviews
   final int? reviews;
+
+  /// List of weeks containing daily contribution data
+  final List<List<ContributionDay>> weeks;
 
   /// Callback when a repository is tapped
   final void Function(ContributedRepository repo)? onRepositoryTap;
@@ -168,7 +173,7 @@ class ActivityOverviewSection extends StatelessWidget {
             child: BorderedContainer(
               // borderColor: Colors.blue,
               borderSide: BorderSideType.bottom,
-              size: BorderRadiusSize.small,
+              // size: BorderRadiusSize.small,
               child: Padding(
                 padding: const EdgeInsets.all(12),
                 child: RepositoryCard(
@@ -227,18 +232,14 @@ class ActivityOverviewSection extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 12),
-        Padding(
-          padding: const EdgeInsets.all(8),
-          child: SizedBox(
-            height: 150,
-            child: ContributionRadarChart(
-              commits: commits,
-              issues: issues,
-              pullRequests: pullRequests,
-              reviews: reviews,
-              color: const Color(0xFF40C463), // GitHub green color
-            ),
-          ),
+        ChartCarousel(
+          repositories: repositories,
+          commits: commits,
+          issues: issues,
+          pullRequests: pullRequests,
+          reviews: reviews,
+          weeks: weeks,
+          height: 150,
         ),
         const SizedBox(height: 12),
       ],

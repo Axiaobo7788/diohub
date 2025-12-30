@@ -14,7 +14,7 @@ class ScrollDynamicElevation extends StatefulWidget {
 }
 
 class _ScrollDynamicElevationState extends State<ScrollDynamicElevation> {
-  static const double _tintDistance = 120;
+  static const double _tintDistance = 80;
 
   ScrollNotificationObserverState? _scrollNotificationObserver;
   bool _scrolledUnder = false;
@@ -87,7 +87,7 @@ class _ScrollDynamicElevationState extends State<ScrollDynamicElevation> {
     };
 
     final bool scrolledUnder = states.contains(MaterialState.scrolledUnder);
-    final Color base = context.colorScheme.background;
+    final Color base = Colors.transparent;
     final Color tinted = context.colorScheme.surfaceContainer;
     final double fraction =
         scrolledUnder ? _scrolledFraction.clamp(0.05, 1.0) : 0;

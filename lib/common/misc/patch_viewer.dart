@@ -121,7 +121,6 @@ class PatchViewerState extends State<PatchViewer> {
     codeSplit.addAll(patch!.split(RegExp(r'(?:\n)(?=@@)(.*)(?<=@@)')));
     for (int i = 0; i < codeSplit.length; i++) {
       codeChunks[i]['code'] = codeSplit[i].split('\n');
-      // log(codeChunks[i].toString());
       for (final String str in codeChunks[i]['code']) {
         if (str.length > maxChars) {
           maxChars = str.length;

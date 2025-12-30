@@ -5,6 +5,7 @@ import 'package:diohub/common/misc/profile_banner.dart';
 import 'package:diohub/common/wrappers/infinite_scroll_wrapper.dart';
 import 'package:diohub/graphql/__generated__/schema.schema.gql.dart';
 import 'package:diohub/graphql/queries/issues_pulls/__generated__/issue_pull_info.data.gql.dart';
+import 'package:diohub/graphql/queries/issues_pulls/__generated__/timeline.data.gql.dart';
 import 'package:diohub/utils/utils.dart';
 import 'package:flutter/material.dart';
 import 'package:image_stack/image_stack.dart';

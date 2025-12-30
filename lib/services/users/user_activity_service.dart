@@ -2,19 +2,21 @@
 
 import 'package:built_collection/built_collection.dart';
 import 'package:diohub/app/api_handler/dio.dart';
+import 'package:diohub/app/global.dart';
 import 'package:diohub/graphql/queries/users/__generated__/user_activity_timeline_full.data.gql.dart';
 import 'package:diohub/graphql/queries/users/__generated__/user_activity_timeline_full.req.gql.dart';
 import 'package:diohub/models/activity_timeline_progress.dart';
 import 'package:diohub/view/profile/about/widgets/activity_timeline_converter.dart';
 import 'package:diohub/view/profile/about/widgets/activity_timeline_event.dart';
+import 'package:flutter/foundation.dart';
 
 class UserActivityService {
-  static const int _repoPageSize = 50;
-  static const int _prPageSize = 50;
-  static const int _issuePageSize = 50;
-  static const int _reviewPageSize = 50;
+  static const int _repoPageSize = 100;
+  static const int _prPageSize = 100;
+  static const int _issuePageSize = 100;
+  static const int _reviewPageSize = 100;
   static const int _commitPageSize = 100;
-  static const int _commitRepoMax = 50;
+  static const int _commitRepoMax = 100;
 
   static final GraphqlHandler _gqlHandler = GraphqlHandler();
 
@@ -25,8 +27,7 @@ class UserActivityService {
     required DateTime from,
     required DateTime to,
     bool refreshCache = false,
-  }) async {
-    String? repoAfter;
+  }) async {    String? repoAfter;
     String? prAfter;
     String? issueAfter;
     String? reviewAfter;
@@ -50,9 +51,10 @@ class UserActivityService {
     var reviewHasNext = true;
 
     GuserActivityTimelineFullData_user? lastUser;
+    var paginationIteration = 0;
 
     while (true) {
-      final response = await _gqlHandler.query(
+      paginationIteration++;      final response = await _gqlHandler.query(
         GuserActivityTimelineFullReq(
           (b) => b
             ..vars.user = login
@@ -87,49 +89,38 @@ class UserActivityService {
 
       final repoConnection = cc.repositoryContributions;
       if (repoConnection.nodes != null) {
-        repoNodes.addAll(
-          repoConnection.nodes!.whereType<
-              GuserActivityTimelineFullData_user_contributionsCollection_repositoryContributions_nodes>(),
-        );
-      }
+        final newRepos = repoConnection.nodes!.whereType<
+            GuserActivityTimelineFullData_user_contributionsCollection_repositoryContributions_nodes>();
+        repoNodes.addAll(newRepos);      }
       repoHasNext = repoConnection.pageInfo.hasNextPage;
       repoAfter = repoConnection.pageInfo.endCursor;
 
       final prConnection = cc.pullRequestContributions;
       if (prConnection.nodes != null) {
-        prNodes.addAll(
-          prConnection.nodes!.whereType<
-              GuserActivityTimelineFullData_user_contributionsCollection_pullRequestContributions_nodes>(),
-        );
-      }
+        final newPRs = prConnection.nodes!.whereType<
+            GuserActivityTimelineFullData_user_contributionsCollection_pullRequestContributions_nodes>();
+        prNodes.addAll(newPRs);      }
       prHasNext = prConnection.pageInfo.hasNextPage;
       prAfter = prConnection.pageInfo.endCursor;
 
       final issueConnection = cc.issueContributions;
       if (issueConnection.nodes != null) {
-        issueNodes.addAll(
-          issueConnection.nodes!.whereType<
-              GuserActivityTimelineFullData_user_contributionsCollection_issueContributions_nodes>(),
-        );
-      }
+        final newIssues = issueConnection.nodes!.whereType<
+            GuserActivityTimelineFullData_user_contributionsCollection_issueContributions_nodes>();
+        issueNodes.addAll(newIssues);      }
       issueHasNext = issueConnection.pageInfo.hasNextPage;
       issueAfter = issueConnection.pageInfo.endCursor;
 
       final reviewConnection = cc.pullRequestReviewContributions;
       if (reviewConnection.nodes != null) {
-        reviewNodes.addAll(
-          reviewConnection.nodes!.whereType<
-              GuserActivityTimelineFullData_user_contributionsCollection_pullRequestReviewContributions_nodes>(),
-        );
-      }
+        final newReviews = reviewConnection.nodes!.whereType<
+            GuserActivityTimelineFullData_user_contributionsCollection_pullRequestReviewContributions_nodes>();
+        reviewNodes.addAll(newReviews);      }
       reviewHasNext = reviewConnection.pageInfo.hasNextPage;
       reviewAfter = reviewConnection.pageInfo.endCursor;
 
-      commitRepos ??= cc.commitContributionsByRepository;
-
-      final hasMore = repoHasNext || prHasNext || issueHasNext || reviewHasNext;
-      if (!hasMore) {
-        return lastUser.rebuild((b) {
+      commitRepos ??= cc.commitContributionsByRepository;      final hasMore = repoHasNext || prHasNext || issueHasNext || reviewHasNext;
+      if (!hasMore) {        return lastUser.rebuild((b) {
           b.contributionsCollection.update((ccBuilder) {
             ccBuilder.repositoryContributions.update((rcBuilder) {
               rcBuilder.nodes.replace(repoNodes);
@@ -177,12 +168,9 @@ class UserActivityService {
     required DateTime from,
     required DateTime to,
     bool refreshCache = false,
-  }) async* {
-    try {
+  }) async* {    try {
       final daysDiff = to.difference(from).inDays;
-      final exceedsOneYear = daysDiff > 365;
-
-      if (!exceedsOneYear) {
+      final exceedsOneYear = daysDiff > 365;      if (!exceedsOneYear) {
         yield ActivityTimelineLoading(
           phase: 'loading',
           current: 0,
@@ -198,9 +186,7 @@ class UserActivityService {
           refreshCache: refreshCache,
         );
 
-        final events = ActivityTimelineConverter.convertToEvents(fullData);
-
-        yield ActivityTimelineLoading(
+        final events = ActivityTimelineConverter.convertToEvents(fullData);        yield ActivityTimelineLoading(
           phase: 'loading',
           current: 90,
           total: 100,
@@ -208,8 +194,7 @@ class UserActivityService {
           eventCount: events.length,
         );
 
-        final timelineData = _buildTimelineData(fullData, from, to);
-        yield ActivityTimelineSuccess(timelineData);
+        final timelineData = _buildTimelineData(fullData, from, to);        yield ActivityTimelineSuccess(timelineData);
         return;
       }
 
@@ -218,9 +203,7 @@ class UserActivityService {
       final totalSteps = chunks.length;
       final progressPerStep = 90 / totalSteps;
       var currentProgress = 0.0;
-      var totalEventCount = 0;
-
-      yield ActivityTimelineLoading(
+      var totalEventCount = 0;      yield ActivityTimelineLoading(
         phase: 'loading',
         current: 0,
         total: 100,
@@ -255,11 +238,8 @@ class UserActivityService {
 
           final events = ActivityTimelineConverter.convertToEvents(fullData);
           chunkEventLists.add(events);
-          totalEventCount += events.length;
-
-          currentProgress += progressPerStep;
-        } catch (e) {
-          yield ActivityTimelineError(
+          totalEventCount += events.length;          currentProgress += progressPerStep;
+        } catch (e, stackTrace) {          yield ActivityTimelineError(
             message: 'Failed to load activity for $yearLabel',
             error: e,
           );
@@ -277,16 +257,12 @@ class UserActivityService {
 
       final allEvents = chunkEventLists.length == 1
           ? chunkEventLists.first
-          : _mergeSortedChunks(chunkEventLists);
-
-      final timelineData = UserActivityTimelineData(
+          : _mergeSortedChunks(chunkEventLists);      final timelineData = UserActivityTimelineData(
         events: allEvents,
         from: from,
         to: to,
-      );
-      yield ActivityTimelineSuccess(timelineData);
-    } catch (e, stackTrace) {
-      yield ActivityTimelineError(
+      );      yield ActivityTimelineSuccess(timelineData);
+    } catch (e, stackTrace) {      yield ActivityTimelineError(
         message: 'Failed to fetch activity timeline for user "$login": $e',
         error: e,
         stackTrace: stackTrace,
@@ -299,49 +275,46 @@ class UserActivityService {
     required DateTime from,
     required DateTime to,
     bool refreshCache = false,
-  }) async {
-    final daysDiff = to.difference(from).inDays;
-    final exceedsOneYear = daysDiff > 365;
+  }) async {    try {
+      final daysDiff = to.difference(from).inDays;
+      final exceedsOneYear = daysDiff > 365;
 
-    if (!exceedsOneYear) {
-      final fullData = await _fetchTimelineChunk(
-        login: login,
+      if (!exceedsOneYear) {
+        final fullData = await _fetchTimelineChunk(
+          login: login,
+          from: from,
+          to: to,
+          refreshCache: refreshCache,
+        );
+        final result = _buildTimelineData(fullData, from, to);        return result;
+      }
+
+      final chunks = _splitDateRangeIntoYearChunks(from, to);
+      final chunkEventLists = <List<ActivityTimelineEvent>>[];      for (final (chunkFrom, chunkTo) in chunks) {
+        final fullData = await _fetchTimelineChunk(
+          login: login,
+          from: chunkFrom,
+          to: chunkTo,
+          refreshCache: refreshCache,
+        );
+        final events = ActivityTimelineConverter.convertToEvents(fullData);
+        chunkEventLists.add(events);      }
+
+      final allEvents = chunkEventLists.length == 1
+          ? chunkEventLists.first
+          : _mergeSortedChunks(chunkEventLists);      return UserActivityTimelineData(
+        events: allEvents,
         from: from,
         to: to,
-        refreshCache: refreshCache,
       );
-      return _buildTimelineData(fullData, from, to);
+    } catch (e, stackTrace) {      rethrow;
     }
-
-    final chunks = _splitDateRangeIntoYearChunks(from, to);
-    final chunkEventLists = <List<ActivityTimelineEvent>>[];
-
-    for (final (chunkFrom, chunkTo) in chunks) {
-      final fullData = await _fetchTimelineChunk(
-        login: login,
-        from: chunkFrom,
-        to: chunkTo,
-        refreshCache: refreshCache,
-      );
-      chunkEventLists.add(ActivityTimelineConverter.convertToEvents(fullData));
-    }
-
-    final allEvents = chunkEventLists.length == 1
-        ? chunkEventLists.first
-        : _mergeSortedChunks(chunkEventLists);
-
-    return UserActivityTimelineData(
-      events: allEvents,
-      from: from,
-      to: to,
-    );
   }
 
   static List<(DateTime, DateTime)> _splitDateRangeIntoYearChunks(
     DateTime from,
     DateTime to,
-  ) {
-    final chunks = <(DateTime, DateTime)>[];
+  ) {    final chunks = <(DateTime, DateTime)>[];
     var currentFrom = from;
 
     while (currentFrom.isBefore(to) ||
@@ -365,9 +338,7 @@ class UserActivityService {
         );
       }
 
-      chunks.add((currentFrom, chunkTo));
-
-      if (chunkTo.year == to.year &&
+      chunks.add((currentFrom, chunkTo));      if (chunkTo.year == to.year &&
           chunkTo.month == to.month &&
           chunkTo.day == to.day) {
         break;
@@ -375,21 +346,24 @@ class UserActivityService {
 
       currentFrom = chunkTo.add(const Duration(days: 1));
 
-      if (chunks.length > 100) {
-        throw Exception(
+      if (chunks.length > 100) {        throw Exception(
           'Date range splitting exceeded maximum chunks (100). Range: $from to $to',
         );
       }
-    }
-
-    return chunks;
+    }    return chunks;
   }
 
   static List<ActivityTimelineEvent> _mergeSortedChunks(
     List<List<ActivityTimelineEvent>> sortedChunks,
   ) {
-    if (sortedChunks.isEmpty) return [];
-    if (sortedChunks.length == 1) return sortedChunks.first;
+    if (sortedChunks.isEmpty) {      return [];
+    }
+    if (sortedChunks.length == 1) {      return sortedChunks.first;
+    }
+
+    if (kDebugMode) {
+      final totalEvents =
+          sortedChunks.fold<int>(0, (sum, chunk) => sum + chunk.length);    }
 
     final merged = <ActivityTimelineEvent>[];
     final iterators = sortedChunks.map((chunk) => chunk.iterator).toList();
@@ -425,9 +399,7 @@ class UserActivityService {
           currentValues[newestIndex] = null;
         }
       }
-    }
-
-    return merged;
+    }    return merged;
   }
 
   static UserActivityTimelineData _buildTimelineData(
@@ -435,12 +407,63 @@ class UserActivityService {
     DateTime from,
     DateTime to,
   ) {
-    final events = ActivityTimelineConverter.convertToEvents(fullData);
-
-    return UserActivityTimelineData(
+    final events = ActivityTimelineConverter.convertToEvents(fullData);    return UserActivityTimelineData(
       events: events,
       from: from,
       to: to,
     );
+  }
+
+  /// Get the year for a given page number (0-indexed, newest first)
+  /// Pages are ordered from newest year to oldest year
+  static int getYearForPage(DateTime from, DateTime to, int pageNumber) {
+    final years = <int>[];
+
+    // Start from the end year and work backwards
+    var currentYear = to.year;
+    final startYear = from.year;
+
+    // Collect all years in the range (newest first)
+    while (currentYear >= startYear) {
+      years.add(currentYear);
+      currentYear--;
+    }
+
+    if (pageNumber < 0 || pageNumber >= years.length) {
+      throw Exception(
+        'Page $pageNumber out of range. Available years: ${years.length} (${years.firstOrNull ?? 'none'} to ${years.lastOrNull ?? 'none'})',
+      );
+    }
+
+    return years[pageNumber];
+  }
+
+  /// Fetch events for a single year (for infinite pagination)
+  /// Returns events wrapped with flags, ready for display
+  static Future<List<TimelineEventWithFlags>> getYearEvents({
+    required String login,
+    required int year,
+    required DateTime from,
+    required DateTime to,
+    bool refreshCache = false,
+  }) async {    // Calculate year boundaries
+    final yearStart = DateTime(year, 1, 1);
+    final yearEnd = DateTime(year, 12, 31);
+
+    // Clamp to actual date range
+    final chunkFrom = yearStart.isBefore(from) ? from : yearStart;
+    final chunkTo = yearEnd.isAfter(to) ? to : yearEnd;    final fullData = await _fetchTimelineChunk(
+      login: login,
+      from: chunkFrom,
+      to: chunkTo,
+      refreshCache: refreshCache,
+    );
+
+    final events = ActivityTimelineConverter.convertToEvents(fullData);
+    final timelineData = UserActivityTimelineData(
+      events: events,
+      from: chunkFrom,
+      to: chunkTo,
+    );    return timelineData.events;
   }
 }

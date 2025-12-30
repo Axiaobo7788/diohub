@@ -522,14 +522,12 @@ List<ActionButtonData> buildAllActions(
   final defaultBranchName = repo.defaultBranchRef?.name;
   if (currentBranchName == defaultBranchName && repo.defaultBranchRef != null) {
     // Use defaultBranchRef target for better performance
-    print('Using defaultBranchRef for current branch: $currentBranchName');
     repo.defaultBranchRef!.target?.when(
       commit: (c) {
         currentBranchDate = c.committedDate;
-        print('Default branch committedDate: $currentBranchDate');
       },
       orElse: () {
-        print('Default branch target is not a commit');
+        // Default branch target is not a commit
       },
     );
   } else {
@@ -542,22 +540,18 @@ List<ActionButtonData> buildAllActions(
 
     for (final branch in branches) {
       if (branch.name == currentBranchName) {
-        print('Found branch in list: $currentBranchName');
         branch.target?.when(
           commit: (c) {
             currentBranchDate = c.committedDate;
-            print('Branch committedDate: $currentBranchDate');
           },
           orElse: () {
-            print('Branch target is not a commit');
+            // Branch target is not a commit
           },
         );
         break;
       }
     }
   }
-
-  print('Current branch date for subtitle: $currentBranchDate');
 
   final branchButton = ExpandableActionButton(
     icon: Octicons.git_branch,
@@ -631,6 +625,15 @@ List<ActionButtonData> buildAllActions(
           : ActionButtonVisibilityState.both,
       onTap: () => tabController.openTab('Pull Requests'),
     ),
+    MinorActionButton(
+      icon: Octicons.git_branch,
+      label: 'Commits',
+      category: 'Navigation',
+      visibilityState: tabState.isOnCommitsTab
+          ? ActionButtonVisibilityState.none
+          : ActionButtonVisibilityState.both,
+      onTap: () => tabController.openTab('Commits'),
+    ),
     // Content - visible in expanded state only
     MinorActionButton(
       icon: Octicons.book,
@@ -703,6 +706,15 @@ Widget buildActionButtons(
           ? ActionButtonVisibilityState.none
           : ActionButtonVisibilityState.both,
       onTap: () => tabController.openTab('Pull Requests'),
+    ),
+    MinorActionButton(
+      icon: Octicons.git_branch,
+      label: 'Commits',
+      actionType: ActionButtonActionType.tab,
+      visibilityState: tabState.isOnCommitsTab
+          ? ActionButtonVisibilityState.none
+          : ActionButtonVisibilityState.both,
+      onTap: () => tabController.openTab('Commits'),
     ),
     MinorActionButton(
       icon: Icons.menu_rounded,
@@ -953,17 +965,12 @@ class _BranchListExpandedWidgetState extends State<_BranchListExpandedWidget> {
 
                   // Get committed date from target
                   DateTime? committedDate;
-                  print(
-                      'Expandable - Branch: $branchName, target: ${branch.target}, typename: ${branch.target?.G__typename}');
                   branch.target?.when(
                     commit: (c) {
                       committedDate = c.committedDate;
-                      print(
-                          'Expandable - Branch: $branchName, committedDate: $committedDate');
                     },
                     orElse: () {
-                      print(
-                          'Expandable - Branch: $branchName, target is not a commit, typename was: ${branch.target?.G__typename}');
+                      // Branch target is not a commit
                     },
                   );
 
@@ -1379,17 +1386,12 @@ class _BranchesBottomSheetBodyState extends State<_BranchesBottomSheetBody> {
 
         // Get committed date from target
         DateTime? committedDate;
-        print(
-            'BottomSheet - Branch: $branchName, target: ${branch.target}, typename: ${branch.target?.G__typename}');
         branch.target?.when(
           commit: (c) {
             committedDate = c.committedDate;
-            print(
-                'BottomSheet - Branch: $branchName, committedDate: $committedDate');
           },
           orElse: () {
-            print(
-                'BottomSheet - Branch: $branchName, target is not a commit, typename was: ${branch.target?.G__typename}');
+            // Branch target is not a commit
           },
         );
 

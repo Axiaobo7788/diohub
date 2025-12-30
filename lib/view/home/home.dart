@@ -5,16 +5,14 @@ import 'package:diohub/adapters/deep_linking_handler.dart';
 import 'package:diohub/common/events/events.dart';
 import 'package:diohub/common/misc/animated_tab_bar.dart';
 import 'package:diohub/common/misc/collapsible_app_bar.dart';
-import 'package:diohub/common/misc/collapsible_action_buttons.dart';
 import 'package:diohub/common/misc/action_card_builder.dart';
 import 'package:diohub/common/misc/floating_action_toolbar.dart';
 import 'package:diohub/common/misc/floating_toolbar_wrapper.dart';
 import 'package:diohub/common/misc/ink_pot.dart';
 import 'package:diohub/common/misc/profile_banner.dart';
 import 'package:diohub/common/misc/shimmer_widget.dart';
-import 'package:diohub/common/misc/surface_shape_resolver.dart';
+import 'package:diohub/common/misc/sliver_pinned_overlap_injector.dart';
 import 'package:diohub/common/search_overlay/search_bar.dart';
-import 'package:diohub/style/surface_style_theme.dart';
 import 'package:diohub/common/search_overlay/search_overlay.dart';
 import 'package:diohub/common/wrappers/dynamic_tabs_parent.dart';
 import 'package:diohub/common/wrappers/infinite_scroll_wrapper.dart';
@@ -26,12 +24,16 @@ import 'package:diohub/providers/users/current_user_provider.dart';
 import 'package:diohub/routes/router.gr.dart';
 import 'package:diohub/services/users/user_info_service.dart';
 import 'package:diohub/utils/utils.dart';
-import 'package:diohub/utils/string_compare.dart';
+import 'package:diohub/common/misc/overlay_menu_widget.dart';
+import 'package:diohub/view/account/account_switcher.dart';
+import 'package:diohub/view/home/home_toolbar_actions_handler.dart';
+import 'package:diohub/view/home/widgets/accounts_tab.dart';
 import 'package:diohub/view/home/widgets/issues_tab.dart';
 import 'package:diohub/view/home/widgets/pulls_tab.dart';
+import 'package:diohub/view/home/widgets/theme_tab.dart';
+import 'package:diohub/view/home/widgets/theme_carousel_tab.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_dynamic_tabs/flutter_dynamic_tabs.dart';
-import 'package:flutter_vector_icons/flutter_vector_icons.dart';
 
 @RoutePage()
 class HomeScreen extends StatefulWidget {
@@ -50,6 +52,8 @@ class HomeScreenState extends State<HomeScreen>
   @override
   bool get wantKeepAlive => true;
 
+  final OverlayController _accountSwitcherController = OverlayController();
+
   late final DynamicTabsController tabsController = DynamicTabsController(
     vsync: this,
     tabs: _buildTabs(),
@@ -66,7 +70,14 @@ class HomeScreenState extends State<HomeScreen>
           identifier: 'Events',
           tab: TabBarItem(label: 'Feed'),
           isDismissible: false,
-          tabViewBuilder: (final BuildContext context) => const Events(),
+          tabViewBuilder: (final BuildContext context) => CustomScrollView(
+            slivers: [
+              SliverPinnedOverlapInjector(
+                  handle:
+                      NestedScrollView.sliverOverlapAbsorberHandleFor(context)),
+              Events(),
+            ],
+          ),
         ),
         DynamicTab(
           identifier: 'Issues',
@@ -125,6 +136,23 @@ class HomeScreenState extends State<HomeScreen>
             ),
           ),
         ),
+        DynamicTab(
+          identifier: 'Accounts',
+          tab: TabBarItem(label: 'Accounts'),
+          tabViewBuilder: (final BuildContext context) => const AccountsTab(),
+        ),
+        DynamicTab(
+          identifier: 'Theme',
+          tab: TabBarItem(label: 'Theme'),
+          tabViewBuilder: (final BuildContext context) => const ThemeTab(),
+        ),
+        DynamicTab(
+          identifier: 'ThemeCarousel',
+          tab: TabBarItem(label: 'Themes'),
+          keepViewAlive: true,
+          tabViewBuilder: (final BuildContext context) =>
+              const ThemeCarouselTab(),
+        ),
       ];
 
   @override
@@ -136,325 +164,25 @@ class HomeScreenState extends State<HomeScreen>
             ValueListenableBuilder<String>(
           valueListenable: tabsController.activeIdentifierNotifier,
           builder: (context, currentTab, _) {
-            final isIssuesTab = currentTab == 'Issues';
-            final isPullsTab = currentTab == 'Pulls';
-            final hasSearchTab = isIssuesTab || isPullsTab;
-
             // Prominent actions (will appear above the row)
             // Always include these buttons so they can animate out smoothly when switching tabs
             // Use visibilityState to control visibility instead of conditionally adding
-            final searchWrapperState = hasSearchTab
-                ? (isIssuesTab
-                    ? _issuesSearchKey.currentState
-                    : _pullsSearchKey.currentState)
-                : null;
+            final issuesSearchState = _issuesSearchKey.currentState;
+            final pullsSearchState = _pullsSearchKey.currentState;
 
             // Use StatefulBuilder to rebuild when search data changes
             return StatefulBuilder(
               builder: (context, setState) {
-                // Build all actions in a single list - they'll be automatically split by type
-                final List<ActionButtonData> allActions = [];
-
-                final isEventsTab = currentTab == 'Events';
-
-                // Search & Filter category - Search bar as major action
-                allActions
-                  ..add(
-                    MinorActionButton(
-                      icon: Icons.search_rounded,
-                      label: 'Search',
-                      category: 'Search & Filter',
-                      onTap: () async {
-                        if (searchWrapperState != null) {
-                          await AutoRouter.of(context).push(
-                            SearchOverlayRoute(
-                              message: searchWrapperState.searchBarMessage ??
-                                  (isIssuesTab
-                                      ? 'Search in your issues'
-                                      : 'Search in your pull requests'),
-                              multiHero: true,
-                              searchData: searchWrapperState.currentSearchData,
-                              heroTag: searchWrapperState.searchHeroTag,
-                              onSubmit: searchWrapperState.updateSearchData,
-                            ),
-                          );
-                        }
-                      },
-                      visibilityState: hasSearchTab
-                          ? ActionButtonVisibilityState.both
-                          : ActionButtonVisibilityState.none,
-                    ),
-                  )
-
-                  // New Issue button - visible only on Issues tab in both states
-                  ..add(
-                    MajorActionButton(
-                      icon: Octicons.plus,
-                      label: 'New Issue',
-                      isPositive: true,
-                      category: 'Actions',
-                      visibilityState: isIssuesTab
-                          ? ActionButtonVisibilityState.both
-                          : ActionButtonVisibilityState.none,
-                      onTap: () {
-                        // TODO: Navigate to repository selection or issue creation
-                        // For now, this is a placeholder that can be implemented
-                        // to show a repository selection dialog or navigate to a repo
-                      },
-                    ),
-                  )
-
-                  // Navigation category - Events action (visible in both states)
-                  ..add(
-                    MinorActionButton(
-                      icon: Octicons.pulse,
-                      label: 'Events',
-                      actionType: ActionButtonActionType.tab,
-                      visibilityState: isEventsTab
-                          ? ActionButtonVisibilityState.none
-                          : ActionButtonVisibilityState.both,
-                      category: 'Navigation',
-                      onTap: () => tabsController.openTab('Events'),
-                    ),
-                  );
-
-                // Quick Filters expandable widget
-                // Always add to maintain consistent list structure (prevents widget recreation)
-                final filters = searchWrapperState?.quickFilters;
-                final activeFilter = searchWrapperState != null &&
-                        searchWrapperState
-                                .currentSearchData.activeQuickFilter !=
-                            null &&
-                        filters != null
-                    ? filters[
-                        searchWrapperState.currentSearchData.activeQuickFilter]
-                    : null;
-                allActions.add(
-                  ExpandableActionButton(
-                    icon: Icons.filter_list_rounded,
-                    label: 'Quick Filters',
-                    subtitle: activeFilter, // Show active filter as subtitle
-                    category: 'Search & Filter',
-                    expandableWidgetBuilder: (onCollapse) {
-                      if (searchWrapperState == null ||
-                          filters == null ||
-                          filters.isEmpty) {
-                        return const SizedBox.shrink();
-                      }
-                      return _buildQuickFiltersWidget(
-                        context,
-                        searchWrapperState,
-                        filters,
-                        onCollapse,
-                        setState,
-                      );
-                    },
-                    visibilityState:
-                        (hasSearchTab && filters != null && filters.isNotEmpty)
-                            ? ActionButtonVisibilityState.both
-                            : ActionButtonVisibilityState.none,
-                  ),
+                final handler = HomeScreenToolbarActionsHandler(
+                  context: context,
+                  currentTab: currentTab,
+                  tabsController: tabsController,
+                  issuesSearchState: issuesSearchState,
+                  pullsSearchState: pullsSearchState,
+                  setState: setState,
                 );
 
-                // Sort expandable widget - always include, use visibilityState
-                final sortOptions = searchWrapperState?.sortOptions;
-                final currentSort = searchWrapperState?.currentSearchData.sort;
-                final sortSubtitle = (sortOptions != null &&
-                        currentSort != null &&
-                        sortOptions.containsKey(currentSort))
-                    ? sortOptions[currentSort]!
-                    : null;
-                allActions.add(
-                  ExpandableActionButton(
-                    icon: Icons.sort_rounded,
-                    label: 'Sort',
-                    subtitle: sortSubtitle, // Show active sort as subtitle
-                    category: 'Search & Filter',
-                    expandableWidgetBuilder: (onCollapse) {
-                      if (searchWrapperState == null) {
-                        return const SizedBox.shrink();
-                      }
-                      return _buildSortWidget(
-                        context,
-                        searchWrapperState,
-                        onCollapse,
-                        setState,
-                      );
-                    },
-                    visibilityState:
-                        (hasSearchTab && searchWrapperState != null)
-                            ? ActionButtonVisibilityState.both
-                            : ActionButtonVisibilityState.none,
-                  ),
-                );
-
-                // Quick options as CheckboxActionButton widgets - always include, use visibilityState
-                // Always add to maintain consistent list structure (prevents widget recreation)
-                final options = searchWrapperState?.quickOptions;
-                // Define a fixed order for options to maintain consistency
-                // This ensures buttons are always added in the same order
-                final optionsToAdd = options?.entries.toList() ?? [];
-                for (final entry in optionsToAdd) {
-                  // Capture entry.key in a variable for the closure
-                  final filterKey = entry.key;
-                  final currentSearchData =
-                      searchWrapperState?.currentSearchData;
-                  final isSelected =
-                      currentSearchData?.filterStrings.contains(filterKey) ??
-                          false;
-                  print(
-                    '[Home] Creating checkbox for: ${entry.value}, key: $filterKey, isSelected: $isSelected',
-                  );
-                  allActions.add(
-                    CheckboxActionButton(
-                      icon: isSelected
-                          ? Icons.check_box_rounded
-                          : Icons.check_box_outline_blank_rounded,
-                      label: entry.value,
-                      value: isSelected,
-                      category: 'Search & Filter',
-                      onChanged: (bool value) {
-                        if (searchWrapperState == null) return;
-                        print(
-                          '[Home] Checkbox onChanged called! value: $value, filterKey: $filterKey',
-                        );
-                        final currentData =
-                            searchWrapperState.currentSearchData;
-                        print(
-                          '[Home] Current filters before: ${currentData.filterStrings}',
-                        );
-                        final filters = currentData.filterStrings.toList();
-                        if (value) {
-                          // Only add if not already present (prevent duplicates)
-                          if (!filters.contains(filterKey)) {
-                            print('[Home] Adding filter: $filterKey');
-                            filters.add(filterKey);
-                          } else {
-                            print(
-                              '[Home] Filter already exists, skipping: $filterKey',
-                            );
-                          }
-                        } else {
-                          print('[Home] Removing filter: $filterKey');
-                          filters.remove(filterKey);
-                        }
-                        print('[Home] New filters: $filters');
-                        final newSearchData = currentData.copyWith(
-                          filterStrings: filters,
-                        );
-                        print(
-                          '[Home] Calling updateSearchData with: ${newSearchData.filterStrings}',
-                        );
-                        searchWrapperState.updateSearchData(newSearchData);
-                        // Trigger rebuild to update checkbox state
-                        setState(() {});
-                        print('[Home] updateSearchData called successfully');
-                      },
-                      visibilityState: (hasSearchTab &&
-                              options != null &&
-                              options.isNotEmpty)
-                          ? ActionButtonVisibilityState.both
-                          : ActionButtonVisibilityState.none,
-                    ),
-                  );
-                }
-
-                // Navigation category - Tab navigation actions
-                allActions.addAll([
-                  MinorActionButton(
-                    icon: Octicons.issue_opened,
-                    label: 'Issues',
-                    trailing: buildActionButtonTrailingCount(
-                      context,
-                      context.viewer.issues.totalCount,
-                    ),
-                    actionType: ActionButtonActionType.tab,
-                    category: 'Navigation',
-                    visibilityState: currentTab == 'Issues'
-                        ? ActionButtonVisibilityState.none
-                        : ActionButtonVisibilityState.both,
-                    onTap: () => tabsController.openTab('Issues'),
-                  ),
-                  MinorActionButton(
-                    icon: Octicons.git_pull_request,
-                    label: 'Pull Requests',
-                    trailing: buildActionButtonTrailingCount(
-                      context,
-                      context.viewer.pullRequests.totalCount,
-                    ),
-                    actionType: ActionButtonActionType.tab,
-                    category: 'Navigation',
-                    visibilityState: currentTab == 'Pulls'
-                        ? ActionButtonVisibilityState.none
-                        : ActionButtonVisibilityState.both,
-                    onTap: () => tabsController.openTab('Pulls'),
-                  ),
-                  MinorActionButton(
-                    icon: Octicons.organization,
-                    label: 'Organizations',
-                    trailing: buildActionButtonTrailingCount(
-                      context,
-                      context.viewer.organizations.totalCount,
-                    ),
-                    actionType: ActionButtonActionType.tab,
-                    category: 'Navigation',
-                    visibilityState: currentTab == 'orgs'
-                        ? ActionButtonVisibilityState.none
-                        : ActionButtonVisibilityState.expandedOnly,
-                    onTap: () => tabsController.openTab('orgs'),
-                  ),
-                  MinorActionButton(
-                    icon: Octicons.repo,
-                    label: 'Repositories',
-                    trailing: buildActionButtonTrailingCount(
-                      context,
-                      context.viewer.repositories.totalCount,
-                    ),
-                    category: 'Navigation',
-                    visibilityState: currentTab == 'repos'
-                        ? ActionButtonVisibilityState.none
-                        : ActionButtonVisibilityState.expandedOnly,
-                    onTap: () {
-                      // tabsController.openTab('repos');
-                    },
-                  ),
-                ]);
-
-                // Account category - Expanded only actions
-                final currentUserLogin =
-                    context.provider<CurrentUserProvider>().data.login;
-                allActions.addAll([
-                  MinorActionButton(
-                    icon: Icons.person_rounded,
-                    label: 'Profile',
-                    category: 'Account',
-                    actionType: ActionButtonActionType.navigation,
-                    visibilityState: ActionButtonVisibilityState.expandedOnly,
-                    onTap: () {
-                      AutoRouter.of(
-                        context,
-                      ).push(UserProfileRoute(login: currentUserLogin));
-                    },
-                  ),
-                  MinorActionButton(
-                    icon: Icons.settings_rounded,
-                    label: 'App Settings',
-                    category: 'Account',
-                    visibilityState: ActionButtonVisibilityState.expandedOnly,
-                    onTap: () {
-                      // Navigate to settings
-                    },
-                  ),
-                  MinorActionButton(
-                    icon: Icons.notifications_rounded,
-                    label: 'Notifications',
-                    category: 'Account',
-                    visibilityState: ActionButtonVisibilityState.expandedOnly,
-                    onTap: () {
-                      // Navigate to notifications
-                    },
-                  ),
-                ]);
+                final allActions = handler.buildActions();
 
                 return FloatingActionToolbar(
                   key: const ValueKey('home_toolbar'),
@@ -462,10 +190,7 @@ class HomeScreenState extends State<HomeScreen>
                   actionCardBuilder: (context, action) =>
                       buildStandardActionCard(context, action),
                   position: FloatingPosition.bottom,
-                  // Default alignment for bottom is right (set in FloatingActionToolbar)
-                  // alignment: null,
                   title: context.provider<CurrentUserProvider>().data.login,
-
                   padding: const EdgeInsets.symmetric(
                     horizontal: 16,
                     vertical: 12,
@@ -478,22 +203,31 @@ class HomeScreenState extends State<HomeScreen>
           },
         ),
         child: SafeArea(
+            bottom: false,
           child: DynamicTabsParent(
             controller: tabsController,
             builder: (
               final BuildContext context,
               final PreferredSizeWidget tabBar,
-              final Widget tabView,
+              final WidgetBuilder tabView,
             ) =>
                 DynamicScroll(
               collapsedWidget: buildCollapsedAppBar(context),
-              bottom: AnimatedTabBar(
-                showTabBar: tabsController.activeLength > 1,
-                tabBar: tabBar,
-                // defaultPadding: const EdgeInsets.only(bottom: 8),
-              ),
+              headerSlivers: [
+                AnimatedTabBar(
+                  showTabBar: tabsController.activeLength > 1,
+                  tabBar: tabBar,
+                  // defaultPadding: const EdgeInsets.only(bottom: 8),
+                ),
+              ],
               expandedWidget: buildProfileCard(context),
-              body: tabView,
+              bodyBuilder: (BuildContext context) {
+                // Note: Tab views that have pinned headers should use
+                // OverlapAwarePinnedHeader to ensure they appear below the
+                // header pinned tab bar instead of behind it.
+                // Example: OverlapAwarePinnedHeader(child: YourPinnedContent())
+                return tabView(context);
+              },
             ),
           ),
         ),
@@ -543,6 +277,37 @@ class HomeScreenState extends State<HomeScreen>
                   ],
                 ),
               ),
+              OverlayMenuWidget(
+                controller: _accountSwitcherController,
+                heightMultiplier: 0.6,
+                childAnchor: Alignment.bottomRight,
+                portalAnchor: Alignment.topRight,
+                overlay: ConstrainedBox(
+                  constraints: const BoxConstraints(
+                    maxWidth: 400,
+                    maxHeight: 500,
+                  ),
+                  child: Card(
+                    elevation: 8,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: AccountSwitcher(
+                      onClose: () {
+                        _accountSwitcherController.close();
+                      },
+                    ),
+                  ),
+                ),
+                child: IconButton(
+                  icon: const Icon(Icons.swap_horiz_rounded),
+                  tooltip: 'Switch Account',
+                  onPressed: () {
+                    print('[Home] Switching account');
+                    _accountSwitcherController.open();
+                  },
+                ),
+              ),
             ],
           ),
           const SizedBox(height: 16),
@@ -566,19 +331,41 @@ class HomeScreenState extends State<HomeScreen>
   Row buildCollapsedAppBar(final BuildContext context) => Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: <Widget>[
-          ClipOval(
-            child: InkPot(
-              onTap: () {
-                // widget.tabNavigators.toProfile();
-              },
-              child: CachedNetworkImage(
-                height: 32,
-                imageUrl: context.viewer.avatarUrl.toString(),
-                placeholder: (final BuildContext context, final _) =>
-                    ShimmerWidget(
-                  child: Container(color: context.colorScheme.surface),
+          OverlayMenuWidget(
+            controller: _accountSwitcherController,
+            heightMultiplier: 0.6,
+            childAnchor: Alignment.bottomCenter,
+            portalAnchor: Alignment.topCenter,
+            overlay: ConstrainedBox(
+              constraints: const BoxConstraints(
+                maxWidth: 400,
+                maxHeight: 500,
+              ),
+              child: Card(
+                elevation: 8,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
                 ),
-                // )
+                child: AccountSwitcher(
+                  onClose: () {
+                    _accountSwitcherController.close();
+                  },
+                ),
+              ),
+            ),
+            child: ClipOval(
+              child: InkPot(
+                onTap: () {
+                  _accountSwitcherController.tapped();
+                },
+                child: CachedNetworkImage(
+                  height: 32,
+                  imageUrl: context.viewer.avatarUrl.toString(),
+                  placeholder: (final BuildContext context, final _) =>
+                      ShimmerWidget(
+                    child: Container(color: context.colorScheme.surface),
+                  ),
+                ),
               ),
             ),
           ),
@@ -587,192 +374,12 @@ class HomeScreenState extends State<HomeScreen>
             context.provider<CurrentUserProvider>().data.login,
             style: context.textTheme.bodyMedium?.asBold(),
           ),
+          const SizedBox(width: 4),
+          Icon(
+            Icons.arrow_drop_down,
+            size: 20,
+            color: context.colorScheme.onSurfaceVariant,
+          ),
         ],
       );
-
-  /// Builds the quick filters widget
-  Widget _buildQuickFiltersWidget(
-    BuildContext context,
-    SearchScrollWrapperState searchWrapperState,
-    Map<String, String> quickFilters,
-    VoidCallback onCollapse,
-    void Function(VoidCallback) setState,
-  ) {
-    final currentSearchData = searchWrapperState.currentSearchData;
-    final activeQuickFilter = currentSearchData.activeQuickFilter;
-
-    // Debug: Print SearchData state
-    print(
-      '[Home] _buildQuickFiltersWidget: currentSearchData.quickFilters=${currentSearchData.quickFilters}',
-    );
-    print(
-      '[Home] _buildQuickFiltersWidget: currentSearchData.filterStrings=${currentSearchData.filterStrings}',
-    );
-    print(
-      '[Home] _buildQuickFiltersWidget: activeQuickFilter=$activeQuickFilter',
-    );
-    print(
-      '[Home] _buildQuickFiltersWidget: quickFilters.keys=${quickFilters.keys.toList()}',
-    );
-
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: quickFilters.entries.map((entry) {
-        // Print activeQuickFilter and entry.key for debugging
-        print(
-          '[Home] QuickFilter: activeQuickFilter=$activeQuickFilter, entry.key=${entry.key}',
-        );
-        final isSelected = activeQuickFilter != null &&
-            StringFunctions(activeQuickFilter).isStringEqual(entry.key);
-        print('[Home] QuickFilter: isSelected=$isSelected for ${entry.key}');
-        return ListTile(
-          dense: true,
-          contentPadding: const EdgeInsets.symmetric(
-            horizontal: 12,
-            vertical: 4,
-          ),
-          shape: SurfaceShapeResolver.shape(
-            context,
-            size: BorderRadiusSize.small,
-          ),
-          selected: isSelected,
-          selectedTileColor: isSelected ? context.colorScheme.primary : null,
-          title: Text(
-            entry.value,
-            style: context.textTheme.labelMedium?.copyWith(
-              color: isSelected
-                  ? context.colorScheme.onPrimary
-                  : context.colorScheme.onSurface,
-              fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
-            ),
-          ),
-          trailing: isSelected
-              ? Icon(
-                  Icons.check_rounded,
-                  size: 18,
-                  color: context.colorScheme.onPrimary,
-                )
-              : null,
-          onTap: () {
-            print(
-              '[Home] QuickFilter tapped: ${entry.key}, isSelected: $isSelected',
-            );
-            SearchData newSearchData;
-            if (isSelected) {
-              // Deselecting: remove the current quick filter from filterStrings
-              final filters = currentSearchData.filterStrings.toList();
-              final activeFilter = currentSearchData.activeQuickFilter;
-              print(
-                '[Home] Deselecting filter. Current active: $activeFilter, Filters before: $filters',
-              );
-              if (activeFilter != null) {
-                filters.removeWhere((filter) {
-                  for (final quickFilter in quickFilters.keys) {
-                    final match = StringFunctions(
-                      quickFilter,
-                    ).isStringEqual(filter);
-                    if (match)
-                      print('[Home] Removing matching quick filter: $filter');
-                    if (match) return true;
-                  }
-                  return false;
-                });
-              }
-              // Preserve quickFilters list when deselecting
-              final quickFiltersList = quickFilters.keys.toList();
-              print(
-                '[Home] Preserving quickFilters list on deselect: $quickFiltersList',
-              );
-              newSearchData = currentSearchData.copyWith(
-                filterStrings: filters,
-                quickFilters: quickFiltersList,
-              );
-            } else {
-              // Selecting: this will automatically replace any existing quick filter
-              // The copyWith method with quickFilter parameter handles replacing previous quick filters
-              print('[Home] Selecting filter: ${entry.key}');
-              // Preserve quickFilters list when updating
-              final quickFiltersList = quickFilters.keys.toList();
-              print('[Home] Preserving quickFilters list: $quickFiltersList');
-              newSearchData = currentSearchData.copyWith(
-                quickFilter: entry.key,
-                quickFilters: quickFiltersList,
-              );
-            }
-            print(
-              '[Home] QuickFilter newSearchData filters: ${newSearchData.filterStrings}',
-            );
-            print(
-              '[Home] QuickFilter newSearchData.quickFilters: ${newSearchData.quickFilters}',
-            );
-            print(
-              '[Home] QuickFilter newSearchData.activeQuickFilter: ${newSearchData.activeQuickFilter}',
-            );
-            searchWrapperState.updateSearchData(newSearchData);
-            // Trigger rebuild to update button label
-            setState(() {});
-            onCollapse();
-            print('[Home] QuickFilter updateSearchData and setState called');
-          },
-        );
-      }).toList(),
-    );
-  }
-
-  /// Builds the sort widget
-  Widget _buildSortWidget(
-    BuildContext context,
-    SearchScrollWrapperState searchWrapperState,
-    VoidCallback onCollapse,
-    void Function(VoidCallback) setState,
-  ) {
-    final currentSearchData = searchWrapperState.currentSearchData;
-    final sortOptions = searchWrapperState.sortOptions;
-    if (sortOptions == null) return const SizedBox.shrink();
-
-    return SingleChildScrollView(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: sortOptions.entries.map((entry) {
-          final isSelected = currentSearchData.sort == entry.key;
-          return ListTile(
-            dense: true,
-            contentPadding: const EdgeInsets.symmetric(
-              horizontal: 12,
-              vertical: 4,
-            ),
-            shape: SurfaceShapeResolver.shape(
-              context,
-              size: BorderRadiusSize.small,
-            ),
-            selected: isSelected,
-            selectedTileColor: isSelected ? context.colorScheme.primary : null,
-            title: Text(
-              entry.value,
-              style: context.textTheme.labelMedium?.copyWith(
-                color: isSelected
-                    ? context.colorScheme.onPrimary
-                    : context.colorScheme.onSurface,
-                fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
-              ),
-            ),
-            trailing: isSelected
-                ? Icon(
-                    Icons.check_rounded,
-                    size: 18,
-                    color: context.colorScheme.onPrimary,
-                  )
-                : null,
-            onTap: () {
-              final newSearchData = currentSearchData.copyWith(sort: entry.key);
-              searchWrapperState.updateSearchData(newSearchData);
-              // Trigger rebuild to update button label
-              setState(() {});
-              onCollapse();
-            },
-          );
-        }).toList(),
-      ),
-    );
-  }
 }

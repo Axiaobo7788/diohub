@@ -87,9 +87,7 @@ class FloatingWidgetPositionCalculator {
 
   /// Helper function to log debug messages if logging is enabled
   void _debugLog(String message) {
-    if (debugLogging && kDebugMode) {
-      print(message);
-    }
+    // Debug logging disabled
   }
 
   /// Gets the effective alignment (uses defaults if not specified)
@@ -565,9 +563,6 @@ class FloatingWidgetPositionCalculator {
         : distanceToBottomEdge;
     final isNearTop = distanceToTopEdge < distanceToBottomEdge;
 
-    // print(
-    //     '[FloatingWidgetPositionCalculator] calculateEdgeDistances: center=$currentCenterPosition, widgetSize=$widgetSize, isExpanded=$isExpanded, topEdgeY=$topEdgeY, bottomEdgeY=$bottomEdgeY, widgetTop=$widgetTopEdge, widgetBottom=$widgetBottomEdge, distanceToTop=$distanceToTopEdge, distanceToBottom=$distanceToBottomEdge, nearest=$distanceToNearestEdge');
-
     return (
       distanceToTopEdge: distanceToTopEdge,
       distanceToBottomEdge: distanceToBottomEdge,
@@ -615,8 +610,6 @@ class FloatingWidgetPositionCalculator {
     );
 
     final shouldExpand = edgeDistances.distanceToNearestEdge > threshold;
-    // print(
-    //     '[FloatingWidgetPositionCalculator] shouldAutoExpand: position=$currentCenterPosition, widgetSize=$widgetSize, distanceToNearestEdge=${edgeDistances.distanceToNearestEdge}, threshold=$threshold, shouldExpand=$shouldExpand');
     return shouldExpand;
   }
 

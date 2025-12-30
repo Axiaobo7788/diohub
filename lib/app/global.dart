@@ -1,6 +1,5 @@
 import 'package:diohub/routes/router.dart';
 import 'package:flutter/material.dart';
-import 'package:logger/logger.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 late AppRouter _customRouter;
@@ -11,11 +10,6 @@ void setUpRouter(final BuildContext context) {
 }
 
 BuildContext get currentContext => customRouter.navigatorKey.currentContext!;
-
-const String apiBaseURL = 'https://api.github.com';
-
-final Logger _log = Logger();
-Logger get log => _log;
 
 late SharedPreferences _sharedPrefs;
 SharedPreferences get sharedPrefs => _sharedPrefs;

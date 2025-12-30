@@ -3,9 +3,47 @@ import 'package:flutter/material.dart';
 import 'package:flutter_portal/flutter_portal.dart';
 
 class OverlayController {
-  late void Function() open;
-  late void Function() close;
-  late void Function() tapped;
+  final List<void Function()> _openCallbacks = [];
+  final List<void Function()> _closeCallbacks = [];
+  final List<void Function()> _tappedCallbacks = [];
+
+  void addListener({
+    required void Function() open,
+    required void Function() close,
+    required void Function() tapped,
+  }) {
+    _openCallbacks.add(open);
+    _closeCallbacks.add(close);
+    _tappedCallbacks.add(tapped);
+  }
+
+  void removeListener({
+    required void Function() open,
+    required void Function() close,
+    required void Function() tapped,
+  }) {
+    _openCallbacks.remove(open);
+    _closeCallbacks.remove(close);
+    _tappedCallbacks.remove(tapped);
+  }
+
+  void open() {
+    for (final callback in _openCallbacks) {
+      callback();
+    }
+  }
+
+  void close() {
+    for (final callback in _closeCallbacks) {
+      callback();
+    }
+  }
+
+  void tapped() {
+    for (final callback in _tappedCallbacks) {
+      callback();
+    }
+  }
 }
 
 class OverlayMenuWidget extends StatefulWidget {
@@ -41,15 +79,27 @@ class OverlayMenuWidgetState extends State<OverlayMenuWidget> {
   late bool visible;
   @override
   void initState() {
-    setupController();
-    visible = widget.initiallyVisible;
     super.initState();
+    visible = widget.initiallyVisible;
+    setupController();
+  }
+
+  @override
+  void dispose() {
+    widget.controller.removeListener(
+      open: openOverlay,
+      close: closeOverlay,
+      tapped: tapped,
+    );
+    super.dispose();
   }
 
   void setupController() {
-    widget.controller.open = openOverlay;
-    widget.controller.close = closeOverlay;
-    widget.controller.tapped = tapped;
+    widget.controller.addListener(
+      open: openOverlay,
+      close: closeOverlay,
+      tapped: tapped,
+    );
   }
 
   void openOverlay() {

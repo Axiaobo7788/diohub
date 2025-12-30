@@ -67,6 +67,7 @@ query userInfo($user: String!) {
         isViewer
         viewerIsFollowing
         viewerCanFollow
+        hasSponsorsListing
         followers {
             totalCount
         }

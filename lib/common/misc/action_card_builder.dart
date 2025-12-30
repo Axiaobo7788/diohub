@@ -134,11 +134,7 @@ Widget buildStandardActionCard(
             ? switch (action) {
                 MinorActionButton(:final onTap) => onTap,
                 CheckboxActionButton(:final onChanged, :final value) => () {
-                    print(
-                        '[ActionCardBuilder] Checkbox tapped! current value: $value, onChanged is null: ${onChanged == null}');
                     onChanged?.call(!value);
-                    print(
-                        '[ActionCardBuilder] Checkbox onChanged called with: ${!value}');
                   },
                 _ => null,
               }
@@ -255,20 +251,6 @@ Widget buildProminentActionCard(
     seedColor: seedColor,
   );
 
-  // Debug: Print checkbox state for AnimatedContainer animation
-  if (action is CheckboxActionButton) {
-    final isSelected = action.value;
-    print(
-        '[ActionCardBuilder] buildProminentActionCard: Checkbox ${action.label}, value=$isSelected');
-    print(
-        '  - Background: ${colors.backgroundColor} (hashCode: ${colors.backgroundColor.hashCode})');
-    print(
-        '  - IconColor: ${colors.iconColor} (hashCode: ${colors.iconColor.hashCode})');
-    print(
-        '  - TextColor: ${colors.textColor} (hashCode: ${colors.textColor.hashCode})');
-    print('  - AnimatedContainer key: checkbox_${action.label}');
-  }
-
   // Extract badge text from trailing widget or use trailing widget directly
   final badgeText = action.badgeText;
   final trailingWidget = action.trailing != null && action.trailing is! Text
@@ -279,11 +261,7 @@ Widget buildProminentActionCard(
   final VoidCallback? onTap = switch (action) {
     MajorActionButton(:final onTap) => onTap,
     CheckboxActionButton(:final onChanged, :final value) => () {
-        print(
-            '[ActionCardBuilder] Checkbox tapped (card)! current value: $value, onChanged is null: ${onChanged == null}');
         onChanged?.call(!value);
-        print(
-            '[ActionCardBuilder] Checkbox onChanged called (card) with: ${!value}');
       },
     _ => null,
   };
@@ -296,17 +274,12 @@ Widget buildProminentActionCard(
         onTap: action.enabled ? onTap : null,
         borderRadius: Theme.of(context).surfaceStyle.borderRadius(size: size),
         child: AnimatedContainer(
-          key: ValueKey('checkbox_${action.label}'),
+          key: action.getCheckboxKey(),
           duration: const Duration(milliseconds: 600),
           curve: Curves.easeInOut,
           width: double.infinity,
           padding: effectivePadding,
-          onEnd: () {
-            if (action is CheckboxActionButton) {
-              print(
-                  '[ActionCardBuilder] AnimatedContainer animation ended for ${action.label}');
-            }
-          },
+          onEnd: () {},
           decoration: BoxDecoration(
             color: colors.backgroundColor,
             borderRadius:

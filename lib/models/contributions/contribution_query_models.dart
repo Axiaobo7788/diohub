@@ -1,5 +1,7 @@
+import 'package:diohub/app/global.dart';
 import 'package:diohub/common/charts/contribution_calendar_widget.dart';
 import 'package:diohub/view/profile/about/widgets/activity_overview_section.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 /// Typed key for contribution queries.
@@ -17,16 +19,18 @@ class ContributionQueryKey {
   factory ContributionQueryKey.lastYear(String userName) {
     final now = DateTime.now();
     final to = DateTime(now.year, now.month, now.day);
-    final from = DateTime(to.year - 1, to.month, to.day);
-    return ContributionQueryKey(
+    final from = DateTime(to.year - 1, to.month, to.day);    return ContributionQueryKey(
       userName: userName,
-      dateRange: ContributionDateRange.custom(from: from, to: to),
+      dateRange: ContributionDateRange.custom(
+        from: from,
+        to: to,
+        isLastYear: true,
+      ),
     );
   }
 
   /// Create key for a specific year
-  factory ContributionQueryKey.year(String userName, int year) {
-    return ContributionQueryKey(
+  factory ContributionQueryKey.year(String userName, int year) {    return ContributionQueryKey(
       userName: userName,
       dateRange: ContributionDateRange.year(year),
     );
@@ -38,9 +42,24 @@ class ContributionQueryKey {
     required DateTime from,
     required DateTime to,
   }) {
-    return ContributionQueryKey(
+    // Normalize dates to day level for stable keys
+    // This ensures DateTime instances with same day have same hashCode
+    // Prevents unnecessary Riverpod refetches when DateTime.now() is called
+    final DateTime normalizedFrom = DateTime(
+      from.year,
+      from.month,
+      from.day,
+    );
+    final DateTime normalizedTo = DateTime(
+      to.year,
+      to.month,
+      to.day,
+    );    return ContributionQueryKey(
       userName: userName,
-      dateRange: ContributionDateRange.custom(from: from, to: to),
+      dateRange: ContributionDateRange.custom(
+        from: normalizedFrom,
+        to: normalizedTo,
+      ),
     );
   }
 
@@ -64,6 +83,7 @@ sealed class ContributionDateRange {
   const factory ContributionDateRange.custom({
     required DateTime from,
     required DateTime to,
+    bool isLastYear,
   }) = CustomRange;
 
   /// Get the actual from/to dates for the query
@@ -73,6 +93,60 @@ sealed class ContributionDateRange {
   bool get isMultiYear {
     final (from, to) = dates;
     return (to.year - from.year) > 0;
+  }
+
+  /// Extract selected year if this is a single-year range, null otherwise
+  int? get displayYear {
+    return switch (this) {
+      YearRange(:final year) => year,
+      CustomRange() => null,
+    };
+  }
+
+  /// Extract from date for display
+  DateTime? get displayFromDate {
+    return switch (this) {
+      YearRange() => null,
+      CustomRange(:final from) => from,
+    };
+  }
+
+  /// Extract to date for display
+  DateTime? get displayToDate {
+    return switch (this) {
+      YearRange() => null,
+      CustomRange(:final to) => to,
+    };
+  }
+
+  /// Check if this is a custom range (not a single year)
+  bool get isCustomRange => this is CustomRange;
+
+  /// Check if this represents "last year" (365 days ending today)
+  /// This is a simple boolean flag set when creating via ContributionQueryKey.lastYear()
+  bool get isLastYear => false;
+
+  /// Check if this is a custom range that spans exactly Jan 1 - Dec 31 of a single year
+  /// Returns the year if it's a full year range, null otherwise
+  int? get fullYearIfCustomRange {
+    return switch (this) {
+      YearRange(:final year) => year,
+      CustomRange(:final from, :final to) => () {
+          // Normalize dates to day level for comparison
+          final normalizedFrom = DateTime(from.year, from.month, from.day);
+          final normalizedTo = DateTime(to.year, to.month, to.day);
+
+          // Check if it's Jan 1 - Dec 31 of the same year
+          if (normalizedFrom.year == normalizedTo.year &&
+              normalizedFrom.month == 1 &&
+              normalizedFrom.day == 1 &&
+              normalizedTo.month == 12 &&
+              normalizedTo.day == 31) {
+            return normalizedFrom.year;
+          }
+          return null;
+        }(),
+    };
   }
 }
 
@@ -100,10 +174,15 @@ class CustomRange extends ContributionDateRange {
   const CustomRange({
     required this.from,
     required this.to,
-  });
+    bool isLastYear = false,
+  }) : _isLastYear = isLastYear;
 
   final DateTime from;
   final DateTime to;
+  final bool _isLastYear;
+
+  @override
+  bool get isLastYear => _isLastYear;
 
   @override
   (DateTime, DateTime) get dates => (from, to);

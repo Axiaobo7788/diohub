@@ -173,8 +173,10 @@ sealed class ActionButtonData {
   /// Gets the display icon for this action button
   /// For CheckboxActionButton, returns checked icon when value is true
   IconData get displayIcon {
-    if (this is CheckboxActionButton && (this as CheckboxActionButton).value) {
-      return Icons.check_box_rounded;
+    if (this is CheckboxActionButton) {
+      return (this as CheckboxActionButton).value
+          ? Icons.check_box_rounded
+          : Icons.check_box_outline_blank_rounded;
     }
     return icon;
   }
@@ -234,6 +236,57 @@ sealed class ActionButtonData {
         return false;
     }
   }
+
+  /// Generates a stable key for this action based on semantic properties
+  /// Uses only stable identifiers (not object identity) so widgets persist across rebuilds
+  /// Icons are not included in keys as they can change (e.g., checkbox icons based on value)
+  /// 
+  /// [context] is only used for truly separate widget instances (e.g., checkbox AnimatedContainer)
+  /// For actions visible in both collapsed/expanded states, context is ignored to preserve widget instances
+  ValueKey getStableKey({
+    String?
+        context, // Only used for truly separate instances (e.g., 'checkbox' for AnimatedContainer)
+    bool? includeEnabledState, // Whether to include enabled/disabled in key
+  }) {
+    // For actions visible in both states, ignore context to preserve widget instances
+    // Context is only used for truly separate widget instances
+    final shouldIncludeContext = context != null && 
+        context != 'expanded' && 
+        context != 'collapsed' &&
+        context != 'prominent_expanded' &&
+        context != 'prominent_collapsed';
+    
+    return ValueKey(Object.hash(
+      shouldIncludeContext ? context : null,
+      includeEnabledState == true ? (enabled ? 'enabled' : 'disabled') : null,
+      category,
+      label,
+      // runtimeType,
+      // Note: NOT using hashCode - only semantic properties
+      // Note: NOT using icon - icons can change (e.g., checkbox icons based on value)
+    ));
+  }
+
+  /// Convenience method for expanded action keys
+  /// For actions with visibilityState.both, this returns the same key as getCollapsedKey()
+  ValueKey getExpandedKey() => getStableKey();
+
+  /// Convenience method for collapsed action keys
+  /// For actions with visibilityState.both, this returns the same key as getExpandedKey()
+  ValueKey getCollapsedKey({bool includeEnabledState = true}) => getStableKey(
+        includeEnabledState: includeEnabledState,
+      );
+
+  /// Convenience method for prominent expanded action keys
+  /// For actions with visibilityState.both, this returns the same key as getProminentCollapsedKey()
+  ValueKey getProminentExpandedKey() => getStableKey();
+
+  /// Convenience method for prominent collapsed action keys
+  /// For actions with visibilityState.both, this returns the same key as getProminentExpandedKey()
+  ValueKey getProminentCollapsedKey() => getStableKey();
+
+  /// Convenience method for checkbox AnimatedContainer keys
+  ValueKey getCheckboxKey() => getStableKey(context: 'checkbox');
 
   /// Gets the icon color for this action based on its state and type
   /// Used for simple icon buttons in collapsed toolbar
@@ -514,9 +567,9 @@ class ExpandableActionButton extends ActionButtonData {
 }
 
 /// Checkbox action button for toggleable actions
+/// The icon is handled internally based on the value - no need to pass it
 class CheckboxActionButton extends ActionButtonData {
   const CheckboxActionButton({
-    required super.icon,
     required super.label,
     required this.value,
     required this.onChanged,
@@ -531,7 +584,10 @@ class CheckboxActionButton extends ActionButtonData {
     super.visibilityState,
     super.seedColor,
     super.category,
-  });
+  }) : super(
+          // Use a stable icon internally - displayIcon getter handles the actual display
+          icon: Icons.check_box_outline_blank_rounded,
+        );
 
   /// Current checkbox value
   final bool value;
@@ -541,7 +597,6 @@ class CheckboxActionButton extends ActionButtonData {
 
   /// Creates a copy of this CheckboxActionButton with updated properties
   CheckboxActionButton copyWith({
-    IconData? icon,
     String? label,
     bool? value,
     ValueChanged<bool>? onChanged,
@@ -558,7 +613,6 @@ class CheckboxActionButton extends ActionButtonData {
     String? category,
   }) {
     return CheckboxActionButton(
-      icon: icon ?? this.icon,
       label: label ?? this.label,
       value: value ?? this.value,
       onChanged: onChanged ?? this.onChanged,

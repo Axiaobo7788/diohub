@@ -1,4 +1,5 @@
 import 'package:diohub/common/misc/menu_button.dart';
+import 'package:diohub/common/wrappers/dynamic_tabs_parent_designs.dart';
 import 'package:diohub/style/surface_style_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_dynamic_tabs/flutter_dynamic_tabs.dart';
@@ -22,7 +23,7 @@ class DynamicTabsParent extends StatelessWidget {
   final Widget Function(
     BuildContext context,
     PreferredSizeWidget tabBar,
-    Widget tabView,
+    WidgetBuilder tabViewBuilder,
   ) builder;
 
   @override
@@ -32,29 +33,7 @@ class DynamicTabsParent extends StatelessWidget {
 
     return DynamicTabsWrapper(
       controller: controller,
-      tabBarSettings: DynamicTabSettings(
-        // Color-only design: No indicator, just color change
-        indicator: const BoxDecoration(),
-        indicatorSize: TabBarIndicatorSize.label,
-        indicatorPadding: EdgeInsets.zero,
-        dividerColor: Colors.transparent,
-        tabAlignment: TabAlignment.center,
-        labelStyle: theme.textTheme.labelLarge?.copyWith(
-          fontWeight: FontWeight.w700,
-          fontSize: 13,
-          letterSpacing: 0.2,
-        ),
-        unselectedLabelStyle: theme.textTheme.labelLarge?.copyWith(
-          fontWeight: FontWeight.w500,
-          fontSize: 13,
-          letterSpacing: 0.1,
-        ),
-        labelColor: colorScheme.primary,
-        unselectedLabelColor: colorScheme.onSurfaceVariant.withOpacity(0.6),
-        labelPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-        childPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-        physics: const BouncingScrollPhysics(),
-      ),
+      tabBarSettings: getTabBarDesign(context, 6),
       tabBuilder: (final BuildContext context, final DynamicTab tab) =>
           tabBuilder?.call(context, tab) ??
           _buildDynamicTabMenuButton(tab: tab, tabController: controller),
@@ -90,7 +69,8 @@ Tab _buildDynamicTabMenuButton({
                         Material(
                   color: Colors.transparent,
                   child: InkWell(
-                    borderRadius: Theme.of(context).surfaceStyle.borderRadiusMedium(),
+                    borderRadius:
+                        Theme.of(context).surfaceStyle.borderRadiusMedium(),
                     onTap: showMenu,
                     child: Padding(
                       padding: const EdgeInsets.all(2),

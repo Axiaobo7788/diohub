@@ -1,6 +1,8 @@
 import 'package:built_collection/built_collection.dart';
 import 'package:dio/dio.dart';
 import 'package:diohub/app/api_handler/dio.dart';
+import 'package:diohub/app/global.dart';
+import 'package:flutter/foundation.dart';
 import 'package:diohub/graphql/queries/issues_pulls/__generated__/issue_templates.data.gql.dart';
 import 'package:diohub/graphql/queries/issues_pulls/__generated__/issue_templates.req.gql.dart';
 import 'package:diohub/graphql/queries/repositories/__generated__/branches_list.data.gql.dart';
@@ -297,9 +299,13 @@ class RepositoryServices {
       if (data.object == null) {
         throw Exception('Commit not found');
       }
+
+      // Log object type for debugging     
       final commit = data.object!.when(
         commit: (c) => c,
-        orElse: () => throw Exception('Object is not a Commit'),
+        orElse: () {          throw Exception(
+              'Object is not a Commit (type: ${data.object!.G__typename})');
+        },
       );
       return commit.history;
     } else if (ref != null) {
@@ -325,11 +331,23 @@ class RepositoryServices {
       if (data.ref?.target == null) {
         throw Exception('Ref not found');
       }
-      final commit = data.ref!.target!.when(
-        commit: (c) => c,
-        orElse: () => throw Exception('Target is not a Commit'),
+
+      // Log target type for debugging      // Handle Commit or Tag -> Commit
+      return data.ref!.target!.when(
+        commit: (c) => c.history,
+        tag: (t) {
+          // Tag.target is also GitObject, need to check if it's a Commit
+          return t.target.when(
+            commit: (c) => c.history,
+            orElse: () {              throw Exception(
+                  'Tag target is not a Commit (type: ${t.target.G__typename})');
+            },
+          );
+        },
+        orElse: () {          throw Exception(
+              'Target is not a Commit or Tag (type: ${data.ref!.target!.G__typename})');
+        },
       );
-      return commit.history;
     } else {
       // Use commitsList for default branch
       final GQLResponse response = await _gqlHandler.query(
@@ -349,14 +367,25 @@ class RepositoryServices {
         refreshCache: refresh,
       );
       final data = GcommitsListData.fromJson(response.data!)!.repository!;
-      if (data.defaultBranchRef?.target == null) {
-        throw Exception('Repository has no default branch');
+      if (data.defaultBranchRef?.target == null) {        throw Exception('Repository has no default branch');
       }
-      final commit = data.defaultBranchRef!.target!.when(
-        commit: (c) => c,
-        orElse: () => throw Exception('Target is not a Commit'),
+
+      // Log default branch info      // Handle Commit or Tag -> Commit
+      return data.defaultBranchRef!.target!.when(
+        commit: (c) => c.history,
+        tag: (t) {
+          // Tag.target is also GitObject, need to check if it's a Commit
+          return t.target.when(
+            commit: (c) => c.history,
+            orElse: () {              throw Exception(
+                  'Tag target is not a Commit (type: ${t.target.G__typename})');
+            },
+          );
+        },
+        orElse: () {          throw Exception(
+              'Target is not a Commit or Tag (type: ${data.defaultBranchRef!.target!.G__typename})');
+        },
       );
-      return commit.history;
     }
   }
 
