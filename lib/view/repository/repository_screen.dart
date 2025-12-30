@@ -457,6 +457,7 @@ class RepositoryScreenState extends DeepLinkWidgetState<RepositoryScreen>
                           );
                         },
                         child: SafeArea(
+                          bottom: false,
                           child: ExpandOnScrollWrapper(
                             collapsedWidget: (
                               final BuildContext context,

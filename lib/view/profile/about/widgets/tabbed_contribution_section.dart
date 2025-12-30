@@ -2,6 +2,7 @@ import 'package:diohub/common/events/events.dart';
 import 'package:diohub/common/misc/collapsible_app_bar.dart';
 import 'package:diohub/common/misc/shimmer_widget.dart';
 import 'package:diohub/common/widgets/styled_divider.dart';
+import 'package:diohub/common/wrappers/app_custom_scroll_view.dart';
 import 'package:diohub/models/contributions/contribution_chip_type.dart';
 import 'package:diohub/models/contributions/contribution_query_models.dart';
 import 'package:diohub/style/surface_style_theme.dart';
@@ -56,10 +57,10 @@ class _TabbedContributionSectionState extends State<TabbedContributionSection> {
     final SliverOverlapAbsorberHandle overlapHandle =
         NestedScrollView.sliverOverlapAbsorberHandleFor(context);
 
-    return CustomScrollView(
+    return AppCustomScrollView(
       slivers: [
         // Inject overlap to handle NestedScrollView header spacing
-        SliverOverlapInjector(handle: overlapHandle),
+        
         // Top widget (expandable metadata) - translate up to remove overlap spacing
         if (widget.topWidget != null)
           SliverToBoxAdapter(

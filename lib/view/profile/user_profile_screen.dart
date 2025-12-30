@@ -1238,6 +1238,7 @@ class _UserProfileTabsContentState extends State<_UserProfileTabsContent>
         },
         child: tabController != null
             ? SafeArea(
+              bottom: false,
                 child: ExpandOnScrollWrapper(
                   collapsedWidget: (final BuildContext context,
                           final double pullProgress,
