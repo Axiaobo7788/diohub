@@ -1,4 +1,55 @@
-## [1.0.0] - Draft
+## [1.0.0-dev.2] - 30 December 2025
+
+This is a ground-up redesign of the app—nearly every screen has been rebuilt.
+
+**Multi-account support**
+
+- Sign in to multiple GitHub accounts ~~(including Enterprise)~~ and switch between them instantly.
+- New Accounts tab to manage all your accounts in one place; inline account switcher always visible from the Home header.
+
+**Redesigned Home**
+
+- Completely new Home screen with dynamic tabs: Feed, Issues, Pull Requests, Organizations, and Accounts.
+- Profile card with integrated search bar at the top.
+- Floating action toolbar that changes based on which tab you're on—quick filters, sorting, search, and "new issue" etc, context aware options.
+
+**Rebuilt User Profile & Contributions**
+
+- Profile screen redesigned from scratch with richer activity data.
+- New contribution calendar with better colors, horizontal scrolling for viewing past years, and tap-to-see-details on any day.
+- Activity timeline rebuilt with infinite scrolling and cleaner event cards.
+- Contribution highlights and yearly summaries.
+
+**Overhauled Issues & Pull Requests**
+
+- Issue and PR screens completely redesigned with collapsible headers, dynamic tabs, and cleaner layouts.
+- Infinite scrolling replaces pagination on long lists.
+- Quick filters and sorting options available directly from the toolbar.
+- Cards redesigned to surface key info (comments, labels, status) at a glance.
+
+**New Repository Experience**
+
+- Repository screen rebuilt with a cleaner layout and better navigation.
+- Commit info and SHA visible directly on file/repo cards.
+- Refreshed action buttons and controls throughout.
+
+**New Search Screen**
+
+- Dedicated search screen with quick filter chips and better result presentation.
+- Search overlay refined with cleaner prompts and smoother transitions.
+
+**Material You & Visual Refresh**
+
+- Full Material You theming with dynamic colors.
+- New surface styling system across all screens for a cohesive look.
+- Collapsible and expandable sections throughout the app—pull down on headers to reveal more details.
+- Smoother animations and transitions everywhere.
+
+**Performance & Reliability**
+
+- Faster loading with smarter caching and pagination.
+- Switching accounts clears stale data so you never see the wrong content.
+- Invalid tokens are detected and cleaned up automatically.
 
 # [1.0.0-dev.1] - 20 December 2023
 
@@ -9,9 +60,9 @@ _Please don't open new issues for this build, instead post the issues as comment
 - Issue/Pull Screens
 - Home Screen
 - User Profile Screen
-  *Currently disabled*
+  _Currently disabled_
 - Editing Themes (Need to implement a new setup to handle 2 possible theme brightnesses)
-  *Planned Additions (Not in any particular order)*
+  _Planned Additions (Not in any particular order)_
 - View followers, starred repos of users (with filtering options), watchers, people who starred a
   repo etc
 - New settings screen
@@ -181,8 +232,8 @@ Dev Changelog:
 
 ## [0.2.0] - 29 April 2021
 
-*If you had a previous release installed, this version will install as a new app. You can uninstall
-the previous one.*
+_If you had a previous release installed, this version will install as a new app. You can uninstall
+the previous one._
 
 - New logo
 - New splash screen
@@ -196,7 +247,7 @@ the previous one.*
 - Cases not handled will open in an in app browser.
 - Report any URL patterns that should be opening in the app or any patterns not opening as they
   should here: https://github.com/NamanShergill/diohub/issues/17
-- *Upcoming: Deeplink to directory/file paths in repository code view in the next release.*
+- _Upcoming: Deeplink to directory/file paths in repository code view in the next release._
 
 **Enhancements**
 
