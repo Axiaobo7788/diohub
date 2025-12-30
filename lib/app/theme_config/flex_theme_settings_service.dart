@@ -1,8 +1,9 @@
-import 'package:diohub/app/theme_settings/api/theme_settings_api.dart';
-import 'package:diohub/app/theme_settings/models/flex_theme_settings_model.dart';
+import 'package:diohub/app/theme_config/api/theme_settings_api.dart';
+import 'package:diohub/app/theme_config/models/flex_theme_settings_model.dart';
 
 /// Service for managing FlexColorScheme theme settings
-class FlexThemeSettingsService extends ThemeSettingsApi<FlexThemeSettingsModel> {
+class FlexThemeSettingsService
+    extends ThemeSettingsApi<FlexThemeSettingsModel> {
   FlexThemeSettingsService()
       : super(
           storageKey: 'flex_theme_settings',
@@ -23,22 +24,3 @@ class FlexThemeSettingsService extends ThemeSettingsApi<FlexThemeSettingsModel> 
   FlexThemeSettingsModel fromJson(Map<String, dynamic> json) =>
       FlexThemeSettingsModel.fromJson(json);
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

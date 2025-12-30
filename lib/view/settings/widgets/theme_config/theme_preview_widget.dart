@@ -1,5 +1,5 @@
-import 'package:diohub/app/theme_settings/models/flex_theme_settings_model.dart';
-import 'package:diohub/app/theme_settings/utils/flex_color_scheme_builder.dart';
+import 'package:diohub/app/theme_config/models/flex_theme_settings_model.dart';
+import 'package:diohub/app/theme_config/utils/flex_color_scheme_builder.dart';
 import 'package:flex_color_scheme/flex_color_scheme.dart';
 import 'package:flutter/material.dart';
 
