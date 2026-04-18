@@ -1,7 +1,8 @@
 import 'package:diohub/common/misc/loading_indicator.dart';
+import 'package:diohub/style/app_spacing.dart';
 import 'package:flutter/material.dart';
 
-class Button extends StatefulWidget {
+class Button extends StatelessWidget {
   const Button({
     required this.onTap,
     required this.child,
@@ -10,11 +11,9 @@ class Button extends StatefulWidget {
     this.stretch = true,
     this.color,
     this.loading = false,
-    this.padding = const EdgeInsets.all(16),
     this.elevation = 2,
     this.borderRadius = 10,
     this.leadingIcon,
-    // this.loadingWidget,
     super.key,
   });
 
@@ -26,54 +25,37 @@ class Button extends StatefulWidget {
   final Icon? trailingIcon;
   final double borderRadius;
 
-  // final Widget? loadingWidget;
   final bool stretch;
   final bool loading;
   final double elevation;
-  final EdgeInsets padding;
 
-  @override
-  ButtonState createState() => ButtonState();
-}
-
-class ButtonState extends State<Button> {
   @override
   Widget build(final BuildContext context) => ElevatedButton(
-        // disabledColor:
-        //     (widget.color ?? context.colorScheme.primary).withOpacity(0.7),
-        // elevation: widget.elevation,
-        // padding: widget.padding,
-        // // disabledTextColor:
-        // //     Provider.of<PaletteSettings>(context).currentSetting.baseElements,
-        // shape: RoundedRectangleBorder(
-        //   borderRadius: BorderRadius.circular(widget.borderRadius),
-        // ),
-        onPressed: widget.enabled && !widget.loading ? widget.onTap : null,
-        // color: widget.color,
+        onPressed: enabled && !loading ? onTap : null,
         child: Padding(
-          padding: const EdgeInsets.all(8),
+          padding: EdgeInsets.all(context.spacing.itemSpacing),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: <Widget>[
-              if (!widget.loading)
+              if (!loading)
                 Row(
                   mainAxisSize:
-                      widget.stretch ? MainAxisSize.max : MainAxisSize.min,
+                      stretch ? MainAxisSize.max : MainAxisSize.min,
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: <Widget>[
                     Visibility(
-                      visible: widget.leadingIcon != null,
+                      visible: leadingIcon != null,
                       child: Padding(
                         padding: const EdgeInsets.only(right: 16),
-                        child: widget.leadingIcon ?? Container(),
+                        child: leadingIcon ?? Container(),
                       ),
                     ),
-                    Flexible(child: widget.child),
+                    Flexible(child: child),
                     Visibility(
-                      visible: widget.trailingIcon != null,
+                      visible: trailingIcon != null,
                       child: Padding(
                         padding: const EdgeInsets.only(right: 16),
-                        child: widget.trailingIcon ?? Container(),
+                        child: trailingIcon ?? Container(),
                       ),
                     ),
                   ],
@@ -94,9 +76,9 @@ class AppButton extends StatelessWidget {
   });
 
   AppButton.icon({
-    required Widget child,
+    required final Widget child,
     required this.onPressed,
-    required Widget icon,
+    required final Widget icon,
     super.key,
   }) : child = Row(
           mainAxisSize: MainAxisSize.min,
@@ -130,7 +112,6 @@ class StringButton extends StatelessWidget {
     this.borderRadius = 10,
     this.textSize,
     this.leadingIcon,
-    this.padding = const EdgeInsets.all(16),
     // this.loadingText,
     super.key,
   });
@@ -149,7 +130,6 @@ class StringButton extends StatelessWidget {
   final bool loading;
   final bool stretch;
   final double elevation;
-  final EdgeInsets padding;
 
   @override
   Widget build(final BuildContext context) => Button(
@@ -175,7 +155,7 @@ class StringButton extends StatelessWidget {
             Visibility(
               visible: subtitle != null,
               child: Padding(
-                padding: const EdgeInsets.all(8),
+                padding: EdgeInsets.all(context.spacing.itemSpacing),
                 child: Text(subtitle ?? ''),
               ),
             ),

@@ -1,0 +1,17 @@
+# import '../../fragments/repo_card_fields.graphql'
+
+query searchRepositories($query: String!, $first: Int!, $after: String) {
+  search(query: $query, type: REPOSITORY, first: $first, after: $after) {
+    repositoryCount
+    pageInfo {
+      endCursor
+      hasNextPage
+    }
+    nodes {
+      __typename
+      ... on Repository {
+        ...repoCardFields
+      }
+    }
+  }
+}

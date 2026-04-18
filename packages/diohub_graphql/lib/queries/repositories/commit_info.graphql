@@ -1,0 +1,153 @@
+# import '../../fragments/actor.graphql'
+# import '../../fragments/commit_author_user.graphql'
+
+query commitInfo($owner: String!, $name: String!, $oid: GitObjectID!) {
+  repository(name: $name, owner: $owner) {
+    object(oid: $oid) {
+      __typename
+      ... on Commit {
+        oid
+        abbreviatedOid
+        message
+        messageHeadline
+        messageBody
+        messageHeadlineHTML
+        commitUrl
+        commitResourcePath
+        url
+
+        resourcePath
+        additions
+        deletions
+        changedFilesIfAvailable
+        authoredDate
+        committedDate
+        authoredByCommitter
+        author {
+          avatarUrl
+          name
+          email
+          date
+          user {
+            __typename
+            login
+            avatarUrl
+            url
+            ... on User {
+              ...commitAuthorUser
+            }
+          }
+        }
+        committer {
+          avatarUrl
+          name
+          email
+          date
+          user {
+            __typename
+            login
+            avatarUrl
+            url
+            ... on User {
+              ...commitAuthorUser
+            }
+          }
+        }
+        parents(first: 10) {
+          edges {
+            node {
+              oid
+              abbreviatedOid
+              commitUrl
+              url
+            }
+          }
+        }
+        tree {
+          oid
+          abbreviatedOid
+        }
+        signature {
+          isValid
+          wasSignedByGitHub
+          signer {
+            email
+            name
+          }
+          payload
+          signature
+        }
+        comments {
+          totalCount
+        }
+        statusCheckRollup {
+          state
+          contexts(first: 50) {
+            pageInfo {
+              hasNextPage
+              endCursor
+            }
+            nodes {
+              __typename
+              ... on CheckRun {
+                name
+                conclusion
+                status
+                detailsUrl
+                startedAt
+                completedAt
+                checkSuite {
+                  app {
+                    name
+                    logoUrl
+                  }
+                }
+              }
+              ... on StatusContext {
+                context
+                state
+                targetUrl
+              }
+            }
+          }
+        }
+        authors(first: 5) {
+          nodes {
+            name
+            email
+            avatarUrl
+            user {
+              ... on Actor {
+                ...actor
+              }
+            }
+          }
+        }
+        committedViaWeb
+        onBehalfOf {
+          login
+          avatarUrl
+        }
+        associatedPullRequests(first: 5) {
+          edges {
+            node {
+              number
+              title
+              url
+              state
+              isDraft
+            }
+          }
+        }
+        repository {
+          name
+          nameWithOwner
+          url
+          defaultBranchRef {
+            name
+          }
+        }
+      }
+    }
+  }
+}

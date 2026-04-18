@@ -1,0 +1,13 @@
+# import '../../fragments/comment_edit_history_fields.graphql'
+
+query issueCommentEditHistory($id: ID!, $first: Int!, $after: String) {
+  node(id: $id) {
+    __typename
+    ... on IssueComment {
+      ...issueCommentEditHistoryFields
+    }
+    ... on PullRequestReviewComment {
+      ...pullRequestReviewCommentEditHistoryFields
+    }
+  }
+}

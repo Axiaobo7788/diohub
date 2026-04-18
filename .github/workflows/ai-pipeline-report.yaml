@@ -1,0 +1,18 @@
+name: AI Pipeline Report
+
+on:
+  workflow_run:
+    workflows: ["Android Pipeline", "iOS Pipeline"]
+    types: [completed]
+
+permissions:
+  contents: read
+
+jobs:
+  call-private:
+    uses: namanshergill/diohub-premium/.github/workflows/_ai-pipeline-report.yaml@main
+    with:
+      run_id: ${{ github.event.workflow_run.id }}
+      commit_sha: ${{ github.event.workflow_run.head_sha }}
+      conclusion: ${{ github.event.workflow_run.conclusion }}
+    secrets: inherit

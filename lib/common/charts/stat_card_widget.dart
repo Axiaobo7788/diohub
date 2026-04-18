@@ -1,4 +1,8 @@
+import 'package:diohub/common/animations/animated_counter_text.dart';
+import 'package:diohub/style/app_spacing.dart';
+import 'package:diohub/style/opacities.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 /// A reusable stat card widget for displaying metrics.
 ///
@@ -15,7 +19,7 @@ import 'package:flutter/material.dart';
 ///   onTap: () => navigateToCommits(),
 /// )
 /// ```
-class StatCardWidget extends StatelessWidget {
+class StatCardWidget extends ConsumerWidget {
   const StatCardWidget({
     required this.icon,
     required this.value,
@@ -61,47 +65,44 @@ class StatCardWidget extends StatelessWidget {
   final double borderRadius;
 
   @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
+  Widget build(final BuildContext context, final WidgetRef ref) {
+    final ThemeData theme = Theme.of(context);
+    final ColorScheme colorScheme = theme.colorScheme;
 
-    final defaultColor = color ?? colorScheme.primary;
-    final defaultValueStyle = valueStyle ??
+    final Color defaultColor = color ?? colorScheme.primary;
+    final TextStyle? defaultValueStyle = valueStyle ??
         theme.textTheme.titleMedium?.copyWith(
           fontWeight: FontWeight.w700,
           color: defaultColor,
         );
-    final defaultLabelStyle = labelStyle ??
+    final TextStyle? defaultLabelStyle = labelStyle ??
         theme.textTheme.labelSmall?.copyWith(
           color: colorScheme.onSurfaceVariant,
           fontSize: 11,
         );
-    final defaultPadding =
+    final EdgeInsets defaultPadding =
         padding ?? const EdgeInsets.symmetric(vertical: 8, horizontal: 6);
 
-    final content = Column(
+    final Column content = Column(
       mainAxisSize: MainAxisSize.min,
       mainAxisAlignment: MainAxisAlignment.center,
-      crossAxisAlignment: CrossAxisAlignment.center,
-      children: [
+      children: <Widget>[
         Flexible(
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             mainAxisSize: MainAxisSize.min,
-            children: [
+            children: <Widget>[
               Icon(
                 icon,
                 size: iconSize,
                 color: defaultColor,
               ),
-              const SizedBox(width: 4),
+              context.spacing.tightGap,
               Flexible(
-                child: Text(
-                  value,
+                child: _valueWidget(
+                  value: value,
                   style: defaultValueStyle,
-                  overflow: TextOverflow.ellipsis,
-                  maxLines: 1,
-                  textAlign: TextAlign.center,
+                  ref: ref,
                 ),
               ),
             ],
@@ -130,7 +131,7 @@ class StatCardWidget extends StatelessWidget {
 
     // Tappable stat card with visual feedback
     return Material(
-      color: colorScheme.surfaceContainerHighest.withOpacity(0.2),
+      color: colorScheme.surfaceContainerHighest.tintStrong,
       borderRadius: BorderRadius.circular(borderRadius),
       child: InkWell(
         onTap: onTap,
@@ -140,6 +141,31 @@ class StatCardWidget extends StatelessWidget {
           child: content,
         ),
       ),
+    );
+  }
+
+  static Widget _valueWidget({
+    required final String value,
+    required final TextStyle? style,
+    required final WidgetRef ref,
+  }) {
+    final int? parsed = int.tryParse(
+      value.replaceAll(',', '').replaceAll('%', '').trim(),
+    );
+    if (parsed != null) {
+      final bool withPercent = value.contains('%');
+      return AnimatedCounterText(
+        value: parsed,
+        style: style,
+        formatter: (final int v) => withPercent ? '$v%' : v.toString(),
+      );
+    }
+    return Text(
+      value,
+      style: style,
+      overflow: TextOverflow.ellipsis,
+      maxLines: 1,
+      textAlign: TextAlign.center,
     );
   }
 }
@@ -191,32 +217,29 @@ class StatCardGrid extends StatelessWidget {
   final EdgeInsets? padding;
 
   @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: padding ?? EdgeInsets.zero,
-      child: GridView.builder(
-        shrinkWrap: true,
-        physics: const NeverScrollableScrollPhysics(),
-        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-          crossAxisCount: crossAxisCount,
-          crossAxisSpacing: spacing,
-          mainAxisSpacing: runSpacing,
-          childAspectRatio: 1.0, // More vertical space for content
+  Widget build(final BuildContext context) => Padding(
+        padding: padding ?? EdgeInsets.zero,
+        child: GridView.builder(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: crossAxisCount,
+            crossAxisSpacing: spacing,
+            mainAxisSpacing: runSpacing,
+          ),
+          itemCount: stats.length,
+          itemBuilder: (final BuildContext context, final int index) {
+            final StatCardData stat = stats[index];
+            return StatCardWidget(
+              icon: stat.icon,
+              value: stat.value,
+              label: stat.label,
+              color: stat.color,
+              onTap: stat.onTap,
+            );
+          },
         ),
-        itemCount: stats.length,
-        itemBuilder: (context, index) {
-          final stat = stats[index];
-          return StatCardWidget(
-            icon: stat.icon,
-            value: stat.value,
-            label: stat.label,
-            color: stat.color,
-            onTap: stat.onTap,
-          );
-        },
-      ),
-    );
-  }
+      );
 }
 
 /// Data class for stat card information

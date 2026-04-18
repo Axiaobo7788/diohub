@@ -1,5 +1,8 @@
 import 'package:intl/intl.dart';
 
+final DateFormat _dateFormatFull = DateFormat('MMM d, yyyy');
+final DateFormat _dateFormatShort = DateFormat('MMM d');
+
 /// Extension on [DateTime] to format dates as relative time or absolute dates.
 extension DateTimeFormatting on DateTime {
   /// Formats the date as a relative time string (e.g., "2h ago", "3d ago")
@@ -14,9 +17,7 @@ extension DateTimeFormatting on DateTime {
 
     // Handle future dates (shouldn't happen but just in case)
     if (difference.isNegative) {
-      return shorten
-          ? DateFormat('MMM d, yyyy').format(this)
-          : DateFormat('MMM d, yyyy').format(this);
+      return _dateFormatFull.format(this);
     }
 
     // Very recent (less than a minute)
@@ -26,7 +27,7 @@ extension DateTimeFormatting on DateTime {
 
     // Minutes ago
     if (difference.inMinutes < 60) {
-      final minutes = difference.inMinutes;
+      final int minutes = difference.inMinutes;
       if (shorten) {
         return '${minutes}m';
       }
@@ -35,7 +36,7 @@ extension DateTimeFormatting on DateTime {
 
     // Hours ago
     if (difference.inHours < 24) {
-      final hours = difference.inHours;
+      final int hours = difference.inHours;
       if (shorten) {
         return '${hours}h';
       }
@@ -43,7 +44,7 @@ extension DateTimeFormatting on DateTime {
     }
 
     // Days ago
-    final days = difference.inDays;
+    final int days = difference.inDays;
     if (days == 1) {
       return shorten ? '1d' : 'yesterday';
     }
@@ -53,7 +54,7 @@ extension DateTimeFormatting on DateTime {
     }
 
     // Weeks ago
-    final weeks = (days / 7).floor();
+    final int weeks = (days / 7).floor();
     if (weeks < 4) {
       if (shorten) {
         return '${weeks}w';
@@ -62,7 +63,7 @@ extension DateTimeFormatting on DateTime {
     }
 
     // Months ago
-    final months = (days / 30).floor();
+    final int months = (days / 30).floor();
     if (months < 12) {
       if (shorten) {
         return '${months}mo';
@@ -71,7 +72,7 @@ extension DateTimeFormatting on DateTime {
     }
 
     // Years ago
-    final years = (days / 365).floor();
+    final int years = (days / 365).floor();
     if (years < 2) {
       return shorten ? '1y' : '1 year ago';
     }
@@ -79,19 +80,15 @@ extension DateTimeFormatting on DateTime {
     // For dates older than 1 year, show formatted date with full year
     if (shorten) {
       // Check if it's the current year
-      if (year == now.year) {
-        return DateFormat('MMM d').format(this);
+      if (this.year == now.year) {
+        return _dateFormatShort.format(this);
       }
-      // Always show full 4-digit year for older dates
-      return DateFormat('MMM d, yyyy').format(this);
+      return _dateFormatFull.format(this);
     } else {
-      // Full date format: "Jan 15, 2024"
-      // Check if it's the current year to optionally omit year
-      if (year == now.year) {
-        return DateFormat('MMM d').format(this);
+      if (this.year == now.year) {
+        return _dateFormatShort.format(this);
       }
-      // Always show full 4-digit year for older dates
-      return DateFormat('MMM d, yyyy').format(this);
+      return _dateFormatFull.format(this);
     }
   }
 }
@@ -102,16 +99,5 @@ extension DateTimeFormattingNullable on DateTime? {
   String toRelativeDate({final bool shorten = true}) {
     if (this == null) return '';
     return this!.toRelativeDate(shorten: shorten);
-  }
-}
-
-/// Legacy function for backward compatibility.
-/// Prefer using [DateTime.toRelativeDate] extension method instead.
-@Deprecated('Use DateTime.toRelativeDate() extension method instead')
-String getDate(final String date, {final bool shorten = true}) {
-  try {
-    return DateTime.parse(date).toRelativeDate(shorten: shorten);
-  } catch (e) {
-    return '';
   }
 }

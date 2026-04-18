@@ -1,0 +1,7 @@
+mutation deleteIssue($issueId: ID!) {
+  deleteIssue(input: { issueId: $issueId }) {
+    repository {
+      id
+    }
+  }
+}

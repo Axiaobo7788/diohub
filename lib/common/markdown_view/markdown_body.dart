@@ -1,74 +1,216 @@
+import 'package:diohub/app/app_logger.dart';
+import 'package:diohub/common/markdown_view/builders/markdown_image_builder.dart';
 import 'package:diohub/common/markdown_view/extensions/markdown_extensions.dart';
-import 'package:diohub/common/misc/image_loader.dart';
-import 'package:diohub/common/misc/loading_indicator.dart';
-import 'package:diohub/common/wrappers/api_wrapper_widget.dart';
-import 'package:diohub/services/markdown/markdown_service.dart';
+import 'package:diohub/common/misc/floating_glass_pill.dart';
+import 'package:diohub/common/misc/markdown_skeleton.dart';
+import 'package:diohub/common/misc/shimmer_scope.dart';
+import 'package:diohub/common/widgets/section_toc_button.dart';
+import 'package:diohub/common/wrappers/sticky_glass_header.dart';
+import 'package:diohub_models/models/entity_ref.dart';
+import 'package:diohub_models/models/server_config.dart';
+import 'package:diohub/utils/utils.dart';
+import 'package:diohub/style/app_spacing.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_svg/flutter_svg.dart';
+import 'package:flutter_sticky_header/flutter_sticky_header.dart';
 import 'package:flutter_widget_from_html/flutter_widget_from_html.dart';
 import 'package:html/dom.dart' as dom;
 import 'package:html/parser.dart';
+import 'package:sliver_tools/sliver_tools.dart';
 
-class MarkdownRenderAPI extends StatelessWidget {
-  const MarkdownRenderAPI(
-    this.data, {
-    super.key,
-    this.repoContext,
-    this.branch,
-    this.style,
-    this.buildAsync,
-    this.onHeadingsExtracted,
-    this.onScrollToAnchor,
-    this.markdownBodyKey,
+final RegExp _reIdSafe = RegExp(r'[^0-9a-zA-Z-]+');
+
+/// Typedef for image source modifiers
+typedef MarkdownImgSrcModifiers = String Function(MarkdownImgSrcData srcData);
+
+/// Data class for markdown image source information
+class MarkdownImgSrcData {
+  MarkdownImgSrcData(this.src);
+
+  final String src;
+
+  bool get isHttp => src.startsWith('https://') || src.startsWith('http://');
+
+  bool isInRepoContext(final ServerConfig server, final String repoContext) =>
+      src.startsWith('${server.webBaseUrl}/$repoContext/blob/');
+}
+
+/// Create image source modifiers for repository context.
+/// [serverConfig] is used to build raw content URLs for the active server.
+List<MarkdownImgSrcModifiers> createRepoMarkdownImgSrcModifiers(
+  final String? repoContext,
+  final String? branch,
+  final ServerConfig serverConfig,
+) {
+  if (repoContext == null) return <MarkdownImgSrcModifiers>[];
+  final List<String> parts = repoContext.split('/');
+  final String owner = parts.isNotEmpty ? parts[0] : '';
+  final String repo = parts.length > 1 ? parts[1] : '';
+  return <MarkdownImgSrcModifiers>[
+    (final MarkdownImgSrcData srcData) {
+      String src = srcData.src;
+      if (!srcData.isHttp &&
+          branch != null &&
+          owner.isNotEmpty &&
+          repo.isNotEmpty) {
+        src = serverConfig.rawUrl(owner, repo, branch, src).toString();
+      } else if (srcData.isInRepoContext(serverConfig, repoContext)) {
+        src = src.replaceFirst(
+          '${serverConfig.webBaseUrl}/$repoContext/blob/',
+          '${serverConfig.rawContentBaseUrl}/$repoContext/',
+        );
+      }
+      return src;
+    },
+  ];
+}
+
+/// Create image source modifiers for wiki context.
+/// [serverConfig] is used to build raw wiki image URLs.
+List<MarkdownImgSrcModifiers> createWikiMarkdownImgSrcModifiers(
+  final String repoFullName,
+  final ServerConfig serverConfig,
+) {
+  final List<String> parts = repoFullName.split('/');
+  final String owner = parts.isNotEmpty ? parts[0] : '';
+  final String repo = parts.length > 1 ? parts[1] : '';
+  return <MarkdownImgSrcModifiers>[
+    (final MarkdownImgSrcData srcData) {
+      String src = srcData.src;
+      if (!srcData.isHttp && owner.isNotEmpty && repo.isNotEmpty) {
+        src = serverConfig.wikiRawUrl(owner, repo, src).toString();
+      } else if (src.contains(serverConfig.host) && src.contains('/wiki/')) {
+        final Uri uri = Uri.parse(src);
+        if (uri.pathSegments.contains('wiki') &&
+            !src.contains(serverConfig.rawContentBaseUrl)) {
+          final int wikiIdx = uri.pathSegments.indexOf('wiki');
+          final List<String> rest = uri.pathSegments.sublist(wikiIdx + 1);
+          if (rest.isNotEmpty) {
+            src =
+                serverConfig.wikiRawUrl(owner, repo, rest.join('/')).toString();
+          }
+        }
+      }
+      return src;
+    },
+  ];
+}
+
+extension RepoRefMarkdownImg on RepoRef {
+  List<MarkdownImgSrcModifiers> markdownImgModifiers(
+    String? branch,
+    ServerConfig server,
+  ) =>
+      createRepoMarkdownImgSrcModifiers(fullName, branch, server);
+
+  List<MarkdownImgSrcModifiers> wikiImgModifiers(ServerConfig server) =>
+      createWikiMarkdownImgSrcModifiers(fullName, server);
+}
+
+/// Mixin for shared markdown parsing logic
+mixin MarkdownParserMixin {
+  /// Parse HTML document, inject heading IDs, and extract heading list
+  ({
+    dom.Document doc,
+    List<({String text, String id, int level})> headings,
+  }) parseMarkdownDoc(final String htmlContent) {
+    final dom.Document document = parse(htmlContent);
+    final List<String> tags = <String>['h1', 'h2', 'h3', 'h4', 'h5', 'h6'];
+
+    // Add IDs to all headings
+    for (final String element in tags) {
+      final List<dom.Element> elements = document.getElementsByTagName(element);
+      addHeadingIds(elements);
+    }
+
+    // Extract all headings
+    final List<({String id, int level, String text})> headings =
+        <({String text, String id, int level})>[];
+    final List<dom.Element> allHeadingElements =
+        document.querySelectorAll('h1, h2, h3, h4, h5, h6');
+
+    for (final dom.Element headingElement in allHeadingElements) {
+      final String text = headingElement.text.trim();
+      if (text.isNotEmpty) {
+        final String id = headingElement.attributes['id'] ?? '';
+        final int level = int.parse(headingElement.localName!.substring(1));
+        headings.add((text: text, id: id, level: level));
+      }
+    }
+
+    return (doc: document, headings: headings);
+  }
+
+  /// Inject IDs into heading elements
+  void addHeadingIds(final List<dom.Element> elements) {
+    for (final dom.Element node in elements) {
+      node.attributes.addAll(
+        <Object, String>{
+          'id': node.text
+              .toLowerCase()
+              .replaceAll(' ', '-')
+              .replaceAll(_reIdSafe, ''),
+        },
+      );
+    }
+  }
+
+  /// Shared custom styles builder for HtmlWidget
+  Map<String, String>? markdownStylesBuilder(final dom.Element element) =>
+      switch (element.localName) {
+        'a' => <String, String>{
+            'text-decoration': 'none',
+          },
+        'blockquote' => <String, String>{
+            'margin': '0',
+          },
+        'ol' => <String, String>{
+            'margin': '16',
+          },
+        'ul' => <String, String>{
+            'margin': '16',
+          },
+        _ => null,
+      };
+
+  /// Shared custom widget builder for HtmlWidget
+  Widget? markdownWidgetBuilder(
+    final dom.Element element,
+    final List<MarkdownImgSrcModifiers>? imgSrcModifiers,
+  ) {
+    if (element.children.isNotEmpty) {
+      if (element.children.first.isTag('pre')) {
+        return CodeView(
+          element.text,
+          language: element.attributes['class']
+              ?.replaceAll('highlight highlight-source-', '')
+              .split(' ')
+              .first,
+        );
+      }
+    }
+
+    if (element.isTag('img')) {
+      return buildImageTag(
+        element,
+        imgSrcModifiers: imgSrcModifiers,
+      );
+    }
+    return null;
+  }
+}
+
+/// Internal data class for grouping nodes during recursive split
+class _NodeGroup {
+  const _NodeGroup({
+    required this.heading,
+    required this.contentNodes,
   });
 
-  final String data;
-  final String? repoContext;
-  final String? branch;
-  final bool? buildAsync;
-  final MarkdownBodyStyle? style;
-  final void Function(List<({String text, String id, int level})> headings)?
-      onHeadingsExtracted;
-  final void Function(String anchorId)? onScrollToAnchor;
-  final Key? markdownBodyKey;
+  /// The heading element (null for preamble)
+  final dom.Element? heading;
 
-  List<MarkdownImgSrcModifiers> get _repoMarkdownImgSrcModifiers =>
-      <MarkdownImgSrcModifiers>[
-        (final MarkdownImgSrcData srcData) {
-          String src = srcData.src;
-          if (!srcData.isHttp && branch != null) {
-            src = 'https://raw.githubusercontent.com/$repoContext/$branch/$src';
-          } else if (repoContext != null &&
-              srcData.isInRepoContext(repoContext!)) {
-            src = src.replaceFirst(
-              'https://github.com/$repoContext/blob/',
-              'https://raw.githubusercontent.com/$repoContext/',
-            );
-          }
-          return src;
-        },
-      ];
-
-  @override
-  Widget build(final BuildContext context) => APIWrapper<String>.deferred(
-        apiCall: ({
-          required final bool refresh,
-        }) async =>
-            MarkdownService.renderMarkdown(data, context: repoContext),
-        loadingBuilder: (final BuildContext context) => const Center(
-          child: LoadingIndicator(),
-        ),
-        builder: (final BuildContext context, final String data) =>
-            MarkdownBody(
-          data,
-          key: markdownBodyKey,
-          buildAsync: buildAsync,
-          imgSrcModifiers: _repoMarkdownImgSrcModifiers,
-          style: style,
-          onHeadingsExtracted: onHeadingsExtracted,
-          onScrollToAnchor: onScrollToAnchor,
-        ),
-      );
+  /// The content nodes under this heading
+  final List<dom.Node> contentNodes;
 }
 
 class MarkdownBody extends StatefulWidget {
@@ -76,15 +218,12 @@ class MarkdownBody extends StatefulWidget {
     this.content, {
     super.key,
     this.imgSrcModifiers,
-    this.style,
     this.buildAsync,
     this.textStyle,
     this.onHeadingsExtracted,
     this.onScrollToAnchor,
-    // this.defaultBodyStyle,
   });
 
-  final MarkdownBodyStyle? style;
   final bool? buildAsync;
   final String content;
   final List<MarkdownImgSrcModifiers>? imgSrcModifiers;
@@ -93,14 +232,11 @@ class MarkdownBody extends StatefulWidget {
       onHeadingsExtracted;
   final void Function(String anchorId)? onScrollToAnchor;
 
-  // final Style? defaultBodyStyle;
-
   @override
   MarkdownBodyState createState() => MarkdownBodyState();
 }
 
-class MarkdownBodyState extends State<MarkdownBody> {
-  // late String content;
+class MarkdownBodyState extends State<MarkdownBody> with MarkdownParserMixin {
   late dom.Document doc;
 
   @override
@@ -111,42 +247,14 @@ class MarkdownBodyState extends State<MarkdownBody> {
   }
 
   void updateData(final String data) {
-    final dom.Document document = parse(data);
-    // The list of tags to perform modifications on.
-    final List<String> tags = <String>['h1', 'h2', 'h3', 'h4', 'h5', 'h6'];
+    final ({
+      dom.Document doc,
+      List<({String id, int level, String text})> headings
+    }) result = parseMarkdownDoc(data);
+    doc = result.doc;
 
-    // Collect all heading elements first (for modifications)
-    for (final String element in tags) {
-      final List<dom.Element> elements = document.getElementsByTagName(element);
-      performModifications(elements);
-    }
-
-    // Extract headings in document order by querying all at once
-    final headings = <({String text, String id, int level})>[];
-    final allHeadingElements =
-        document.querySelectorAll('h1, h2, h3, h4, h5, h6');
-
-    for (final dom.Element headingElement in allHeadingElements) {
-      final text = headingElement.text.trim();
-      if (text.isNotEmpty) {
-        final id = headingElement.attributes['id'] ?? '';
-        // Extract level from tag name (h1 = 1, h2 = 2, etc.)
-        final level = int.parse(headingElement.localName!.substring(1));
-
-        print(
-            '[MarkdownBody] Extracted heading: text="$text", id="$id", level=$level');
-        print(
-            '[MarkdownBody] Heading element attributes: ${headingElement.attributes}');
-
-        headings.add((text: text, id: id, level: level));
-      }
-    }
-
-    doc = document;
-
-    // Notify about extracted headings - defer to avoid setState during build
-    if (widget.onHeadingsExtracted != null && headings.isNotEmpty) {
-      widget.onHeadingsExtracted!(headings);
+    if (widget.onHeadingsExtracted != null && result.headings.isNotEmpty) {
+      widget.onHeadingsExtracted!(result.headings);
     }
   }
 
@@ -155,9 +263,7 @@ class MarkdownBodyState extends State<MarkdownBody> {
     if (oldWidget.content != widget.content) {
       updateData(widget.content);
     }
-    // Update scroll callback if changed
     if (oldWidget.onScrollToAnchor != widget.onScrollToAnchor) {
-      // Store scroll callback for later use
       _scrollCallback = widget.onScrollToAnchor;
     }
     super.didUpdateWidget(oldWidget);
@@ -165,434 +271,495 @@ class MarkdownBodyState extends State<MarkdownBody> {
 
   void Function(String anchorId)? _scrollCallback;
 
-  void performModifications(final List<dom.Element> elements) {
-    for (final dom.Element node in elements) {
-      node.attributes.addAll(
-        <Object, String>{
-          'id': node.text
-              .toLowerCase()
-              .replaceAll(' ', '-')
-              .replaceAll(RegExp(r'[^0-9a-zA-Z-]+'), ''),
-        },
-      );
-    }
-  }
-
   final GlobalKey<HtmlWidgetState> htmlWidgetKey = GlobalKey<HtmlWidgetState>();
 
   HtmlWidgetState? get currentMarkdownState => htmlWidgetKey.currentState;
 
-  void scrollToAnchor(String anchorId) {
-    print('[MarkdownBodyState] ====== scrollToAnchor CALLED ======');
-    print('[MarkdownBodyState] anchorId: "$anchorId"');
-    print('[MarkdownBodyState] htmlWidgetKey: ${htmlWidgetKey.toString()}');
-    print(
-        '[MarkdownBodyState] currentMarkdownState (HtmlWidgetState) is ${currentMarkdownState != null ? "not null" : "null"}');
+  void scrollToAnchor(final String anchorId) {
     if (currentMarkdownState != null) {
-      print('[MarkdownBodyState] ✓ HtmlWidgetState found');
-      print(
-          '[MarkdownBodyState] HtmlWidgetState type: ${currentMarkdownState.runtimeType}');
-      print(
-          '[MarkdownBodyState] Calling currentMarkdownState.scrollToAnchor("$anchorId")');
       try {
         currentMarkdownState!.scrollToAnchor(anchorId);
-        print(
-            '[MarkdownBodyState] ✓ scrollToAnchor call to HtmlWidgetState completed successfully');
       } catch (e, stackTrace) {
-        print('[MarkdownBodyState] ✗ ERROR calling scrollToAnchor: $e');
-        print('[MarkdownBodyState] Stack trace: $stackTrace');
+        AppLogger.warning(
+          'Error scrolling to anchor: $anchorId',
+          error: e,
+          stackTrace: stackTrace,
+          tag: 'Markdown',
+        );
       }
-    } else {
-      print(
-          '[MarkdownBodyState] ✗ ERROR: currentMarkdownState is null, cannot scroll');
-      print(
-          '[MarkdownBodyState] This means HtmlWidget may not be mounted yet or htmlWidgetKey is not attached');
     }
-    // Also call callback if provided
     if (_scrollCallback != null) {
-      print(
-          '[MarkdownBodyState] Calling _scrollCallback with anchorId: "$anchorId"');
       _scrollCallback!.call(anchorId);
-    } else {
-      print('[MarkdownBodyState] No _scrollCallback provided');
     }
   }
 
   @override
   Widget build(final BuildContext context) => HtmlWidget(
-        doc.outerHtml, key: htmlWidgetKey,
+        doc.outerHtml,
+        key: htmlWidgetKey,
         buildAsync: widget.buildAsync,
         factoryBuilder: () => MyWidgetFactory(
           fetchState: () => currentMarkdownState,
-          // codeBlockStyle: widget.style?.codeBlockStyle,
         ),
         textStyle: widget.textStyle,
-        // onTapUrl: (final String url) async {
-        //   await URLActions(
-        //     uri: Uri.parse(url),
-        //   ).showMenu(context);
-        //   return true;
-        // },
         onLoadingBuilder: (
           final BuildContext context,
           final dom.Element element,
           final double? loadingProgress,
         ) =>
-            const LoadingIndicator(),
-
-        customStylesBuilder: (final dom.Element element) {
-          // print(element.localName);
-          return switch (element.localName) {
-            'a' => <String, String>{
-                'text-decoration': 'none',
-              },
-            'blockquote' => <String, String>{
-                'margin': '0',
-                // 'padding': '0',
-              },
-            'ol' => {
-                'margin': '16',
-                // 'padding': '16',
-              },
-            'ul' => {
-                'margin': '16',
-                // 'padding': '16',
-              },
-            _ => null,
-          };
-        },
-        // rende
-        // rMode: RenderMode.sliverList,
-
-        customWidgetBuilder: (final dom.Element element) {
-          if (element.children.isNotEmpty) {
-            if (element.children.first.isTag('pre')) {
-              return CodeView(
-                element.text,
-                language: element.attributes['class']
-                    ?.replaceAll('highlight highlight-source-', '')
-                    .split(' ')
-                    .first,
-                codeBlockStyle: widget.style?.codeBlockStyle,
-              );
-            }
-          }
-
-          // if (element.isTag('table')) {
-          //   return Container();
-          // }
-          if (element.isTag('img')) {
-            return buildImageTag(
-              element,
-              imgSrcModifiers: widget.imgSrcModifiers,
-            );
-          }
-          return null;
-        },
+            const ShimmerScope(child: MarkdownSkeleton()),
+        customStylesBuilder: markdownStylesBuilder,
+        customWidgetBuilder: (final dom.Element element) =>
+            markdownWidgetBuilder(element, widget.imgSrcModifiers),
       );
+}
 
-  Widget buildImageTag(
-    final dom.Element element, {
-    required final Iterable<MarkdownImgSrcModifiers>? imgSrcModifiers,
+/// Sliver-based markdown body that splits content at headings and uses PinnedGlassHeader
+class SliverMarkdownBody extends StatefulWidget {
+  const SliverMarkdownBody(
+    this.content, {
+    super.key,
+    this.imgSrcModifiers,
+    this.buildAsync,
+    this.textStyle,
+    this.onHeadingsExtracted,
+    this.onScrollToAnchor,
+    this.contentPadding,
+    this.onTapLink,
+  });
+
+  final String content;
+  final List<MarkdownImgSrcModifiers>? imgSrcModifiers;
+  final bool? buildAsync;
+  final TextStyle? textStyle;
+  final void Function(List<({String text, String id, int level})> headings)?
+      onHeadingsExtracted;
+  final void Function(String anchorId)? onScrollToAnchor;
+  final EdgeInsets? contentPadding;
+
+  /// When non-null and returns true for a given href, the link is handled
+  /// in-app (e.g. wiki page navigation) and the default launch URL is skipped.
+  final bool Function(String href)? onTapLink;
+
+  @override
+  SliverMarkdownBodyState createState() => SliverMarkdownBodyState();
+}
+
+class SliverMarkdownBodyState extends State<SliverMarkdownBody>
+    with MarkdownParserMixin {
+  late dom.Document doc;
+  final Map<String, GlobalKey> _anchorKeys =
+      <String, GlobalKey<State<StatefulWidget>>>{};
+  List<({String text, String id, int level})> _headings =
+      <({String id, int level, String text})>[];
+
+  /// Pre-allocated GlobalKeys for HtmlWidget sections — created/resized in
+  /// [_updateData] when content changes, reused by index in [build] so that
+  /// Flutter's reconciliation keeps the Elements alive across parent rebuilds.
+  final List<GlobalKey<HtmlWidgetState>> _sectionHtmlKeys =
+      <GlobalKey<HtmlWidgetState>>[];
+
+  /// Index counter reset at the start of each [build], incremented by
+  /// [_buildHtmlContent] to pick the next pre-allocated key.
+  int _nextSectionIndex = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _updateData(widget.content, defer: true);
+  }
+
+  @override
+  void didUpdateWidget(covariant final SliverMarkdownBody oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.content != widget.content) {
+      _updateData(widget.content);
+    }
+  }
+
+  void _updateData(final String data, {final bool defer = false}) {
+    _anchorKeys.clear();
+
+    final ({
+      dom.Document doc,
+      List<({String id, int level, String text})> headings
+    }) result = parseMarkdownDoc(data);
+    doc = result.doc;
+    _headings = result.headings;
+
+    // Create GlobalKeys for all headings
+    for (final ({String id, int level, String text}) heading
+        in result.headings) {
+      if (heading.id.isNotEmpty && !_anchorKeys.containsKey(heading.id)) {
+        _anchorKeys[heading.id] = GlobalKey();
+      }
+    }
+
+    // Pre-allocate GlobalKeys for HtmlWidget sections. The recursive layout
+    // creates one HtmlWidget per leaf section (base case at level > 6), plus
+    // one per heading group that has no sub-headings. We over-estimate slightly
+    // (headings + 1 for preamble) — extra keys are harmless.
+    final int sectionCount = (result.headings.length + 1).clamp(1, 256);
+    _resizeSectionKeys(sectionCount);
+
+    if (widget.onHeadingsExtracted != null && result.headings.isNotEmpty) {
+      if (defer) {
+        // Defer to avoid setState-during-build when called from initState.
+        WidgetsBinding.instance.addPostFrameCallback((final _) {
+          if (mounted) {
+            widget.onHeadingsExtracted!(result.headings);
+          }
+        });
+      } else {
+        widget.onHeadingsExtracted!(result.headings);
+      }
+    }
+  }
+
+  /// Grow or shrink [_sectionHtmlKeys] to [count]. Existing keys are kept
+  /// so their Elements survive content-unchanged rebuilds.
+  void _resizeSectionKeys(final int count) {
+    while (_sectionHtmlKeys.length < count) {
+      _sectionHtmlKeys.add(GlobalKey<HtmlWidgetState>());
+    }
+    if (_sectionHtmlKeys.length > count) {
+      _sectionHtmlKeys.removeRange(count, _sectionHtmlKeys.length);
+    }
+  }
+
+  /// Try to extract a heading element of [tag] from a node.
+  ///
+  /// GitHub wraps headings in `<div class="markdown-heading"><h2>…</h2></div>`.
+  /// This returns the inner heading element if [node] is such a wrapper,
+  /// or [node] itself if it is directly a heading of [tag].
+  dom.Element? _extractHeading(final dom.Node node, final String tag) {
+    if (node is! dom.Element) return null;
+    if (node.localName == tag) return node;
+    // Check for wrapper div (e.g. <div class="markdown-heading">)
+    if (node.localName == 'div' &&
+        (node.classes.contains('markdown-heading') ||
+            (node.attributes['class']?.contains('markdown-heading') ??
+                false))) {
+      // Look for the heading child inside the wrapper
+      for (final dom.Element child in node.children) {
+        if (child.localName == tag) return child;
+      }
+    }
+    return null;
+  }
+
+  /// Split nodes at a specific heading tag, also detecting headings wrapped
+  /// in `<div class="markdown-heading">` wrappers (GitHub's README format).
+  List<_NodeGroup> _splitNodesAtTag(
+      final List<dom.Node> nodes, final String tag) {
+    final List<_NodeGroup> groups = <_NodeGroup>[];
+    dom.Element? currentHeading;
+    List<dom.Node> currentNodes = <dom.Node>[];
+
+    for (final dom.Node node in nodes) {
+      final dom.Element? heading = _extractHeading(node, tag);
+      if (heading != null) {
+        // Flush previous group
+        groups.add(
+          _NodeGroup(
+            heading: currentHeading,
+            contentNodes: List.from(currentNodes),
+          ),
+        );
+        currentHeading = heading;
+        currentNodes = <dom.Node>[];
+      } else {
+        currentNodes.add(node);
+      }
+    }
+
+    // Flush last group
+    groups.add(
+      _NodeGroup(
+        heading: currentHeading,
+        contentNodes: List.from(currentNodes),
+      ),
+    );
+
+    return groups;
+  }
+
+  /// Recursively build slivers from nodes, splitting at each heading level
+  List<Widget> _buildSliversFromNodes(
+      final List<dom.Node> nodes, final int currentLevel) {
+    if (currentLevel > 6) {
+      // Base case: no more heading levels to split at, render as HtmlWidget
+      return <Widget>[SliverToBoxAdapter(child: _buildHtmlContent(nodes))];
+    }
+
+    // Split nodes at h{currentLevel} boundaries
+    final List<_NodeGroup> groups = _splitNodesAtTag(nodes, 'h$currentLevel');
+
+    // If no splits happened (no headings at this level), try next level
+    if (groups.length == 1 && groups.first.heading == null) {
+      return _buildSliversFromNodes(nodes, currentLevel + 1);
+    }
+
+    final List<Widget> slivers = <Widget>[];
+    for (final _NodeGroup group in groups) {
+      if (group.heading == null && group.contentNodes.isNotEmpty) {
+        // Preamble content before first heading at this level
+        // Recurse into it to find deeper headings
+        slivers.addAll(
+          _buildSliversFromNodes(group.contentNodes, currentLevel + 1),
+        );
+      } else if (group.heading != null) {
+        // Recursively build child slivers for content under this heading
+        final List<Widget> childSlivers = _buildSliversFromNodes(
+          group.contentNodes,
+          currentLevel + 1,
+        );
+
+        // Get anchor key for this heading
+        final String headingId = group.heading!.attributes['id'] ?? '';
+        final GlobalKey<State<StatefulWidget>>? anchorKey =
+            headingId.isNotEmpty && _anchorKeys.containsKey(headingId)
+                ? _anchorKeys[headingId]!
+                : null;
+
+        final bool isFirst = _nextHeadingIsFirst;
+        if (isFirst) _nextHeadingIsFirst = false;
+        final SectionTocButton? trailing = isFirst && _headings.isNotEmpty
+            ? SectionTocButton(
+                entries: _headings
+                    .map(
+                      (final ({String id, int level, String text}) h) =>
+                          SectionTocEntry(
+                        id: h.id,
+                        title: h.text,
+                        level: h.level,
+                      ),
+                    )
+                    .toList(),
+                onSelect: scrollToAnchor,
+              )
+            : null;
+
+        slivers.add(
+          PinnedGlassHeader(
+            headerBuilder: (final BuildContext context,
+                    final SliverStickyHeaderState state) =>
+                _buildHeadingWidget(group, state, trailing: trailing),
+            style: GlassPillStyle.section(
+              context,
+              restingColor: Theme.of(context).scaffoldBackgroundColor,
+            ),
+            sliver: MultiSliver(
+              children: <Widget>[
+                // Place anchor key on SizedBox.shrink at start of content
+                if (anchorKey != null)
+                  SliverToBoxAdapter(
+                    child: SizedBox.shrink(key: anchorKey),
+                  ),
+                ...childSlivers,
+              ],
+            ),
+          ),
+        );
+      }
+    }
+    return slivers;
+  }
+
+  /// Build HtmlWidget for a list of nodes, using a pre-allocated GlobalKey.
+  Widget _buildHtmlContent(final List<dom.Node> nodes) {
+    if (nodes.isEmpty) return const SizedBox.shrink();
+
+    // Use pre-allocated key by index — stable across parent rebuilds.
+    // If we exceed pre-allocated count (edge case), create on the fly.
+    final GlobalKey<HtmlWidgetState> sectionHtmlKey;
+    if (_nextSectionIndex < _sectionHtmlKeys.length) {
+      sectionHtmlKey = _sectionHtmlKeys[_nextSectionIndex++];
+    } else {
+      sectionHtmlKey = GlobalKey<HtmlWidgetState>();
+      _sectionHtmlKeys.add(sectionHtmlKey);
+      _nextSectionIndex++;
+    }
+
+    final String html = _nodesToHtml(nodes);
+
+    final HtmlWidget htmlWidget = HtmlWidget(
+      '<div>$html</div>',
+      key: sectionHtmlKey,
+      buildAsync: widget.buildAsync,
+      factoryBuilder: () => MyWidgetFactory(
+        fetchState: () => sectionHtmlKey.currentState,
+        onScrollToAnchor: scrollToAnchor,
+        anchorKeys: _anchorKeys,
+        onTapLink: widget.onTapLink,
+      ),
+      textStyle: widget.textStyle,
+      onLoadingBuilder: (
+        final BuildContext context,
+        final dom.Element element,
+        final double? loadingProgress,
+      ) =>
+          const ShimmerScope(child: MarkdownSkeleton()),
+      customStylesBuilder: markdownStylesBuilder,
+      customWidgetBuilder: (final dom.Element element) =>
+          markdownWidgetBuilder(element, widget.imgSrcModifiers),
+    );
+
+    if (widget.contentPadding != null) {
+      return Padding(
+        padding: widget.contentPadding!,
+        child: htmlWidget,
+      );
+    }
+
+    return htmlWidget;
+  }
+
+  String _nodesToHtml(final List<dom.Node> nodes) {
+    if (nodes.isEmpty) return '';
+
+    // Create a temporary div to hold the nodes
+    final dom.Element tempDiv = dom.Element.tag('div');
+    for (final dom.Node node in nodes) {
+      tempDiv.append(node.clone(true));
+    }
+
+    return tempDiv.innerHtml;
+  }
+
+  void scrollToAnchor(final String anchorId) {
+    final GlobalKey<State<StatefulWidget>>? key = _anchorKeys[anchorId];
+    if (key?.currentContext != null) {
+      Scrollable.ensureVisible(
+        key!.currentContext!,
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeInOut,
+      );
+      return;
+    }
+
+    // Fallback: try each section's HtmlWidgetState for non-heading anchors
+    for (final GlobalKey<HtmlWidgetState> sectionKey in _sectionHtmlKeys) {
+      try {
+        sectionKey.currentState?.scrollToAnchor(anchorId);
+        return;
+      } catch (e, stackTrace) {
+        AppLogger.warning(
+          'Error scrolling to anchor in section',
+          error: e,
+          stackTrace: stackTrace,
+          tag: 'Markdown',
+        );
+      }
+    }
+  }
+
+  Widget _buildHeadingWidget(
+    final _NodeGroup group,
+    final SliverStickyHeaderState state, {
+    final Widget? trailing,
   }) {
-    String src = element.attributes['src']!;
-    for (final MarkdownImgSrcModifiers modifier
-        in imgSrcModifiers ?? <MarkdownImgSrcModifiers>[]) {
-      src = modifier.call(
-        MarkdownImgSrcData(src),
-      );
+    final dom.Element heading = group.heading!;
+    final int level = int.parse(heading.localName!.substring(1));
+    final String headingText = heading.text.trim();
+
+    final TextStyle expandedStyle = _headingTextStyle(context, level);
+    final TextStyle pinnedStyle = switch (level) {
+      1 => context.textTheme.titleMedium!,
+      2 => context.textTheme.titleSmall!,
+      3 => context.textTheme.bodyLarge!,
+      4 => context.textTheme.bodyMedium!,
+      5 => context.textTheme.bodySmall!,
+      6 => context.textTheme.bodySmall!,
+      _ => context.textTheme.bodyMedium!,
     }
-    if (src.split('.').last.contains('svg')) {
-      return SvgPicture.network(
-        src,
-      );
-    }
-    return Padding(
-      padding: const EdgeInsets.all(4),
-      child: ImageLoader(
-        src,
-        height: double.tryParse(
-          element.attributes['height'] ?? '',
-        ),
-        width: double.tryParse(
-          element.attributes['width'] ?? '',
-        ),
-        // Some SVGs don't have svg in their URL so will miss the
-        // if check above. They will fail in the image loader
-        // so will build here.
-        errorBuilder: (final BuildContext context) => SvgPicture.network(
-          src,
+        .copyWith(fontWeight: FontWeight.bold);
+
+    final AnimatedDefaultTextStyle content = AnimatedDefaultTextStyle(
+      style: state.isPinned ? pinnedStyle : expandedStyle,
+      duration: const Duration(milliseconds: 200),
+      child: Align(
+        alignment: Alignment.centerLeft,
+        child: Text(
+          headingText,
+          softWrap: true,
+          overflow: TextOverflow.visible,
         ),
       ),
     );
+
+    if (trailing == null) return content;
+    return Row(
+      children: <Widget>[
+        Expanded(child: content),
+        context.spacing.itemGap,
+        trailing,
+      ],
+    );
+  }
+
+  TextStyle _headingTextStyle(final BuildContext context, final int level) {
+    final TextStyle baseStyle =
+        context.textTheme.bodyMedium ?? const TextStyle();
+
+    // Match HtmlWidget's default heading sizes
+    return switch (level) {
+      1 => baseStyle.copyWith(
+          fontSize: 32,
+          fontWeight: FontWeight.bold,
+        ),
+      2 => baseStyle.copyWith(
+          fontSize: 24,
+          fontWeight: FontWeight.bold,
+        ),
+      3 => baseStyle.copyWith(
+          fontSize: 18.72,
+          fontWeight: FontWeight.bold,
+        ),
+      4 => baseStyle.copyWith(
+          fontSize: 16,
+          fontWeight: FontWeight.bold,
+        ),
+      5 => baseStyle.copyWith(
+          fontSize: 13.28,
+          fontWeight: FontWeight.bold,
+        ),
+      6 => baseStyle.copyWith(
+          fontSize: 10.72,
+          fontWeight: FontWeight.bold,
+        ),
+      _ => baseStyle,
+    };
+  }
+
+  /// True until the first PinnedGlassHeader for a heading is built (markdown:
+  /// pill only on highest available heading).
+  bool _nextHeadingIsFirst = true;
+
+  @override
+  Widget build(final BuildContext context) {
+    // Reset section index counter — _buildHtmlContent will increment it.
+    _nextSectionIndex = 0;
+    _nextHeadingIsFirst = true;
+
+    final List<dom.Node> bodyNodes = doc.body?.nodes.toList() ?? <dom.Node>[];
+
+    // GitHub (and some parsers) nest the README in multiple wrapper elements
+    // (e.g. <body><div id="readme"><article class="markdown-body">...</article></div></body>).
+    // Recursively unwrap single-child wrappers so we can split at h1–h6.
+    List<dom.Node> nodesToUse = bodyNodes;
+    while (nodesToUse.length == 1 && nodesToUse.first is dom.Element) {
+      final dom.Element wrapper = nodesToUse.first as dom.Element;
+      if (wrapper.nodes.isEmpty) break;
+      nodesToUse = wrapper.nodes.toList();
+    }
+
+    final List<Widget> slivers = _buildSliversFromNodes(nodesToUse, 1);
+
+    if (slivers.isEmpty) {
+      return SliverToBoxAdapter(child: _buildHtmlContent(nodesToUse));
+    }
+
+    return MultiSliver(children: slivers);
   }
 }
-
-class MarkdownBodyStyle {
-  MarkdownBodyStyle({
-    this.codeBlockStyle,
-  });
-
-  final MarkdownBodyCodeBlockStyle? codeBlockStyle;
-}
-
-class MarkdownBodyCodeBlockStyle {
-  MarkdownBodyCodeBlockStyle({
-    this.headerColor,
-    this.elevation,
-  });
-
-  final Color? headerColor;
-  final double? elevation;
-}
-
-//     return Html.fromDom(
-//       document: doc,
-//       // onLinkTap: (String? url, RenderContext rContext,
-//       //     Map<String, String> attributes, data) {
-//       //   return linkHandler(context, url);
-//       // },
-//       extensions: markdownTagExtensions(
-//         context,
-//         imgSrcModifiers: widget.imgSrcModifiers,
-//       )..addAll(<HtmlExtension>[
-//           const TableHtmlExtension(),
-//         ]),
-//       // tagsList: Html.tags
-//       //   ..addAll(
-//       //     ['g-emoji'],
-//       //   ),
-//       style: <String, Style>{
-//         'a': Style(
-//           textDecoration: TextDecoration.none,
-//           color: Colors.blueAccent,
-//         ),
-//         'blockquote': Style(
-//           padding: HtmlPaddings.zero,
-//           margin: Margins.all(4),
-//         ),
-//         if (widget.defaultBodyStyle != null) 'body': widget.defaultBodyStyle!,
-//         'p': Style(
-//           padding: HtmlPaddings.zero,
-//           margin: Margins.symmetric(vertical: 8),
-//         ),
-//         'table': Style(
-//           border: Border.all(
-//             // color: context.palette.faded3,
-//             width: 0.2,
-//           ),
-//         ),
-//         'td': Style(
-//           border: Border.all(
-//             // color: context.palette.faded3,
-//             width: 0.2,
-//           ),
-//           padding: HtmlPaddings.symmetric(horizontal: 8, vertical: 4),
-//         ),
-//         'th': Style(
-//           border: Border.all(
-//             // color: context.palette.faded3,
-//             width: 0.2,
-//           ),
-//           padding: HtmlPaddings.symmetric(horizontal: 8, vertical: 4),
-//         ),
-//         'ul': Style(
-//           padding: HtmlPaddings(
-//             inlineStart: HtmlPadding(16),
-//             // top: HtmlPadding(0),
-//             // inlineEnd: HtmlPadding(0),
-//           ),
-//         ),
-//         // 'li': Style(
-//         //   padding: HtmlPaddings(
-//         //     bottom: HtmlPadding(0),
-//         //   ),
-//         // )
-//       },
-//       onLinkTap: (
-//         final String? url,
-//         final Map<String, String> attributes,
-//         final dom.Element? element,
-//       ) async =>
-//           URLActions(
-//         uri: Uri.parse(url!),
-//       ).showMenu(context),
-// //         customRender:  {
-// //           // 'a': (final renderContext, final child) {
-// //           //   if (renderContext.tree.attributes['href']?.startsWith('#') ==
-// //           //       true) {
-// //           //     return null;
-// //           //   }
-// //           //   return GestureDetector(
-// //           //     onTap: () => linkHandler(
-// //           //       context,
-// //           //       renderContext.tree.attributes['href'],
-// //           //     ),
-// //           //     onLongPress: () => linkHandler(
-// //           //       context,
-// //           //       renderContext.tree.attributes['href'],
-// //           //       showSheetOnDeepLink: true,
-// //           //     ),
-// //           //     child: child,
-// //           //   );
-// //           // },
-// //           //TODO: not implemented in new API.
-// //        //   'li': (final context, final child) {},
-// //           // 'blockquote': (final context, final child) => Container(
-// //           //       padding: const EdgeInsets.only(left: 12),
-// //           //       decoration: BoxDecoration(
-// //           //         border: Border(
-// //           //           left: BorderSide(color: grey.shade400, width: 2),
-// //           //         ),
-// //           //       ),
-// //           //       child: child,
-// //           //     ),
-// //           // 'code': (final rdrCtx, final child) => DecoratedBox(
-// //           //       decoration: BoxDecoration(
-// //           //         color: Provider.of<PaletteSettings>(context)
-// //           //             .currentSetting
-// //           //             .faded1,
-// //           //         borderRadius: smallBorderRadius,
-// //           //       ),
-// //           //       child: Padding(
-// //           //         padding: const EdgeInsets.symmetric(horizontal: 6),
-// //           //         child: child,
-// //           //       ),
-// //           //     ),
-// //           // 'div': (final rdr, final child) {
-// //           //   final divClass = rdr.tree.attributes['class'];
-// //           //   if (divClass == 'border rounded-1 my-2') {
-// //           //     return DecoratedBox(
-// //           //       decoration: BoxDecoration(
-// //           //         border: Border.all(
-// //           //           color: Provider.of<PaletteSettings>(context)
-// //           //               .currentSetting
-// //           //               .faded3,
-// //           //           width: 0.3,
-// //           //         ),
-// //           //         borderRadius: smallBorderRadius,
-// //           //       ),
-// //           //       child: Padding(
-// //           //         padding: const EdgeInsets.symmetric(horizontal: 8),
-// //           //         child: child,
-// //           //       ),
-// //           //     );
-// //           //   } else if (divClass == 'blob-wrapper blob-wrapper-embedded data') {
-// //           //     // return Html(data: context.tree.element!.outerHtml);
-// //           //   } else if (rdr.tree.children.isNotEmpty) {
-// //           //     if (rdr.tree.children.first.name == 'pre') {
-// //           //       return _CodeView(
-// //           //         rdr.tree.children.first.element!.text,
-// //           //         language: rdr.tree.element?.attributes['class']
-// //           //             ?.replaceAll('highlight highlight-source-', '')
-// //           //             .split(' ')
-// //           //             .first,
-// //           //       );
-// //           //     }
-// //           //   }
-// //           //   return child;
-// //           // },
-// //           //TODO: not implemented in new API.
-// //
-// // //          'g-emoji': (final renderContext, final child) => child,
-// //           // 'img': (final renderContext, final child) {
-// //           //   var src = renderContext.tree.element!.attributes['src'];
-// //           //   if (!src.startsWith('https://') && !src.startsWith('http://')) {
-// //           //     src =
-// //           //         'https://raw.githubusercontent.com/${widget.context}/${widget.branch}/$src';
-// //           //   } else if (src
-// //           //       .startsWith('https://github.com/${widget.context}/blob/')) {
-// //           //     src = src.replaceFirst(
-// //           //       'https://github.com/${widget.context}/blob/',
-// //           //       'https://raw.githubusercontent.com/${widget.context}/',
-// //           //     );
-// //           //   }
-// //           //   if (src.split('.').last.contains('svg')) {
-// //           //     return SvgPicture.network(src);
-// //           //   }
-// //           //   return Padding(
-// //           //     padding: const EdgeInsets.all(4),
-// //           //     child: ImageLoader(
-// //           //       src,
-// //           //       height: double.tryParse(
-// //           //         renderContext.tree.element?.attributes['height'] ?? '',
-// //           //       ),
-// //           //       width: double.tryParse(
-// //           //         renderContext.tree.element?.attributes['width'] ?? '',
-// //           //       ),
-// //           //       // Some SVGs don't have svg in their URL so will miss the
-// //           //       // if check above. They will fail in the image loader
-// //           //       // so will build here.
-// //           //       errorBuilder: (final context) => SvgPicture.network(src),
-// //           //     ),
-// //           //   );
-// //           // },
-// //           // 'p': (RenderContext renderContext, Widget child) {
-// //           //   final String? pClass = renderContext.tree.attributes['class'];
-// //           //   if (pClass == 'mb-0 color-text-tertiary') {
-// //           //     return DefaultTextStyle(
-// //           //       style: renderContext.style
-// //           //           .generateTextStyle()
-// //           //           .copyWith(color: context.palette.grey3),
-// //           //       child: child,
-// //           //     );
-// //           //   }
-// //           //   return child;
-// //           // },
-// //           // 'pre': (final renderContext, final child) {
-// //           //   if (renderContext.tree.children.first.name == 'code') {
-// //           //     return _CodeView(renderContext.tree.element!.text);
-// //           //   }
-// //           //   return child;
-// //           // },
-// //           //TODO: not implemented in new API.
-// //
-// //           // 'table': (final renderContext, final child) => SingleChildScrollView(
-// //           //       scrollDirection: Axis.horizontal,
-// //           //       child: (renderContext.tree as TableLayoutElement)
-// //           //           .toWidget(renderContext),
-// //           //     ),
-// //           // 'td': (renderContext, child) {
-// //           //   return Row(
-// //           //     children: [
-// //           //       Expanded(
-// //           //         child: Container(
-// //           //           decoration: BoxDecoration(
-// //           //             border: Border.all(
-// //           //                 color: Provider.of<PaletteSettings>(context)
-// //           //                     .currentSetting
-// //           //                     .faded3,
-// //           //                 width: 0.3),
-// //           //           ),
-// //           //           child: Padding(
-// //           //             padding: const EdgeInsets.all(8.0),
-// //           //             child: child,
-// //           //           ),
-// //           //         ),
-// //           //       ),
-// //           //     ],
-// //           //   );
-// //           // },
-// //           // 'th': (renderContext, child) {
-// //           //   return Row(
-// //           //     children: [
-// //           //       Expanded(
-// //           //         child: Container(
-// //           //           decoration: BoxDecoration(
-// //           //             border: Border.all(
-// //           //                 color: Provider.of<PaletteSettings>(context)
-// //           //                     .currentSetting
-// //           //                     .faded3,
-// //           //                 width: 0.3),
-// //           //           ),
-// //           //           child: Padding(
-// //           //             padding: const EdgeInsets.all(8.0),
-// //           //             child: child,
-// //           //           ),
-// //           //         ),
-// //           //       ),
-// //           //     ],
-// //           //   );
-// //           // },
-// //         },
-//     );

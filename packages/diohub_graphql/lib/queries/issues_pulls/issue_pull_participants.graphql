@@ -1,0 +1,42 @@
+# import '../../fragments/actor.graphql'
+
+query issuePullParticipants(
+  $owner: String!
+  $name: String!
+  $number: Int!
+  $after: String
+) {
+  repository(name: $name, owner: $owner) {
+    issueOrPullRequest(number: $number) {
+      __typename
+      ... on Issue {
+        ...issueParticipantUserList
+      }
+      ... on PullRequest {
+        ...pullParticipantUserList
+      }
+    }
+  }
+}
+
+fragment issueParticipantUserList on Issue {
+  participants(after: $after, first: 10) {
+    edges {
+      cursor
+      node {
+        ...actor
+      }
+    }
+  }
+}
+
+fragment pullParticipantUserList on PullRequest {
+  participants(after: $after, first: 10) {
+    edges {
+      cursor
+      node {
+        ...actor
+      }
+    }
+  }
+}

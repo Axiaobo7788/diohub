@@ -1,11 +1,15 @@
-import 'package:diohub/common/misc/shimmer_widget.dart';
-import 'package:diohub/style/surface_style_theme.dart';
+import 'package:diohub/common/misc/bordered_container.dart';
+import 'package:diohub/common/misc/shimmer_bone.dart';
+import 'package:diohub/common/misc/shimmer_scope.dart';
+import 'package:diohub/style/app_spacing.dart';
+import 'package:diohub/style/opacities.dart';
 import 'package:diohub/utils/utils.dart';
 import 'package:flutter/material.dart';
 
 /// Reusable shimmer widget for timeline items
 /// Mimics the structure of UnifiedTimelineItem with shimmer effects
-/// Uses IntrinsicHeight with Row to avoid LayoutBuilder issues while maintaining proper alignment
+/// Uses CustomPaint to draw timeline connector lines, avoiding IntrinsicHeight issues.
+/// Must be used within a ShimmerScope.
 class TimelineShimmerItem extends StatelessWidget {
   const TimelineShimmerItem({
     this.showAvatar = false,
@@ -22,168 +26,138 @@ class TimelineShimmerItem extends StatelessWidget {
   final double actionHeaderTopPadding;
 
   @override
-  Widget build(BuildContext context) {
-    final indicatorSize = showAvatar ? 30.0 : 24.0;
-    final lineColor = context.colorScheme.outlineVariant.withOpacity(0.5);
+  Widget build(final BuildContext context) {
+    final double indicatorSize = showAvatar ? 30.0 : 24.0;
+    final Color lineColor = context.colorScheme.outlineVariant.hinted;
 
-    return IntrinsicHeight(
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          // Timeline indicator column with line
-          SizedBox(
-            width: indicatorSize,
-            child: Column(
-              children: [
-                // Top line (if not first)
-                if (!isFirst)
-                  Expanded(
-                    child: Container(
-                      width: 1,
-                      color: lineColor,
-                    ),
-                  ),
-                // Indicator centered
-                SizedBox(
-                  height: indicatorSize,
-                  width: indicatorSize,
-                  child: showAvatar
-                      ? _buildAvatarShimmer(context, indicatorSize)
-                      : _buildIconShimmer(context, indicatorSize),
-                ),
-                // Bottom line (if not last)
-                if (!isLast)
-                  Expanded(
-                    child: Container(
-                      width: 1,
-                      color: lineColor,
-                    ),
-                  ),
-              ],
+    return ShimmerScope(
+      child: CustomPaint(
+        foregroundPainter: _TimelineShimmerPainter(
+          isFirst: isFirst,
+          isLast: isLast,
+          indicatorSize: indicatorSize,
+          lineColor: lineColor,
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: <Widget>[
+            // Timeline indicator (lines drawn by painter)
+            SizedBox(
+              width: indicatorSize,
+              height: indicatorSize,
+              child: ShimmerBone.avatar(size: indicatorSize),
             ),
-          ),
-          // Content
-          Expanded(
-            child: Padding(
-              padding: EdgeInsets.fromLTRB(12, 24, 0, showAvatar ? 12 : 0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  // Action header shimmer
-                  Padding(
-                    padding: EdgeInsets.only(
-                      top: actionHeaderTopPadding,
-                      bottom: 8,
+            // Content
+            Expanded(
+              child: Padding(
+                padding: EdgeInsets.fromLTRB(12, 0, 0, showAvatar ? 12 : 0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: <Widget>[
+                    // Action header shimmer
+                    Padding(
+                      padding: EdgeInsets.only(
+                        top: actionHeaderTopPadding,
+                        bottom: 8,
+                      ),
+                      child: const ShimmerBone.text(width: 120),
                     ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Flexible(
-                          child: _buildActionTextShimmer(context, showAvatar),
-                        ),
-                        ShimmerWidget.container(
-                          height: 12,
-                          width: 30,
-                          borderRadius: Theme.of(context).surfaceStyle.borderRadiusSmall(),
-                        ),
-                      ],
+                    // Content card shimmer — sized to match repo/issue/PR cards in timeline
+                    BorderedContainer(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: <Widget>[
+                          Row(
+                            children: <Widget>[
+                              const ShimmerBone.avatar(size: 24),
+                              context.spacing.itemGap,
+                              const ShimmerBone.label(width: 100),
+                            ],
+                          ),
+                          context.spacing.itemGap,
+                          const ShimmerBone.title(width: 200),
+                          context.spacing.itemGap,
+                          const ShimmerBone.text(),
+                          context.spacing.tightGap,
+                          const ShimmerBone.text(width: 180),
+                          context.spacing.itemGap,
+                          Wrap(
+                            spacing: 8,
+                            runSpacing: 4,
+                            children: const <Widget>[
+                              ShimmerBone.chip(width: 50),
+                              ShimmerBone.chip(width: 40),
+                              ShimmerBone.chip(width: 45),
+                            ],
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
-                  // Content card shimmer
-                  _buildContentShimmer(context),
-                ],
+                  ],
+                ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
-    );
-  }
-
-  Widget _buildAvatarShimmer(BuildContext context, double size) {
-    return Stack(
-      clipBehavior: Clip.none,
-      children: [
-        // Avatar shimmer
-        ShimmerWidget.container(
-          height: size,
-          width: size,
-          borderRadius: BorderRadius.circular(size / 2),
-        ),
-        // Badge shimmer
-        Positioned(
-          right: -5,
-          bottom: -8,
-          child: ShimmerWidget.container(
-            height: size * 2 / 3,
-            width: size * 2 / 3,
-            borderRadius: BorderRadius.circular(size / 3),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildIconShimmer(BuildContext context, double size) {
-    return ShimmerWidget.container(
-      height: size,
-      width: size,
-      borderRadius: BorderRadius.circular(size / 2),
-    );
-  }
-
-  Widget _buildActionTextShimmer(BuildContext context, bool includeUsername) {
-    if (includeUsername) {
-      // Events format: "username actionText"
-      return Row(
-        children: [
-          ShimmerWidget.container(
-            height: 14,
-            width: 80,
-            borderRadius: Theme.of(context).surfaceStyle.borderRadiusSmall(),
-          ),
-          const SizedBox(width: 4),
-          ShimmerWidget.container(
-            height: 14,
-            width: 60,
-            borderRadius: Theme.of(context).surfaceStyle.borderRadiusSmall(),
-          ),
-        ],
-      );
-    } else {
-      // Activity format: just action text
-      return ShimmerWidget.container(
-        height: 14,
-        width: 100,
-        borderRadius: Theme.of(context).surfaceStyle.borderRadiusSmall(),
-      );
-    }
-  }
-
-  Widget _buildContentShimmer(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        const SizedBox(height: 8),
-        // Main content card shimmer
-        ShimmerWidget.container(
-          height: 80,
-          borderRadius: Theme.of(context).surfaceStyle.borderRadiusMedium(),
-          highlightColor: context.colorScheme.surfaceVariant.withOpacity(0.5),
-        ),
-      ],
     );
   }
 }
 
-/// Widget that displays multiple timeline shimmer items for loading state
+/// Custom painter that draws timeline connector lines for shimmer items.
+class _TimelineShimmerPainter extends CustomPainter {
+  _TimelineShimmerPainter({
+    required this.isFirst,
+    required this.isLast,
+    required this.indicatorSize,
+    required this.lineColor,
+  });
+
+  final bool isFirst;
+  final bool isLast;
+  final double indicatorSize;
+  final Color lineColor;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final double centerX = indicatorSize / 2;
+    final double indicatorBottom = indicatorSize;
+    const double lineThickness = 1.0;
+
+    final linePaint = Paint()
+      ..color = lineColor
+      ..strokeWidth = lineThickness
+      ..strokeCap = StrokeCap.butt;
+
+    // Bottom line (if not last)
+    if (!isLast) {
+      canvas.drawLine(
+        Offset(centerX, indicatorBottom),
+        Offset(centerX, size.height),
+        linePaint,
+      );
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _TimelineShimmerPainter oldDelegate) =>
+      isFirst != oldDelegate.isFirst ||
+      isLast != oldDelegate.isLast ||
+      indicatorSize != oldDelegate.indicatorSize ||
+      lineColor != oldDelegate.lineColor;
+}
+
+/// Widget that displays multiple timeline shimmer items for loading state.
+///
+/// Default horizontal padding matches [AppSpacing.listInset] (8px) so the
+/// shimmer has the same horizontal insets as the loaded content.
 class TimelineShimmerList extends StatelessWidget {
   const TimelineShimmerList({
     this.itemCount = 5,
     this.showAvatar = false,
-    this.padding = const EdgeInsets.symmetric(horizontal: 16),
+    this.padding = const EdgeInsets.symmetric(horizontal: 8),
     this.showUserHeaders = false,
     super.key,
   });
@@ -194,7 +168,7 @@ class TimelineShimmerList extends StatelessWidget {
   final bool showUserHeaders;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(final BuildContext context) {
     if (showUserHeaders) {
       return _buildWithUserHeaders(context);
     }
@@ -206,7 +180,7 @@ class TimelineShimmerList extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: List.generate(
           itemCount,
-          (index) => TimelineShimmerItem(
+          (final int index) => TimelineShimmerItem(
             showAvatar: showAvatar,
             isFirst: index == 0,
             isLast: index == itemCount - 1,
@@ -217,52 +191,48 @@ class TimelineShimmerList extends StatelessWidget {
     );
   }
 
-  Widget _buildWithUserHeaders(BuildContext context) {
+  Widget _buildWithUserHeaders(final BuildContext context) {
     // When showing user headers, group items into user groups
     // Show 3-4 user groups with varying items each
-    final userGroups = [
+    final List<int> userGroups = <int>[
       2, // First user has 2 items
       3, // Second user has 3 items
       2, // Third user has 2 items
       1, // Fourth user has 1 item
     ];
 
-    final children = <Widget>[];
+    final List<Widget> children = <Widget>[];
 
-    for (var groupIndex = 0; groupIndex < userGroups.length; groupIndex++) {
-      final itemsInGroup = userGroups[groupIndex];
-      final isFirstGroup = groupIndex == 0;
+    for (int groupIndex = 0; groupIndex < userGroups.length; groupIndex++) {
+      final int itemsInGroup = userGroups[groupIndex];
+      final bool isFirstGroup = groupIndex == 0;
 
       // Add user header (mimics _buildUserGroupHeader structure)
       children.add(
         Container(
           margin: EdgeInsets.only(
-            top: isFirstGroup ? 0 : 8, // groupSpacing between groups
+            top: isFirstGroup ? 0 : context.spacing.itemSpacing,
           ),
           child: Padding(
-            padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+            padding: EdgeInsets.only(top: context.spacing.itemSpacing),
             child: _buildUserHeaderShimmer(context),
           ),
         ),
       );
 
       // Add spacing between header and first timeline item
-      children.add(const SizedBox(height: 16));
+      children.add(SizedBox(height: context.spacing.itemSpacing));
 
       // Add timeline items for this user group
-      for (var i = 0; i < itemsInGroup; i++) {
-        final isFirstInGroup = i == 0;
-        final isLastInGroup = i == itemsInGroup - 1;
+      for (int i = 0; i < itemsInGroup; i++) {
+        final bool isFirstInGroup = i == 0;
+        final bool isLastInGroup = i == itemsInGroup - 1;
 
         children.add(
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: TimelineShimmerItem(
-              showAvatar: false, // Icon-only indicator for events
-              isFirst: isFirstInGroup,
-              isLast: isLastInGroup,
-              actionHeaderTopPadding: isFirstInGroup ? 0.0 : 0.0,
-            ),
+          TimelineShimmerItem(
+            isFirst: isFirstInGroup,
+            isLast: isLastInGroup,
+            actionHeaderTopPadding: isFirstInGroup ? 0.0 : 0.0,
           ),
         );
       }
@@ -278,26 +248,18 @@ class TimelineShimmerList extends StatelessWidget {
     );
   }
 
-  Widget _buildUserHeaderShimmer(BuildContext context) {
-    return Row(
-      children: [
-        // Avatar shimmer
-        ShimmerWidget.container(
-          height: 24,
-          width: 24,
-          borderRadius: Theme.of(context).surfaceStyle.borderRadiusMedium(),
+  Widget _buildUserHeaderShimmer(final BuildContext context) => ShimmerScope(
+        child: Row(
+          children: <Widget>[
+            // Avatar shimmer - fixed to be circular instead of medium radius
+            const ShimmerBone.avatar(size: 24),
+            context.spacing.itemGap,
+            // Username shimmer
+            Padding(
+              padding: const EdgeInsets.only(bottom: 4),
+              child: ShimmerBone.text(width: 100),
+            ),
+          ],
         ),
-        const SizedBox(width: 8),
-        // Username shimmer
-        Padding(
-          padding: const EdgeInsets.only(bottom: 4),
-          child: ShimmerWidget.container(
-            height: 14,
-            width: 100,
-            borderRadius: Theme.of(context).surfaceStyle.borderRadiusSmall(),
-          ),
-        ),
-      ],
-    );
-  }
+      );
 }

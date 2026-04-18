@@ -1,0 +1,37 @@
+# import './actor.graphql'
+
+fragment issueCommentEditHistoryFields on IssueComment {
+  userContentEdits(first: $first, after: $after) {
+    totalCount
+    pageInfo {
+      hasNextPage
+      endCursor
+    }
+    nodes {
+      id
+      editedAt
+      diff
+      editor {
+        ...actor
+      }
+    }
+  }
+}
+
+fragment pullRequestReviewCommentEditHistoryFields on PullRequestReviewComment {
+  userContentEdits(first: $first, after: $after) {
+    totalCount
+    pageInfo {
+      hasNextPage
+      endCursor
+    }
+    nodes {
+      id
+      editedAt
+      diff
+      editor {
+        ...actor
+      }
+    }
+  }
+}

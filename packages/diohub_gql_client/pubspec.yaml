@@ -1,0 +1,17 @@
+name: diohub_gql_client
+description: GraphQL-over-Dio transport layer for DioHub
+version: 1.0.0
+publish_to: none
+
+environment:
+  sdk: ^3.8.0
+
+dependencies:
+  dio: ^5.8.0+1
+  dio_cache_interceptor: ^4.0.3
+  gql: ^1.0.1
+  gql_dio_link: ^2.0.0
+  gql_exec: ^1.1.0
+  gql_link: ^1.0.0
+  path_provider: ^2.1.5
+  uuid: ^4.5.1

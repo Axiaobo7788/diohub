@@ -1,0 +1,49 @@
+targets:
+  $default:
+    sources:
+      - lib/**
+      - $package$
+    builders:
+      graphql_codegen:
+        options:
+          schema_mapping:
+            - schema: lib/**/*.graphql
+              output: lib
+          scalars:
+            DateTime:
+              type: DateTime
+              fromJsonFunctionName: dateTimeFromJson
+              toJsonFunctionName: dateTimeToJson
+              import: package:diohub_graphql/scalar_helpers.dart
+            Date:
+              type: DateTime
+              fromJsonFunctionName: dateTimeFromJson
+              toJsonFunctionName: dateTimeToJson
+              import: package:diohub_graphql/scalar_helpers.dart
+            PreciseDateTime:
+              type: DateTime
+              fromJsonFunctionName: dateTimeFromJson
+              toJsonFunctionName: dateTimeToJson
+              import: package:diohub_graphql/scalar_helpers.dart
+            GitTimestamp:
+              type: DateTime
+              fromJsonFunctionName: dateTimeFromJson
+              toJsonFunctionName: dateTimeToJson
+              import: package:diohub_graphql/scalar_helpers.dart
+            URI:
+              type: Uri
+              fromJsonFunctionName: uriFromJson
+              toJsonFunctionName: uriToJson
+              import: package:diohub_graphql/scalar_helpers.dart
+            HTML:
+              type: String
+            Base64String:
+              type: String
+            GitObjectID:
+              type: String
+            GitSSHRemote:
+              type: String
+            X509Certificate:
+              type: String
+            BigInt:
+              type: BigInt

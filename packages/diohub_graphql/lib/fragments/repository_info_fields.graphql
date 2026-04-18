@@ -1,0 +1,248 @@
+# import './label.graphql'
+# import './release_list_item.graphql'
+# import './repository_owner_fields.graphql'
+
+fragment repositoryInfoFields on Repository {
+  databaseId
+  descriptionHTML
+  resourcePath
+  homepageUrl
+  sshUrl
+
+  # Status
+  isDisabled
+  isLocked
+  isEmpty
+  archivedAt
+
+  # Dates
+  createdAt
+  updatedAt
+
+  # Owner (extended)
+  owner {
+    __typename
+    ... on User {
+      ...repositoryOwnerFields
+      hasSponsorsListing
+    }
+    ... on Organization {
+      ...repositoryOwnerFields
+    }
+  }
+  isInOrganization
+
+  # Statistics
+  watchers {
+    totalCount
+  }
+  diskUsage
+
+  # Features
+  hasIssuesEnabled
+  hasProjectsEnabled
+  hasWikiEnabled
+  hasDiscussionsEnabled
+  hasSponsorshipsEnabled
+  hasVulnerabilityAlertsEnabled
+  isBlankIssuesEnabled
+  isSecurityPolicyEnabled
+
+  # Code
+  defaultBranchRef {
+    name
+    target {
+      __typename
+      ... on Commit {
+        oid
+        abbreviatedOid
+        commitUrl
+        url
+        committedDate
+        history {
+          totalCount
+        }
+        tree {
+          oid
+        }
+      }
+    }
+  }
+  languages(first: 10, orderBy: { field: SIZE, direction: DESC }) {
+    edges {
+      node {
+        name
+        color
+      }
+      size
+    }
+    totalSize
+    totalCount
+  }
+
+  # License (extended)
+  licenseInfo {
+    name
+    spdxId
+    key
+    url
+    id
+    description
+    body
+    nickname
+    pseudoLicense
+    conditions {
+      key
+      label
+      description
+    }
+    permissions {
+      key
+      label
+      description
+    }
+    limitations {
+      key
+      label
+      description
+    }
+  }
+
+  # Viewer-specific
+  viewerPermission
+  viewerCanAdminister
+  viewerCanUpdateTopics
+  lockReason
+  mergeCommitAllowed
+  squashMergeAllowed
+  rebaseMergeAllowed
+  planFeatures {
+    maximumAssignees
+    maximumManualReviewRequests
+  }
+
+  # Latest release (full fragment for ReleaseCard reuse)
+  latestRelease {
+    ...releaseListItem
+  }
+
+  # Pinned issues
+  pinnedIssues(first: 3) {
+    totalCount
+    nodes {
+      id
+      issue {
+        number
+        title
+        url
+        state
+        author {
+          avatarUrl
+          login
+        }
+        labels(first: 10) {
+          nodes {
+            name
+            color
+          }
+        }
+      }
+    }
+  }
+
+  # Issue templates
+  issueTemplates {
+    name
+    title
+    body
+    about
+    filename
+    labels(first: 20) {
+      nodes {
+        ...label
+      }
+    }
+    assignees(first: 10) {
+      nodes {
+        id
+        login
+        avatarUrl
+      }
+    }
+  }
+
+  # README existence check
+  readmeFile: object(expression: "HEAD:README.md") {
+    __typename
+    ... on Blob {
+      byteSize
+    }
+  }
+
+  # Counts for dock trailing
+  discussions {
+    totalCount
+  }
+  projectsV2 {
+    totalCount
+  }
+  labels {
+    totalCount
+  }
+  milestones {
+    totalCount
+  }
+  releases {
+    totalCount
+  }
+  packages {
+    totalCount
+  }
+  branchCount: refs(refPrefix: "refs/heads/", first: 0) {
+    totalCount
+  }
+  tagCount: refs(refPrefix: "refs/tags/", first: 0) {
+    totalCount
+  }
+  environments {
+    totalCount
+  }
+
+  # Additional
+  openGraphImageUrl
+  mirrorUrl
+  fundingLinks {
+    platform
+    url
+  }
+  vulnerabilityAlerts(first: 0) {
+    totalCount
+  }
+  codeOfConduct {
+    name
+    url
+  }
+  contributingGuidelines {
+    body
+    resourcePath
+    url
+  }
+  autoMergeAllowed
+  deleteBranchOnMerge
+  webCommitSignoffRequired
+  visibility
+  templateRepository {
+    nameWithOwner
+    owner {
+      login
+      avatarUrl
+    }
+    url
+  }
+  isTemplate
+  contactLinks {
+    about
+    name
+    url
+  }
+}

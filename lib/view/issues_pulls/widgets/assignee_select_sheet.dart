@@ -1,155 +1,194 @@
-import 'package:diohub/common/misc/button.dart';
+import 'package:diohub/common/bottom_sheet/paginated_select_sheet.dart';
+import 'package:diohub/common/misc/async_error_widgets.dart';
 import 'package:diohub/common/misc/profile_banner.dart';
-import 'package:diohub/common/wrappers/infinite_scroll_wrapper.dart';
-import 'package:diohub/models/issues/issue_model.dart';
-import 'package:diohub/models/users/user_info_model.dart';
-import 'package:diohub/services/issues/issues_service.dart';
-import 'package:flutter/material.dart';
+import 'package:diohub_models/models/pagination/page_slice.dart';
+import 'package:diohub/common/pagination/page_source.dart';
+import 'package:diohub_graphql/queries/issues_pulls/issue_pull_typedefs.dart';
 
-class AssigneeSelectSheet extends StatefulWidget {
+import 'package:diohub_graphql/queries/repositories/repo_typedefs.dart';
+import 'package:diohub_models/models/entity_ref.dart';
+import 'package:diohub_models/models/users/user_info_model.dart';
+import 'package:diohub/providers/issue_pulls/issue_providers.dart';
+import 'package:diohub/providers/database_providers.dart'
+    show apiClientProvider;
+import 'package:diohub/services/base/service_extensions.dart';
+import 'package:diohub/style/app_spacing.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+/// When [issueRef] or [pullRef] is set (edit mode), [onApplyChanges] is called
+/// with the sets to add and remove instead of calling notifier methods directly.
+/// This keeps premium mutation logic out of this OSS widget.
+class AssigneeSelectSheet extends ConsumerStatefulWidget {
   const AssigneeSelectSheet({
     super.key,
     this.assignees,
-    this.issueUrl,
-    this.repoURL,
+    this.repoRef,
+    this.issueRef,
+    this.pullRef,
     this.controller,
     this.newAssignees,
+    this.initialSelectedIds,
+    this.onApplyChanges,
   });
-  final String? repoURL;
-  final String? issueUrl;
+  final RepoRef? repoRef;
+  final IssueRef? issueRef;
+  final PullRequestRef? pullRef;
   final List<UserInfoModel>? assignees;
   final ScrollController? controller;
   final ValueChanged<List<UserInfoModel>?>? newAssignees;
 
+  /// Called in edit mode with the diff to apply: (toAdd, toRemove).
+  /// If null and in edit mode, no mutations are performed.
+  final Future<void> Function(List<String> toAdd, List<String> toRemove)?
+  onApplyChanges;
+
+  /// Pre-fill selected IDs (e.g. from template) when [issueRef] is null (new-issue mode).
+  final Set<String>? initialSelectedIds;
+
   @override
-  AssigneeSelectSheetState createState() => AssigneeSelectSheetState();
+  ConsumerState<AssigneeSelectSheet> createState() =>
+      _AssigneeSelectSheetState();
 }
 
-class AssigneeSelectSheetState extends State<AssigneeSelectSheet> {
-  late List<String?> assignees;
+class _AssigneeSelectSheetState extends ConsumerState<AssigneeSelectSheet> {
+  Set<String> _initialAssigneeNodeIds = {};
+  bool _initializedFromProvider = false;
 
-  @override
-  void initState() {
-    assignees =
-        widget.assignees!.map((final UserInfoModel e) => e.login).toList();
-    super.initState();
-  }
-
-  Future<List<UserInfoModel>?> updateAssignees() async {
-    final List<String?> assigneesToRemove = <String?>[];
-    final List<String?> assigneesToAdd = assignees;
-    final List<String?> originalAssignees =
-        widget.assignees!.map((final UserInfoModel e) => e.login).toList();
-    final List<Future<IssueModel>> futures = <Future<IssueModel>>[];
-    for (final String? login in originalAssignees) {
-      if (!assignees.contains(login)) {
-        assigneesToRemove.add(login);
-        assigneesToAdd.remove(login);
-      }
+  Set<String> get _initialSelectedIds {
+    if (widget.issueRef != null || widget.pullRef != null) {
+      return _initialAssigneeNodeIds;
     }
-    if (assigneesToRemove.isNotEmpty) {
-      futures.add(
-        IssuesService.removeAssignees(widget.issueUrl, assigneesToRemove),
-      );
-    }
-    if (assigneesToAdd.isNotEmpty) {
-      futures.add(IssuesService.addAssignees(widget.issueUrl, assigneesToAdd));
-    }
-    if (futures.isNotEmpty) {
-      final List<IssueModel> results = await Future.wait(futures);
-      return results.last.assignees;
-    }
-    return widget.assignees;
+    return widget.initialSelectedIds ?? {};
   }
 
   @override
-  Widget build(final BuildContext context) => Column(
+  Widget build(final BuildContext context) {
+    final IssueRef? issueRef = widget.issueRef;
+    final PullRequestRef? pullRef = widget.pullRef;
+    final RepoRef? repoRef = widget.repoRef;
+
+    if (issueRef != null) {
+      ref.listen(issueDetailProvider(issueRef), (
+        final AsyncValue<IssueInfo>? prev,
+        final AsyncValue<IssueInfo> next,
+      ) {
+        if (next.value != null && !_initializedFromProvider) {
+          final IssueInfo issue = next.value!;
+          final List<String> ids =
+              issue.assignees.nodes
+                  ?.whereType<IssueAssigneeNode>()
+                  .map((final IssueAssigneeNode n) => n.id)
+                  .toList() ??
+              <String>[];
+          setState(() {
+            _initialAssigneeNodeIds = ids.toSet();
+            _initializedFromProvider = true;
+          });
+        }
+      });
+    } else if (pullRef != null) {
+      ref.listen(pullDetailProvider(pullRef), (
+        final AsyncValue<PullInfo>? prev,
+        final AsyncValue<PullInfo> next,
+      ) {
+        if (next.value != null && !_initializedFromProvider) {
+          final PullInfo pr = next.value!;
+          final List<String> ids =
+              pr.assignees.nodes
+                  ?.whereType<PullAssigneeNode>()
+                  .map((final PullAssigneeNode n) => n.id)
+                  .toList() ??
+              <String>[];
+          setState(() {
+            _initialAssigneeNodeIds = ids.toSet();
+            _initializedFromProvider = true;
+          });
+        }
+      });
+    }
+
+    if (repoRef == null) {
+      return const EmptyState(message: 'No repository');
+    }
+
+    return PaginatedSelectSheet<AssignableUserEdge>(
+      key: ValueKey<Set<String>>(_initialSelectedIds),
+      mode: SelectMode.multi,
+      searchable: true,
+      searchHint: 'Search assignees…',
+      initialSelectedIds: _initialSelectedIds,
+      scrollController: widget.controller,
+      headerWidget: ExpansionTile(
+        title: const Text('Note'),
         children: <Widget>[
           Padding(
-            padding: const EdgeInsets.all(8),
-            child: Button(
-              // color: Provider.of<PaletteSettings>(context)
-              //     .currentSetting
-              //     .secondary,
-              onTap: () async {
-                try {
-                  final List<UserInfoModel>? newAssignees =
-                      await updateAssignees();
-                  if (context.mounted) {
-                    Navigator.pop(context);
-                  }
-                  widget.newAssignees!(newAssignees);
-                } catch (e) {
-                  rethrow;
-                }
-              },
-              child: const Text('Apply'),
+            padding: context.spacing.screenPadding,
+            child: const Text(
+              'Organizations on the free plan can only have one active assignee on an issue at a time.',
             ),
           ),
-          const SizedBox(
-            height: 8,
-          ),
-          const ExpansionTile(
-            title: Text('Note'),
-            children: <Widget>[
-              Padding(
-                padding: EdgeInsets.symmetric(horizontal: 16),
-                child: Text(
-                  'Organizations on the free plan can only have one active assignee on an issue at a time.',
-                  style: TextStyle(
-                      // color: Provider.of<PaletteSettings>(context)
-                      //     .currentSetting
-                      //     .faded3,
-                      ),
-                ),
-              ),
-              SizedBox(
-                height: 8,
-              ),
-            ],
-          ),
-          const Divider(),
-          Expanded(
-            child: InfiniteScrollWrapper<UserInfoModel>(
-              future: (
-                data,
-              ) async =>
-                  IssuesService.listAssignees(
-                widget.repoURL,
-                data.pageNumber,
-                data.pageSize,
-              ),
-              separatorBuilder: (final BuildContext context, final int index) =>
-                  const Divider(
-                height: 8,
-              ),
-              scrollController: widget.controller,
-              listEndIndicator: false,
-              builder: (
-                final BuildContext context,
-                final data,
-              ) =>
-                  CheckboxListTile(
-                // activeColor:
-                //     Provider.of<PaletteSettings>(context).currentSetting.accent,
-                value: assignees.contains(data.item.login),
-                onChanged: (final bool? value) {
-                  setState(() {
-                    if (assignees.contains(data.item.login)) {
-                      assignees.remove(data.item.login);
-                    } else {
-                      assignees.add(data.item.login);
-                    }
-                  });
-                },
-                title: ProfileTile.login(
-                  avatarUrl: data.item.avatarUrl,
-                  userLogin: data.item.login,
-                  padding: EdgeInsets.zero,
-                ),
-              ),
-            ),
-          ),
+          context.spacing.itemGap,
         ],
-      );
+      ),
+      sourceBuilder: (String? query) => CursorForwardSource<AssignableUserEdge>(
+        fetch: ({required int first, String? after}) async {
+          final r = await repoRef!
+              .collaborators(ref.read(apiClientProvider))
+              .listAssignableUsersGQL(first: first, after: after, query: query);
+          final List<AssignableUserEdge> items = r.items
+              .whereType<AssignableUserEdge>()
+              .toList();
+          return CursorPage<AssignableUserEdge>(
+            items: items,
+            hasNextPage: r.hasNextPage,
+            endCursor: r.endCursor,
+          );
+        },
+      ),
+      idOf: (e) => e.node?.id ?? '',
+      titleOf: (e) => e.node?.login ?? '',
+      subtitleOf: (e) {
+        final n = e.node;
+        return (n?.name?.isNotEmpty == true) ? n!.name! : null;
+      },
+      leadingOf: (BuildContext context, AssignableUserEdge e) =>
+          ProfileTile.login(
+            avatarUrl: e.node?.avatarUrl.toString() ?? '',
+            userLogin: e.node?.login ?? '',
+            padding: EdgeInsets.zero,
+          ),
+      onApplyMulti: (List<AssignableUserEdge> selected) async {
+        final bool isNewIssueMode = issueRef == null && pullRef == null;
+        if (isNewIssueMode) {
+          final List<UserInfoModel> users = selected
+              .map(
+                (AssignableUserEdge e) => SimpleUser(
+                  login: e.node?.login ?? '',
+                  avatarUrl: e.node?.avatarUrl.toString() ?? '',
+                  id: e.node?.id ?? '',
+                ),
+              )
+              .toList();
+          widget.newAssignees?.call(users);
+          return;
+        }
+        final Set<String> selectedIds = selected
+            .map((e) => e.node?.id)
+            .whereType<String>()
+            .toSet();
+        final List<String> toAdd = selectedIds
+            .difference(_initialAssigneeNodeIds)
+            .toList();
+        final List<String> toRemove = _initialAssigneeNodeIds
+            .difference(selectedIds)
+            .toList();
+        if (widget.onApplyChanges != null) {
+          await widget.onApplyChanges!(toAdd, toRemove);
+        }
+        widget.newAssignees?.call(null);
+        if (context.mounted) Navigator.of(context).pop();
+      },
+    );
+  }
 }

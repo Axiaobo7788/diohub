@@ -1,0 +1,35 @@
+# import '../../fragments/actor.graphql'
+# import '../../fragments/label.graphql'
+
+fragment issue on Issue {
+  url
+  title
+  number
+  issueState: state
+  stateReason
+  createdAt
+  body
+  comments {
+    totalCount
+  }
+  author {
+    ...actor
+  }
+  labels(first: 30) {
+    pageInfo {
+      hasNextPage
+    }
+    nodes {
+      ...label
+    }
+  }
+  repository {
+    name
+    nameWithOwner
+    viewerHasStarred
+    owner {
+      login
+      avatarUrl
+    }
+  }
+}

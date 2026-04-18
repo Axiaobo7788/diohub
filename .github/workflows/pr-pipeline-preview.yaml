@@ -1,0 +1,19 @@
+name: PR Pipeline Preview
+
+on:
+  pull_request:
+    types: [opened, synchronize, labeled, unlabeled]
+    branches: [develop, beta, main]
+
+permissions:
+  contents: read
+
+jobs:
+  call-private:
+    uses: namanshergill/diohub-premium/.github/workflows/_pr-pipeline-preview.yaml@main
+    with:
+      pr_number: ${{ github.event.pull_request.number }}
+      base_ref: ${{ github.event.pull_request.base.ref }}
+      head_ref: ${{ github.event.pull_request.head.ref }}
+      event_action: ${{ github.event.action }}
+    secrets: inherit

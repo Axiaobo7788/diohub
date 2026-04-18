@@ -1,0 +1,59 @@
+# import '../../fragments/actor.graphql'
+
+# Git blame for a file at a given expression (e.g. branch:path).
+
+query getBlame(
+  $owner: String!
+  $name: String!
+  $expression: String!
+  $path: String!
+) {
+  repository(owner: $owner, name: $name) {
+    object(expression: $expression) {
+      __typename
+      ... on Commit {
+        blame(path: $path) {
+          ranges {
+            age
+            startingLine
+            endingLine
+            commit {
+              oid
+              abbreviatedOid
+              message
+              authoredDate
+              additions
+              deletions
+              parents(first: 1) {
+                nodes {
+                  oid
+                }
+              }
+              author {
+                name
+                avatarUrl
+                user {
+                  ... on Actor {
+                    ...actor
+                  }
+                }
+              }
+              signature {
+                isValid
+                wasSignedByGitHub
+              }
+              statusCheckRollup {
+                state
+              }
+              associatedPullRequests(first: 1) {
+                nodes {
+                  number
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

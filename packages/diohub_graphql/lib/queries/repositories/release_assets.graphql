@@ -1,0 +1,10 @@
+# import '../../fragments/release_with_assets.graphql'
+
+query releaseAssets($id: ID!, $first: Int = 100, $after: String) {
+  node(id: $id) {
+    __typename
+    ... on Release {
+      ...releaseWithAssets
+    }
+  }
+}

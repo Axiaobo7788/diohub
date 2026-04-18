@@ -1,149 +1,158 @@
-import 'package:diohub/common/animations/fade_animation_widget.dart';
-import 'package:diohub/models/contributions/contribution_chip_type.dart';
+import 'package:diohub/common/misc/bordered_container.dart';
+import 'package:diohub/common/widgets/section_header.dart';
+import 'package:diohub_graphql/fragments/fragment_typedefs.dart';
+import 'package:diohub_models/models/contributions/contribution_chip_type.dart';
 import 'package:diohub/models/contributions/contribution_query_models.dart';
-import 'package:diohub/view/profile/about/widgets/activity_overview_section.dart';
+import 'package:diohub_models/models/entity_ref.dart';
+import 'package:diohub/style/app_spacing.dart';
 import 'package:diohub/view/profile/about/widgets/contribution_calendar_section.dart';
-import 'package:diohub/view/profile/about/widgets/contribution_highlights_section.dart';
+import 'package:diohub/view/profile/about/widgets/contribution_statistics_section.dart';
+import 'package:diohub/view/profile/about/widgets/contribution_streak_section.dart';
+import 'package:diohub/view/profile/about/widgets/top_languages_section.dart';
+import 'package:diohub/common/misc/repository_card.dart';
 import 'package:flutter/material.dart';
 
 /// Summary tab showing calendar, radar chart, badges, chips, and per-year highlights
 class ContributionSummaryTab extends StatelessWidget {
   const ContributionSummaryTab({
     required this.contributionResult,
-    required this.userName,
-    required this.selectedYear,
-    required this.customFromDate,
-    required this.customToDate,
-    required this.useCustomRange,
+    required this.userRef,
     required this.createdAt,
+    required this.providerKey,
+    this.pinnedItems = const <RepoCardData>[],
     this.onChipTap,
     super.key,
   });
 
   final ContributionCollectionResult contributionResult;
-  final String userName;
-  final int? selectedYear;
-  final DateTime? customFromDate;
-  final DateTime? customToDate;
-  final bool useCustomRange;
+  final UserRef userRef;
   final DateTime? createdAt;
+  final ContributionQueryKey providerKey;
+  final List<RepoCardData> pinnedItems;
   final void Function(ContributionChipType chipType)? onChipTap;
 
-  /// Builds a styled section divider with gradient effect
-  Widget _buildSectionDivider(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 16),
-      child: Container(
-        height: 1,
-        margin: const EdgeInsets.symmetric(horizontal: 16),
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            colors: [
-              Colors.transparent,
-              colorScheme.outlineVariant.withOpacity(0.3),
-              Colors.transparent,
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  /// Builds a consistent section header
-  Widget _buildSectionHeader(BuildContext context, String title) {
-    final theme = Theme.of(context);
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 20, 16, 12),
-      child: Text(
-        title,
-        style: theme.textTheme.titleLarge?.copyWith(
-          fontWeight: FontWeight.w700,
-          letterSpacing: -0.5,
-        ),
-      ),
-    );
-  }
+  /// Extract display values from providerKey
+  int? get selectedYear => providerKey.dateRange.displayYear;
+  DateTime? get customFromDate => providerKey.dateRange.displayFromDate;
+  DateTime? get customToDate => providerKey.dateRange.displayToDate;
+  bool get useCustomRange => providerKey.dateRange.isCustomRange;
 
   @override
-  Widget build(BuildContext context) {
-    final viewModel = contributionResult.viewModel;
-    final highlights = contributionResult.yearlyHighlights;
+  Widget build(final BuildContext context) {
+    final ContributionViewModel viewModel = contributionResult.viewModel;
+    final AppSpacing spacing = context.spacing;
 
-    return CustomScrollView(
-      slivers: [
-        const SliverToBoxAdapter(child: SizedBox(height: 16)),
-
-        // Calendar section
-        SliverToBoxAdapter(
-          child: FadeAnimationSection(
-            duration: const Duration(milliseconds: 400),
-            child: Padding(
-              padding: const EdgeInsets.all(8.0),
-              child: ContributionCalendarSection(
-                weeks: viewModel.weeks,
-                totalContributions: viewModel.totalContributions,
-                colors: viewModel.colors,
-                availableYears: viewModel.contributionYears,
-                selectedYear: selectedYear,
-                customFromDate: customFromDate,
-                customToDate: customToDate,
-                useCustomRange: useCustomRange,
-                createdAt: createdAt,
-                commits: viewModel.totalCommitContributions,
-                pullRequests: viewModel.totalPullRequestContributions,
-                issues: viewModel.totalIssueContributions,
-                reviews: viewModel.totalPullRequestReviewContributions,
-                contributionResult: contributionResult,
-                onChipTap: onChipTap,
-                userLogin: userName,
+    return Column(
+      children: <Widget>[
+        // Pinned Repos section (conditional)
+        if (pinnedItems.isNotEmpty) ...<Widget>[
+          SectionHeader(
+            title: 'Pinned',
+            style: SectionHeaderStyle.medium,
+            child: SizedBox(
+              height: 120,
+              child: ListView.builder(
+                scrollDirection: Axis.horizontal,
+                itemCount: pinnedItems.length,
+                itemExtent: 280,
+                padding: EdgeInsets.symmetric(
+                  horizontal: spacing.itemSpacing,
+                  vertical: spacing.itemSpacing,
+                ),
+                itemBuilder: (final BuildContext context, final int index) {
+                  final RepoCardData repo = pinnedItems[index];
+                  return Padding(
+                    padding: EdgeInsets.only(
+                      right: index < pinnedItems.length - 1
+                          ? spacing.itemSpacing
+                          : 0,
+                    ),
+                    child: BorderedContainer(
+                      ref: RepoRef.fromRepoCardFields(repo),
+                      child: RepositoryCard(
+                        repo,
+                        showOwner: false,
+                      ),
+                    ),
+                  );
+                },
               ),
-            ),
-          ),
-        ),
-
-        // Activity Overview section with header
-        SliverToBoxAdapter(
-          child: _buildSectionDivider(context),
-        ),
-
-        SliverToBoxAdapter(
-          child: _buildSectionHeader(context, 'Activity Overview'),
-        ),
-
-        SliverToBoxAdapter(
-          child: FadeAnimationSection(
-            duration: const Duration(milliseconds: 400),
-            child: Padding(
-              padding: const EdgeInsets.all(8.0),
-              child: ActivityOverviewSection(
-                repositories: viewModel.commitContributionsByRepository,
-                commits: viewModel.totalCommitContributions,
-                issues: viewModel.totalIssueContributions,
-                pullRequests: viewModel.totalPullRequestContributions,
-                reviews: viewModel.totalPullRequestReviewContributions,
-              ),
-            ),
-          ),
-        ),
-
-        // Highlights section
-        if (highlights.isNotEmpty) ...[
-          SliverToBoxAdapter(
-            child: _buildSectionDivider(context),
-          ),
-          SliverToBoxAdapter(
-            child: ContributionHighlightsSection(
-              yearlyHighlights: highlights,
-              userName: userName,
-              onChipTap: onChipTap,
             ),
           ),
         ],
 
-        const SliverToBoxAdapter(
-          child: SizedBox(height: 32),
+        // Contribution streak
+        ContributionStreakSection(weeks: viewModel.weeks),
+
+        // Calendar section
+        Padding(
+          padding: EdgeInsets.all(spacing.itemSpacing),
+          child: ContributionCalendarSection(
+            weeks: viewModel.weeks,
+            totalContributions: viewModel.totalContributions,
+            colors: viewModel.colors,
+            providerKey: providerKey,
+            createdAt: createdAt,
+            commits: viewModel.totalCommitContributions,
+            pullRequests: viewModel.totalPullRequestContributions,
+            issues: viewModel.totalIssueContributions,
+            reviews: viewModel.totalPullRequestReviewContributions,
+            contributionResult: contributionResult,
+            onChipTap: onChipTap,
+            userRef: userRef,
+          ),
         ),
+
+        // Contribution statistics (commits, PRs, issues, reviews)
+        ContributionStatisticsSection(
+          commits: viewModel.totalCommitContributions,
+          pullRequests: viewModel.totalPullRequestContributions,
+          issues: viewModel.totalIssueContributions,
+          reviews: viewModel.totalPullRequestReviewContributions,
+          onStatTap: onChipTap != null
+              ? (final String statType) {
+                  final ContributionChipType? chipType =
+                      ContributionChipType.fromStatType(statType);
+                  if (chipType != null) onChipTap!(chipType);
+                }
+              : null,
+        ),
+
+        // Top Languages
+        if (viewModel.commitContributionsByRepository.isNotEmpty)
+          TopLanguagesSection(
+            repositories: viewModel.commitContributionsByRepository,
+          ),
+
+        // Focus Areas (top repos by commit count)
+        if (viewModel.commitContributionsByRepository.isNotEmpty)
+          SectionHeader(
+            title: 'Focus Areas',
+            showDivider: true,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: viewModel.commitContributionsByRepository
+                  .take(5)
+                  .map(
+                    (repo) => BorderedContainer(
+                      ref: RepoRef(
+                        owner: repo.owner,
+                        name: repo.name,
+                      ),
+                      child: ListTile(
+                        title: Text(repo.graphQLRepository.nameWithOwner),
+                        subtitle: Text(
+                          '${repo.contributionCount} contributions',
+                        ),
+                        dense: true,
+                      ),
+                    ),
+                  )
+                  .toList(),
+            ),
+          ),
+
+        SizedBox(height: spacing.listPaddingBottom),
       ],
     );
   }

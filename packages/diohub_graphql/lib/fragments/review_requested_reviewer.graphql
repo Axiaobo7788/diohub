@@ -1,0 +1,12 @@
+# Requested reviewer display for ReviewRequestedEvent / ReviewRequestRemovedEvent / reviewRequests.
+# User and Team have different field names (userAvatarUrl vs teamAvatarUrl).
+
+fragment requestReviewerUser on User {
+  login
+  userAvatarUrl: avatarUrl
+}
+
+fragment requestReviewerTeam on Team {
+  name
+  teamAvatarUrl: avatarUrl
+}

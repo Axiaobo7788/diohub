@@ -1,0 +1,11 @@
+# CODEOWNERS - Require review for critical pipeline files
+# See: https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
+
+# Workflow files - protect thin triggers and orchestrators
+/.github/workflows/ @NamanShergill
+
+# Runtime configuration - protect app secrets
+/dart_defines.json @NamanShergill
+
+# Pipeline detection script - protect pipeline logic
+/.github/scripts/detect-pipeline-state.sh @NamanShergill

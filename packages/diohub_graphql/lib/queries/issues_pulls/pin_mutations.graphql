@@ -1,0 +1,17 @@
+mutation pinIssue($issueId: ID!) {
+  pinIssue(input: { issueId: $issueId }) {
+    issue {
+      id
+      isPinned
+    }
+  }
+}
+
+mutation unpinIssue($issueId: ID!) {
+  unpinIssue(input: { issueId: $issueId }) {
+    issue {
+      id
+      isPinned
+    }
+  }
+}

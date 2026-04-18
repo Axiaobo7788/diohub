@@ -1,0 +1,22 @@
+# import '../../fragments/repo_card_fields.graphql'
+
+query followStatusInfo($user: String!) {
+  user(login: $user) {
+    id
+    viewerIsFollowing
+    viewerCanFollow
+    followers {
+      totalCount
+    }
+    pinnedItems(first: 6, types: [REPOSITORY]) {
+      edges {
+        node {
+          __typename
+          ... on Repository {
+            ...repoCardFields
+          }
+        }
+      }
+    }
+  }
+}

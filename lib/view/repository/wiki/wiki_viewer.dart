@@ -1,187 +1,67 @@
 import 'package:auto_route/annotations.dart';
+import 'package:diohub/providers/repository/wiki_providers.dart';
+import 'package:diohub/view/repository/wiki/wiki_browser.dart';
+import 'package:diohub_models/models/entity_ref.dart';
+import 'package:diohub_premium_api/diohub_premium_api.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+/// Standalone route for wiki deep links (e.g. from [WikiRef], activity feed).
+/// Uses [buildWikiBrowserSlivers] with a page-level [CustomScrollView]; optional
+/// [slug] is pushed after first frame so the wiki opens that page.
 @RoutePage()
-class WikiViewer extends StatefulWidget {
-  const WikiViewer({super.key, this.repoURL});
-  final String? repoURL;
+class WikiViewer extends ConsumerStatefulWidget {
+  const WikiViewer({super.key, this.repo, this.slug});
+
+  final RepoRef? repo;
+  final String? slug;
 
   @override
-  WikiViewerState createState() => WikiViewerState();
+  ConsumerState<WikiViewer> createState() => _WikiViewerState();
 }
 
-class WikiViewerState extends State<WikiViewer> {
-  // late WebViewController _webViewController;
-  bool loading = true;
-  String? wikiLink;
-  String? repoLink;
-  String? error;
-  // late Map<String, String> headers;
+class _WikiViewerState extends ConsumerState<WikiViewer> {
+  bool _initialSlugPushed = false;
 
   @override
   void initState() {
-    // setupHeaders();
-    repoLink = widget.repoURL!
-        .replaceAll('https://api.github.com/repos', 'https://github.com');
-    wikiLink = '${repoLink!}/wiki';
     super.initState();
+    if (widget.slug != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) => _pushInitialSlug());
+    }
   }
 
-  Future<void> setupHeaders() async {
-    // final token = (await AuthService.getAccessTokenFromDevice())!;
-    // headers = {'Authorization': 'Bearer $token'};
+  void _pushInitialSlug() {
+    if (_initialSlugPushed || !mounted || widget.repo == null) return;
+    final AsyncValue<WikiBrowseState> async =
+        ref.read(wikiProvider(widget.repo!));
+    async.whenData((WikiBrowseState state) {
+      if (state.currentPage != null && state.currentPage!.slug != widget.slug) {
+        ref.read(wikiProvider(widget.repo!).notifier).pushPage(widget.slug!);
+        _initialSlugPushed = true;
+      }
+    });
   }
 
   @override
   Widget build(final BuildContext context) {
-    return Container();
-    // return SafeArea(
-    //   child: WillPopScope(
-    //     onWillPop: () async {
-    //       bool canGoBack;
-    //       try {
-    //         canGoBack = await _webViewController.canGoBack();
-    //       } catch (e) {
-    //         canGoBack = false;
-    //       }
-    //       if (canGoBack) {
-    //         _webViewController.goBack();
-    //         return false;
-    //       } else {
-    //         return true;
-    //       }
-    //     },
-    //     child: Scaffold(
-    //       appBar: AppBar(
-    //         leading: IconButton(
-    //           icon: Icon(Icons.adaptive.arrow_back),
-    //           onPressed: () {
-    //             Navigator.pop(context);
-    //           },
-    //         ),
-    //         title: Row(
-    //           mainAxisAlignment: MainAxisAlignment.start,
-    //           crossAxisAlignment: CrossAxisAlignment.center,
-    //           children: const [
-    //             Text(
-    //               'Wiki',
-    //               style: TextStyle( 14),
-    //             ),
-    //             // SizedBox(
-    //             //   width: 8,
-    //             // ),
-    //             // Text(
-    //             //   repoLink.replaceAll('https://github.com/', ''),
-    //             //   style: TextStyle(fontWeight: FontWeight.bold,  14),
-    //             // ),
-    //           ],
-    //         ),
-    //       ),
-    //       body: error == null
-    //           ? Stack(
-    //               fit: StackFit.expand,
-    //               children: [
-    //                 WebView(
-    //                   onWebViewCreated: (controller) {
-    //                     _webViewController = controller;
-    //                     // _webViewController.loadUrl(wikiLink!, headers: headers);
-    //                   },
-    //                   javascriptMode: JavascriptMode.unrestricted,
-    //                   initialUrl: wikiLink,
-    //                   onPageStarted: (initialURL) {
-    //                     setState(() {
-    //                       loading = true;
-    //                     });
-    //                   },
-    //                   navigationDelegate: (action) {
-    //                     if (action.url
-    //                         .toLowerCase()
-    //                         .startsWith(wikiLink!.toLowerCase())) {
-    //                       return NavigationDecision.navigate;
-    //                     } else if (action.url.toLowerCase() ==
-    //                             repoLink?.toLowerCase() &&
-    //                         loading) {
-    //                       setState(() {
-    //                         error =
-    //                             'Seems like ${action.url.replaceAll('https://github.com/', '')} does not have a wiki yet.';
-    //                       });
-    //                     } else {
-    //                       linkHandler(context, action.url);
-    //                     }
-    //                     return NavigationDecision.prevent;
-    //                   },
-    //                   onPageFinished: (initialURL) async {
-    //                     final futures = <Future>[
-    //                       _webViewController.evaluateJavascript(
-    //                           "document.getElementsByClassName('position-relative js-header-wrapper')[0].style.display='none';"),
-    //                       _webViewController.evaluateJavascript(
-    //                           "document.getElementsByClassName('color-bg-secondary pt-3 hide-full-screen mb-5')[0].style.display='none';"),
-    //                       _webViewController.evaluateJavascript(
-    //                           "document.getElementsByClassName('width-full input-group')[0].style.display='none';"),
-    //                       _webViewController.evaluateJavascript(
-    //                           "document.getElementsByClassName('footer container-xl width-full p-responsive')[0].style.display='none';"),
-    //                       _webViewController.evaluateJavascript(
-    //                           "document.getElementsByClassName('mt-0 mb-2')[0].style.display='none';"),
-    //                       _webViewController.evaluateJavascript(
-    //                           "document.getElementsByClassName('Box Box--condensed mb-4')[0].style.display='none';"),
-    //                       _webViewController.evaluateJavascript(
-    //                           "document.getElementsByClassName('hx_page-header-bg pt-3 hide-full-screen mb-5')[0].style.display='none';"),
-    //                       _webViewController.loadUrl(
-    //                           'javascript:document.body.style.margin="4%"; void 0'),
-    //                     ];
-    //                     // Remove unnecessary page elements from the view.
-    //                     await Future.wait(futures);
-    //                     // Wait a few milliseconds so the elements are gone by
-    //                     // the time the page becomes visible.
-    //                     await Future.delayed(const Duration(milliseconds: 100));
-    //                     setState(() {
-    //                       loading = false;
-    //                     });
-    //                   },
-    //                 ),
-    //                 // Show loading indicator until the page is loaded and unnecessary
-    //                 // elements are removed.
-    //                 Column(
-    //                   children: [
-    //                     Expanded(
-    //                       child: Visibility(
-    //                         visible: loading,
-    //                         child: Container(
-    //                           color: white,
-    //                           child: LoadingIndicator(
-    //                             color: Provider.of<PaletteSettings>(context)
-    //                                 .currentSetting
-    //                                 .accent,
-    //                           ),
-    //                         ),
-    //                       ),
-    //                     ),
-    //                   ],
-    //                 ),
-    //               ],
-    //             )
-    //           : Center(
-    //               child: Padding(
-    //               padding: const EdgeInsets.all(16.0),
-    //               child: Column(
-    //                 mainAxisAlignment: MainAxisAlignment.center,
-    //                 children: [
-    //                   Text(
-    //                     'Uh oh.',
-    //                     style: Theme.of(context)
-    //                         .textTheme
-    //                         .headlineMedium!
-    //                         .copyWith(fontWeight: FontWeight.bold),
-    //                   ),
-    //                   Text(
-    //                     error!,
-    //                     textAlign: TextAlign.center,
-    //                   ),
-    //                 ],
-    //               ),
-    //             )),
-    //     ),
-    //   ),
-    // );
+    if (widget.repo == null) {
+      return Scaffold(
+        body: Center(child: Text('Repository not specified')),
+      );
+    }
+    final RepoRef repo = widget.repo!;
+    return Scaffold(
+      appBar: AppBar(
+        leading: IconButton(
+          icon: Icon(Icons.adaptive.arrow_back),
+          onPressed: () => Navigator.of(context).pop(),
+        ),
+        title: const Text('Wiki'),
+      ),
+      body: CustomScrollView(
+        slivers: buildWikiBrowserSlivers(context, ref, repo),
+      ),
+    );
   }
 }

@@ -1,181 +1,118 @@
-import 'package:diohub/common/utils/contribution_utils.dart';
-import 'package:diohub/services/users/user_activity_service.dart';
-import 'package:diohub/view/profile/about/widgets/activity_timeline_event.dart';
+import 'package:diohub_models/models/activity/activity_timeline_event.dart';
+import 'package:diohub/common/misc/loading_indicator.dart';
+import 'package:diohub_models/models/activity/user_activity_timeline_data.dart';
+import 'package:diohub_models/models/entity_ref.dart';
+import 'package:diohub/providers/users/user_activity_timeline_provider.dart';
+import 'package:diohub/style/app_spacing.dart';
 import 'package:diohub/view/profile/about/widgets/activity_timeline_item.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-/// Bottom sheet displaying activity for a specific day
-class DayActivityBottomSheet extends StatelessWidget {
+/// Bottom sheet displaying activity for a specific day.
+/// Callers must pass [scrollController] from [AppSheet.scrollable] and provide
+/// a header (e.g. [AppSheetHeader.text] with trailing close button).
+class DayActivityBottomSheet extends ConsumerWidget {
   const DayActivityBottomSheet({
-    required this.login,
+    required this.userRef,
     required this.from,
     required this.to,
+    required this.scrollController,
     super.key,
   });
 
-  final String login;
+  final UserRef userRef;
   final DateTime from;
   final DateTime to;
+  final ScrollController scrollController;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(final BuildContext context, final WidgetRef ref) {
     final theme = Theme.of(context);
-    final future = UserActivityService.getUserActivityTimeline(
-      login: login,
-      from: from,
-      to: to,
-    );
+    final key = (userRef: userRef, from: from, to: to);
+    final asyncData = ref.watch(dayActivityProvider(key));
 
-    return DraggableScrollableSheet(
-      initialChildSize: 0.9,
-      minChildSize: 0.5,
-      maxChildSize: 0.95,
-      expand: false,
-      builder: (context, controller) {
-        return FutureBuilder<UserActivityTimelineData>(
-          future: future,
-          builder: (context, snapshot) {
-            if (snapshot.connectionState == ConnectionState.waiting) {
-              return Column(
-                children: [
-                  _buildHeader(context, theme),
-                  const Expanded(
-                    child: Center(child: CircularProgressIndicator()),
-                  ),
-                ],
-              );
-            }
-
-            if (snapshot.hasError) {
-              return Column(
-                children: [
-                  _buildHeader(context, theme),
-                  Expanded(
-                    child: Center(
-                      child: Padding(
-                        padding: const EdgeInsets.all(24),
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(
-                              Icons.error_outline,
-                              size: 48,
-                              color: theme.colorScheme.error,
-                            ),
-                            const SizedBox(height: 16),
-                            Text(
-                              'Failed to load activity',
-                              style: theme.textTheme.titleMedium?.copyWith(
-                                color: theme.colorScheme.error,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-                            Text(
-                              snapshot.error.toString(),
-                              style: theme.textTheme.bodySmall?.copyWith(
-                                color: theme.colorScheme.onSurfaceVariant,
-                              ),
-                              textAlign: TextAlign.center,
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              );
-            }
-
-            final data = snapshot.data;
-            final events = data?.events
-                    .where((e) => e.event != null)
-                    .map((e) => e.event!)
-                    .toList() ??
-                <ActivityTimelineEvent>[];
-
-            if (events.isEmpty) {
-              return Column(
-                children: [
-                  _buildHeader(context, theme),
-                  Expanded(
-                    child: Center(
-                      child: Padding(
-                        padding: const EdgeInsets.all(24),
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(
-                              Icons.event_busy,
-                              size: 64,
-                              color: theme.colorScheme.onSurfaceVariant,
-                            ),
-                            const SizedBox(height: 16),
-                            Text(
-                              'No activity for this day',
-                              style: theme.textTheme.titleMedium?.copyWith(
-                                color: theme.colorScheme.onSurfaceVariant,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              );
-            }
-
-            return Column(
-              children: [
-                _buildHeader(context, theme),
-                const Divider(height: 1),
-                Expanded(
-                  child: ListView.separated(
-                    controller: controller,
-                    padding: const EdgeInsets.all(16),
-                    itemCount: events.length,
-                    separatorBuilder: (_, __) => const SizedBox(height: 12),
-                    itemBuilder: (context, index) {
-                      final event = events[index];
-                      return ActivityTimelineItem(
-                        event: event,
-                        userLogin: login,
-                        userAvatarUrl: null,
-                        isFirst: index == 0,
-                        isLast: index == events.length - 1,
-                      );
-                    },
-                  ),
+    return asyncData.when(
+      loading: () => const CenteredSpinner(),
+      error: (final Object err, _) => Center(
+        child: Padding(
+          padding: context.spacing.spaciousPadding,
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: <Widget>[
+              Icon(
+                Icons.error_outline,
+                size: 48,
+                color: theme.colorScheme.error,
+              ),
+              context.spacing.sectionGap,
+              Text(
+                'Failed to load activity',
+                style: theme.textTheme.titleMedium?.copyWith(
+                  color: theme.colorScheme.error,
+                  fontWeight: FontWeight.w600,
                 ),
-              ],
+              ),
+              context.spacing.itemGap,
+              Text(
+                err.toString(),
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ],
+          ),
+        ),
+      ),
+      data: (final UserActivityTimelineData data) {
+        final List<ActivityTimelineEvent> events = data.events
+            .where((final TimelineEventWithFlags e) => e.event != null)
+            .map((final TimelineEventWithFlags e) => e.event!)
+            .toList();
+
+        if (events.isEmpty) {
+          return Center(
+            child: Padding(
+              padding: context.spacing.spaciousPadding,
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: <Widget>[
+                  Icon(
+                    Icons.event_busy,
+                    size: 64,
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
+                  context.spacing.sectionGap,
+                  Text(
+                    'No activity for this day',
+                    style: theme.textTheme.titleMedium?.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        }
+
+        return ListView.separated(
+          controller: scrollController,
+          padding: context.spacing.pagePadding,
+          itemCount: events.length,
+          separatorBuilder: (final _, final __) => context.spacing.contentGap,
+          itemBuilder: (final BuildContext context, final int index) {
+            final ActivityTimelineEvent event = events[index];
+            return ActivityTimelineItem(
+              event: event,
+              userLogin: userRef.login,
+              userAvatarUrl: null,
+              isFirst: index == 0,
+              isLast: index == events.length - 1,
             );
           },
         );
       },
-    );
-  }
-
-  Widget _buildHeader(BuildContext context, ThemeData theme) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(24, 12, 24, 8),
-      child: Row(
-        children: [
-          Expanded(
-            child: Text(
-              'Activity on ${formatDateOnly(from)}',
-              style: theme.textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-          ),
-          IconButton(
-            icon: const Icon(Icons.close),
-            onPressed: () => Navigator.of(context).pop(),
-          ),
-        ],
-      ),
     );
   }
 }

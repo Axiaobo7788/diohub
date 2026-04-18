@@ -1,0 +1,21 @@
+# import '../../fragments/issue_card_fields.graphql'
+# import '../../fragments/pull_card_fields.graphql'
+
+query searchIssuesPulls($query: String!, $first: Int!, $after: String) {
+  search(query: $query, type: ISSUE, first: $first, after: $after) {
+    issueCount
+    pageInfo {
+      endCursor
+      hasNextPage
+    }
+    nodes {
+      __typename
+      ... on Issue {
+        ...issueCardFields
+      }
+      ... on PullRequest {
+        ...pullCardFields
+      }
+    }
+  }
+}

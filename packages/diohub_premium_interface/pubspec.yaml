@@ -1,0 +1,16 @@
+name: diohub_premium_interface
+description: Abstract interfaces for DioHub premium extension points.
+publish_to: none
+
+environment:
+  sdk: ^3.8.0
+
+dependencies:
+  auto_route: ^11.1.0
+  diohub_graphql:
+    path: ../diohub_graphql
+  diohub_models:
+    path: ../diohub_models
+  flutter:
+    sdk: flutter
+  flutter_riverpod: ^3.0.3

@@ -1,0 +1,94 @@
+# import './timeline.graphql'
+# import '../../fragments/actor.graphql'
+# import '../../fragments/assignable_label_fields.graphql'
+# import '../../fragments/closable_comment_count.graphql'
+# import '../../fragments/label.graphql'
+
+mutation addComment($subjectId: ID!, $body: String!) {
+  addComment(input: { subjectId: $subjectId, body: $body }) {
+    commentEdge {
+      node {
+        __typename
+        ... on IssueComment {
+          ...issueComment
+        }
+      }
+    }
+    subject {
+      __typename
+      ... on Issue {
+        ...issueSubjectCommentCount
+      }
+      ... on PullRequest {
+        ...pullRequestSubjectCommentCount
+      }
+    }
+  }
+}
+
+mutation addAssigneesToAssignable($assignableId: ID!, $assigneeIds: [ID!]!) {
+  addAssigneesToAssignable(
+    input: { assignableId: $assignableId, assigneeIds: $assigneeIds }
+  ) {
+    assignable {
+      __typename
+      ... on Issue {
+        ...assignableAssigneesFieldsIssue
+      }
+      ... on PullRequest {
+        ...assignableAssigneesFieldsPullRequest
+      }
+    }
+  }
+}
+
+mutation removeAssigneesFromAssignable(
+  $assignableId: ID!
+  $assigneeIds: [ID!]!
+) {
+  removeAssigneesFromAssignable(
+    input: { assignableId: $assignableId, assigneeIds: $assigneeIds }
+  ) {
+    assignable {
+      __typename
+      ... on Issue {
+        ...assignableAssigneesFieldsIssue
+      }
+      ... on PullRequest {
+        ...assignableAssigneesFieldsPullRequest
+      }
+    }
+  }
+}
+
+mutation addLabelsToLabelable($labelableId: ID!, $labelIds: [ID!]!) {
+  addLabelsToLabelable(
+    input: { labelableId: $labelableId, labelIds: $labelIds }
+  ) {
+    labelable {
+      __typename
+      ... on Issue {
+        ...labelableLabelsFieldsIssue
+      }
+      ... on PullRequest {
+        ...labelableLabelsFieldsPullRequest
+      }
+    }
+  }
+}
+
+mutation removeLabelsFromLabelable($labelableId: ID!, $labelIds: [ID!]!) {
+  removeLabelsFromLabelable(
+    input: { labelableId: $labelableId, labelIds: $labelIds }
+  ) {
+    labelable {
+      __typename
+      ... on Issue {
+        ...labelableLabelsFieldsIssue
+      }
+      ... on PullRequest {
+        ...labelableLabelsFieldsPullRequest
+      }
+    }
+  }
+}

@@ -1,123 +1,176 @@
 import 'package:diohub/common/charts/contribution_calendar_widget.dart';
-import 'package:diohub/view/profile/about/widgets/activity_overview_section.dart';
+import 'package:diohub_graphql/fragments/fragment_typedefs.dart';
+import 'package:diohub_graphql/fragments/repo_card_fields.graphql.dart';
+import 'package:diohub_models/models/contributions/contribution_day.dart';
+import 'package:diohub_models/models/visual_state.dart';
 import 'package:flutter/material.dart';
+import 'package:freezed_annotation/freezed_annotation.dart';
+
+part 'contribution_query_models.freezed.dart';
 
 /// Typed key for contribution queries.
 /// Eliminates string parsing and provides compile-time safety.
-class ContributionQueryKey {
-  const ContributionQueryKey({
-    required this.userName,
-    required this.dateRange,
-  });
+@freezed
+abstract class ContributionQueryKey with _$ContributionQueryKey {
+  const ContributionQueryKey._();
 
-  final String userName;
-  final ContributionDateRange dateRange;
+  const factory ContributionQueryKey({
+    required String userName,
+    required ContributionDateRange dateRange,
+  }) = _ContributionQueryKey;
 
   /// Create key for the last year from today (default view)
-  factory ContributionQueryKey.lastYear(String userName) {
-    final now = DateTime.now();
-    final to = DateTime(now.year, now.month, now.day);
-    final from = DateTime(to.year - 1, to.month, to.day);
+  factory ContributionQueryKey.lastYear(final String userName) {
+    final DateTime now = DateTime.now();
+    final DateTime to = DateTime(now.year, now.month, now.day);
+    final DateTime from = DateTime(to.year - 1, to.month, to.day);
     return ContributionQueryKey(
       userName: userName,
-      dateRange: ContributionDateRange.custom(from: from, to: to),
+      dateRange: ContributionDateRange.custom(
+        from: from,
+        to: to,
+        isLastYear: true,
+      ),
     );
   }
 
   /// Create key for a specific year
-  factory ContributionQueryKey.year(String userName, int year) {
-    return ContributionQueryKey(
-      userName: userName,
-      dateRange: ContributionDateRange.year(year),
-    );
-  }
+  factory ContributionQueryKey.year(final String userName, final int year) =>
+      ContributionQueryKey(
+        userName: userName,
+        dateRange: ContributionDateRange.year(year),
+      );
 
   /// Create key for a custom date range
   factory ContributionQueryKey.customRange({
-    required String userName,
-    required DateTime from,
-    required DateTime to,
+    required final String userName,
+    required final DateTime from,
+    required final DateTime to,
   }) {
+    final DateTime normalizedFrom = DateTime(from.year, from.month, from.day);
+    final DateTime normalizedTo = DateTime(to.year, to.month, to.day);
     return ContributionQueryKey(
       userName: userName,
-      dateRange: ContributionDateRange.custom(from: from, to: to),
+      dateRange: ContributionDateRange.custom(
+        from: normalizedFrom,
+        to: normalizedTo,
+      ),
     );
   }
-
-  @override
-  bool operator ==(Object other) =>
-      identical(this, other) ||
-      other is ContributionQueryKey &&
-          runtimeType == other.runtimeType &&
-          userName == other.userName &&
-          dateRange == other.dateRange;
-
-  @override
-  int get hashCode => userName.hashCode ^ dateRange.hashCode;
 }
 
 /// Date range specification for contribution queries
-sealed class ContributionDateRange {
-  const ContributionDateRange();
+@freezed
+sealed class ContributionDateRange with _$ContributionDateRange {
+  const ContributionDateRange._();
 
   const factory ContributionDateRange.year(int year) = YearRange;
   const factory ContributionDateRange.custom({
     required DateTime from,
     required DateTime to,
+    @Default(false) bool isLastYear,
   }) = CustomRange;
 
   /// Get the actual from/to dates for the query
-  (DateTime, DateTime) get dates;
+  (DateTime, DateTime) get dates => switch (this) {
+    YearRange(year: final y) => (DateTime(y), DateTime(y, 12, 31)),
+    CustomRange(from: final from, to: final to) => (from, to),
+  };
 
   /// Check if this is a multi-year range
   bool get isMultiYear {
-    final (from, to) = dates;
+    final (DateTime from, DateTime to) = dates;
     return (to.year - from.year) > 0;
   }
+
+  /// Extract selected year if this is a single-year range, null otherwise
+  int? get displayYear => switch (this) {
+    YearRange(year: final year) => year,
+    CustomRange() => null,
+  };
+
+  /// Extract from date for display
+  DateTime? get displayFromDate => switch (this) {
+    YearRange() => null,
+    CustomRange(from: final from) => from,
+  };
+
+  /// Extract to date for display
+  DateTime? get displayToDate => switch (this) {
+    YearRange() => null,
+    CustomRange(to: final to) => to,
+  };
+
+  /// Check if this is a custom range (not a single year)
+  bool get isCustomRange => this is CustomRange;
+
+  /// Check if this represents "last year" (365 days ending today)
+  bool get isLastYear => switch (this) {
+    YearRange() => false,
+    CustomRange(isLastYear: final v) => v,
+  };
+
+  /// Check if this is a custom range that spans exactly Jan 1 - Dec 31 of a single year
+  int? get fullYearIfCustomRange => switch (this) {
+    YearRange(year: final year) => year,
+    CustomRange(from: final from, to: final to) => () {
+      final DateTime normalizedFrom = DateTime(from.year, from.month, from.day);
+      final DateTime normalizedTo = DateTime(to.year, to.month, to.day);
+      if (normalizedFrom.year == normalizedTo.year &&
+          normalizedFrom.month == 1 &&
+          normalizedFrom.day == 1 &&
+          normalizedTo.month == 12 &&
+          normalizedTo.day == 31) {
+        return normalizedFrom.year;
+      }
+      return null;
+    }(),
+  };
 }
 
-class YearRange extends ContributionDateRange {
-  const YearRange(this.year);
-
-  final int year;
-
-  @override
-  (DateTime, DateTime) get dates =>
-      (DateTime(year, 1, 1), DateTime(year, 12, 31));
-
-  @override
-  bool operator ==(Object other) =>
-      identical(this, other) ||
-      other is YearRange &&
-          runtimeType == other.runtimeType &&
-          year == other.year;
-
-  @override
-  int get hashCode => year.hashCode;
-}
-
-class CustomRange extends ContributionDateRange {
-  const CustomRange({
-    required this.from,
-    required this.to,
+/// Data for a repository in the "Contributed to" section.
+/// Stores the full GraphQL repository object to avoid data loss.
+class ContributedRepository {
+  const ContributedRepository({
+    required this.graphQLRepository,
+    required this.contributionCount,
+    this.commitCount,
+    this.reviewCount,
+    this.issueCount,
+    this.pullRequestCount,
   });
 
-  final DateTime from;
-  final DateTime to;
+  /// Full GraphQL repository object (uses repoCardFields fragment from contributions query)
+  final RepoCardData graphQLRepository;
 
-  @override
-  (DateTime, DateTime) get dates => (from, to);
+  /// Total contribution count (sum of all contribution types)
+  final int contributionCount;
 
-  @override
-  bool operator ==(Object other) =>
-      identical(this, other) ||
-      other is CustomRange &&
-          runtimeType == other.runtimeType &&
-          from == other.from &&
-          to == other.to;
+  /// Number of commits contributed
+  final int? commitCount;
 
-  @override
-  int get hashCode => from.hashCode ^ to.hashCode;
+  /// Number of PR reviews contributed
+  final int? reviewCount;
+
+  /// Number of issues contributed
+  final int? issueCount;
+
+  /// Number of pull requests contributed
+  final int? pullRequestCount;
+
+  String get name => graphQLRepository.name;
+  String get owner => graphQLRepository.owner.when(
+    organization: (o) => o.login,
+    user: (u) => u.login,
+    orElse: () => '',
+  );
+  String get url => graphQLRepository.url.toString();
+  String? get description => graphQLRepository.description;
+  int get stargazersCount => graphQLRepository.stargazerCount;
+  bool get isPrivate => graphQLRepository.isPrivate;
+  bool get isFork => graphQLRepository.isFork;
+  String? get language => graphQLRepository.primaryLanguage?.name;
+  String? get languageColor => graphQLRepository.primaryLanguage?.color;
 }
 
 /// Unified view model for contribution data.
@@ -280,7 +333,7 @@ class ContributionHighlightItem {
     this.stargazerCount,
     this.isPrivate = false,
     this.isRestricted = false,
-    this.state, // OPEN or CLOSED for issues/PRs
+    this.state,
     this.body, // Description for issues/PRs
     this.mergedAt, // For PRs
     this.graphQLIssue, // GraphQL issue type (from issueInfoTimeline fragment)
@@ -299,17 +352,19 @@ class ContributionHighlightItem {
   final int? stargazerCount; // For repos
   final bool isPrivate;
   final bool isRestricted;
-  final String? state; // OPEN, CLOSED for issues/PRs
+  final VisualState? state;
   final String? body; // Description body
   final DateTime? mergedAt; // For merged PRs
   final dynamic
-      graphQLIssue; // GraphQL issue type (from issueInfoTimeline fragment)
+  graphQLIssue; // GraphQL issue type (from issueInfoTimeline fragment)
   final dynamic
-      graphQLPullRequest; // GraphQL pull request type (from pullInfoTimeline fragment)
+  graphQLPullRequest; // GraphQL pull request type (from pullInfoTimeline fragment)
   final dynamic
-      graphQLRepository; // GraphQL repository type (from repositoryFields fragment)
+  graphQLRepository; // GraphQL repository type (from repositoryFields fragment)
 
   String get repositoryFullName => '$repositoryOwner/$repositoryName';
+
+  /// Prefer building URL at call site with [ServerConfig.webUrl] for active server.
   String get repositoryUrl => 'https://github.com/$repositoryFullName';
 }
 
@@ -343,12 +398,15 @@ class ContributionCollectionResult {
   final List<YearlyContributionHighlights> yearlyHighlights;
 
   /// Utility: Check if any year has restricted contributions
-  bool get hasAnyRestrictedContributions =>
-      yearlyHighlights.any((h) => h.restrictedContributionsCount > 0);
+  bool get hasAnyRestrictedContributions => yearlyHighlights.any(
+    (final YearlyContributionHighlights h) =>
+        h.restrictedContributionsCount > 0,
+  );
 
   /// Utility: Total restricted contributions across all years
   int get totalRestrictedContributions => yearlyHighlights.fold(
-        0,
-        (sum, h) => sum + h.restrictedContributionsCount,
-      );
+    0,
+    (final int sum, final YearlyContributionHighlights h) =>
+        sum + h.restrictedContributionsCount,
+  );
 }

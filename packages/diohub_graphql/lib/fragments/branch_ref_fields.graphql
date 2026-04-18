@@ -1,0 +1,11 @@
+# Used by create-branch sheet and branches list: ref name and target commit oid for branch source.
+fragment branchRefFields on Ref {
+  name
+  id
+  target {
+    __typename
+    ... on Commit {
+      oid
+    }
+  }
+}

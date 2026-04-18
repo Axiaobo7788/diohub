@@ -1,52 +1,93 @@
 import 'package:diohub/common/misc/changed_files_list_card.dart';
-import 'package:diohub/models/commits/commit_model.dart';
-import 'package:diohub/providers/commits/commit_provider.dart';
-import 'package:flutter/cupertino.dart';
+import 'package:diohub_graphql/queries/repositories/repo_typedefs.dart';
+import 'package:diohub_models/models/commits/commit_model.dart';
+import 'package:diohub/style/app_spacing.dart';
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
 
-class ChangedFiles extends StatefulWidget {
-  const ChangedFiles({super.key});
+/// Slivers for the commit Files tab for use inside the shell's scroll view.
+List<Widget> buildChangedFilesSlivers(
+  final BuildContext context,
+  final CommitInfo commit,
+  final List<FileElement>? files,
+) {
+  if (files == null || files.isEmpty) {
+    return <Widget>[
+      SliverFillRemaining(
+        hasScrollBody: false,
+        child: Center(
+          child: Padding(
+            padding: context.spacing.spaciousPadding,
+            child: const Text('No changed files available'),
+          ),
+        ),
+      ),
+    ];
+  }
 
-  @override
-  ChangedFilesState createState() => ChangedFilesState();
+  return <Widget>[
+    SliverToBoxAdapter(
+      child: Padding(
+        padding: context.spacing.spaciousPadding,
+        child: Text(
+          'Showing ${files.length} changed files with ${commit.additions} additions and ${commit.deletions} deletions.',
+          textAlign: TextAlign.center,
+        ),
+      ),
+    ),
+    SliverList(
+      delegate: SliverChildBuilderDelegate(
+        (final BuildContext context, final int index) {
+          if (index.isOdd) {
+            return context.spacing.contentGap;
+          }
+          return ChangedFilesListCard(files[index ~/ 2]);
+        },
+        childCount: files.length * 2 - 1,
+      ),
+    ),
+  ];
 }
 
-class ChangedFilesState extends State<ChangedFiles> {
+class ChangedFiles extends StatelessWidget {
+  const ChangedFiles({
+    required this.commit,
+    required this.files,
+    super.key,
+  });
+
+  final CommitInfo commit;
+  final List<FileElement>? files;
+
   @override
   Widget build(final BuildContext context) {
-    final provider = Provider.of<CommitProvider>(context);
-    final commit = provider.data;
-    final List<FileElement>? files = provider.files;
-
-    if (files == null || files.isEmpty) {
-      return const Center(
+    if (files == null || files!.isEmpty) {
+      return Center(
         child: Padding(
-          padding: EdgeInsets.all(24),
-          child: Text('No changed files available'),
+          padding: context.spacing.spaciousPadding,
+          child: const Text('No changed files available'),
         ),
       );
     }
 
-    return ListView(
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: <Widget>[
         Padding(
-          padding: const EdgeInsets.all(24),
+          padding: context.spacing.spaciousPadding,
           child: Text(
-            'Showing ${files.length} changed files with ${commit.additions} additions and ${commit.deletions} deletions.',
+            'Showing ${files!.length} changed files with ${commit.additions} additions and ${commit.deletions} deletions.',
             textAlign: TextAlign.center,
           ),
         ),
         ListView.separated(
           physics: const NeverScrollableScrollPhysics(),
           shrinkWrap: true,
-          itemCount: files.length,
+          itemCount: files!.length,
           separatorBuilder: (final BuildContext context, final int index) =>
-              const SizedBox(
-            height: 12,
-          ),
+              context.spacing.contentGap,
           itemBuilder: (final BuildContext context, final int index) =>
-              ChangedFilesListCard(files[index]),
+              ChangedFilesListCard(files![index]),
         ),
       ],
     );

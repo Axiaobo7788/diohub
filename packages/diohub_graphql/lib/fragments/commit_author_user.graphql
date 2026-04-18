@@ -1,0 +1,6 @@
+# Commit author/committer user fields (User-only; used when author.user / committer.user is User).
+
+fragment commitAuthorUser on User {
+  name
+  bio
+}

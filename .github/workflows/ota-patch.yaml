@@ -1,0 +1,157 @@
+name: OTA Patch (Emergency Only)
+
+on:
+  workflow_dispatch:
+    inputs:
+      platform:
+        description: 'Target platform'
+        required: true
+        type: choice
+        options:
+          - android
+          - ios
+          - both
+      flavor:
+        description: 'Build flavor'
+        required: true
+        type: choice
+        options:
+          - dev
+          - beta
+          - rel
+      release_version:
+        description: 'Exact release version to patch (e.g., 1.1.0-dev+2054)'
+        required: true
+        type: string
+      reason:
+        description: 'Emergency reason (why is OTA patch needed instead of full release?)'
+        required: true
+        type: string
+
+jobs:
+  validate:
+    name: Validate Emergency Patch Request
+    runs-on: ubuntu-latest
+    outputs:
+      hotfix_number: ${{ steps.number.outputs.hotfix_number }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Validate inputs
+        run: |
+          VERSION="${{ inputs.release_version }}"
+          REASON="${{ inputs.reason }}"
+          
+          if [ -z "$VERSION" ]; then
+            echo "Error: release_version is required"
+            exit 1
+          fi
+          
+          if [ -z "$REASON" ]; then
+            echo "Error: reason is required"
+            exit 1
+          fi
+          
+          if [ ${#REASON} -lt 10 ]; then
+            echo "Error: reason must be at least 10 characters"
+            exit 1
+          fi
+          
+          echo "✓ Validated emergency patch request"
+          echo "  Version: $VERSION"
+          echo "  Reason: $REASON"
+
+      - name: Calculate hotfix number
+        id: number
+        run: |
+          VERSION="${{ inputs.release_version }}"
+          PLATFORM="${{ inputs.platform }}"
+          
+          # Count existing hotfix tags for this version
+          if [ "$PLATFORM" = "both" ]; then
+            # For both, use the max of either platform
+            ANDROID_COUNT=$(git tag -l "v${VERSION}-hotfix.android.*" | wc -l | tr -d ' ')
+            IOS_COUNT=$(git tag -l "v${VERSION}-hotfix.ios.*" | wc -l | tr -d ' ')
+            MAX_COUNT=$(( ANDROID_COUNT > IOS_COUNT ? ANDROID_COUNT : IOS_COUNT ))
+            HOTFIX_NUM=$((MAX_COUNT + 1))
+          else
+            COUNT=$(git tag -l "v${VERSION}-hotfix.${PLATFORM}.*" | wc -l | tr -d ' ')
+            HOTFIX_NUM=$((COUNT + 1))
+          fi
+          
+          echo "hotfix_number=$HOTFIX_NUM" >> "$GITHUB_OUTPUT"
+          echo "This will be hotfix #$HOTFIX_NUM for $VERSION"
+
+  configure:
+    name: Configure Patch Targets
+    runs-on: ubuntu-latest
+    needs: validate
+    outputs:
+      flutter_version: ${{ steps.flutter_ver.outputs.version }}
+      patch_android: ${{ steps.config.outputs.patch_android }}
+      patch_ios: ${{ steps.config.outputs.patch_ios }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Read Flutter version
+        id: flutter_ver
+        run: |
+          FLUTTER_VERSION=$(cat .flutter-version)
+          echo "version=$FLUTTER_VERSION" >> "$GITHUB_OUTPUT"
+          echo "✓ Flutter version: $FLUTTER_VERSION"
+
+      - name: Determine patch targets
+        id: config
+        run: |
+          case "${{ github.event.inputs.platform }}" in
+            android)
+              echo "patch_android=true" >> "$GITHUB_OUTPUT"
+              echo "patch_ios=false" >> "$GITHUB_OUTPUT"
+              ;;
+            ios)
+              echo "patch_android=false" >> "$GITHUB_OUTPUT"
+              echo "patch_ios=true" >> "$GITHUB_OUTPUT"
+              ;;
+            both)
+              echo "patch_android=true" >> "$GITHUB_OUTPUT"
+              echo "patch_ios=true" >> "$GITHUB_OUTPUT"
+              ;;
+          esac
+
+  codegen:
+    name: Code Generation
+    needs: configure
+    uses: namanshergill/diohub-premium/.github/workflows/_codegen.yaml@main
+    with:
+      flutter_version: ${{ needs.configure.outputs.flutter_version }}
+    secrets: inherit
+
+  patch-android:
+    name: Patch Android
+    needs: [validate, configure, codegen]
+    if: needs.configure.outputs.patch_android == 'true' && needs.codegen.result == 'success'
+    uses: namanshergill/diohub-premium/.github/workflows/_patch-android.yaml@main
+    with:
+      flavor: ${{ github.event.inputs.flavor }}
+      release_version: ${{ github.event.inputs.release_version }}
+      flutter_version: ${{ needs.configure.outputs.flutter_version }}
+      hotfix_number: ${{ needs.validate.outputs.hotfix_number }}
+      reason: ${{ github.event.inputs.reason }}
+    secrets: inherit
+
+  patch-ios:
+    name: Patch iOS
+    needs: [validate, configure, codegen]
+    if: needs.configure.outputs.patch_ios == 'true' && needs.codegen.result == 'success'
+    uses: namanshergill/diohub-premium/.github/workflows/_patch-ios.yaml@main
+    with:
+      flavor: ${{ github.event.inputs.flavor }}
+      release_version: ${{ github.event.inputs.release_version }}
+      flutter_version: ${{ needs.configure.outputs.flutter_version }}
+      hotfix_number: ${{ needs.validate.outputs.hotfix_number }}
+      reason: ${{ github.event.inputs.reason }}
+    secrets: inherit

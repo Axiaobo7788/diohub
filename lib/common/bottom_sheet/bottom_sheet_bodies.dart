@@ -1,7 +1,27 @@
 part of 'bottom_sheets.dart';
 
-class BottomSheetBodyList extends StatelessWidget {
-  const BottomSheetBodyList({
+/// Scrollable sheet body: [AppCustomScrollView] with [scrollController] and
+/// [slivers]. Use from [AppSheet.scrollable] bodyBuilder when the body is
+/// a single scroll view (e.g. [PaginatedSliverList]).
+class SheetScrollBody extends StatelessWidget {
+  const SheetScrollBody({
+    required this.scrollController,
+    required this.slivers,
+    super.key,
+  });
+
+  final ScrollController scrollController;
+  final List<Widget> slivers;
+
+  @override
+  Widget build(BuildContext context) => AppCustomScrollView(
+        controller: scrollController,
+        slivers: slivers,
+      );
+}
+
+class SheetBodyList extends StatelessWidget {
+  const SheetBodyList({
     required this.children,
     super.key,
     this.itemPadding = const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -23,7 +43,7 @@ class BottomSheetBodyList extends StatelessWidget {
           thickness: 1,
           indent: 16,
           endIndent: 16,
-          color: context.colorScheme.outline.withOpacity(0.1),
+          color: context.colorScheme.outline.subtle,
         ),
         itemCount: children.length,
       );
@@ -34,27 +54,3 @@ typedef ScrollBuilder = Widget Function(
   void Function(void Function()) setState,
   ScrollController scrollController,
 );
-
-class BottomSheetBodyScrollable extends StatelessWidget {
-  const BottomSheetBodyScrollable({
-    required this.scrollBuilder,
-    super.key,
-    this.initialChildSize = 0.7,
-    this.maxChildSize = 0.95,
-    this.expand = false,
-    this.minChildSize = 0.5,
-  });
-  final ScrollableWidgetBuilder scrollBuilder;
-  final double initialChildSize;
-  final double maxChildSize;
-  final bool expand;
-  final double minChildSize;
-  @override
-  Widget build(final BuildContext context) => DraggableScrollableSheet(
-        initialChildSize: initialChildSize,
-        maxChildSize: maxChildSize,
-        expand: expand,
-        minChildSize: minChildSize,
-        builder: scrollBuilder.call,
-      );
-}

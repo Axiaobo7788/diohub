@@ -1,0 +1,22 @@
+name: Scheduled Cleanup
+
+on:
+  schedule:
+    # Run weekly on Sunday at 2 AM UTC
+    - cron: '0 2 * * 0'
+  workflow_dispatch:
+    inputs:
+      max_age_days:
+        description: 'Maximum age in days for resources to keep'
+        type: number
+        default: 7
+
+jobs:
+  cleanup-all:
+    name: Run Scheduled Cleanup
+    uses: namanshergill/diohub-premium/.github/workflows/_cleanup.yaml@main
+    with:
+      delete_draft: true
+      delete_tags: false
+      max_age_days: ${{ inputs.max_age_days || 7 }}
+    secrets: inherit

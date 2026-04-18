@@ -1,15 +1,16 @@
-import 'dart:async';
-
-import 'package:auto_route/auto_route.dart';
 import 'package:cached_network_image/cached_network_image.dart';
-import 'package:diohub/common/misc/ink_pot.dart';
-import 'package:diohub/common/misc/shimmer_widget.dart';
-import 'package:diohub/routes/router.gr.dart';
-import 'package:diohub/utils/utils.dart';
+import 'package:diohub/common/misc/shimmer_bone.dart';
+import 'package:diohub/common/misc/shimmer_scope.dart';
+import 'package:diohub_models/models/entity_ref.dart';
+import 'package:diohub_models/models/navigable.dart';
+import 'package:diohub/routes/navigable_actions.dart';
+import 'package:diohub/style/surface_ext.dart';
+import 'package:diohub/style/surface_style.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_material_design_icons/flutter_material_design_icons.dart';
 
-class ProfileTile extends StatelessWidget {
+class ProfileTile extends ConsumerWidget {
   const ProfileTile.avatar({
     required this.avatarUrl,
     this.userLogin,
@@ -56,93 +57,90 @@ class ProfileTile extends StatelessWidget {
   final Widget Function(Widget child)? wrapperBuilder;
 
   @override
-  Widget build(final BuildContext context) => InkPot(
-        // borderRadius: smallBorderRadius,
-        onTap: userLogin != null && !disableTap
-            ? () {
-                navigateToProfile(login: userLogin!, context: context);
-              }
-            : null,
-        child: wrapperBuilder?.call(
-              _buildChild(context),
-            ) ??
-            _buildChild(context),
-      );
+  Widget build(final BuildContext context, final WidgetRef ref) {
+    final Padding content = Padding(
+      padding: padding,
+      child: wrapperBuilder?.call(
+            _buildContent(context),
+          ) ??
+          _buildContent(context),
+    );
 
-  Padding _buildChild(final BuildContext context) => Padding(
-        padding: padding,
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: <Widget>[
-            ClipOval(
-              child: CachedNetworkImage(
-                imageUrl: avatarUrl ?? 'N/A',
-                height: size,
-                fit: BoxFit.fill,
-                placeholder:
-                    (final BuildContext context, final String string) =>
-                        ShimmerWidget(
-                  child: Container(
-                    height: size,
-                    width: size,
-                    color: context.colorScheme.surfaceVariant,
-                  ),
-                ),
-                errorWidget: (final BuildContext context, final _, final __) =>
-                    Icon(
-                  MdiIcons.ghost,
-                  size: size,
-                ),
-              ),
-            ),
-            Flexible(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: <Widget>[
-                  if (fullName != null)
-                    Flexible(
-                      child: Padding(
-                        padding: const EdgeInsets.only(left: 8),
-                        child: Text(
-                          fullName!,
-                          style: (textStyle ??
-                                  const TextStyle(
-                                      // color: Provider.of<PaletteSettings>(
-                                      //   context,
-                                      // ).currentSetting.baseElements,
-                                      //  15,
-                                      ))
-                              .copyWith(fontWeight: FontWeight.bold),
-                        ),
-                      ),
-                    ),
-                  if (_type != _UserCardType.photo)
-                    Flexible(
-                      child: Padding(
-                        padding: EdgeInsets.only(left: size / 3),
-                        child: Text(
-                          userLogin ?? 'N/A',
-                          style: textStyle,
-                        ),
-                      ),
-                    ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      );
-}
+    final bool tapEnabled = userLogin != null && !disableTap;
+    if (!tapEnabled) return content;
 
-void navigateToProfile({
-  required final BuildContext context,
-  required final String login,
-}) =>
-    unawaited(
-      context.router.push(
-        UserProfileRoute(login: login),
+    return Material(
+      type: MaterialType.transparency,
+      child: InkWell(
+        onTap: () => UserRef(login: userLogin!).navigate(context, ref),
+        borderRadius: context.radius(RadiusSize.small),
+        child: content,
       ),
     );
+  }
+
+  Widget _buildContent(final BuildContext context) => Row(
+        mainAxisSize: MainAxisSize.min,
+        children: <Widget>[
+          ClipOval(
+            child: CachedNetworkImage(
+              imageUrl: avatarUrl ?? 'N/A',
+              width: size,
+              height: size,
+              memCacheWidth: (size * MediaQuery.of(context).devicePixelRatio)
+                  .round()
+                  .clamp(1, 512),
+              memCacheHeight: (size * MediaQuery.of(context).devicePixelRatio)
+                  .round()
+                  .clamp(1, 512),
+              fit: BoxFit.cover,
+              placeholder: (final BuildContext context, final String string) =>
+                  ShimmerScope(
+                child: ShimmerBone.avatar(size: size),
+              ),
+              errorWidget: (final BuildContext context, final _, final __) =>
+                  Icon(
+                MdiIcons.ghost,
+                size: size,
+              ),
+            ),
+          ),
+          Flexible(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: <Widget>[
+                if (fullName != null)
+                  Flexible(
+                    child: Padding(
+                      padding: const EdgeInsets.only(left: 8),
+                      child: Text(
+                        fullName!,
+                        style: (textStyle ??
+                                const TextStyle(
+                                    //   context,
+                                    // ).currentSetting.baseElements,
+                                    //  15,
+                                    ))
+                            .copyWith(fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                  ),
+                if (_type != _UserCardType.photo)
+                  Flexible(
+                    child: Padding(
+                      padding: EdgeInsets.only(left: size / 3),
+                      child: Text(
+                        userLogin ?? 'N/A',
+                        style: textStyle,
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        ],
+      );
+}
 
 enum _UserCardType { photo, login, extended }

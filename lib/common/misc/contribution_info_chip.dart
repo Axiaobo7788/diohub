@@ -1,5 +1,9 @@
-import 'package:diohub/common/misc/surface_shape_resolver.dart';
-import 'package:diohub/style/surface_style_theme.dart';
+import 'package:diohub/common/misc/tap_feedback.dart';
+import 'package:diohub/style/app_spacing.dart';
+import 'package:diohub/style/contribution_colors.dart';
+import 'package:diohub/style/opacities.dart';
+import 'package:diohub/style/surface_ext.dart';
+import 'package:diohub/style/surface_style.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_vector_icons/flutter_vector_icons.dart';
 
@@ -10,11 +14,102 @@ class ContributionInfoChip extends StatelessWidget {
   const ContributionInfoChip({
     required this.icon,
     required this.count,
-    this.label,
     required this.color,
+    this.label,
     this.onTap,
     super.key,
   });
+
+  /// Factory method for commits chip with optional repo count
+  factory ContributionInfoChip.commits({
+    required final int count,
+    final int repoCount = 0,
+    final VoidCallback? onTap,
+  }) =>
+      ContributionInfoChip(
+        icon: Octicons.git_commit,
+        count: count,
+        label: repoCount > 0
+            ? 'in $repoCount ${repoCount == 1 ? 'repo' : 'repos'}'
+            : null,
+        color: ContributionColors.commit,
+        onTap: onTap,
+      );
+
+  /// Factory method for pull requests chip with optional repo count
+  factory ContributionInfoChip.pullRequests({
+    required final int count,
+    final int repoCount = 0,
+    final VoidCallback? onTap,
+  }) =>
+      ContributionInfoChip(
+        icon: Octicons.git_pull_request,
+        count: count,
+        label: repoCount > 0
+            ? 'in $repoCount ${repoCount == 1 ? 'repo' : 'repos'}'
+            : null,
+        color: ContributionColors.pullRequest,
+        onTap: onTap,
+      );
+
+  /// Factory method for issues chip with optional repo count
+  factory ContributionInfoChip.issues({
+    required final int count,
+    final int repoCount = 0,
+    final VoidCallback? onTap,
+  }) =>
+      ContributionInfoChip(
+        icon: Octicons.issue_opened,
+        count: count,
+        label: repoCount > 0
+            ? 'in $repoCount ${repoCount == 1 ? 'repo' : 'repos'}'
+            : null,
+        color: ContributionColors.issue,
+        onTap: onTap,
+      );
+
+  /// Factory method for reviews chip with optional repo count
+  factory ContributionInfoChip.reviews({
+    required final int count,
+    final int repoCount = 0,
+    final VoidCallback? onTap,
+  }) =>
+      ContributionInfoChip(
+        icon: Octicons.code_review,
+        count: count,
+        label: repoCount > 0
+            ? 'reviews in $repoCount ${repoCount == 1 ? 'repo' : 'repos'}'
+            : 'reviews',
+        color: ContributionColors.review,
+        onTap: onTap,
+      );
+
+  /// Factory method for repositories created chip
+  factory ContributionInfoChip.repositories({
+    required final int count,
+    final VoidCallback? onTap,
+  }) =>
+      ContributionInfoChip(
+        icon: Octicons.repo,
+        count: count,
+        label: count == 1 ? 'repo created' : 'repos created',
+        color: ContributionColors.repo,
+        onTap: onTap,
+      );
+
+  /// Factory method for private/restricted contributions chip
+  factory ContributionInfoChip.private({
+    required final int count,
+    required final ColorScheme colorScheme,
+    final VoidCallback? onTap,
+  }) =>
+      ContributionInfoChip(
+        icon: Octicons.lock,
+        count: count,
+        label: 'private',
+        color: colorScheme.tertiary,
+        onTap: onTap,
+      );
 
   /// Icon to display
   final IconData icon;
@@ -31,128 +126,30 @@ class ContributionInfoChip extends StatelessWidget {
   /// Optional callback when chip is tapped
   final VoidCallback? onTap;
 
-  /// Factory method for commits chip with optional repo count
-  factory ContributionInfoChip.commits({
-    required int count,
-    int repoCount = 0,
-    VoidCallback? onTap,
-  }) {
-    return ContributionInfoChip(
-      icon: Octicons.git_commit,
-      count: count,
-      label: repoCount > 0
-          ? 'in $repoCount ${repoCount == 1 ? 'repo' : 'repos'}'
-          : null,
-      color: const Color(0xFF2196F3),
-      onTap: onTap,
-    );
-  }
-
-  /// Factory method for pull requests chip with optional repo count
-  factory ContributionInfoChip.pullRequests({
-    required int count,
-    int repoCount = 0,
-    VoidCallback? onTap,
-  }) {
-    return ContributionInfoChip(
-      icon: Octicons.git_pull_request,
-      count: count,
-      label: repoCount > 0
-          ? 'in $repoCount ${repoCount == 1 ? 'repo' : 'repos'}'
-          : null,
-      color: const Color(0xFF9C27B0),
-      onTap: onTap,
-    );
-  }
-
-  /// Factory method for issues chip with optional repo count
-  factory ContributionInfoChip.issues({
-    required int count,
-    int repoCount = 0,
-    VoidCallback? onTap,
-  }) {
-    return ContributionInfoChip(
-      icon: Octicons.issue_opened,
-      count: count,
-      label: repoCount > 0
-          ? 'in $repoCount ${repoCount == 1 ? 'repo' : 'repos'}'
-          : null,
-      color: const Color(0xFF4CAF50),
-      onTap: onTap,
-    );
-  }
-
-  /// Factory method for reviews chip with optional repo count
-  factory ContributionInfoChip.reviews({
-    required int count,
-    int repoCount = 0,
-    VoidCallback? onTap,
-  }) {
-    return ContributionInfoChip(
-      icon: Octicons.code_review,
-      count: count,
-      label: repoCount > 0
-          ? 'reviews in $repoCount ${repoCount == 1 ? 'repo' : 'repos'}'
-          : 'reviews',
-      color: const Color(0xFFFF9800),
-      onTap: onTap,
-    );
-  }
-
-  /// Factory method for repositories created chip
-  factory ContributionInfoChip.repositories({
-    required int count,
-    VoidCallback? onTap,
-  }) {
-    return ContributionInfoChip(
-      icon: Octicons.repo,
-      count: count,
-      label: count == 1 ? 'repo created' : 'repos created',
-      color: const Color(0xFF795548),
-      onTap: onTap,
-    );
-  }
-
-  /// Factory method for private/restricted contributions chip
-  factory ContributionInfoChip.private({
-    required int count,
-    required ColorScheme colorScheme,
-    VoidCallback? onTap,
-  }) {
-    return ContributionInfoChip(
-      icon: Octicons.lock,
-      count: count,
-      label: 'private',
-      color: colorScheme.tertiary,
-      onTap: onTap,
-    );
-  }
-
   @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
+  Widget build(final BuildContext context) {
+    final ThemeData theme = Theme.of(context);
+    final ColorScheme colorScheme = theme.colorScheme;
+    final AppSpacing spacing = context.spacing;
 
-    final chipContent = Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-      decoration: SurfaceShapeResolver.boxDecoration(
-        context,
-        size: BorderRadiusSize.large,
-        color: color.withOpacity(0.1),
+    final Container chipContent = Container(
+      padding: spacing.chipPadding,
+      decoration: context.surfaceDecoration(
+        RadiusSize.large,
+        color: color.subtle,
         border: Border.all(
-          color: color.withOpacity(0.3),
-          width: 1,
+          color: color.borderO,
         ),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
-        children: [
+        children: <Widget>[
           Icon(
             icon,
             size: 14,
             color: color,
           ),
-          const SizedBox(width: 6),
+          spacing.compactGap,
           Text(
             _formatNumber(count),
             style: theme.textTheme.bodySmall?.copyWith(
@@ -161,12 +158,12 @@ class ContributionInfoChip extends StatelessWidget {
               fontWeight: FontWeight.w600,
             ),
           ),
-          if (label != null) ...[
-            const SizedBox(width: 4),
+          if (label != null) ...<Widget>[
+            spacing.tightGap,
             Text(
               label!,
               style: theme.textTheme.bodySmall?.copyWith(
-                color: colorScheme.onSurfaceVariant.withOpacity(0.7),
+                color: colorScheme.onSurfaceVariant.secondary,
                 fontSize: 11,
                 fontWeight: FontWeight.w400,
               ),
@@ -180,14 +177,14 @@ class ContributionInfoChip extends StatelessWidget {
       return chipContent;
     }
 
-    return InkWell(
+    return TapFeedback(
       onTap: onTap,
-      borderRadius: theme.surfaceStyle.borderRadius(size: BorderRadiusSize.large),
+      size: RadiusSize.large,
       child: chipContent,
     );
   }
 
-  String _formatNumber(int number) {
+  String _formatNumber(final int number) {
     if (number < 1000) return number.toString();
     if (number < 1000000) return '${(number / 1000).toStringAsFixed(1)}k';
     return '${(number / 1000000).toStringAsFixed(1)}M';

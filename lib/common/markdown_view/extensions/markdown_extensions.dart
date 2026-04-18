@@ -1,26 +1,24 @@
 import 'package:diohub/common/bottom_sheet/url_actions.dart';
-import 'package:diohub/common/markdown_view/markdown_body.dart';
+import 'package:diohub/common/clipboard/clipboard_service.dart';
+import 'package:diohub/providers/settings/links_provider.dart';
 import 'package:diohub/common/misc/code_block_view.dart';
-import 'package:diohub/common/misc/image_loader.dart';
-import 'package:diohub/common/misc/info_card.dart';
-import 'package:diohub/common/misc/ink_pot.dart';
-import 'package:diohub/style/surface_style_theme.dart';
-import 'package:diohub/utils/copy_to_clipboard.dart';
+import 'package:diohub/common/misc/collapsible_action_buttons.dart';
+import 'package:diohub/common/misc/copy_select_action.dart';
+import 'package:diohub/common/misc/nested_card_with_header.dart';
+import 'package:diohub/common/misc/tap_feedback.dart';
+import 'package:diohub/common/popup/animated_menu_icon.dart';
+import 'package:diohub/common/popup/popup_button.dart';
+import 'package:diohub/style/surface_ext.dart';
+import 'package:diohub/style/surface_style.dart';
 import 'package:diohub/utils/lang_colors/get_language_color.dart';
 import 'package:diohub/utils/utils.dart';
+// ignore: no_view_import_in_common
 import 'package:diohub/view/issues_pulls/widgets/discussion_comment.dart';
+import 'package:diohub/style/app_spacing.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_material_design_icons/flutter_material_design_icons.dart';
-import 'package:flutter_svg/svg.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_widget_from_html/flutter_widget_from_html.dart';
 import 'package:html/dom.dart' as dom;
-import 'package:pull_down_button/pull_down_button.dart';
-
-part 'a_extension.dart';
-part 'code_extension.dart';
-part 'div_extension.dart';
-part 'img_extension.dart';
-part 'pre_extension.dart';
 
 extension Tag on dom.Element {
   bool isTag(final String tag) => localName == tag;
@@ -59,53 +57,21 @@ extension on BuildTree {
   }
 }
 
-// extension BuildTreeCopyWith on BuildTree {
-//   BuildTree copyWith({
-//     dom.Element? element,
-//     InheritanceResolvers? inheritanceResolvers,
-//     List<BuildBit>? children,
-//     List<dynamic>? nonInherited,
-//     LockableList<css.Declaration>? styles,
-//   }) {
-//     return BuildTree(
-//       element: element ?? this.element,
-//       inheritanceResolvers: inheritanceResolvers ?? this.inheritanceResolvers,
-//       _children: children ?? this._children,
-//       _nonInherited: nonInherited ?? this._nonInherited,
-//       styles: styles ?? this.styles,
-//     );
-//   }
-// }
-
-// extension on BuildTree {
-//   // ... (rest of your class)
-//
-//   /// Creates a copy of the current BuildTree with optional parameter overrides.
-//   BuildTree copyWith({
-//     dom.Element? element,
-//     InheritanceResolvers? inheritanceResolvers,
-//     List<BuildBit>? children,
-//     List<dynamic>? nonInherited,
-//     LockableList<css.Declaration>? styles,
-//   }) {
-//     return BuildTree(
-//       element: element ?? this.element,
-//       inheritanceResolvers: inheritanceResolvers ?? this.inheritanceResolvers,
-//       _children: children ?? this._children,
-//       _nonInherited: nonInherited ?? this._nonInherited,
-//       styles: styles ?? this.styles,
-//     );
-//   }
-// }
-
 class MyWidgetFactory extends WidgetFactory {
   MyWidgetFactory({
     required this.fetchState,
-    // required this.codeBlockStyle,
+    this.onScrollToAnchor,
+    this.anchorKeys,
+    this.onTapLink,
   });
 
-  // final MarkdownBodyCodeBlockStyle? codeBlockStyle;
   final HtmlWidgetState? Function() fetchState;
+  final void Function(String anchorId)? onScrollToAnchor;
+  final Map<String, GlobalKey>? anchorKeys;
+
+  /// When non-null and returns true for a given href, the link is handled
+  /// in-app and the default (launch URL) is skipped.
+  final bool Function(String href)? onTapLink;
 
   @override
   void parse(final BuildTree meta) {
@@ -117,28 +83,19 @@ class MyWidgetFactory extends WidgetFactory {
           final Widget child,
           final BuildTree tree,
         ) {
-          Future<void> onPress() async => showActionsMenu(
-                <PullDownMenuEntry>[
-                  PullDownMenuTitle(
-                    title: Text(
-                      tree.element.text,
-                    ),
-                  ),
-                  PullDownMenuItem(
-                    onTap: () => copyToClipboard(tree.element.text),
-                    title: 'Copy',
-                    icon: MdiIcons.contentCopy,
-                  ),
-                ],
-                context,
-              );
+          Future<void> onPress() async {
+            await ProviderScope.containerOf(context)
+                .read(clipboardServiceProvider)
+                .copy(tree.element.text);
+          }
+
           return GestureDetector(
             onLongPress: onPress,
             onTap: onPress,
             child: DecoratedBox(
               decoration: BoxDecoration(
-                color: context.colorScheme.surfaceVariant,
-                borderRadius: Theme.of(context).surfaceStyle.borderRadiusMedium(),
+                color: context.colorScheme.surfaceContainerHighest,
+                borderRadius: context.radius(RadiusSize.medium),
               ),
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 4),
@@ -161,20 +118,35 @@ class MyWidgetFactory extends WidgetFactory {
           final BuildTree tree,
         ) {
           final String link = tree.element.attributes['href'] ?? '';
-          print(link);
           if (link.startsWith('#')) {
-            return InkPot(
-              onTap: () async => fetchState()?.scrollToAnchor(
-                link.replaceAll('#', ''),
-              ),
+            return TapFeedback(
+              onTap: () async {
+                final String anchorId = link.replaceAll('#', '');
+                if (onScrollToAnchor != null) {
+                  onScrollToAnchor!(anchorId);
+                } else {
+                  fetchState()?.scrollToAnchor(anchorId);
+                }
+              },
               child: child,
             );
           }
+          if (onTapLink != null && onTapLink!(link)) {
+            return TapFeedback(
+              onTap: () async {},
+              child: child,
+            );
+          }
+          final links = ProviderScope.containerOf(context).read(linksProvider);
           final URLActions urlActions = URLActions(
             uri: Uri.parse(link),
+            clipboard: ProviderScope.containerOf(context)
+                .read(clipboardServiceProvider),
+            openGitHubInApp: links.openGitHubInApp,
+            confirmBeforeBrowser: links.confirmBeforeBrowser,
           );
-          return InkPot(
-            onTap: () async => urlActions.launchURL(),
+          return TapFeedback(
+            onTap: () async => urlActions.launchURL(context),
             onLongPress: () async => urlActions.showMenu(context),
             child: child,
           );
@@ -182,8 +154,11 @@ class MyWidgetFactory extends WidgetFactory {
       )
       ..wrapTaggedWidget(
         tag: 'blockquote',
-        newWidgetBuilder: (final BuildContext context, final Widget child,
-                final BuildTree tree) =>
+        newWidgetBuilder: (
+          final BuildContext context,
+          final Widget child,
+          final BuildTree tree,
+        ) =>
             DecoratedBox(
           decoration: BoxDecoration(
             // color: context.colorScheme.surface.,
@@ -192,7 +167,6 @@ class MyWidgetFactory extends WidgetFactory {
                 color: context.colorScheme.primary,
                 width: 2,
               ),
-
             ),
           ),
           child: Padding(
@@ -201,127 +175,20 @@ class MyWidgetFactory extends WidgetFactory {
           ),
         ),
       );
-    // ..wrapTaggedWidget(
-    //   tag: 'img',
-    //   newWidgetBuilder: (context, child, tree) => buildImageTag(
-    //     tree.element,
-    //     imgSrcModifiers: null,
-    //   ),
-    // );
+
     super.parse(meta);
   }
 }
-
-Widget buildImageTag(
-  final dom.Element element, {
-  required final Iterable<MarkdownImgSrcModifiers>? imgSrcModifiers,
-}) {
-  String src = element.attributes['src']!;
-  for (final MarkdownImgSrcModifiers modifier
-      in imgSrcModifiers ?? <MarkdownImgSrcModifiers>[]) {
-    src = modifier.call(
-      MarkdownImgSrcData(src),
-    );
-  }
-  if (src.split('.').last.contains('svg')) {
-    return SvgPicture.network(
-      src,
-    );
-  }
-  return Padding(
-    padding: const EdgeInsets.all(4),
-    child: ImageLoader(
-      src,
-      height: double.tryParse(
-        element.attributes['height'] ?? '',
-      ),
-      width: double.tryParse(
-        element.attributes['width'] ?? '',
-      ),
-      // Some SVGs don't have svg in their URL so will miss the
-      // if check above. They will fail in the image loader
-      // so will build here.
-      errorBuilder: (final BuildContext context) => SvgPicture.network(
-        src,
-      ),
-    ),
-  );
-}
-
-// List<HtmlExtension> markdownTagExtensionsTagExtensions(
-//   final BuildContext context, {
-//   required final List<MarkdownImgSrcModifiers>? imgSrcModifiers,
-// }) =>
-//     <HtmlExtension>[
-//       ..._tagWrapExtensions(context),
-//       ..._tagExtensions(
-//         context,
-//         imgSrcModifiers: imgSrcModifiers,
-//       ),
-//     ];
-
-// List<TagExtension> _tagExtensions(
-//   final BuildContext context, {
-//   required final List<MarkdownImgSrcModifiers>? imgSrcModifiers,
-// }) =>
-//     <TagExtension>[
-//       // _divExtension(context).extension,
-//       // _imgExtension(
-//       //   context,
-//       //   imgSrcModifiers: imgSrcModifiers ?? <MarkdownImgSrcModifiers>[],
-//       // ).extension,
-//       // _preExtension(context).extension,
-//       // _aExtension(context).extension,
-//       // _codeExtension(context).extension,
-//       // TagExtension(tagsToExtend: {'li'}, child: Placeholder()),
-//     ];
-
-// List<TagExtension> _tagWrapExtensions(final BuildContext context) =>
-//     <TagExtension>[
-//       TagExtension(
-//         tagsToExtend: <String>{
-//           'blockquote',
-//         },
-//         builder: (final ExtensionContext p0) => DecoratedBox(
-//           // padding: const EdgeInsets.only(bottom: 40),
-
-// child: Padding(
-//   padding: const EdgeInsets.only(left: 4),
-//   child: p0.child,
-// ),
-//         ),
-//       ),
-//       // TagExtension(
-//       //   tagsToExtend: <String>{
-//       //     'code',
-//       //   },
-//       //   builder: (final ExtensionContext child) => Padding(
-//       //     padding: const EdgeInsets.symmetric(vertical: 1),
-//       //     child: DecoratedBox(
-//       //       decoration: BoxDecoration(
-//       //         // color: context.palette.faded1,
-//       //         borderRadius: smallBorderRadius,
-//       //       ),
-//       //       child: Padding(
-//       //         padding: const EdgeInsets.symmetric(horizontal: 4),
-//       //         child: child.child,
-//       //       ),
-//       //     ),
-//       //   ),
-//       // ),
-//     ];
 
 class CodeView extends StatefulWidget {
   const CodeView(
     this.data, {
     super.key,
     this.language,
-    this.codeBlockStyle,
   });
 
   final String data;
   final String? language;
-  final MarkdownBodyCodeBlockStyle? codeBlockStyle;
 
   @override
   _CodeViewState createState() => _CodeViewState();
@@ -333,63 +200,71 @@ class _CodeViewState extends State<CodeView> {
   @override
   Widget build(final BuildContext context) {
     final Widget child = Padding(
-      padding: const EdgeInsets.all(8),
+      padding: EdgeInsets.all(context.spacing.itemSpacing),
       child: CodeBlockView(
         widget.data,
         language: widget.language,
       ),
     );
 
-    return MenuInfoCard(
-      title: widget.language ?? 'Code',
-      elevation: widget.codeBlockStyle?.elevation,
-      headerColor: widget.codeBlockStyle?.headerColor,
-      leading: Container(
-        decoration: BoxDecoration(
-          color: Color(
-            getLangColor(widget.language),
-          ),
-          shape: BoxShape.circle,
-        ),
-        height: 10,
-        width: 10,
+    final List<ActionButtonData> actions = <ActionButtonData>[
+      CheckboxActionButton(
+        label: 'Wrap',
+        value: wrapText,
+        onChanged: (final bool value) {
+          setState(() {
+            wrapText = value;
+          });
+        },
       ),
-      menuBuilder: (final BuildContext context) => <PullDownMenuEntry>[
-        PullDownMenuItem.selectable(
-          onTap: () {
-            setState(() {
-              wrapText = !wrapText;
-            });
-          },
-          selected: wrapText,
-          title: 'Wrap',
-          icon: MdiIcons.wrap,
+      createCopySelectAction(
+        text: widget.data,
+        copy: ProviderScope.containerOf(context)
+            .read(clipboardServiceProvider)
+            .copy,
+        selectDialogBuilder: (final BuildContext context) => SelectAndCopy(
+          widget.data,
+          copy: ProviderScope.containerOf(context)
+              .read(clipboardServiceProvider)
+              .copy,
         ),
-        PullDownMenuActionsRow.medium(
-          items: <PullDownMenuItem>[
-            PullDownMenuItem(
-              onTap: () async {
-                await copyToClipboard(widget.data);
-              },
-              title: 'Copy',
-              icon: MdiIcons.contentCopy,
+      ),
+    ];
+    return NestedCardWithHeader(
+      headerPadding: const EdgeInsets.symmetric(horizontal: 4),
+      header: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: <Widget>[
+          Container(
+            decoration: BoxDecoration(
+              color: Color(
+                getLangColor(widget.language),
+              ),
+              shape: BoxShape.circle,
             ),
-            PullDownMenuItem(
-              onTap: () async {
-                await showDialog(
-                  context: context,
-                  builder: (final BuildContext cxt) => SelectAndCopy(
-                    widget.data,
-                    // onQuote: widget.onQuote,
+            height: 10,
+            width: 10,
+          ),
+          if ((widget.language ?? 'Code').isNotEmpty) ...[
+            context.spacing.itemGap,
+            Text(
+              widget.language ?? 'Code',
+              style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                    fontWeight: FontWeight.w600,
+                    color: Theme.of(context).colorScheme.onSurface,
                   ),
-                );
-              },
-              title: 'Select',
-              icon: MdiIcons.cursorText,
             ),
           ],
+        ],
+      ),
+      trailing: PopupButton(
+        animatedButtonBuilder: (context, showMenu, isOpen) => TapFeedback(
+          onTap: showMenu,
+          child: AnimatedMenuIcon.compact(isOpen: isOpen),
         ),
-      ],
+        buttonBuilder: (context, showMenu) => const SizedBox.shrink(),
+        actions: actions,
+      ),
       child: wrapText
           ? child
           : Scrollbar(
@@ -401,56 +276,3 @@ class _CodeViewState extends State<CodeView> {
     );
   }
 }
-
-// abstract class _ExtensionWidget extends StatelessWidget {
-//   const _ExtensionWidget(
-//     this.extensionContext,
-//   );
-//
-//   final ExtensionContext extensionContext;
-//
-//   String? get divClass => extensionContext.elementName;
-//
-//   LinkedHashMap<Object, String>? get attributes =>
-//       extensionContext.element?.attributes;
-//
-//   Widget get defaultChild => extensionContext.child;
-// }
-
-class _MarkdownExtension {
-  // _MarkdownExtension({
-  //   required this.tag,
-  //   this.child,
-  //   this.builder,
-  // }) : assert(
-  //         (child != null) || (builder != null),
-  //         'Either child or builder needs to be provided to TagExtension',
-  //       );
-  //
-  // final String tag;
-  // final Widget? child;
-  // final _ExtensionWidget Function(ExtensionContext extensionContext)? builder;
-  //
-  // TagExtension get extension => TagExtension(
-  //       tagsToExtend: <String>{
-  //         tag,
-  //       },
-  //       builder: builder,
-  //       child: child,
-  //     );
-}
-
-// class FixedTagWrap extends TagWrapExtension {
-//   FixedTagWrap({required super.tagsToWrap, required super.builder});
-//
-//   @override
-//   InlineSpan build(ExtensionContext context) {
-//     final child = CssBoxWidget.withInlineSpanChildren(
-//       children: context.inlineSpanChildren!,
-//       style: context.style!,
-//     );
-//
-//     return child;
-//   }
-// }
-

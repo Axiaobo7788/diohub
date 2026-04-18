@@ -1,6 +1,8 @@
+import 'package:diohub/common/misc/bordered_container.dart';
 import 'package:diohub/common/misc/highlighted_container.dart';
-import 'package:diohub/common/misc/surface_shape_resolver.dart';
-import 'package:diohub/style/surface_style_theme.dart';
+import 'package:diohub/style/opacities.dart';
+import 'package:diohub/style/surface_ext.dart';
+import 'package:diohub/style/surface_style.dart';
 import 'package:diohub/utils/utils.dart';
 import 'package:flutter/material.dart';
 
@@ -40,45 +42,35 @@ class DetailTilesVisibilityConfig {
 
   /// Default configuration: Show all alwaysVisibleTiles, no width-based logic
   static const DetailTilesVisibilityConfig defaultConfig =
-      DetailTilesVisibilityConfig(
-    minVisibleTiles: 2,
-    maxVisibleTiles: null,
-    tileWidth: 200,
-    useWidthBasedVisibility: false,
-    defaultVisibleCount: null,
-    minVisiblePerRow: null,
-  );
+      DetailTilesVisibilityConfig();
 
   /// Configuration that uses width-based visibility
   static DetailTilesVisibilityConfig widthBased({
-    int minVisibleTiles = 2,
-    int? maxVisibleTiles,
-    double tileWidth = 200,
-    int? minVisiblePerRow,
+    final int minVisibleTiles = 2,
+    final int? maxVisibleTiles,
+    final double tileWidth = 200,
+    final int? minVisiblePerRow,
   }) =>
       DetailTilesVisibilityConfig(
         minVisibleTiles: minVisibleTiles,
         maxVisibleTiles: maxVisibleTiles,
         tileWidth: tileWidth,
         useWidthBasedVisibility: true,
-        defaultVisibleCount: null,
         minVisiblePerRow: minVisiblePerRow,
       );
 
   /// Configuration with fixed visible count
   static DetailTilesVisibilityConfig fixedCount({
-    required int defaultVisibleCount,
-    int minVisibleTiles = 2,
-    int? maxVisibleTiles,
-    double tileWidth = 200,
+    required final int defaultVisibleCount,
+    final int minVisibleTiles = 2,
+    final int? maxVisibleTiles,
+    final double tileWidth = 200,
   }) =>
       DetailTilesVisibilityConfig(
         minVisibleTiles: minVisibleTiles,
         maxVisibleTiles: maxVisibleTiles,
         tileWidth: tileWidth,
-        useWidthBasedVisibility: false,
         defaultVisibleCount: defaultVisibleCount,
-        minVisiblePerRow: null,
       );
 }
 
@@ -115,15 +107,18 @@ class _CollapsibleDetailTilesState extends State<CollapsibleDetailTiles> {
   bool _showAllTiles = false;
 
   @override
-  Widget build(BuildContext context) {
-    final allTiles = [...widget.alwaysVisibleTiles, ...widget.expandableTiles];
+  Widget build(final BuildContext context) {
+    final List<Widget> allTiles = <Widget>[
+      ...widget.alwaysVisibleTiles,
+      ...widget.expandableTiles
+    ];
 
     if (allTiles.isEmpty) {
       return const SizedBox.shrink();
     }
 
     return LayoutBuilder(
-      builder: (context, constraints) {
+      builder: (final BuildContext context, final BoxConstraints constraints) {
         // Determine visible tiles based on configuration
         final List<Widget> visibleTiles;
         if (_showAllTiles) {
@@ -133,7 +128,7 @@ class _CollapsibleDetailTilesState extends State<CollapsibleDetailTiles> {
           visibleTiles = _calculateVisibleTiles(constraints);
         } else if (widget.visibilityConfig.defaultVisibleCount != null) {
           // Use fixed count if specified
-          final visibleCount = widget.visibilityConfig.defaultVisibleCount!
+          final int visibleCount = widget.visibilityConfig.defaultVisibleCount!
               .clamp(0, widget.alwaysVisibleTiles.length);
           visibleTiles = widget.alwaysVisibleTiles.take(visibleCount).toList();
         } else {
@@ -142,96 +137,96 @@ class _CollapsibleDetailTilesState extends State<CollapsibleDetailTiles> {
         }
 
         // Calculate if there are hidden alwaysVisibleTiles
-        final bool hasHiddenAlwaysVisible = widget.visibilityConfig.useWidthBasedVisibility
-            ? visibleTiles.length < widget.alwaysVisibleTiles.length
-            : widget.visibilityConfig.defaultVisibleCount != null
+        final bool hasHiddenAlwaysVisible =
+            widget.visibilityConfig.useWidthBasedVisibility
                 ? visibleTiles.length < widget.alwaysVisibleTiles.length
-                : false;
+                : widget.visibilityConfig.defaultVisibleCount != null &&
+                    visibleTiles.length < widget.alwaysVisibleTiles.length;
 
         return HighlightedContainer(
-          highlightColor: context.colorScheme.primary.withOpacity(0.4),
-          borderSide: BorderSideType.bottom,
-          borderWidth: 2.0,
-          size: BorderRadiusSize.medium,
-          child: Card(
-          color: Color.lerp(
-            context.colorScheme.surfaceContainer,
-            Colors.black,
-            0.1,
-          ),
-          elevation: 0,
-          margin: EdgeInsets.zero,
-          shape: SurfaceShapeResolver.shape(
-            context,
-            size: BorderRadiusSize.medium,
-          ),
-          child: AnimatedSize(
-            duration: const Duration(milliseconds: 300),
-            curve: Curves.easeInOut,
-            child: Column(
-              children: [
-                // Visible tiles
-                ...visibleTiles.asMap().entries.map((entry) {
-                  final int index = entry.key;
-                  final Widget tile = entry.value;
+          highlightColor: context.colorScheme.primary.withValues(alpha: 0.4),
+          borderWidth: 2,
+          child: BorderedContainer(
+            backgroundColor: Color.lerp(
+              context.colorScheme.surfaceContainer,
+              Colors.black,
+              0.1,
+            ),
+            elevation: 0,
+            size: RadiusSize.medium,
+            padding: EdgeInsets.zero,
+            child: AnimatedSize(
+              duration: const Duration(milliseconds: 300),
+              curve: Curves.easeInOut,
+              child: Column(
+                children: <Widget>[
+                  // Visible tiles
+                  ...visibleTiles
+                      .asMap()
+                      .entries
+                      .map((final MapEntry<int, Widget> entry) {
+                    final int index = entry.key;
+                    final Widget tile = entry.value;
                     final bool isLastTile = index == visibleTiles.length - 1;
                     // Never show divider after the last tile
-                  return Column(
-                    children: [
-                      tile,
+                    return Column(
+                      children: <Widget>[
+                        tile,
                         if (!isLastTile)
-                        Divider(
-                          height: 1,
-                          thickness: 1,
-                          indent: 12,
-                          endIndent: 12,
-                          color: context.colorScheme.outlineVariant.withOpacity(0.3),
-                        ),
-                    ],
-                  );
-                }).toList(),
-                // Expand button (only show if there are expandable tiles or hidden alwaysVisibleTiles)
-                  if (widget.expandableTiles.isNotEmpty || hasHiddenAlwaysVisible) ...[
-                  Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 12),
-                    child: SizedBox(
-                      width: double.infinity,
-                      child: Material(
-                        color: Color.lerp(
-                          context.colorScheme.surfaceContainer,
-                          Colors.black,
-                          0.1,
-                        ),
-                        borderRadius: Theme.of(context).surfaceStyle.borderRadiusMedium(),
-                        child: InkWell(
-                          onTap: () {
-                            setState(() {
-                              _showAllTiles = !_showAllTiles;
-                            });
-                            widget.onExpandChanged?.call(_showAllTiles);
-                          },
-                          borderRadius: Theme.of(context).surfaceStyle.borderRadiusMedium(),
-                          child: Padding(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 12,
-                              vertical: 6,
-                            ),
-                            child: AnimatedRotation(
-                              duration: const Duration(milliseconds: 300),
-                              turns: _showAllTiles ? 0.5 : 0,
-                              child: Icon(
-                                Icons.expand_more_rounded,
-                                size: 14,
-                                color: context.colorScheme.onSurfaceVariant,
+                          Divider(
+                            height: 1,
+                            thickness: 1,
+                            indent: 12,
+                            endIndent: 12,
+                            color: context.colorScheme.outlineVariant.borderO,
+                          ),
+                      ],
+                    );
+                  }),
+                  // Expand button (only show if there are expandable tiles or hidden alwaysVisibleTiles)
+                  if (widget.expandableTiles.isNotEmpty ||
+                      hasHiddenAlwaysVisible) ...<Widget>[
+                    Padding(
+                      padding: const EdgeInsets.symmetric(
+                          vertical: 4, horizontal: 12),
+                      child: SizedBox(
+                        width: double.infinity,
+                        child: Material(
+                          color: Color.lerp(
+                            context.colorScheme.surfaceContainer,
+                            Colors.black,
+                            0.1,
+                          ),
+                          borderRadius: context.radius(RadiusSize.medium),
+                          child: InkWell(
+                            onTap: () {
+                              setState(() {
+                                _showAllTiles = !_showAllTiles;
+                              });
+                              widget.onExpandChanged?.call(_showAllTiles);
+                            },
+                            borderRadius: context.radius(RadiusSize.medium),
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 6,
+                              ),
+                              child: AnimatedRotation(
+                                duration: const Duration(milliseconds: 300),
+                                turns: _showAllTiles ? 0.5 : 0,
+                                child: Icon(
+                                  Icons.expand_more_rounded,
+                                  size: 14,
+                                  color: context.colorScheme.onSurfaceVariant,
+                                ),
                               ),
                             ),
                           ),
                         ),
                       ),
                     ),
-                  ),
+                  ],
                 ],
-              ],
               ),
             ),
           ),
@@ -241,35 +236,37 @@ class _CollapsibleDetailTilesState extends State<CollapsibleDetailTiles> {
   }
 
   /// Calculates how many tiles should be visible based on available width
-  List<Widget> _calculateVisibleTiles(BoxConstraints constraints) {
-    final config = widget.visibilityConfig;
-    final allAlwaysVisible = widget.alwaysVisibleTiles;
-    
+  List<Widget> _calculateVisibleTiles(final BoxConstraints constraints) {
+    final DetailTilesVisibilityConfig config = widget.visibilityConfig;
+    final List<Widget> allAlwaysVisible = widget.alwaysVisibleTiles;
+
     if (allAlwaysVisible.isEmpty) {
-      return [];
+      return <Widget>[];
     }
 
     // Use minVisiblePerRow if specified, otherwise use minVisibleTiles
-    final minPerRow = config.minVisiblePerRow ?? config.minVisibleTiles;
-    
+    final int minPerRow = config.minVisiblePerRow ?? config.minVisibleTiles;
+
     // Ensure min <= max for clamp to work correctly
-    final int safeMinPerRow = minPerRow < allAlwaysVisible.length ? minPerRow : allAlwaysVisible.length;
+    final int safeMinPerRow = minPerRow < allAlwaysVisible.length
+        ? minPerRow
+        : allAlwaysVisible.length;
 
     // Calculate how many tiles fit based on width
     final int tilesThatFit = (constraints.maxWidth / config.tileWidth)
         .floor()
         .clamp(safeMinPerRow, allAlwaysVisible.length);
-    
+
     // Apply maxVisibleTiles limit if set
     final int maxVisible = config.maxVisibleTiles != null
-        ? (config.maxVisibleTiles! < allAlwaysVisible.length 
-            ? config.maxVisibleTiles! 
+        ? (config.maxVisibleTiles! < allAlwaysVisible.length
+            ? config.maxVisibleTiles!
             : allAlwaysVisible.length)
         : allAlwaysVisible.length;
-    final int safeMaxVisible = maxVisible < safeMinPerRow ? safeMinPerRow : maxVisible;
+    final int safeMaxVisible =
+        maxVisible < safeMinPerRow ? safeMinPerRow : maxVisible;
     final int visibleCount = tilesThatFit.clamp(safeMinPerRow, safeMaxVisible);
-    
+
     return allAlwaysVisible.take(visibleCount).toList();
   }
 }
-

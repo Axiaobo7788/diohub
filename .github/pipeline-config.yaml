@@ -1,0 +1,170 @@
+# Pipeline Configuration
+# Single source of truth for CI/CD pipeline settings
+
+bot:
+  name: Speedwagon
+  email: ci@namanshergill.dev
+
+# JoJo AI Characters Configuration
+characters:
+  speedwagon:
+    role: detection
+    secret_prefix: SPEEDWAGON
+    email: speedwagon@users.noreply.github.com  # Replace with your domain
+  jotaro:
+    role: builds
+    secret_prefix: JOTARO
+    email: jotaro@users.noreply.github.com
+  joseph:
+    role: tests-and-review
+    secret_prefix: JOSEPH
+    email: joseph@users.noreply.github.com
+  giorno:
+    role: distribution
+    secret_prefix: GIORNO
+    email: giorno@users.noreply.github.com
+  josuke:
+    role: failures-and-cleanup
+    secret_prefix: JOSUKE
+    email: josuke@users.noreply.github.com
+  bucciarati:
+    role: coordination
+    secret_prefix: BUCCIARATI
+    email: bucciarati@users.noreply.github.com
+  koichi:
+    role: issue-triage
+    secret_prefix: KOICHI
+    email: koichi@users.noreply.github.com
+  polnareff:
+    role: dependencies-and-stale
+    secret_prefix: POLNAREFF
+    email: polnareff@users.noreply.github.com
+
+# AI Configuration
+ai:
+  max_prompt_chars: 250000  # ~60K tokens, plenty for diffs/logs while staying efficient
+  
+  # Multi-provider chain: primary -> fallback 1 -> fallback 2 -> graceful degradation
+  providers:
+    - name: gemini
+      model: gemini-2.5-flash
+      key_env: GEMINI_API_KEY
+      max_output_tokens: 65536
+      temperature: 0.7
+    - name: groq
+      model: meta-llama/llama-4-scout-17b-16e-instruct
+      key_env: GROQ_API_KEY
+      max_output_tokens: 8192
+      temperature: 0.7
+    - name: github-models
+      model: openai/gpt-4.1-mini
+      key_env: GITHUB_TOKEN
+      max_output_tokens: 4096
+      temperature: 0.7
+  
+  # Directory structure:
+  # - .github/ai/scripts/        → call-ai.sh (orchestrator), build-context.sh, test-local.sh, run.sh
+  # - .github/ai/providers/      → Provider adapters (gemini.sh, groq.sh, github-models.sh, fallback-template.sh)
+  # - .github/ai/prompts/tasks/  → Committed task prompts (.md files)
+  # - .github/ai/prompts/personalities/ → Local personality prompts (gitignored, copy to secrets)
+  # - .github/ai/actions/        → Composite actions (post-as-character)
+
+# AI Scenarios Configuration
+scenarios:
+  pr-summary:
+    role: tests-and-review
+    tasks: [pr-summary, changelog-dev]
+    context_type: pr-diff
+    output_type: pr-body
+  pipeline-preview:
+    role: detection
+    tasks: [detection-briefing]
+    context_type: pr-diff
+    output_type: pr-comment
+  build-report:
+    role: builds
+    tasks: [build-report]
+    context_type: build-result
+    output_type: commit-comment
+  distribution-report:
+    role: distribution
+    tasks: [distribution-report]
+    context_type: build-result
+    output_type: commit-comment
+  failure-report:
+    role: failures-and-cleanup
+    tasks: [cleanup-report]
+    context_type: test-failure
+    output_type: commit-comment
+  test-failure:
+    role: tests-and-review
+    tasks: [test-failure]
+    context_type: test-failure
+    output_type: pr-comment
+  issue-triage:
+    role: issue-triage
+    tasks: [issue-triage]
+    context_type: issue
+    output_type: issue-comment
+  release-notes:
+    role: distribution
+    tasks: [release-notes]
+    context_type: pr-diff
+    output_type: release-body
+  slash-command:
+    role: coordination
+    tasks: [slash-command]
+    context_type: conversation
+    output_type: pr-comment
+  conversation:
+    # special: character resolved from slash command, not from scenario role
+    tasks: [conversation]
+    context_type: conversation
+    output_type: pr-comment
+  stale-triage:
+    role: dependencies-and-stale
+    tasks: [stale-triage]
+    context_type: issue
+    output_type: issue-comment
+  dependency-analysis:
+    role: dependencies-and-stale
+    tasks: [dependency-analysis]
+    context_type: pr-diff
+    output_type: pr-comment
+  changelog-condense:
+    tasks: [changelog-condense]
+    context_type: pr-diff
+    output_type: pr-body
+  changelog-production:
+    tasks: [changelog-production]
+    context_type: pr-diff
+    output_type: pr-body
+  health-summary:
+    role: detection
+    tasks: [health-summary]
+    context_type: repo-stats
+    output_type: issue-comment
+  cleanup-report:
+    role: failures-and-cleanup
+    tasks: [cleanup-report]
+    context_type: cleanup-results
+    output_type: pr-comment
+
+packages:
+  dev: com.felix.diohub.dev
+  beta: com.felix.diohub
+  rel: com.felix.diohub
+
+labels:
+  release-android:
+    color: "0075ca"
+    description: "Pipeline: full Android build + store distribution"
+  release-ios:
+    color: "0075ca"
+    description: "Pipeline: full iOS build + store distribution"
+  health-summary:
+    color: "00ff00"
+    description: "Weekly repository health report"
+  cleanup-report:
+    color: "ffcc00"
+    description: "Automated cleanup operation report"

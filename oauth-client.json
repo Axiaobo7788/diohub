@@ -1,0 +1,10 @@
+{
+  "client_id": "https://namanshergill.dev/diohub/.well-known/oauth-client.json",
+  "client_name": "DioHub",
+  "client_uri": "https://namanshergill.dev/diohub/",
+  "logo_uri": "https://namanshergill.dev/diohub/icon.png",
+  "redirect_uris": ["auth.felix.diohub://mcp-callback"],
+  "grant_types": ["authorization_code", "refresh_token"],
+  "response_types": ["code"],
+  "token_endpoint_auth_method": "none"
+}

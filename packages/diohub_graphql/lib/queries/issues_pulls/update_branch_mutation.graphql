@@ -1,0 +1,16 @@
+mutation updatePullRequestBranch(
+  $pullRequestId: ID!
+  $expectedHeadOid: GitObjectID
+) {
+  updatePullRequestBranch(
+    input: {
+      pullRequestId: $pullRequestId
+      expectedHeadOid: $expectedHeadOid
+    }
+  ) {
+    pullRequest {
+      id
+      headRefOid
+    }
+  }
+}

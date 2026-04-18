@@ -9,11 +9,10 @@ targets:
         enabled: true
         options:
           schema: diohub|lib/graphql/schema.graphql
-          #          output_dir: ''
+          # output_dir: lib/models/graphql
           when_extensions:
             when: true
             maybeWhen: true
-          #          output_dir: 'test'
           type_overrides:
             Base64String:
               name: String
@@ -51,6 +50,12 @@ targets:
               name: DateSerializer
             - import: "package:diohub/graphql/serializer/date.dart"
               name: DateTimeSerializer
+      json_serializable:
+        generate_for:
+          exclude:
+            - lib/common/pagination/item_patch.dart
+        options:
+          field_rename: snake
       source_gen:combining_builder:
         options:
           ignore_for_file:

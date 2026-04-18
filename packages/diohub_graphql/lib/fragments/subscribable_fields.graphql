@@ -1,0 +1,5 @@
+# Shared field for Subscribable (Issue, PullRequest, etc.); used by updateSubscription mutation.
+
+fragment subscribableViewerSubscription on Subscribable {
+  viewerSubscription
+}

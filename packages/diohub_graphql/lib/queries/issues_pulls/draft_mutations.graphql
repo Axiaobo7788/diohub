@@ -1,0 +1,17 @@
+mutation convertToDraft($pullRequestId: ID!) {
+  convertPullRequestToDraft(input: { pullRequestId: $pullRequestId }) {
+    pullRequest {
+      id
+      isDraft
+    }
+  }
+}
+
+mutation markReadyForReview($pullRequestId: ID!) {
+  markPullRequestReadyForReview(input: { pullRequestId: $pullRequestId }) {
+    pullRequest {
+      id
+      isDraft
+    }
+  }
+}

@@ -1,0 +1,25 @@
+name: Branch Enforcement
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, edited]
+
+jobs:
+  enforce:
+    runs-on: ubuntu-latest
+    permissions:
+      statuses: write
+    env:
+      HEAD_REF: ${{ github.head_ref }}
+      BASE_REF: ${{ github.base_ref }}
+    steps:
+      - uses: ncalteen/branch-enforcement@v2
+        with:
+          policy: |
+            *:develop
+            develop:beta
+            hotfix/*:beta
+            hotfix/*:main
+            beta:main
+          head_ref: ${{ env.HEAD_REF }}
+          base_ref: ${{ env.BASE_REF }}

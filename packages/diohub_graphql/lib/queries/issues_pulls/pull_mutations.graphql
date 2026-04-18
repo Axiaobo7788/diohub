@@ -1,0 +1,139 @@
+# import '../../fragments/pull_detail_fields.graphql'
+# import '../../fragments/actor.graphql'
+# import '../../fragments/milestone.graphql'
+
+mutation closePullRequest($pullRequestId: ID!) {
+  closePullRequest(input: { pullRequestId: $pullRequestId }) {
+    pullRequest {
+      ...pullDetailFields
+    }
+  }
+}
+
+mutation reopenPullRequest($pullRequestId: ID!) {
+  reopenPullRequest(input: { pullRequestId: $pullRequestId }) {
+    pullRequest {
+      ...pullDetailFields
+    }
+  }
+}
+
+mutation updatePullRequest(
+  $pullRequestId: ID!
+  $title: String
+  $body: String
+  $assigneeIds: [ID!]
+  $labelIds: [ID!]
+  $milestoneId: ID
+  $baseRefName: String
+  $state: PullRequestUpdateState
+) {
+  updatePullRequest(
+    input: {
+      pullRequestId: $pullRequestId
+      title: $title
+      body: $body
+      assigneeIds: $assigneeIds
+      labelIds: $labelIds
+      milestoneId: $milestoneId
+      baseRefName: $baseRefName
+      state: $state
+    }
+  ) {
+    pullRequest {
+      ...pullDetailFields
+    }
+  }
+}
+
+mutation editPullRequestContent(
+  $pullRequestId: ID!
+  $title: String
+  $body: String
+) {
+  updatePullRequest(
+    input: { pullRequestId: $pullRequestId, title: $title, body: $body }
+  ) {
+    pullRequest {
+      id
+      title
+      titleHTML
+      body
+      bodyHTML
+      lastEditedAt
+      editor {
+        ... on Actor {
+          ...actor
+        }
+      }
+      userContentEdits {
+        totalCount
+      }
+    }
+  }
+}
+
+mutation setPullRequestMilestone($pullRequestId: ID!, $milestoneId: ID) {
+  updatePullRequest(
+    input: { pullRequestId: $pullRequestId, milestoneId: $milestoneId }
+  ) {
+    pullRequest {
+      id
+      milestone {
+        ...milestoneFields
+      }
+    }
+  }
+}
+
+mutation createPullRequest(
+  $repositoryId: ID!
+  $title: String!
+  $body: String
+  $baseRefName: String!
+  $headRefName: String!
+  $draft: Boolean
+  $headRepositoryId: ID
+  $maintainerCanModify: Boolean
+) {
+  createPullRequest(
+    input: {
+      repositoryId: $repositoryId
+      title: $title
+      body: $body
+      baseRefName: $baseRefName
+      headRefName: $headRefName
+      draft: $draft
+      headRepositoryId: $headRepositoryId
+      maintainerCanModify: $maintainerCanModify
+    }
+  ) {
+    pullRequest {
+      id
+      number
+      url
+    }
+  }
+}
+
+mutation revertPullRequest(
+  $pullRequestId: ID!
+  $title: String
+  $body: String
+  $draft: Boolean
+) {
+  revertPullRequest(
+    input: {
+      pullRequestId: $pullRequestId
+      title: $title
+      body: $body
+      draft: $draft
+    }
+  ) {
+    revertPullRequest {
+      number
+      url
+      title
+    }
+  }
+}

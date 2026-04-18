@@ -1,0 +1,9 @@
+# import '../../fragments/release_list_item.graphql'
+
+query releaseByTag($owner: String!, $name: String!, $tagName: String!) {
+  repository(owner: $owner, name: $name) {
+    release(tagName: $tagName) {
+      ...releaseListItem
+    }
+  }
+}

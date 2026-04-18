@@ -1,0 +1,80 @@
+name: Feature Request
+description: Suggest a new feature or enhancement for DioHub
+title: "[Feature]: "
+labels: ["enhancement", "needs-triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for suggesting a new feature! Please provide as much detail as possible.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem or Motivation
+      description: What problem does this feature solve? What need does it address?
+      placeholder: I'm always frustrated when...
+    validations:
+      required: true
+
+  - type: textarea
+    id: solution
+    attributes:
+      label: Proposed Solution
+      description: Describe the feature or enhancement you'd like to see
+      placeholder: I would like to see...
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives Considered
+      description: Have you considered any alternative solutions or workarounds?
+      placeholder: I've also thought about...
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: affected-areas
+    attributes:
+      label: Affected Areas
+      description: Which parts of the app would this feature affect? (select all that apply)
+      options:
+        - label: Repositories (browsing, viewing, starring)
+        - label: Issues (viewing, creating, commenting)
+        - label: Pull Requests (viewing, reviewing, merging)
+        - label: DioLens AI (assistant, MCP integrations)
+        - label: Profile (user profile, settings)
+        - label: Notifications
+        - label: Search and Discovery
+        - label: Repository Insights (analytics, visualizations)
+        - label: Other
+
+  - type: textarea
+    id: mockups
+    attributes:
+      label: Mockups or Examples
+      description: |
+        If applicable, add mockups, screenshots, or links to examples from other apps.
+        Tip: You can attach images by clicking this area to highlight it and then dragging files in.
+      placeholder: Drag images or paste links here
+    validations:
+      required: false
+
+  - type: textarea
+    id: additional
+    attributes:
+      label: Additional Context
+      description: Add any other context, use cases, or benefits of this feature
+      placeholder: Any other relevant information...
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: contribution
+    attributes:
+      label: Contribution
+      description: Would you be willing to contribute to this feature?
+      options:
+        - label: I'm willing to submit a PR for this feature

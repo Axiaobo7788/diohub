@@ -1,0 +1,34 @@
+mutation addDiscussionPollVote($input: AddDiscussionPollVoteInput!) {
+  addDiscussionPollVote(input: $input) {
+    pollOption {
+      id
+      option
+      totalVoteCount
+      viewerHasVoted
+    }
+  }
+}
+
+mutation addDiscussionUpvote($input: AddUpvoteInput!) {
+  addUpvote(input: $input) {
+    subject {
+      ... on Discussion {
+        id
+        upvoteCount
+        viewerHasUpvoted
+      }
+    }
+  }
+}
+
+mutation removeDiscussionUpvote($input: RemoveUpvoteInput!) {
+  removeUpvote(input: $input) {
+    subject {
+      ... on Discussion {
+        id
+        upvoteCount
+        viewerHasUpvoted
+      }
+    }
+  }
+}

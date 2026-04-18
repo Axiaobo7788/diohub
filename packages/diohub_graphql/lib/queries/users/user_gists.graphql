@@ -1,0 +1,37 @@
+query getUserGists($user: String!, $first: Int!, $after: String) {
+  user(login: $user) {
+    gists(
+      first: $first
+      after: $after
+      orderBy: { field: UPDATED_AT, direction: DESC }
+    ) {
+      totalCount
+      pageInfo {
+        hasNextPage
+        endCursor
+      }
+      edges {
+        cursor
+        node {
+          id
+          name
+          description
+          url
+          createdAt
+          updatedAt
+          isPublic
+          stargazerCount
+          comments(first: 0) {
+            totalCount
+          }
+          forks(first: 0) {
+            totalCount
+          }
+          files(limit: 5) {
+            name
+          }
+        }
+      }
+    }
+  }
+}

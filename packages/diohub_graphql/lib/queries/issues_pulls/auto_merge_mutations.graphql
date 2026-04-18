@@ -1,0 +1,35 @@
+# import '../../fragments/actor.graphql'
+
+mutation enableAutoMerge(
+  $pullRequestId: ID!
+  $mergeMethod: PullRequestMergeMethod
+) {
+  enablePullRequestAutoMerge(
+    input: {
+      pullRequestId: $pullRequestId
+      mergeMethod: $mergeMethod
+    }
+  ) {
+    pullRequest {
+      id
+      autoMergeRequest {
+        enabledAt
+        mergeMethod
+        enabledBy {
+          ...actor
+        }
+      }
+    }
+  }
+}
+
+mutation disableAutoMerge($pullRequestId: ID!) {
+  disablePullRequestAutoMerge(input: { pullRequestId: $pullRequestId }) {
+    pullRequest {
+      id
+      autoMergeRequest {
+        enabledAt
+      }
+    }
+  }
+}

@@ -1,0 +1,15 @@
+# Shared subject fields for addComment mutation (Issue and PullRequest same shape).
+
+fragment issueSubjectCommentCount on Issue {
+  id
+  comments {
+    totalCount
+  }
+}
+
+fragment pullRequestSubjectCommentCount on PullRequest {
+  id
+  comments {
+    totalCount
+  }
+}

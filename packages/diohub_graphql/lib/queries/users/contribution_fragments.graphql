@@ -1,0 +1,37 @@
+# Shared fragment for contribution queries (repository in contribution lists).
+# Same directory as contribution queries so the IDE resolves the import.
+
+fragment repositoryFields on Repository {
+  name
+  nameWithOwner
+  description
+  stargazerCount
+  updatedAt
+  url
+  isPrivate
+  isFork
+  viewerHasStarred
+  parent {
+    name
+    nameWithOwner
+    url
+    owner {
+      login
+    }
+  }
+  owner {
+    login
+    avatarUrl
+  }
+  primaryLanguage {
+    name
+    color
+  }
+  languages(orderBy: { direction: DESC, field: SIZE }, first: 1) {
+    edges {
+      node {
+        name
+      }
+    }
+  }
+}

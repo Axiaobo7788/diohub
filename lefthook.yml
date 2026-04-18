@@ -1,0 +1,20 @@
+commit-msg:
+  commands:
+    conventional-commit:
+      run: cog verify "{1}"
+
+pre-commit:
+  parallel: true
+  commands:
+    format:
+      glob: "*.dart"
+      run: dart format {staged_files}
+      stage_fixed: true
+    analyze:
+      run: dart analyze --fatal-infos
+
+pre-push:
+  parallel: true
+  commands:
+    actionlint:
+      run: actionlint

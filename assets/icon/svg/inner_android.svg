@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+  <defs>
+    <!-- Mask for Android inner elements: bar + hub ring (matches iOS dimensions) -->
+    <!-- Golden ratio proportions: hub/circle=0.612, hole/hub=0.610 -->
+    <mask id="innerMask">
+      <rect width="1024" height="1024" fill="black"/>
+      <!-- Bar: 686x98 at (169, 463), rx=49 -->
+      <rect x="169" y="463" width="686" height="98" rx="49" fill="white"/>
+      <!-- Hub outer: r=251 (502px diameter, 61.2% of 820px circle) -->
+      <circle cx="512" cy="512" r="251" fill="white"/>
+      <!-- Hub hole: r=153 (306px diameter, 61% of hub outer) -->
+      <circle cx="512" cy="512" r="153" fill="black"/>
+    </mask>
+  </defs>
+  
+  <!-- Inner elements in white on transparent -->
+  <rect width="1024" height="1024" fill="#FFFFFF" mask="url(#innerMask)"/>
+</svg>

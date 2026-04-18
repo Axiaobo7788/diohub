@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1500 1500" width="1500" height="1500">
+  <defs>
+    <mask id="logo">
+      <!-- Start hidden -->
+      <rect width="1500" height="1500" fill="black"/>
+      <!-- Outer disc: show -->
+      <circle cx="750" cy="750" r="715" fill="white"/>
+      <!-- Gap ring: hide -->
+      <circle cx="750" cy="750" r="560" fill="black"/>
+      <!-- Bar: show (back in gap) -->
+      <rect x="190" y="702" width="1120" height="96" rx="48" fill="white"/>
+      <!-- Inner hub: show -->
+      <circle cx="750" cy="750" r="195" fill="white"/>
+      <!-- Hub hole: hide -->
+      <circle cx="750" cy="750" r="115" fill="black"/>
+    </mask>
+
+    <mask id="shadow-area">
+      <rect width="1500" height="1500" fill="black"/>
+      <!-- Gap ring: show -->
+      <circle cx="750" cy="750" r="560" fill="white"/>
+      <!-- Bar: hide (shadow doesn't appear on bar) -->
+      <rect x="190" y="702" width="1120" height="96" rx="48" fill="black"/>
+      <!-- Inner hub: hide -->
+      <circle cx="750" cy="750" r="195" fill="black"/>
+    </mask>
+  </defs>
+
+  <!-- Dark logo shape -->
+  <rect width="1500" height="1500" fill="#333333" mask="url(#logo)"/>
+
+  <!-- Long shadow: diagonal band clipped to gap -->
+  <polygon
+    points="750,750 1500,0 1500,1500 0,1500"
+    fill="#000000"
+    opacity="0.16"
+    mask="url(#shadow-area)"
+  />
+</svg>

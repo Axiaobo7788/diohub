@@ -1,0 +1,16 @@
+# Shared fields for comment types used by resolveNode (single UI flow: id + createdAt).
+
+fragment issueCommentNodeFields on IssueComment {
+  id
+  createdAt
+}
+
+fragment pullRequestReviewCommentNodeFields on PullRequestReviewComment {
+  id
+  createdAt
+}
+
+fragment discussionCommentNodeFields on DiscussionComment {
+  id
+  createdAt
+}

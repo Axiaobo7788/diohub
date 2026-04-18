@@ -1,0 +1,17 @@
+mutation enqueuePullRequest($pullRequestId: ID!) {
+  enqueuePullRequest(input: { pullRequestId: $pullRequestId }) {
+    mergeQueueEntry {
+      id
+      position
+    }
+  }
+}
+
+mutation dequeuePullRequest($pullRequestId: ID!) {
+  dequeuePullRequest(input: { id: $pullRequestId }) {
+    mergeQueueEntry {
+      id
+      position
+    }
+  }
+}

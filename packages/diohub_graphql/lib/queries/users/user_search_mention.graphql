@@ -1,0 +1,14 @@
+# import '../../fragments/actor.graphql'
+
+query searchMentionUsers($query: String!, $after: String) {
+  search(query: $query, type: USER, first: 20, after: $after) {
+    edges {
+      node {
+        ... on Actor {
+          ...actor
+        }
+      }
+      cursor
+    }
+  }
+}

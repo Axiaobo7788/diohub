@@ -1,76 +1,77 @@
 import 'package:diohub/adapters/deep_linking_handler.dart';
+import 'package:diohub/adapters/github_link_parser.dart';
+import 'package:diohub/common/bottom_sheet/confirm_action_sheet.dart';
+import 'package:diohub/common/clipboard/clipboard_service.dart';
 import 'package:diohub/common/const/app_info.dart';
-import 'package:diohub/utils/copy_to_clipboard.dart';
+import 'package:diohub/common/misc/collapsible_action_buttons.dart';
+import 'package:diohub/common/popup/show_popup_menu.dart';
+import 'package:diohub_models/models/navigable.dart';
+import 'package:diohub_models/models/unrecognized_destination.dart';
 import 'package:diohub/utils/open_in_app_browser.dart';
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import 'package:flutter_material_design_icons/flutter_material_design_icons.dart';
-import 'package:pull_down_button/pull_down_button.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 class URLActions {
   URLActions({
     required this.uri,
+    required this.clipboard,
     this.shareDescription,
     this.showOpenAction = true,
+    this.openGitHubInApp = true,
+    this.confirmBeforeBrowser = true,
   });
+  final ClipboardService clipboard;
   final bool showOpenAction;
   final String? shareDescription;
   final Uri uri;
-  List<PullDownMenuEntry> get menuItems => <PullDownMenuEntry>[
-        PullDownMenuTitle(
-          title: Text(
-            uri.toString(),
-          ),
+
+  /// When true, "Open in App" is offered for GitHub deep links.
+  final bool openGitHubInApp;
+
+  /// When true, show a confirmation dialog before opening a URL in the browser.
+  final bool confirmBeforeBrowser;
+
+  bool get _isDeepLink {
+    final Navigable? parsed = GitHubLinkParser.parse(uri);
+    return parsed != null && parsed is! UnrecognizedDestination;
+  }
+
+  List<ActionButtonData> actions(final BuildContext context) =>
+      <ActionButtonData>[
+        MinorActionButton(
+          label: 'Copy',
+          icon: Icons.copy,
+          onTap: () async {
+            await clipboard.copy(uri.toString());
+          },
         ),
-        PullDownMenuActionsRow.medium(
-          items: <PullDownMenuItem>[
-            PullDownMenuItem(
-              onTap: () async {
-                await copyToClipboard(
-                  uri.toString(),
-                );
-              },
-              title: 'Copy',
-              icon: Icons.copy,
-            ),
-            PullDownMenuItem(
-              onTap: () async {
-                String shareText;
-                if (shareDescription != null) {
-                  shareText = '$shareDescription\n$uri';
-                } else {
-                  shareText = uri.toString();
-                }
-                // final RenderBox? box = context.findRenderObject() as RenderBox?;
-                await Share.share(
-                  shareText,
-                  // sharePositionOrigin: box!.localToGlobal(Offset.zero) & box.size,
-                );
-              },
-              icon: Icons.adaptive.share,
-              title: 'Share',
-            ),
-          ],
+        MinorActionButton(
+          label: 'Share',
+          icon: Icons.adaptive.share,
+          onTap: () async {
+            String shareText;
+            if (shareDescription != null) {
+              shareText = '$shareDescription\n$uri';
+            } else {
+              shareText = uri.toString();
+            }
+            await Share.share(shareText);
+          },
         ),
-        if (isDeepLink(
-              uri.toString(),
-            ) &&
-            showOpenAction)
-          PullDownMenuItem(
-            onTap: openInApp,
-            title: 'Open in App',
-            iconWidget: const AppLogoWidget(
-              size: 25,
-            ),
+        if (_isDeepLink && showOpenAction && openGitHubInApp)
+          MinorActionButton(
+            label: 'Open in App',
+            icon: Icons.open_in_new, // Required but overridden by leading
+            leading: const AppLogoWidget(size: 25),
+            onTap: () => openInApp(context),
           ),
-        PullDownMenuItem(
-          onTap: launchURLInBrowser,
-          title: _getOpenText,
+        MinorActionButton(
+          label: _getOpenText,
           icon: _getOpenIcon,
+          onTap: () => launchURLInBrowser(context),
         ),
       ];
 
@@ -80,33 +81,34 @@ class URLActions {
       };
   String get _getOpenText => switch (uri.scheme) {
         'mailto' => 'Mail',
-        _ => 'Open${isDeepLink(
-            uri.toString(),
-          ) ? ' in Browser' : ''}',
+        _ => 'Open${_isDeepLink ? ' in Browser' : ''}',
       };
 
-  Future<void> openInApp() async {
-    if (!isDeepLink(
-      uri.toString(),
-    )) {
+  Future<void> openInApp(final BuildContext context) async {
+    if (!_isDeepLink) {
       throw Exception('Not a deep link');
     }
-    await deepLinkNavigate(
-      uri,
-    );
+    await deepLinkNavigate(uri, context);
   }
 
-  Future<void> launchURL() {
-    if (isDeepLink(
-      uri.toString(),
-    )) {
-      return openInApp();
-    } else {
-      return launchURLInBrowser();
+  Future<void> launchURL(final BuildContext context) {
+    if (_isDeepLink && openGitHubInApp) {
+      return openInApp(context);
     }
+    return launchURLInBrowser(context);
   }
 
-  Future<void> launchURLInBrowser() async {
+  Future<void> launchURLInBrowser(final BuildContext context) async {
+    if (confirmBeforeBrowser) {
+      final bool? confirmed = await showConfirmAction(
+        context,
+        title: 'Open in browser?',
+        explanation: uri.toString(),
+        confirmLabel: 'Open',
+        isDestructive: false,
+      );
+      if (confirmed != true) return;
+    }
     if (await ChromeSafariBrowser.isAvailable()) {
       await openInAppBrowser(uri);
     } else if (await canLaunchUrl(uri)) {
@@ -117,97 +119,30 @@ class URLActions {
   }
 
   Future<void> showMenu(final BuildContext context) async {
-    await showActionsMenu(
-      menuItems,
+    await showPopupMenu(
       context,
+      actions: actions(context),
+      title: uri.toString(),
+      anchorRect: context._getRect,
+      actionLayout: PopupActionLayout.iconStrip,
     );
   }
 }
 
-Future<void> showActionsMenu(
-  final List<PullDownMenuEntry> menuItems,
-  final BuildContext context,
-) async {
-  await HapticFeedback.lightImpact();
-  if (context.mounted) {
-    await showPullDownMenu(
-      context: context,
-      items: menuItems,
-      position: context._getRect,
-    );
-  }
-}
-
-extension RectExtension on BuildContext {
-  /// Shorthand for `context.findRenderObject()! as RenderBox`
-  RenderBox get currentRenderBox => findRenderObject()! as RenderBox;
-
+extension _RectExtension on BuildContext {
   /// Given a [BuildContext], return the [Rect] of the corresponding
   /// [RenderBox]'s paintBounds in global coordinates.
-  ///
-  /// If [Rect]'s height is bigger than the screen size, additionally normalize
-  /// [Rect] to help mitigate possible layout issues.
   Rect get _getRect {
-    final RenderBox renderBoxContainer = currentRenderBox;
-    final MediaQueryData queryData = MediaQuery.of(this);
-    final Size size = queryData.size;
+    final RenderBox? renderBox = findRenderObject() as RenderBox?;
+    if (renderBox == null) {
+      // Fallback to screen center
+      final Size size = MediaQuery.of(this).size;
+      return Rect.fromLTWH(size.width / 2, size.height / 2, 0, 0);
+    }
 
-    final Rect rect = Rect.fromPoints(
-      renderBoxContainer.localToGlobal(
-        renderBoxContainer.paintBounds.topLeft,
-      ),
-      renderBoxContainer.localToGlobal(
-        renderBoxContainer.paintBounds.bottomRight,
-      ),
+    return Rect.fromPoints(
+      renderBox.localToGlobal(renderBox.paintBounds.topLeft),
+      renderBox.localToGlobal(renderBox.paintBounds.bottomRight),
     );
-
-    if (rect.size.height > size.height) {
-      return _normalizeLargeRect(rect, size, queryData.padding);
-    }
-
-    return rect;
   }
-}
-
-/// Apply some additional adjustments on [Rect] from [RectExtension._getRect] if
-/// [rect] is bigger than [size].
-Rect _normalizeLargeRect(
-  final Rect rect,
-  final Size size,
-  final EdgeInsets padding,
-) {
-  const double minimumAllowedSize = kMinInteractiveDimensionCupertino * 2;
-
-  final bool topIsNegative = rect.top.isNegative;
-  final double height = size.height;
-  final double rectBottom = rect.bottom;
-
-  double? top;
-  double? bottom;
-
-  if (topIsNegative && rectBottom > height) {
-    top = height * 0.65;
-    bottom = height * 0.75;
-  } else if (topIsNegative && rectBottom < height) {
-    final double diff = height - rectBottom - padding.bottom;
-
-    if (diff < minimumAllowedSize) {
-      top = rectBottom;
-      bottom = height - padding.bottom;
-    }
-  } else {
-    final double diff = rect.top - padding.top;
-
-    if (diff < minimumAllowedSize) {
-      top = padding.top;
-      bottom = rect.top;
-    }
-  }
-
-  return Rect.fromLTRB(
-    rect.left,
-    top ?? rect.top,
-    rect.right,
-    bottom ?? rect.bottom,
-  );
 }

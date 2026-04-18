@@ -1,0 +1,10 @@
+name: lens_annotations
+description: Annotations for DioLens tool generation.
+version: 1.0.0
+publish_to: none
+
+environment:
+  sdk: ^3.5.0
+
+dependencies:
+  meta: ^1.15.0

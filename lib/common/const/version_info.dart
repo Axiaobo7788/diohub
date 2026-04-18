@@ -1,6 +1,9 @@
 import 'package:diohub/common/misc/loading_indicator.dart';
+import 'package:diohub/style/app_spacing.dart';
 import 'package:diohub/utils/utils.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:jovial_svg/jovial_svg.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 
 class VersionInfoWidget extends StatelessWidget {
@@ -8,7 +11,7 @@ class VersionInfoWidget extends StatelessWidget {
 
   @override
   Widget build(final BuildContext context) => Padding(
-        padding: const EdgeInsets.all(8),
+        padding: context.spacing.chipPadding,
         child: FutureBuilder<PackageInfo>(
           future: PackageInfo.fromPlatform(),
           builder: (
@@ -19,17 +22,20 @@ class VersionInfoWidget extends StatelessWidget {
               return Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: <Widget>[
-                  Image.asset(
-                    'assets/loading.png',
+                  SizedBox(
+                    width: 13,
                     height: 13,
-                    color: context.colorScheme.onBackground,
+                    child: ScalableImageWidget.fromSISource(
+                      si: ScalableImageSource.fromSvg(
+                        rootBundle,
+                        'assets/icon/svg/inner_ios.svg',
+                      ),
+                    ),
                   ),
-                  const SizedBox(
-                    width: 4,
-                  ),
+                  context.spacing.tightGap,
                   Text(
                     snapshot.data!.version,
-                    style: context.textTheme.labelSmall?.asHint(),
+                    style: context.textTheme.labelSmall?.asMuted(),
                   ),
                 ],
               );

@@ -1,0 +1,8 @@
+fragment projectItemCardFields on ProjectV2Item {
+  id
+  project {
+    id
+    title
+    url
+  }
+}

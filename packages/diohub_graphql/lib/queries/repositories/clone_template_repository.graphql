@@ -1,0 +1,11 @@
+mutation cloneTemplateRepository($input: CloneTemplateRepositoryInput!) {
+  cloneTemplateRepository(input: $input) {
+    repository {
+      id
+      name
+      owner {
+        login
+      }
+    }
+  }
+}

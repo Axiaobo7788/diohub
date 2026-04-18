@@ -1,0 +1,26 @@
+# import '../../fragments/user_card_fields.graphql'
+# import '../../fragments/organization_card_fields.graphql'
+
+query getUserSponsors($user: String!, $first: Int!, $after: String) {
+  user(login: $user) {
+    sponsors(first: $first, after: $after) {
+      totalCount
+      pageInfo {
+        hasNextPage
+        endCursor
+      }
+      edges {
+        cursor
+        node {
+          __typename
+          ... on User {
+            ...userCardFields
+          }
+          ... on Organization {
+            ...organizationCardFields
+          }
+        }
+      }
+    }
+  }
+}

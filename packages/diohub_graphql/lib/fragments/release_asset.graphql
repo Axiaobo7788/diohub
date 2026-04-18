@@ -1,0 +1,9 @@
+# Fields needed for download UI and asset display (list/sheet reuse).
+fragment releaseAssetFields on ReleaseAsset {
+  id
+  name
+  downloadUrl
+  size
+  contentType
+  downloadCount
+}

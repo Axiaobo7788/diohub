@@ -1,0 +1,37 @@
+query CheckAnnotations($owner: String!, $name: String!, $sha: GitObjectID!) {
+  repository(owner: $owner, name: $name) {
+    object(oid: $sha) {
+      ... on Commit {
+        checkSuites(first: 10) {
+          nodes {
+            checkRuns(first: 50) {
+              nodes {
+                name
+                conclusion
+                annotations(first: 100) {
+                  nodes {
+                    path
+                    location {
+                      start {
+                        line
+                        column
+                      }
+                      end {
+                        line
+                        column
+                      }
+                    }
+                    annotationLevel
+                    message
+                    title
+                    rawDetails
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

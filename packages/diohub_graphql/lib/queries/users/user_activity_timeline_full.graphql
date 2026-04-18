@@ -1,0 +1,137 @@
+# import '../../fragments/actor.graphql'
+# import '../../fragments/issue_card_fields.graphql'
+# import '../../fragments/pull_card_fields.graphql'
+# import '../../fragments/repo_card_fields.graphql'
+
+# Single-phase activity timeline query using contributionsCollection
+# All connections are already date-filtered by from/to and expose occurredAt
+query userActivityTimelineFull(
+  $user: String!
+  $from: DateTime!
+  $to: DateTime!
+  $firstRepoContributions: Int = 50
+  $afterRepoContributions: String
+  $firstPullRequestContributions: Int = 50
+  $afterPullRequestContributions: String
+  $firstIssueContributions: Int = 50
+  $afterIssueContributions: String
+  $firstReviewContributions: Int = 50
+  $afterReviewContributions: String
+  $firstCommitContributions: Int = 100
+  $afterCommitContributions: String
+  $maxCommitRepositories: Int = 50
+) {
+  user(login: $user) {
+    __typename
+    id
+    contributionsCollection(from: $from, to: $to) {
+      repositoryContributions(
+        first: $firstRepoContributions
+        after: $afterRepoContributions
+        orderBy: { direction: DESC }
+      ) {
+        totalCount
+        nodes {
+          occurredAt
+          repository {
+            __typename
+            createdAt
+            ...repoCardFields
+          }
+        }
+        pageInfo {
+          hasNextPage
+          endCursor
+        }
+      }
+      pullRequestContributions(
+        first: $firstPullRequestContributions
+        after: $afterPullRequestContributions
+        orderBy: { direction: DESC }
+      ) {
+        totalCount
+        nodes {
+          occurredAt
+          pullRequest {
+            ...pullCardFields
+            repository {
+              url
+            }
+          }
+        }
+        pageInfo {
+          hasNextPage
+          endCursor
+        }
+      }
+      issueContributions(
+        first: $firstIssueContributions
+        after: $afterIssueContributions
+        orderBy: { direction: DESC }
+      ) {
+        totalCount
+        nodes {
+          occurredAt
+          issue {
+            ...issueCardFields
+            repository {
+              url
+            }
+          }
+        }
+        pageInfo {
+          hasNextPage
+          endCursor
+        }
+      }
+      pullRequestReviewContributions(
+        first: $firstReviewContributions
+        after: $afterReviewContributions
+        orderBy: { direction: DESC }
+      ) {
+        totalCount
+        nodes {
+          occurredAt
+          pullRequest {
+            ...pullCardFields
+            repository {
+              url
+            }
+          }
+          pullRequestReview {
+            id
+            state
+            body
+          }
+          repository {
+            __typename
+            ...repoCardFields
+          }
+        }
+        pageInfo {
+          hasNextPage
+          endCursor
+        }
+      }
+      commitContributionsByRepository(maxRepositories: $maxCommitRepositories) {
+        repository {
+          __typename
+          ...repoCardFields
+        }
+        contributions(
+          first: $firstCommitContributions
+          after: $afterCommitContributions
+        ) {
+          nodes {
+            occurredAt
+            commitCount
+          }
+          pageInfo {
+            hasNextPage
+            endCursor
+          }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,24 @@
+# import '../../fragments/repo_card_fields.graphql'
+
+query getForks(
+  $owner: String!
+  $name: String!
+  $first: Int!
+  $after: String
+  $orderBy: RepositoryOrder
+) {
+  repository(owner: $owner, name: $name) {
+    forks(first: $first, after: $after, orderBy: $orderBy) {
+      pageInfo {
+        hasNextPage
+        endCursor
+      }
+      edges {
+        cursor
+        node {
+          ...repoCardFields
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,106 @@
+# import './actor.graphql'
+# import './label.graphql'
+# import './project_item_card_fields.graphql'
+# import './reaction_groups.graphql'
+# import './user_card_fields.graphql'
+fragment issueCardFields on Issue {
+  id
+  title
+  number
+  issueState: state
+  stateReason
+  url
+  body
+  createdAt
+  updatedAt
+  closedAt
+  authorAssociation
+  comments {
+    totalCount
+  }
+  author {
+    ...actor
+  }
+  labels(first: 100) {
+    nodes {
+      ...label
+    }
+  }
+  assignees(first: 5) {
+    nodes {
+      __typename
+      ... on User {
+        ...userCardFields
+      }
+    }
+  }
+  repository {
+    name
+    nameWithOwner
+    owner {
+      login
+      avatarUrl
+    }
+    url
+    viewerHasStarred
+  }
+  milestone {
+    id
+    title
+    dueOn
+    description
+    state
+    url
+    progressPercentage
+    openIssues: issues(states: OPEN, first: 0) {
+      totalCount
+    }
+    closedIssues: issues(states: CLOSED, first: 0) {
+      totalCount
+    }
+  }
+  locked
+  activeLockReason
+  isPinned
+  trackedIssues(first: 10) {
+    totalCount
+    nodes {
+      number
+      title
+      state
+      repository {
+        nameWithOwner
+        owner {
+          login
+        }
+        name
+      }
+    }
+  }
+  subIssuesSummary {
+    completed
+    total
+    percentCompleted
+  }
+  parent {
+    number
+    title
+    repository {
+      nameWithOwner
+    }
+  }
+  projectItems(first: 3, includeArchived: false) {
+    nodes {
+      ...projectItemCardFields
+    }
+  }
+  reactionGroups {
+    ...reactionGroups
+  }
+  viewerCanSubscribe
+  viewerSubscription
+  isReadByViewer
+  closedByPRsSummary: closedByPullRequestsReferences(first: 0) {
+    totalCount
+  }
+}

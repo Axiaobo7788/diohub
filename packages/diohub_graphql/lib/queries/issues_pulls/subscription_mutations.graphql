@@ -1,0 +1,17 @@
+# import '../../fragments/subscribable_fields.graphql'
+
+mutation updateSubscription($subscribableId: ID!, $state: SubscriptionState!) {
+  updateSubscription(
+    input: { subscribableId: $subscribableId, state: $state }
+  ) {
+    subscribable {
+      __typename
+      ... on Issue {
+        ...subscribableViewerSubscription
+      }
+      ... on PullRequest {
+        ...subscribableViewerSubscription
+      }
+    }
+  }
+}

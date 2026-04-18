@@ -1,8 +1,54 @@
-import 'package:diohub/common/animations/scale_expanded_widget.dart';
+import 'package:diohub/common/animations/animations.dart';
 import 'package:diohub/common/misc/round_button.dart';
 import 'package:diohub/utils/utils.dart';
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
+
+// ---------------------------------------------------------------------------
+// Scoped InheritedNotifier replacements for package:provider
+// ---------------------------------------------------------------------------
+
+class _EditingProviderScope extends InheritedNotifier<EditingProvider> {
+  const _EditingProviderScope({
+    required final EditingProvider notifier,
+    required super.child,
+  }) : super(notifier: notifier);
+
+  static EditingProvider of(final BuildContext context,
+      {final bool listen = true}) {
+    if (listen) {
+      return context
+          .dependOnInheritedWidgetOfExactType<_EditingProviderScope>()!
+          .notifier!;
+    }
+    return context
+        .getInheritedWidgetOfExactType<_EditingProviderScope>()!
+        .notifier!;
+  }
+}
+
+class _EditingControllerScope<T>
+    extends InheritedNotifier<EditingController<T>> {
+  const _EditingControllerScope({
+    required final EditingController<T> notifier,
+    required super.child,
+  }) : super(notifier: notifier);
+
+  static EditingController<T> of<T>(final BuildContext context,
+      {final bool listen = true}) {
+    if (listen) {
+      return context
+          .dependOnInheritedWidgetOfExactType<_EditingControllerScope<T>>()!
+          .notifier!;
+    }
+    return context
+        .getInheritedWidgetOfExactType<_EditingControllerScope<T>>()!
+        .notifier!;
+  }
+}
+
+// ---------------------------------------------------------------------------
+// EditingWrapper
+// ---------------------------------------------------------------------------
 
 class EditingWrapper extends StatelessWidget {
   const EditingWrapper({
@@ -15,12 +61,9 @@ class EditingWrapper extends StatelessWidget {
   final VoidCallback onSave;
   final List<EditingController<dynamic>> editingControllers;
   @override
-  Widget build(final BuildContext context) =>
-      ChangeNotifierProvider<EditingProvider>(
-        create: (final BuildContext context) =>
-            EditingProvider(editingControllers),
-        builder: (final BuildContext context, final Widget? child) =>
-            builder(context),
+  Widget build(final BuildContext context) => _EditingProviderScope(
+        notifier: EditingProvider(editingControllers),
+        child: Builder(builder: builder),
       );
 }
 
@@ -90,15 +133,12 @@ class EditingController<T> extends ChangeNotifier {
 class EditingHandler<T> extends ChangeNotifier {
   EditingHandler({required this.onSave});
   final VoidCallback onSave;
-  // final T Function() currentValue;
 }
 
 class EditingData<T> {
   EditingData({
-    // required this.newValue,
     required this.tools,
     required this.editingController,
-    // required this.currentlyEditing,
     required this.currentState,
   });
 
@@ -134,8 +174,7 @@ class _EditWidgetState<T> extends State<EditWidget<T>> {
   }
 
   void _checkIfEditingProviderHasController() {
-    if (!context
-        .read<EditingProvider>()
+    if (!_EditingProviderScope.of(context, listen: false)
         .controllers
         .contains(widget.editingController)) {
       throw Exception('Parent EditingWrapper was not supplied the controller!');
@@ -145,108 +184,95 @@ class _EditWidgetState<T> extends State<EditWidget<T>> {
   Color get _buttonColor => widget.buttonColors ?? context.colorScheme.primary;
 
   @override
-  Widget build(final BuildContext context) =>
-      ChangeNotifierProvider<EditingController<T>>.value(
-        value: widget.editingController,
-        builder: (final BuildContext context, final Widget? child) {
-          final EditingState editing =
-              context.watch<EditingProvider>().editingState;
-          final EditingController<T> controller =
-              context.watch<EditingController<T>>();
-          final List<Widget> items = <Widget>[
-            ScaleExpandedSection(
-              expand: editing == EditingState.editMode &&
-                  !controller.currentlyEditing,
-              // axis: widget.toolsAxis,
-              child: RoundButton(
-                onPressed: () async =>
-                    widget.editingController.edit.call(context),
-                icon: const Icon(
-                  Icons.edit,
-                  size: 12,
+  Widget build(final BuildContext context) => _EditingControllerScope<T>(
+        notifier: widget.editingController,
+        child: Builder(
+          builder: (final BuildContext context) {
+            final EditingState editing =
+                _EditingProviderScope.of(context).editingState;
+            final EditingController<T> controller =
+                _EditingControllerScope.of<T>(context);
+            final List<Widget> items = <Widget>[
+              AnimatedVisibility(
+                visible: editing == EditingState.editMode &&
+                    !controller.currentlyEditing,
+                transition: AnimationTransition.scale,
+                child: RoundButton(
+                  onPressed: () async =>
+                      widget.editingController.edit.call(context),
+                  icon: const Icon(
+                    Icons.edit,
+                    size: 12,
+                  ),
+                  padding: EdgeInsets.zero,
+                  color: _buttonColor,
                 ),
-                padding: EdgeInsets.zero,
-                color: _buttonColor,
               ),
-            ),
-            ScaleExpandedSection(
-              expand: editing == EditingState.editMode &&
-                  controller.newValue != null &&
-                  !controller.currentlyEditing,
-              // axis: widget.toolsAxis,
-              child: RoundButton(
-                onPressed: widget.editingController.revertEdit,
-                icon: const Icon(
-                  Icons.restore,
-                  size: 12,
+              AnimatedVisibility(
+                visible: editing == EditingState.editMode &&
+                    controller.newValue != null &&
+                    !controller.currentlyEditing,
+                transition: AnimationTransition.scale,
+                child: RoundButton(
+                  onPressed: widget.editingController.revertEdit,
+                  icon: const Icon(
+                    Icons.restore,
+                    size: 12,
+                  ),
+                  color: _buttonColor,
                 ),
-                // margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                color: _buttonColor,
               ),
-            ),
-            ScaleExpandedSection(
-              expand: editing == EditingState.editMode &&
-                  controller.currentlyEditing,
-              // axis: widget.toolsAxis,
-              child: RoundButton(
-                onPressed: controller.editingHandler?.onSave,
-                icon: const Icon(
-                  Icons.save,
-                  size: 12,
+              AnimatedVisibility(
+                visible: editing == EditingState.editMode &&
+                    controller.currentlyEditing,
+                transition: AnimationTransition.scale,
+                child: RoundButton(
+                  onPressed: controller.editingHandler?.onSave,
+                  icon: const Icon(
+                    Icons.save,
+                    size: 12,
+                  ),
+                  color: _buttonColor,
                 ),
-                // margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                color: _buttonColor,
               ),
-            ),
-            ScaleExpandedSection(
-              expand: controller.currentlyEditing &&
-                  editing == EditingState.editMode,
-              // axis: widget.toolsAxis,
-              child: RoundButton(
-                onPressed: widget.editingController.stopEdit,
-                icon: const Icon(
-                  Icons.cancel,
-                  size: 12,
+              AnimatedVisibility(
+                visible: controller.currentlyEditing &&
+                    editing == EditingState.editMode,
+                transition: AnimationTransition.scale,
+                child: RoundButton(
+                  onPressed: widget.editingController.stopEdit,
+                  icon: const Icon(
+                    Icons.cancel,
+                    size: 12,
+                  ),
+                  color: _buttonColor,
                 ),
-                // margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                color: _buttonColor,
               ),
-            ),
-          ];
-          return widget.builder(
-            context,
-            EditingData<T>(
-              // newValue: widget.editingController.newValue,
-              tools: ScaleSwitch(
-                visible: editing == EditingState.editMode,
-                child: widget.toolsAxis == Axis.horizontal
-                    ? Row(
-                        children: items,
+            ];
+            return widget.builder(
+              context,
+              EditingData<T>(
+                tools: editing == EditingState.editMode
+                    ? AnimatedContentSwitcher(
+                        transition: AnimationTransition.fadeScale,
+                        key: ValueKey(editing),
+                        child: widget.toolsAxis == Axis.horizontal
+                            ? Row(
+                                children: items,
+                              )
+                            : Column(
+                                children: items,
+                              ),
                       )
-                    : Column(
-                        children: items,
-                      ),
+                    : const SizedBox.shrink(),
+                editingController: widget.editingController,
+                currentState: editing,
               ),
-              editingController: widget.editingController,
-              // currentlyEditing: widget.editingController.currentlyEditing,
-              currentState: editing,
-            ),
-          );
-        },
+            );
+          },
+        ),
       );
 }
-
-// class MinRowEditWidget<T> extends StatelessWidget {
-//   const MinRowEditWidget({
-//     required this.data,
-//     required this.child,
-//     super.key,
-//   });
-//   final EditingData<T> data;
-//   final Widget child;
-//   @override
-//   Widget build(final BuildContext context) => child;
-// }
 
 class EditingProvider extends ChangeNotifier {
   EditingProvider(this.controllers);
@@ -270,7 +296,7 @@ class EditingProvider extends ChangeNotifier {
     editingState = EditingState.loading;
     try {
       await onEdit();
-    } on Exception catch (e) {
+    } on Exception {
       rethrow;
     } finally {
       viewMode();

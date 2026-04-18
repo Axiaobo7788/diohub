@@ -1,0 +1,30 @@
+mutation createSupport(
+  $sponsorableId: ID!
+  $tierId: ID
+  $amount: Int
+  $isRecurring: Boolean!
+  $privacyLevel: SponsorshipPrivacy!
+  $receiveEmails: Boolean
+) {
+  createSponsorship(
+    input: {
+      sponsorableId: $sponsorableId
+      tierId: $tierId
+      amount: $amount
+      isRecurring: $isRecurring
+      privacyLevel: $privacyLevel
+      receiveEmails: $receiveEmails
+    }
+  ) {
+    sponsorship {
+      id
+      isActive
+      isOneTimePayment
+      tier {
+        id
+        name
+        monthlyPriceInDollars
+      }
+    }
+  }
+}

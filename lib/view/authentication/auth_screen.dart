@@ -1,89 +1,118 @@
 import 'package:auto_route/auto_route.dart';
-import 'package:diohub/blocs/authentication_bloc/authentication_bloc.dart';
-import 'package:diohub/common/animations/size_expanded_widget.dart';
+import 'package:diohub/common/animations/animations.dart';
 import 'package:diohub/common/const/app_info.dart';
 import 'package:diohub/common/const/version_info.dart';
-import 'package:diohub/routes/router.gr.dart';
+import 'package:diohub/common/misc/loading_indicator.dart';
+import 'package:diohub/providers/account/auth_provider.dart';
+import 'package:diohub/style/opacities.dart';
 import 'package:diohub/view/authentication/widgets/code_info_box.dart';
 import 'package:diohub/view/authentication/widgets/error_popup.dart';
 import 'package:diohub/view/authentication/widgets/login_popup.dart';
+import 'package:diohub/style/app_spacing.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 @RoutePage()
-class AuthScreen extends StatelessWidget {
-  const AuthScreen({super.key, this.onAuthenticated});
-  final VoidCallback? onAuthenticated;
+class AuthScreen extends ConsumerWidget {
+  const AuthScreen({super.key});
 
   @override
-  Widget build(final BuildContext context) => SafeArea(
-        child: Scaffold(
-          body: Stack(
-            children: <Widget>[
-              Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: <Widget>[
-                  SizeExpandedSection(
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: <Widget>[
-                        Column(
+  Widget build(final BuildContext context, final WidgetRef ref) {
+    final double screenHeight = MediaQuery.of(context).size.height;
+    final double screenWidth = MediaQuery.of(context).size.width;
+
+    final AuthenticationState authState = ref.watch(authProvider);
+
+    return Scaffold(
+      body: SafeArea(
+        child: Stack(
+          children: <Widget>[
+            SingleChildScrollView(
+              child: ConstrainedBox(
+                constraints: BoxConstraints(minHeight: screenHeight),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 32),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: <Widget>[
+                      SizedBox(height: screenHeight * 0.1),
+                      DelayedFadeAnimation(
+                        delay: const Duration(milliseconds: 100),
+                        child: Column(
                           mainAxisSize: MainAxisSize.min,
                           children: <Widget>[
-                            AppLogoWidget(
-                              size: MediaQuery.of(context).size.width * 0.3,
+                            Center(
+                              child: AppLogoWidget(size: screenWidth * 0.25),
                             ),
-                            const AppNameWidget(
-                              size: 24,
+                            context.spacing.sectionGap,
+                            const DelayedFadeAnimation(
+                              delay: Duration(milliseconds: 200),
+                              child: Center(
+                                child: AppNameWidget(size: 28),
+                              ),
+                            ),
+                            context.spacing.itemGap,
+                            DelayedFadeAnimation(
+                              delay: const Duration(milliseconds: 300),
+                              child: Center(
+                                child: Text(
+                                  'Sign in to continue',
+                                  style: Theme.of(context)
+                                      .textTheme
+                                      .bodyMedium
+                                      ?.copyWith(
+                                        color: Theme.of(context)
+                                            .colorScheme
+                                            .onSurface
+                                            .secondary,
+                                      ),
+                                ),
+                              ),
                             ),
                           ],
                         ),
-                      ],
-                    ),
+                      ),
+                      SizedBox(height: screenHeight * 0.08),
+                      _buildAuthContent(authState),
+                      SizedBox(height: screenHeight * 0.1),
+                    ],
                   ),
-                  Padding(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 32, vertical: 8),
-                    child:
-                        BlocConsumer<AuthenticationBloc, AuthenticationState>(
-                      listener: (
-                        final BuildContext context,
-                        final AuthenticationState state,
-                      ) async {
-                        if (state is AuthenticationSuccessful) {
-                          if (onAuthenticated != null) {
-                            onAuthenticated!();
-                          } else {
-                            await AutoRouter.of(context).replace(HomeRoute());
-                          }
-                        }
-                      },
-                      builder: (
-                        final BuildContext context,
-                        final AuthenticationState state,
-                      ) {
-                        if (state is AuthenticationUnauthenticated) {
-                          return const LoginPopup();
-                        } else if (state is AuthenticationInitialized) {
-                          return CodeInfoBox(state.deviceCodeModel);
-                        } else if (state is AuthenticationError) {
-                          return ErrorPopup(state.error);
-                        }
-                        return Container();
-                      },
-                    ),
-                  ),
-                  SizedBox(
-                    height: MediaQuery.of(context).size.height * 0.05,
-                  ),
-                ],
+                ),
               ),
-              const Align(
-                alignment: Alignment.bottomCenter,
+            ),
+            const Align(
+              alignment: Alignment.bottomCenter,
+              child: Padding(
+                padding: EdgeInsets.only(bottom: 16),
                 child: VersionInfoWidget(),
               ),
-            ],
-          ),
+            ),
+          ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildAuthContent(final AuthenticationState state) {
+    if (state is AuthenticationUnauthenticated) {
+      return const DelayedFadeAnimation(
+        delay: Duration(milliseconds: 400),
+        child: LoginPopup(),
       );
+    } else if (state is AuthenticationChecking ||
+        state is AuthenticationAccountLinking) {
+      return const LoadingIndicator();
+    } else if (state is AuthenticationInitialized) {
+      return DelayedFadeAnimation(
+        delay: const Duration(milliseconds: 100),
+        child: CodeInfoBox(state.deviceCodeResponse),
+      );
+    } else if (state is AuthenticationError) {
+      return DelayedFadeAnimation(
+        delay: const Duration(milliseconds: 100),
+        child: ErrorPopup(state.error),
+      );
+    }
+    return Container();
+  }
 }

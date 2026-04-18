@@ -6,7 +6,6 @@ class BaseAuthDialog extends StatelessWidget {
   @override
   Widget build(final BuildContext context) => Card(
         // borderRadius: bigBorderRadius,
-        // color: Provider.of<PaletteSettings>(context).currentSetting.primary,
         // elevation: 5,
         child: child,
       );

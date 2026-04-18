@@ -1,0 +1,403 @@
+# import '../../fragments/review_requested_reviewer.graphql'
+# import './timeline.graphql'
+
+query getTimelineBackward(
+  $name: String!
+  $owner: String!
+  $number: Int!
+  $before: String
+  $last: Int!
+) {
+  repository(name: $name, owner: $owner) {
+    issueOrPullRequest(number: $number) {
+      __typename
+      ... on Issue {
+        timelineItems(
+          last: $last
+          before: $before
+          itemTypes: [
+            ADDED_TO_PROJECT_EVENT
+            ADDED_TO_PROJECT_V2_EVENT
+            ASSIGNED_EVENT
+            BLOCKED_BY_ADDED_EVENT
+            BLOCKED_BY_REMOVED_EVENT
+            BLOCKING_ADDED_EVENT
+            BLOCKING_REMOVED_EVENT
+            CLOSED_EVENT
+            CONNECTED_EVENT
+            CONVERTED_TO_DISCUSSION_EVENT
+            CROSS_REFERENCED_EVENT
+            DEMILESTONED_EVENT
+            DISCONNECTED_EVENT
+            ISSUE_COMMENT
+            ISSUE_TYPE_ADDED_EVENT
+            ISSUE_TYPE_CHANGED_EVENT
+            ISSUE_TYPE_REMOVED_EVENT
+            LABELED_EVENT
+            LOCKED_EVENT
+            MARKED_AS_DUPLICATE_EVENT
+            MILESTONED_EVENT
+            MOVED_COLUMNS_IN_PROJECT_EVENT
+            PARENT_ISSUE_ADDED_EVENT
+            PARENT_ISSUE_REMOVED_EVENT
+            PINNED_EVENT
+            PROJECT_V2_ITEM_STATUS_CHANGED_EVENT
+            REMOVED_FROM_PROJECT_EVENT
+            REMOVED_FROM_PROJECT_V2_EVENT
+            RENAMED_TITLE_EVENT
+            REOPENED_EVENT
+            SUB_ISSUE_ADDED_EVENT
+            SUB_ISSUE_REMOVED_EVENT
+            UNASSIGNED_EVENT
+            UNLABELED_EVENT
+            UNLOCKED_EVENT
+            UNMARKED_AS_DUPLICATE_EVENT
+            UNPINNED_EVENT
+          ]
+        ) {
+          edges {
+            node {
+              __typename
+              ... on AddedToProjectV2Event {
+                ...addedToProjectV2
+              }
+              ... on AssignedEvent {
+                ...assigned
+              }
+              ... on AutoMergeDisabledEvent {
+                ...autoMergeDisabled
+              }
+              ... on AutoMergeEnabledEvent {
+                ...autoMergeEnabled
+              }
+              ... on BlockedByAddedEvent {
+                ...blockedByAdded
+              }
+              ... on BlockedByRemovedEvent {
+                ...blockedByRemoved
+              }
+              ... on BlockingAddedEvent {
+                ...blockingAdded
+              }
+              ... on BlockingRemovedEvent {
+                ...blockingRemoved
+              }
+              ... on ClosedEvent {
+                ...closed
+              }
+              ... on ConnectedEvent {
+                ...connectedEvent
+              }
+              ... on ConvertedToDiscussionEvent {
+                ...convertedToDiscussion
+              }
+              ... on CrossReferencedEvent {
+                ...crossReference
+              }
+              ... on DemilestonedEvent {
+                ...deMileStoned
+              }
+              ... on DisconnectedEvent {
+                ...disconnectedEvent
+              }
+              ... on IssueComment {
+                ...issueComment
+              }
+              ... on IssueTypeAddedEvent {
+                ...issueTypeAdded
+              }
+              ... on IssueTypeChangedEvent {
+                ...issueTypeChanged
+              }
+              ... on IssueTypeRemovedEvent {
+                ...issueTypeRemoved
+              }
+              ... on LabeledEvent {
+                ...labeled
+              }
+              ... on LockedEvent {
+                ...locked
+              }
+              ... on MarkedAsDuplicateEvent {
+                ...markedAsDuplicate
+              }
+              ... on MilestonedEvent {
+                ...mileStoned
+              }
+              ... on ParentIssueAddedEvent {
+                ...parentIssueAdded
+              }
+              ... on ParentIssueRemovedEvent {
+                ...parentIssueRemoved
+              }
+              ... on PinnedEvent {
+                ...pinned
+              }
+              ... on ProjectV2ItemStatusChangedEvent {
+                ...projectV2ItemStatusChanged
+              }
+              ... on RemovedFromProjectV2Event {
+                ...removedFromProjectV2
+              }
+              ... on RenamedTitleEvent {
+                ...renamedTitle
+              }
+              ... on ReopenedEvent {
+                ...reopened
+              }
+              ... on SubIssueAddedEvent {
+                ...subIssueAdded
+              }
+              ... on SubIssueRemovedEvent {
+                ...subIssueRemoved
+              }
+              ... on UnassignedEvent {
+                ...unassigned
+              }
+              ... on UnlabeledEvent {
+                ...unlabeled
+              }
+              ... on UnlockedEvent {
+                ...unlocked
+              }
+              ... on UnmarkedAsDuplicateEvent {
+                ...unmarkedAsDuplicate
+              }
+              ... on UnpinnedEvent {
+                ...unpinned
+              }
+            }
+            cursor
+          }
+          pageInfo {
+            hasPreviousPage
+            hasNextPage
+            startCursor
+            endCursor
+          }
+        }
+      }
+      ... on PullRequest {
+        timelineItems(
+          last: $last
+          before: $before
+          itemTypes: [
+            ADDED_TO_MERGE_QUEUE_EVENT
+            ADDED_TO_PROJECT_EVENT
+            ADDED_TO_PROJECT_V2_EVENT
+            ASSIGNED_EVENT
+            AUTO_MERGE_DISABLED_EVENT
+            AUTO_MERGE_ENABLED_EVENT
+            BASE_REF_CHANGED_EVENT
+            BASE_REF_DELETED_EVENT
+            BASE_REF_FORCE_PUSHED_EVENT
+            CLOSED_EVENT
+            CONNECTED_EVENT
+            CONVERT_TO_DRAFT_EVENT
+            CROSS_REFERENCED_EVENT
+            DEMILESTONED_EVENT
+            DEPLOYMENT_ENVIRONMENT_CHANGED_EVENT
+            DISCONNECTED_EVENT
+            HEAD_REF_DELETED_EVENT
+            HEAD_REF_FORCE_PUSHED_EVENT
+            HEAD_REF_RESTORED_EVENT
+            ISSUE_COMMENT
+            LABELED_EVENT
+            LOCKED_EVENT
+            MARKED_AS_DUPLICATE_EVENT
+            MERGED_EVENT
+            MILESTONED_EVENT
+            MOVED_COLUMNS_IN_PROJECT_EVENT
+            PINNED_EVENT
+            PROJECT_V2_ITEM_STATUS_CHANGED_EVENT
+            PULL_REQUEST_COMMIT
+            PULL_REQUEST_COMMIT_COMMENT_THREAD
+            PULL_REQUEST_REVIEW
+            READY_FOR_REVIEW_EVENT
+            REMOVED_FROM_MERGE_QUEUE_EVENT
+            REMOVED_FROM_PROJECT_EVENT
+            REMOVED_FROM_PROJECT_V2_EVENT
+            RENAMED_TITLE_EVENT
+            REOPENED_EVENT
+            REVIEW_DISMISSED_EVENT
+            REVIEW_REQUESTED_EVENT
+            REVIEW_REQUEST_REMOVED_EVENT
+            UNASSIGNED_EVENT
+            UNLABELED_EVENT
+            UNLOCKED_EVENT
+            UNMARKED_AS_DUPLICATE_EVENT
+            UNPINNED_EVENT
+          ]
+        ) {
+          edges {
+            node {
+              __typename
+              ... on AddedToMergeQueueEvent {
+                ...addedToMergeQueue
+              }
+              ... on AddedToProjectV2Event {
+                ...addedToProjectV2
+              }
+              ... on AssignedEvent {
+                ...assigned
+              }
+              ... on AutoMergeDisabledEvent {
+                ...autoMergeDisabled
+              }
+              ... on AutoMergeEnabledEvent {
+                ...autoMergeEnabled
+              }
+              ... on BaseRefChangedEvent {
+                ...baseRefChanged
+              }
+              ... on BaseRefDeletedEvent {
+                ...baseRefDeleted
+              }
+              ... on BaseRefForcePushedEvent {
+                ...baseRefForcePushed
+              }
+              ... on ClosedEvent {
+                ...closed
+              }
+              ... on ConnectedEvent {
+                ...connectedEvent
+              }
+              ... on ConvertToDraftEvent {
+                ...convertedToDraft
+              }
+              ... on CrossReferencedEvent {
+                ...crossReference
+              }
+              ... on DemilestonedEvent {
+                ...deMileStoned
+              }
+              ... on DeploymentEnvironmentChangedEvent {
+                ...deploymentEnvironmentChanged
+              }
+              ... on DisconnectedEvent {
+                ...disconnectedEvent
+              }
+              ... on HeadRefDeletedEvent {
+                ...headRefDeleted
+              }
+              ... on HeadRefForcePushedEvent {
+                ...headRefForcePushed
+              }
+              ... on HeadRefRestoredEvent {
+                ...headRefRestored
+              }
+              ... on IssueComment {
+                ...issueComment
+              }
+              ... on LabeledEvent {
+                ...labeled
+              }
+              ... on LockedEvent {
+                ...locked
+              }
+              ... on MarkedAsDuplicateEvent {
+                ...markedAsDuplicate
+              }
+              ... on MergedEvent {
+                ...merged
+              }
+              ... on MilestonedEvent {
+                ...mileStoned
+              }
+              ... on PinnedEvent {
+                ...pinned
+              }
+              ... on ProjectV2ItemStatusChangedEvent {
+                ...projectV2ItemStatusChanged
+              }
+              ... on PullRequestCommit {
+                ...pullRequestCommit
+              }
+              ... on PullRequestCommitCommentThread {
+                id
+              }
+              ... on PullRequestReview {
+                ...pullRequestReview
+              }
+              ... on PullRequestReviewThread {
+                id
+              }
+              ... on ReadyForReviewEvent {
+                ...readyForReview
+              }
+              ... on RenamedTitleEvent {
+                ...renamedTitle
+              }
+              ... on ReopenedEvent {
+                ...reopened
+              }
+              ... on ReviewDismissedEvent {
+                ...reviewDismissed
+              }
+              ... on ReviewRequestedEvent {
+                id
+                createdAt
+                actor {
+                  ...actor
+                }
+                requestedReviewer {
+                  __typename
+                  ... on User {
+                    ...requestReviewerUser
+                  }
+                  ... on Team {
+                    ...requestReviewerTeam
+                  }
+                }
+              }
+              ... on ReviewRequestRemovedEvent {
+                id
+                createdAt
+                actor {
+                  ...actor
+                }
+                requestedReviewer {
+                  __typename
+                  ... on User {
+                    ...requestReviewerUser
+                  }
+                  ... on Team {
+                    ...requestReviewerTeam
+                  }
+                }
+              }
+              ... on RemovedFromMergeQueueEvent {
+                ...removedFromMergeQueue
+              }
+              ... on RemovedFromProjectV2Event {
+                ...removedFromProjectV2
+              }
+              ... on UnassignedEvent {
+                ...unassigned
+              }
+              ... on UnlabeledEvent {
+                ...unlabeled
+              }
+              ... on UnlockedEvent {
+                ...unlocked
+              }
+              ... on UnmarkedAsDuplicateEvent {
+                ...unmarkedAsDuplicate
+              }
+              ... on UnpinnedEvent {
+                ...unpinned
+              }
+            }
+            cursor
+          }
+          pageInfo {
+            hasPreviousPage
+            hasNextPage
+            startCursor
+            endCursor
+          }
+        }
+      }
+    }
+  }
+}

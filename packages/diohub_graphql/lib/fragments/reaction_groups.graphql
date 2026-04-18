@@ -1,0 +1,10 @@
+fragment reactionGroups on ReactionGroup {
+  content
+  viewerHasReacted
+  reactors {
+    totalCount
+  }
+  subject {
+    id
+  }
+}

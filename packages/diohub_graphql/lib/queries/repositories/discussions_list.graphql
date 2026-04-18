@@ -1,0 +1,31 @@
+# import '../../fragments/discussion_card_fields.graphql'
+
+query discussionsList(
+  $owner: String!
+  $repo: String!
+  $first: Int!
+  $after: String
+  $orderBy: DiscussionOrder
+  $states: [DiscussionState!]
+) {
+  repository(name: $repo, owner: $owner) {
+    id
+    discussions(
+      first: $first
+      after: $after
+      orderBy: $orderBy
+      states: $states
+    ) {
+      edges {
+        cursor
+        node {
+          ...discussionCardFields
+        }
+      }
+      pageInfo {
+        hasNextPage
+        endCursor
+      }
+    }
+  }
+}

@@ -1,0 +1,9 @@
+# import '../../fragments/pull_detail_fields.graphql'
+
+query pullInfoOnly($owner: String!, $name: String!, $number: Int!) {
+  repository(name: $name, owner: $owner) {
+    pullRequest(number: $number) {
+      ...pullDetailFields
+    }
+  }
+}

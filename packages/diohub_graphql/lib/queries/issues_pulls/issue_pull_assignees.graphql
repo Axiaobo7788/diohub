@@ -1,0 +1,31 @@
+# import '../../fragments/actor.graphql'
+
+query issuePullAssignees(
+  $owner: String!
+  $name: String!
+  $number: Int!
+  $after: String
+) {
+  repository(name: $name, owner: $owner) {
+    issueOrPullRequest(number: $number) {
+      __typename
+      ... on Issue {
+        ...assigneeUserList
+      }
+      ... on PullRequest {
+        ...assigneeUserList
+      }
+    }
+  }
+}
+
+fragment assigneeUserList on Assignable {
+  assignees(after: $after, first: 10) {
+    edges {
+      cursor
+      node {
+        ...actor
+      }
+    }
+  }
+}

@@ -1,4 +1,6 @@
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:diohub/style/app_spacing.dart';
+import 'package:diohub/style/opacities.dart';
 import 'package:diohub/utils/utils.dart';
 import 'package:flutter/material.dart';
 import 'package:image_stack/image_stack.dart';
@@ -13,16 +15,18 @@ class DetailTileContent extends StatelessWidget {
   final Widget child;
 
   @override
-  Widget build(BuildContext context) {
-    final baseStyle = context.textTheme.bodyMedium ?? const TextStyle();
+  Widget build(final BuildContext context) {
+    final TextStyle baseStyle =
+        context.textTheme.bodyMedium ?? const TextStyle();
     // Use onSurface with reduced opacity for darker gray that fits the darker card
-    final textColor = context.colorScheme.onSurface.withOpacity(0.85);
+    final Color textColor = context.colorScheme.onSurface.strong;
     return DefaultTextStyle(
       style: baseStyle.copyWith(
         fontWeight: FontWeight.w500,
         height: 1.3,
         color: textColor, // Explicitly override any theme color
-        fontSize: (baseStyle.fontSize ?? 14) * 0.9, // Slightly smaller (90% of original)
+        fontSize: (baseStyle.fontSize ?? 14) *
+            0.9, // Slightly smaller (90% of original)
       ),
       child: child,
     );
@@ -41,23 +45,23 @@ class DetailTileText extends StatelessWidget {
   final Color? color;
 
   @override
-  Widget build(BuildContext context) {
-    final themeStyle = context.textTheme.bodyMedium ?? const TextStyle();
+  Widget build(final BuildContext context) {
+    final TextStyle themeStyle =
+        context.textTheme.bodyMedium ?? const TextStyle();
     // Use onSurfaceVariant with higher opacity for better contrast on darker card
-    final textColor = context.colorScheme.onSurfaceVariant.withOpacity(0.9);
-    final baseStyle = themeStyle.copyWith(
+    final Color textColor = context.colorScheme.onSurfaceVariant.emphasized;
+    final TextStyle baseStyle = themeStyle.copyWith(
       fontWeight: FontWeight.w500,
       height: 1.3,
       color: textColor, // Explicitly override any theme color
-      fontSize: (themeStyle.fontSize ?? 14) * 0.9, // Slightly smaller (90% of original)
+      fontSize: (themeStyle.fontSize ?? 14) *
+          0.9, // Slightly smaller (90% of original)
     );
-    
+
     return DetailTileContent(
       child: Text(
         text,
-        style: color != null
-            ? baseStyle.copyWith(color: color)
-            : baseStyle,
+        style: color != null ? baseStyle.copyWith(color: color) : baseStyle,
       ),
     );
   }
@@ -77,13 +81,11 @@ class DetailTileCount extends StatelessWidget {
   final String pluralLabel;
 
   @override
-  Widget build(BuildContext context) {
-    return DetailTileContent(
-      child: Text(
-        '$count ${count == 1 ? singularLabel : pluralLabel}',
-      ),
-    );
-  }
+  Widget build(final BuildContext context) => DetailTileContent(
+        child: Text(
+          '$count ${count == 1 ? singularLabel : pluralLabel}',
+        ),
+      );
 }
 
 /// Single user display for DetailTile
@@ -100,35 +102,41 @@ class DetailTileUser extends StatelessWidget {
   final double size;
 
   @override
-  Widget build(BuildContext context) {
-    return DetailTileContent(
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          ClipOval(
-            child: CachedNetworkImage(
-              imageUrl: avatarUrl,
-              width: size,
-              height: size,
-              fit: BoxFit.cover,
-              errorWidget: (context, url, error) => Icon(
-                Icons.person,
-                size: size,
-                color: context.colorScheme.onSurface.withOpacity(0.5),
+  Widget build(final BuildContext context) => DetailTileContent(
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: <Widget>[
+            ClipOval(
+              child: CachedNetworkImage(
+                imageUrl: avatarUrl,
+                width: size,
+                height: size,
+                memCacheWidth: (size * MediaQuery.of(context).devicePixelRatio)
+                    .round()
+                    .clamp(1, 512),
+                memCacheHeight: (size * MediaQuery.of(context).devicePixelRatio)
+                    .round()
+                    .clamp(1, 512),
+                fit: BoxFit.cover,
+                errorWidget: (final BuildContext context, final String url,
+                        final Object error) =>
+                    Icon(
+                  Icons.person,
+                  size: size,
+                  color: context.colorScheme.onSurface.hinted,
+                ),
               ),
             ),
-          ),
-          const SizedBox(width: 6),
-          Flexible(
-            child: Text(
-              login,
-              overflow: TextOverflow.ellipsis,
+            context.spacing.compactGap,
+            Flexible(
+              child: Text(
+                login,
+                overflow: TextOverflow.ellipsis,
+              ),
             ),
-          ),
-        ],
-      ),
-    );
-  }
+          ],
+        ),
+      );
 }
 
 /// Multiple users display with avatar stack for DetailTile
@@ -145,7 +153,7 @@ class DetailTileUserStack extends StatelessWidget {
   final double avatarSize;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(final BuildContext context) {
     if (avatars.isEmpty) {
       return DetailTileContent(
         child: Text(
@@ -153,9 +161,10 @@ class DetailTileUserStack extends StatelessWidget {
           style: (context.textTheme.bodyMedium ?? const TextStyle()).copyWith(
             fontWeight: FontWeight.w500,
             height: 1.3,
-            color: context.colorScheme.onSurface.withOpacity(0.6), // Explicitly override
+            color: context.colorScheme.onSurface.muted, // Explicitly override
             fontStyle: FontStyle.italic,
-            fontSize: ((context.textTheme.bodyMedium?.fontSize ?? 14) * 0.9), // Slightly smaller
+            fontSize: (context.textTheme.bodyMedium?.fontSize ?? 14) *
+                0.9, // Slightly smaller
           ),
         ),
       );
@@ -164,36 +173,49 @@ class DetailTileUserStack extends StatelessWidget {
     return DetailTileContent(
       child: Row(
         mainAxisSize: MainAxisSize.min,
-        children: [
+        children: <Widget>[
           ImageStack.widgets(
             totalCount: totalCount,
             widgetBorderColor: Colors.transparent,
             widgetBorderWidth: 0,
-            children: avatars.take(3).map((avatarUrl) {
-              return ClipOval(
-                child: CachedNetworkImage(
-                  imageUrl: avatarUrl,
-                  width: avatarSize,
-                  height: avatarSize,
-                  fit: BoxFit.cover,
-                  errorWidget: (context, url, error) => Icon(
-                    Icons.person,
-                    size: avatarSize,
-                    color: context.colorScheme.onSurface.withOpacity(0.5),
+            children: avatars.take(3).map(
+              (final String avatarUrl) {
+                final int cache =
+                    (avatarSize * MediaQuery.of(context).devicePixelRatio)
+                        .round()
+                        .clamp(1, 512);
+                return ClipOval(
+                  child: CachedNetworkImage(
+                    imageUrl: avatarUrl,
+                    width: avatarSize,
+                    height: avatarSize,
+                    memCacheWidth: cache,
+                    memCacheHeight: cache,
+                    fit: BoxFit.cover,
+                    errorWidget: (final BuildContext context, final String url,
+                            final Object error) =>
+                        Icon(
+                      Icons.person,
+                      size: avatarSize,
+                      color: context.colorScheme.onSurface.hinted,
+                    ),
                   ),
-                ),
-              );
-            }).toList(),
+                );
+              },
+            ).toList(),
           ),
-          if (totalCount > 3) ...[
+          if (totalCount > 3) ...<Widget>[
             const SizedBox(width: 6),
             Text(
               '+${totalCount - 3}',
-              style: (context.textTheme.bodyMedium ?? const TextStyle()).copyWith(
+              style:
+                  (context.textTheme.bodyMedium ?? const TextStyle()).copyWith(
                 fontWeight: FontWeight.w500,
                 height: 1.3,
-                color: context.colorScheme.onSurface.withOpacity(0.7), // Explicitly override
-                fontSize: ((context.textTheme.bodyMedium?.fontSize ?? 14) * 0.9), // Slightly smaller
+                color: context
+                    .colorScheme.onSurface.secondary, // Explicitly override
+                fontSize: (context.textTheme.bodyMedium?.fontSize ?? 14) *
+                    0.9, // Slightly smaller
               ),
             ),
           ],
@@ -219,35 +241,43 @@ class DetailTileRepository extends StatelessWidget {
   final double avatarSize;
 
   @override
-  Widget build(BuildContext context) {
-    return DetailTileContent(
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          ClipOval(
-            child: CachedNetworkImage(
-              imageUrl: ownerAvatarUrl,
-              width: avatarSize,
-              height: avatarSize,
-              fit: BoxFit.cover,
-              errorWidget: (context, url, error) => Icon(
-                Icons.folder,
-                size: avatarSize,
-                color: context.colorScheme.onSurface.withOpacity(0.5),
+  Widget build(final BuildContext context) => DetailTileContent(
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: <Widget>[
+            ClipOval(
+              child: CachedNetworkImage(
+                imageUrl: ownerAvatarUrl,
+                width: avatarSize,
+                height: avatarSize,
+                memCacheWidth:
+                    (avatarSize * MediaQuery.of(context).devicePixelRatio)
+                        .round()
+                        .clamp(1, 512),
+                memCacheHeight:
+                    (avatarSize * MediaQuery.of(context).devicePixelRatio)
+                        .round()
+                        .clamp(1, 512),
+                fit: BoxFit.cover,
+                errorWidget: (final BuildContext context, final String url,
+                        final Object error) =>
+                    Icon(
+                  Icons.folder,
+                  size: avatarSize,
+                  color: context.colorScheme.onSurface.hinted,
+                ),
               ),
             ),
-          ),
-          const SizedBox(width: 6),
-          Flexible(
-            child: Text(
-              '$ownerLogin/$repoName',
-              overflow: TextOverflow.ellipsis,
+            const SizedBox(width: 6),
+            Flexible(
+              child: Text(
+                '$ownerLogin/$repoName',
+                overflow: TextOverflow.ellipsis,
+              ),
             ),
-          ),
-        ],
-      ),
-    );
-  }
+          ],
+        ),
+      );
 }
 
 /// Linked issue/PR display for DetailTile
@@ -266,53 +296,59 @@ class DetailTileLinkedIssue extends StatelessWidget {
   final String repositoryOwner;
 
   @override
-  Widget build(BuildContext context) {
-    return DetailTileContent(
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Flexible(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  '#$number',
-                  style: (context.textTheme.bodyMedium ?? const TextStyle()).copyWith(
-                    fontWeight: FontWeight.w600,
-                    fontSize: ((context.textTheme.bodyMedium?.fontSize ?? 14) * 0.9),
-                    color: context.colorScheme.onSurface.withOpacity(0.9),
-                  ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  title,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: (context.textTheme.bodySmall ?? const TextStyle()).copyWith(
-                    fontSize: ((context.textTheme.bodySmall?.fontSize ?? 12) * 0.9),
-                    color: context.colorScheme.onSurfaceVariant.withOpacity(0.8),
-                  ),
-                ),
-                if (repositoryOwner.isNotEmpty || repositoryName.isNotEmpty) ...[
-                  const SizedBox(height: 2),
+  Widget build(final BuildContext context) => DetailTileContent(
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: <Widget>[
+            Flexible(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: <Widget>[
                   Text(
-                    '$repositoryOwner/$repositoryName',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: (context.textTheme.bodySmall ?? const TextStyle()).copyWith(
-                      fontSize: ((context.textTheme.bodySmall?.fontSize ?? 12) * 0.85),
-                      color: context.colorScheme.onSurfaceVariant.withOpacity(0.6),
+                    '#$number',
+                    style: (context.textTheme.bodyMedium ?? const TextStyle())
+                        .copyWith(
+                      fontWeight: FontWeight.w600,
+                      fontSize:
+                          (context.textTheme.bodyMedium?.fontSize ?? 14) * 0.9,
+                      color: context.colorScheme.onSurface.emphasized,
                     ),
                   ),
+                  const SizedBox(height: 2),
+                  Text(
+                    title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: (context.textTheme.bodySmall ?? const TextStyle())
+                        .copyWith(
+                      fontSize:
+                          (context.textTheme.bodySmall?.fontSize ?? 12) * 0.9,
+                      color: context.colorScheme.onSurfaceVariant.strong,
+                    ),
+                  ),
+                  if (repositoryOwner.isNotEmpty ||
+                      repositoryName.isNotEmpty) ...<Widget>[
+                    const SizedBox(height: 2),
+                    Text(
+                      '$repositoryOwner/$repositoryName',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: (context.textTheme.bodySmall ?? const TextStyle())
+                          .copyWith(
+                        fontSize:
+                            (context.textTheme.bodySmall?.fontSize ?? 12) *
+                                0.85,
+                        color: context.colorScheme.onSurfaceVariant.muted,
+                      ),
+                    ),
+                  ],
                 ],
-              ],
+              ),
             ),
-          ),
-        ],
-      ),
-    );
-  }
+          ],
+        ),
+      );
 }
 
 /// Multiple linked issues/PRs display for DetailTile
@@ -325,12 +361,9 @@ class DetailTileLinkedIssuesStack extends StatelessWidget {
   final int totalCount;
 
   @override
-  Widget build(BuildContext context) {
-    return DetailTileContent(
-      child: Text(
-        '$totalCount ${totalCount == 1 ? 'linked issue' : 'linked issues'}',
-      ),
-    );
-  }
+  Widget build(final BuildContext context) => DetailTileContent(
+        child: Text(
+          '$totalCount ${totalCount == 1 ? 'linked issue' : 'linked issues'}',
+        ),
+      );
 }
-

@@ -1,0 +1,9 @@
+# Shared fields for RepositoryOwner (User, Organization); used by repository info.
+
+fragment repositoryOwnerFields on RepositoryOwner {
+  id
+  login
+  avatarUrl
+  url
+  resourcePath
+}

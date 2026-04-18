@@ -1,0 +1,45 @@
+# import '../../fragments/issue_card_fields.graphql'
+
+mutation addSubIssue($issueId: ID!, $subIssueId: ID, $subIssueUrl: String) {
+  addSubIssue(
+    input: {
+      issueId: $issueId
+      subIssueId: $subIssueId
+      subIssueUrl: $subIssueUrl
+    }
+  ) {
+    issue {
+      id
+      subIssues(first: 0) {
+        totalCount
+      }
+      subIssuesSummary {
+        completed
+        percentCompleted
+        total
+      }
+    }
+    subIssue {
+      ...issueCardFields
+    }
+  }
+}
+
+mutation removeSubIssue($issueId: ID!, $subIssueId: ID!) {
+  removeSubIssue(input: { issueId: $issueId, subIssueId: $subIssueId }) {
+    issue {
+      id
+      subIssues(first: 0) {
+        totalCount
+      }
+      subIssuesSummary {
+        completed
+        percentCompleted
+        total
+      }
+    }
+    subIssue {
+      ...issueCardFields
+    }
+  }
+}

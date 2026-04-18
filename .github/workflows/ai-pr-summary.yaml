@@ -1,0 +1,25 @@
+name: AI PR Summary
+
+on:
+  pull_request:
+    types: [opened, synchronize]
+    branches: [develop, beta, main]
+  workflow_dispatch:
+    inputs:
+      pr_number:
+        description: 'PR number to summarize'
+        required: true
+        type: number
+
+permissions:
+  contents: read
+
+jobs:
+  call-private:
+    uses: namanshergill/diohub-premium/.github/workflows/_ai-pr-summary.yaml@main
+    with:
+      pr_number: ${{ github.event.pull_request.number || inputs.pr_number }}
+      base_ref: ${{ github.event.pull_request.base.ref || '' }}
+      head_ref: ${{ github.event.pull_request.head.ref || '' }}
+      pr_author: ${{ github.event.pull_request.user.login || '' }}
+    secrets: inherit

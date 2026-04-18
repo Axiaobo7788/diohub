@@ -1,0 +1,46 @@
+query getUserRepositories(
+  $user: String!
+  $first: Int!
+  $after: String
+  $orderBy: RepositoryOrder
+  $visibility: RepositoryVisibility
+) {
+  user(login: $user) {
+    repositories(
+      first: $first
+      after: $after
+      orderBy: $orderBy
+      affiliations: [OWNER, COLLABORATOR, ORGANIZATION_MEMBER]
+      visibility: $visibility
+    ) {
+      edges {
+        cursor
+        node {
+          id
+          name
+          nameWithOwner
+          description
+          url
+          isPrivate
+          isFork
+          stargazerCount
+          updatedAt
+          createdAt
+          pushedAt
+          primaryLanguage {
+            name
+            color
+          }
+          owner {
+            login
+            avatarUrl
+          }
+        }
+      }
+      pageInfo {
+        hasNextPage
+        endCursor
+      }
+    }
+  }
+}

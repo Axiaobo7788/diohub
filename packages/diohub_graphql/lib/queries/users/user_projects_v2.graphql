@@ -1,0 +1,22 @@
+query getUserProjectsV2($user: String!, $first: Int!, $after: String) {
+  user(login: $user) {
+    projectsV2(first: $first, after: $after) {
+      totalCount
+      pageInfo {
+        hasNextPage
+        endCursor
+      }
+      edges {
+        cursor
+        node {
+          id
+          title
+          number
+          url
+          closed
+          updatedAt
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,100 @@
+# import '../../fragments/user_card_fields.graphql'
+# import '../../fragments/organization_card_fields.graphql'
+
+query getUserFollowers($user: String!, $first: Int!, $after: String) {
+  user(login: $user) {
+    followers(first: $first, after: $after) {
+      totalCount
+      pageInfo {
+        hasNextPage
+        endCursor
+      }
+      edges {
+        cursor
+        node {
+          ...userCardFields
+        }
+      }
+    }
+  }
+}
+
+query getUserFollowing($user: String!, $first: Int!, $after: String) {
+  user(login: $user) {
+    following(first: $first, after: $after) {
+      totalCount
+      pageInfo {
+        hasNextPage
+        endCursor
+      }
+      edges {
+        cursor
+        node {
+          ...userCardFields
+        }
+      }
+    }
+  }
+}
+
+query getUserOrganizations($user: String!, $first: Int!, $after: String) {
+  user(login: $user) {
+    organizations(first: $first, after: $after) {
+      totalCount
+      pageInfo {
+        hasNextPage
+        endCursor
+      }
+      edges {
+        cursor
+        node {
+          ...organizationCardFields
+        }
+      }
+    }
+  }
+}
+
+query getUserGists($user: String!, $first: Int!, $after: String) {
+  user(login: $user) {
+    gists(
+      first: $first
+      after: $after
+      orderBy: { field: UPDATED_AT, direction: DESC }
+      privacy: ALL
+    ) {
+      totalCount
+      pageInfo {
+        hasNextPage
+        endCursor
+      }
+      edges {
+        cursor
+        node {
+          id
+          name
+          description
+          isPublic
+          isFork
+          createdAt
+          updatedAt
+          stargazerCount
+          url
+          comments(first: 0) {
+            totalCount
+          }
+          forks(first: 0) {
+            totalCount
+          }
+          files(limit: 5) {
+            name
+            language {
+              name
+              color
+            }
+          }
+        }
+      }
+    }
+  }
+}

@@ -1,4 +1,4 @@
-import 'package:diohub/common/animations/size_expanded_widget.dart';
+import 'package:diohub/common/animations/animations.dart';
 import 'package:flutter/material.dart';
 
 class CustomExpandTile extends StatelessWidget {
@@ -22,14 +22,13 @@ class CustomExpandTile extends StatelessWidget {
             trailing: Icon(
               expanded ? Icons.arrow_drop_up : Icons.arrow_drop_down,
               // color: expanded
-              //     ? Provider.of<PaletteSettings>(context)
               //         .currentSetting
               //         .baseElements
-              //     : Provider.of<PaletteSettings>(context).currentSetting.faded3,
             ),
           ),
-          SizeExpandedSection(
-            expand: expanded,
+          AnimatedVisibility(
+            visible: expanded,
+            transition: AnimationTransition.size,
             child: child,
           ),
         ],

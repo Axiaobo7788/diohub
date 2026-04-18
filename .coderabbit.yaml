@@ -1,0 +1,56 @@
+language: en-US
+early_access: false
+reviews:
+  profile: chill
+  request_changes_workflow: false
+  high_level_summary: true
+  poem: false
+  review_status: true
+  collapse_walkthrough: false
+  auto_review:
+    enabled: true
+    drafts: false
+  path_instructions:
+    - path: "lib/features/lens/**"
+      instructions: |
+        This is the DioLens AI assistant system. It includes:
+        - MCP (Model Context Protocol) server integrations
+        - Multi-provider LLM support (OpenAI, Anthropic, Google, Groq, on-device)
+        - Tool auto-generation from GraphQL schema
+        - Conversation management and context optimization
+        Review for proper async handling, memory management, and API key security.
+    
+    - path: "lib/features/repo/insights/**"
+      instructions: |
+        Repository insights engine with data aggregation, anomaly detection, and visualization.
+        Review for efficient data processing, proper caching, and accurate statistical calculations.
+    
+    - path: "packages/diohub_database/**"
+      instructions: |
+        Drift-based offline database with encrypted sync. All tables must have account_id for
+        multi-account isolation. Review for proper migration scripts and account isolation.
+    
+    - path: "packages/diohub_graphql/**"
+      instructions: |
+        GraphQL operations and fragments for GitHub API. Review for query optimization,
+        proper fragment usage, avoiding N+1 queries, and rate limit efficiency.
+    
+    - path: "**.g.dart"
+      instructions: "Generated code - skip detailed review, only check for generation issues."
+    
+    - path: "**.freezed.dart"
+      instructions: "Generated code - skip detailed review."
+    
+    - path: "**.gr.dart"
+      instructions: "Generated code - skip detailed review."
+
+chat:
+  auto_reply: true
+
+tools:
+  shellcheck:
+    enabled: false
+  yamllint:
+    enabled: true
+  markdownlint:
+    enabled: false

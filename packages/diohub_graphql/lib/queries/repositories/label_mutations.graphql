@@ -1,0 +1,48 @@
+# Label CRUD mutations (create, update, delete).
+
+mutation createLabel(
+  $repositoryId: ID!
+  $name: String!
+  $color: String!
+  $description: String
+) {
+  createLabel(
+    input: {
+      repositoryId: $repositoryId
+      name: $name
+      color: $color
+      description: $description
+    }
+  ) {
+    label {
+      id
+      name
+      color
+      description
+    }
+  }
+}
+
+mutation updateLabel(
+  $id: ID!
+  $name: String
+  $color: String
+  $description: String
+) {
+  updateLabel(
+    input: { id: $id, name: $name, color: $color, description: $description }
+  ) {
+    label {
+      id
+      name
+      color
+      description
+    }
+  }
+}
+
+mutation deleteLabel($id: ID!) {
+  deleteLabel(input: { id: $id }) {
+    clientMutationId
+  }
+}

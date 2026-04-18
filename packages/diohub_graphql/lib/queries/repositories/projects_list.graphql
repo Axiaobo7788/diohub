@@ -1,0 +1,37 @@
+query projectsList(
+  $owner: String!
+  $repo: String!
+  $first: Int!
+  $after: String
+  $orderBy: ProjectV2Order
+) {
+  repository(name: $repo, owner: $owner) {
+    id
+    projectsV2(first: $first, after: $after, orderBy: $orderBy) {
+      edges {
+        cursor
+        node {
+          id
+          title
+          number
+          url
+          closed
+          createdAt
+          updatedAt
+          shortDescription
+          creator {
+            login
+            avatarUrl(size: 40)
+          }
+          items(first: 0) {
+            totalCount
+          }
+        }
+      }
+      pageInfo {
+        hasNextPage
+        endCursor
+      }
+    }
+  }
+}

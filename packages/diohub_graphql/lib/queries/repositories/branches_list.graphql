@@ -1,0 +1,79 @@
+# import '../../fragments/branch_ref_fields.graphql'
+
+query branchesList(
+  $owner: String!
+  $repo: String!
+  $first: Int!
+  $after: String
+  $query: String
+  $orderBy: RefOrder
+  $defaultBranchName: String!
+  $includeCompare: Boolean!
+) {
+  repository(name: $repo, owner: $owner) {
+    refs(
+      first: $first
+      after: $after
+      query: $query
+      refPrefix: "refs/heads/"
+      orderBy: $orderBy
+    ) {
+      edges {
+        cursor
+        node {
+          ...branchRefFields
+          prefix
+          associatedPullRequests(states: [OPEN], first: 0) {
+            totalCount
+          }
+          refUpdateRule {
+            viewerCanPush
+          }
+          target {
+            __typename
+            ... on Commit {
+              oid
+              tree {
+                oid
+              }
+              abbreviatedOid
+              commitUrl
+              url
+              committedDate
+              messageHeadline
+              statusCheckRollup {
+                state
+              }
+              author {
+                name
+                avatarUrl(size: 40)
+                user {
+                  login
+                }
+              }
+              signature {
+                isValid
+                wasSignedByGitHub
+                signer {
+                  login
+                  email
+                }
+              }
+            }
+          }
+          branchProtectionRule {
+            isAdminEnforced
+          }
+          compare(headRef: $defaultBranchName) @include(if: $includeCompare) {
+            aheadBy
+            behindBy
+          }
+        }
+      }
+      pageInfo {
+        hasNextPage
+        endCursor
+      }
+    }
+  }
+}

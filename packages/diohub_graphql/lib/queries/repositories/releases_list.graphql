@@ -1,0 +1,24 @@
+# import '../../fragments/release_list_item.graphql'
+
+query releasesList(
+  $owner: String!
+  $repo: String!
+  $first: Int!
+  $after: String
+  $orderBy: ReleaseOrder
+) {
+  repository(name: $repo, owner: $owner) {
+    releases(first: $first, after: $after, orderBy: $orderBy) {
+      edges {
+        cursor
+        node {
+          ...releaseListItem
+        }
+      }
+      pageInfo {
+        hasNextPage
+        endCursor
+      }
+    }
+  }
+}

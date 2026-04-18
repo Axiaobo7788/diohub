@@ -1,163 +1,68 @@
 import 'package:auto_route/annotations.dart';
-import 'package:diohub/common/animations/size_expanded_widget.dart';
-import 'package:diohub/common/misc/loading_indicator.dart';
-import 'package:diohub/common/misc/repository_card.dart';
-import 'package:diohub/common/search_overlay/filters.dart';
-import 'package:diohub/common/search_overlay/search_bar.dart';
-import 'package:diohub/common/wrappers/api_wrapper_widget.dart';
-import 'package:diohub/common/wrappers/search_scroll_wrapper.dart';
-import 'package:diohub/models/repositories/repo_card_data_model.dart';
-import 'package:diohub/models/repositories/repository_model.dart';
-import 'package:diohub/providers/search_data_provider.dart';
-import 'package:diohub/services/search/search_service.dart';
+import 'package:diohub/common/nav_center/shell/nav_center_shell.dart';
+import 'package:diohub/providers/search/search_session_provider.dart';
+import 'package:diohub/providers/search/search_state_notifier.dart';
+import 'package:diohub/view/search/search_screen_config.dart';
+import 'package:diohub_premium_api/diohub_premium_api.dart';
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
-import 'package:provider/provider.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 @RoutePage()
-class SearchScreen extends StatefulWidget {
-  const SearchScreen({super.key});
+class SearchScreen extends ConsumerStatefulWidget {
+  const SearchScreen({super.key, this.initialQuery});
+
+  final String? initialQuery;
+
   @override
-  SearchScreenState createState() => SearchScreenState();
+  ConsumerState<SearchScreen> createState() => SearchScreenState();
 }
 
-class SearchScreenState extends State<SearchScreen>
+class SearchScreenState extends ConsumerState<SearchScreen>
     with AutomaticKeepAliveClientMixin {
+  late final ValueNotifier<Future<void> Function()?> reposRefreshRegistrar =
+      ValueNotifier<Future<void> Function()?>(null);
+
   @override
   bool get wantKeepAlive => true;
 
   @override
-  Widget build(final BuildContext context) {
+  void deactivate() {
+    ref.read(searchSessionProvider.notifier).clear();
+    super.deactivate();
+  }
+
+  @override
+  void dispose() {
+    reposRefreshRegistrar.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     super.build(context);
-    final SearchDataProvider search = Provider.of<SearchDataProvider>(context);
-    return search.searchData.searchFilters != null
-        ? SearchScrollWrapper(
-            search.searchData,
-            key: ValueKey<String>(search.searchData.toQuery),
-            onChanged: search.updateSearchData,
-            // searchBarColor: Provider.of<PaletteSettings>(context).currentSetting.onBackground,
-            searchHeroTag: 'searchScreen',
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-          )
-        : SizeExpandedSection(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: <Widget>[
-                Padding(
-                  padding: const EdgeInsets.all(24),
-                  child: Text(
-                    'Search GitHub',
-                    style: Theme.of(context)
-                        .textTheme
-                        .headlineMedium!
-                        .copyWith(fontWeight: FontWeight.bold),
-                  ),
-                ),
-                Padding(
-                  padding: const EdgeInsets.all(8),
-                  child: AppSearchBar(
-                    // backgroundColor: Provider.of<PaletteSettings>(context)
-                    //     .currentSetting
-                    //     .primary,
-                    heroTag: 'searchScreen',
-                    onSubmit: search.updateSearchData,
-                  ),
-                ),
-                Expanded(
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 8),
-                    child: Card(
-                      // borderRadius: BorderRadius.vertical(
-                      //   top: medBorderRadius.topRight,
-                      // ),
-                      // color: Provider.of<PaletteSettings>(context)
-                      //     .currentSetting
-                      //     .primary,
-                      child: APIWrapper<List<RepositoryModel>>.deferred(
-                        apiCall: ({required final bool refresh}) async =>
-                            SearchService.searchRepos(
-                          SearchQueries().pushed.toQueryString(
-                                '>${DateFormat('yyyy-MM-dd').format(DateTime.now().subtract(const Duration(days: 7)))}',
-                              ),
-                          page: 1,
-                          perPage: 25,
-                        ),
-                        loadingBuilder: (final BuildContext context) =>
-                            const Padding(
-                          padding: EdgeInsets.all(48),
-                          child: LoadingIndicator(),
-                        ),
-                        builder: (
-                          final BuildContext context,
-                          final List<RepositoryModel> data,
-                        ) =>
-                            SizeExpandedSection(
-                          child: Padding(
-                            padding: const EdgeInsets.only(top: 8),
-                            child: ListView.separated(
-                              shrinkWrap: true,
-                              itemBuilder: (
-                                final BuildContext context,
-                                final int index,
-                              ) =>
-                                  Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: <Widget>[
-                                  if (index == 0)
-                                    Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: <Widget>[
-                                        Padding(
-                                          padding: const EdgeInsets.only(
-                                            top: 16,
-                                            left: 24,
-                                            right: 16,
-                                            bottom: 8,
-                                          ),
-                                          child: Text(
-                                            'Trending Repositories',
-                                            style: Theme.of(context)
-                                                .textTheme
-                                                .titleLarge,
-                                          ),
-                                        ),
-                                        // Divider(
-                                        //   height: 0,
-                                        // ),
-                                      ],
-                                    ),
-                                  Padding(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 8,
-                                    ),
-                                    child: RepositoryCard(
-                                      RepoCardDataModel.fromRepositoryModel(
-                                        data[index],
-                                      ),
-                                      // isThemed: false,
-                                      // padding: const EdgeInsets.symmetric(
-                                      //   horizontal: 8,
-                                      // ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              separatorBuilder: (
-                                final BuildContext context,
-                                final int index,
-                              ) =>
-                                  const Divider(),
-                              itemCount: data.length,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          );
+    final initialQuery = widget.initialQuery;
+    if (initialQuery != null &&
+        initialQuery.isNotEmpty &&
+        ref.read(pendingSearchInitialQueryProvider) == null) {
+      ref.read(pendingSearchInitialQueryProvider.notifier).set(initialQuery);
+    }
+    final config = buildSearchScreenConfig(
+      context,
+      ref,
+      reposRefreshRegistrar: reposRefreshRegistrar,
+    );
+    final tabs = config.visibleTabs;
+    int initialIndex = 0;
+    if (tabs.isNotEmpty && config.initialTabPath != null) {
+      final found =
+          tabs.indexWhere((p) => p.deeplinkPath == config.initialTabPath);
+      if (found >= 0) initialIndex = found;
+    }
+    final clampedIndex =
+        tabs.isEmpty ? 0 : initialIndex.clamp(0, tabs.length - 1);
+    return NavCenterShell(
+      config: config,
+      initialTabIndex: clampedIndex,
+    );
   }
 }

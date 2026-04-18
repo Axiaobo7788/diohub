@@ -1,0 +1,88 @@
+# import '../../fragments/actor.graphql'
+# import '../../fragments/reaction_groups.graphql'
+
+query getPRReviewComments($id: ID!, $after: String) {
+  node(id: $id) {
+    __typename
+    ... on PullRequestReview {
+      ...PRReviewComments
+    }
+  }
+}
+
+query reviewThreadCommentsQuery($nodeID: ID!, $after: String) {
+  node(id: $nodeID) {
+    __typename
+    ... on PullRequestReviewThread {
+      comments(first: 10, after: $after) {
+        totalCount
+        pageInfo {
+          hasNextPage
+          endCursor
+        }
+        edges {
+          cursor
+          node {
+            ...pullRequestReviewComment
+          }
+        }
+      }
+    }
+  }
+}
+
+fragment PRReviewComments on PullRequestReview {
+  comments(first: 10, after: $after) {
+    edges {
+      __typename
+      cursor
+      node {
+        ...pullRequestReviewComment
+      }
+    }
+  }
+}
+
+fragment pullRequestReviewComment on PullRequestReviewComment {
+  id
+  pullRequestReview {
+    comments {
+      totalCount
+    }
+  }
+  fullDatabaseId
+  author {
+    ...actor
+  }
+  createdAt
+  authorAssociation
+  body
+  bodyHTML
+  lastEditedAt
+  state
+  diffHunk
+  outdated
+  isMinimized
+  replyTo {
+    id
+  }
+  path
+  reactionGroups {
+    ...reactionGroups
+  }
+  viewerCanDelete
+  viewerCanUpdate
+  viewerDidAuthor
+  viewerCannotUpdateReasons
+  viewerCanReact
+  viewerCanMinimize
+  pullRequest {
+    number
+  }
+  repository {
+    name
+    owner {
+      login
+    }
+  }
+}

@@ -1,0 +1,63 @@
+# import '../../fragments/repo_card_fields.graphql'
+# import '../../fragments/issue_card_fields.graphql'
+# import '../../fragments/pull_card_fields.graphql'
+
+query dashboard(
+  $reviewQuery: String!
+  $issueQuery: String!
+  $prQuery: String!
+  $from: DateTime!
+  $to: DateTime!
+) {
+  viewer {
+    contributionsCollection(from: $from, to: $to) {
+      contributionCalendar {
+        totalContributions
+        weeks {
+          contributionDays {
+            contributionCount
+            date
+          }
+        }
+      }
+      totalCommitContributions
+      totalIssueContributions
+      totalPullRequestContributions
+      totalPullRequestReviewContributions
+    }
+    pinnedItems(first: 6, types: REPOSITORY) {
+      nodes {
+        ... on Repository {
+          ...repoCardFields
+        }
+      }
+    }
+  }
+  reviewRequests: search(query: $reviewQuery, type: ISSUE, first: 5) {
+    issueCount
+    nodes {
+      __typename
+      ... on PullRequest {
+        ...pullCardFields
+      }
+    }
+  }
+  assignedIssues: search(query: $issueQuery, type: ISSUE, first: 5) {
+    issueCount
+    nodes {
+      __typename
+      ... on Issue {
+        ...issueCardFields
+      }
+    }
+  }
+  yourPRs: search(query: $prQuery, type: ISSUE, first: 5) {
+    issueCount
+    nodes {
+      __typename
+      ... on PullRequest {
+        ...pullCardFields
+      }
+    }
+  }
+}

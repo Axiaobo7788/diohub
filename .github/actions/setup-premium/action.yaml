@@ -1,0 +1,46 @@
+name: Setup Premium Override
+description: Conditionally clone premium repo and generate pubspec_overrides.yaml
+
+inputs:
+  token:
+    description: GitHub token with repo scope (PAT_TOKEN)
+    required: false
+    default: ''
+
+outputs:
+  premium_enabled:
+    description: Whether premium override was generated
+    value: ${{ steps.clone.outputs.enabled }}
+
+runs:
+  using: composite
+  steps:
+    - name: Clone premium repo
+      id: clone
+      shell: bash
+      run: |
+        if [ -z "${{ inputs.token }}" ]; then
+          echo "enabled=false" >> "$GITHUB_OUTPUT"
+          exit 0
+        fi
+        if git clone --depth 1 \
+          https://x-access-token:${{ inputs.token }}@github.com/NamanShergill/diohub-premium.git \
+          ../diohub-premium 2>/dev/null; then
+          echo "enabled=true" >> "$GITHUB_OUTPUT"
+        else
+          echo "enabled=false" >> "$GITHUB_OUTPUT"
+        fi
+
+    - name: Generate pubspec_overrides.yaml
+      if: steps.clone.outputs.enabled == 'true'
+      shell: bash
+      run: |
+        existing_overrides=$(yq eval '.dependency_overrides // {}' pubspec.yaml)
+
+        printf 'dependency_overrides:\n  diohub_premium_api:\n    path: ../diohub-premium\n' > pubspec_overrides.yaml
+
+        if [ "$existing_overrides" != "{}" ]; then
+          yq eval-all 'select(fileIndex == 0).dependency_overrides * select(fileIndex == 1).dependency_overrides | {"dependency_overrides": .}' \
+            pubspec.yaml pubspec_overrides.yaml > pubspec_overrides_merged.yaml
+          mv pubspec_overrides_merged.yaml pubspec_overrides.yaml
+        fi

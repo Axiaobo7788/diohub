@@ -1,0 +1,109 @@
+# import './issue_card_fields.graphql'
+# import './actor.graphql'
+# import './pull_card_fields.graphql'
+
+# Fragment for Issue detail screen.
+# Composes issueCardFields and adds detail-specific fields.
+fragment issueDetailFields on Issue {
+  # Inherit ALL card fields
+  ...issueCardFields
+
+  # ─── Detail-only fields ──────────────────────────────────────────
+  titleHTML
+
+  bodyHTML
+  editor {
+    ... on Actor {
+      ...actor
+    }
+  }
+  lastEditedAt
+  includesCreatedEdit
+  userContentEdits {
+    totalCount
+  }
+
+  issueType {
+    id
+    name
+    color
+    description
+  }
+
+  trackedIssuesCount
+  subIssues(first: 0) {
+    totalCount
+  }
+  trackedInIssues(first: 10) {
+    totalCount
+    nodes {
+      title
+      number
+      url
+      state
+      repository {
+        name
+        owner {
+          login
+        }
+      }
+    }
+  }
+
+  linkedBranches(first: 10) {
+    totalCount
+    edges {
+      cursor
+      node {
+        id
+        __typename
+        ref {
+          id
+          prefix
+          name
+          associatedPullRequests(first: 1) {
+            totalCount
+            edges {
+              cursor
+              node {
+                number
+                titleHTMLAsString: titleHTML
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  closedByPullRequestsReferences(first: 10) {
+    totalCount
+    nodes {
+      ...pullCardFields
+    }
+  }
+
+  participants(first: 30) {
+    totalCount
+    nodes {
+      ...actor
+    }
+  }
+
+  timelineItems {
+    totalCount
+  }
+
+  projectsV2 {
+    totalCount
+  }
+
+  viewerCanReact
+  viewerCanUpdate
+  viewerDidAuthor
+  viewerCanClose
+  viewerCanReopen
+  viewerCanDelete
+  viewerCanLabel
+  closed
+}

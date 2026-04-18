@@ -1,0 +1,19 @@
+# import '../../fragments/user_card_fields.graphql'
+
+query getOrgMembers($org: String!, $first: Int!, $after: String) {
+  organization(login: $org) {
+    membersWithRole(first: $first, after: $after) {
+      totalCount
+      pageInfo {
+        hasNextPage
+        endCursor
+      }
+      edges {
+        cursor
+        node {
+          ...userCardFields
+        }
+      }
+    }
+  }
+}

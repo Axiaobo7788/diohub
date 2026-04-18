@@ -1,0 +1,20 @@
+# Create a commit on a branch (file add/change/delete).
+# Use branch.repositoryNameWithOwner + branch.branchName, expectedHeadOid, fileChanges, message.
+
+mutation createCommitOnBranch($input: CreateCommitOnBranchInput!) {
+  createCommitOnBranch(input: $input) {
+    commit {
+      oid
+      abbreviatedOid
+      url
+    }
+    ref {
+      name
+      target {
+        ... on Commit {
+          oid
+        }
+      }
+    }
+  }
+}

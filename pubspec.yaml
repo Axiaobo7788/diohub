@@ -3,60 +3,72 @@ description: A Github mobile client
 
 publish_to: "none"
 
-version: 1.0.0-dev.2+5
+version: 1.0.0
 
 environment:
-  sdk: ">=3.2.0 <4.0.0"
+  sdk: ^3.8.0
 
 dependencies:
-  animated_theme_switcher:
-    path: ../animated_theme_switcher
+  sentry_flutter: ^9.16.1
+  sentry_dio: ^9.16.1
+  diohub_models:
+    path: packages/diohub_models
+  diohub_database:
+    path: packages/diohub_database
+  diohub_graphql:
+    path: packages/diohub_graphql
+  diohub_gql_client:
+    path: packages/diohub_gql_client
+  diohub_premium_api:
+    path: packages/diohub_premium_api
+  lens_annotations:
+    path: dependencies/lens_annotations
   animations: ^2.0.11
-  another_flushbar: ^1.12.30
   app_links: ^6.3.3
-  auto_route: ^10.3.0
-  built_value: ^8.10.1
+  auto_route: ^11.1.0
   cached_network_image: ^3.4.1
-  chucker_flutter: ^1.8.5
-  connectivity_plus: ^7.0.0
-  curl_logger_dio_interceptor: ^1.0.0
+  connectivity_plus: ^7.1.0 # Requires Xcode 26 (iOS 26 SDK) for isUltraConstrained API
+  crypto: ^3.0.6
   dio: ^5.8.0+1
+  encrypt: ^5.0.3
   dio_cache_interceptor: ^4.0.3
+  drift: ^2.32.0
+  drift_flutter: ^0.3.0
   # https://github.com/tekartik/sqflite/issues/1008
   # When fixed, remove the change in ios/Podfile
   dynamic_color: ^1.7.0
-  equatable: ^2.0.7
+  flex_color_picker: ^3.7.1
+  flex_color_scheme: ^8.0.0
   expand_widget: ^3.1.1
   figma_squircle: ^0.6.3
+  
+  # Patched to fix assertion errors with SliverOverlapAbsorber
+  extended_nested_scroll_view:
+    path: dependencies/extended_nested_scroll_view
 
-  # Modified to remove the current typing word indicator.
-  extended_text_field:
-    path: dependencies/extended_text_field
-  ferry_flutter: ^0.9.1+1
+  extended_text_field: ^16.0.2
   flex_list: ^1.2.0
   flutter:
     sdk: flutter
 
   flutter_appauth: ^11.0.0
-  flutter_bloc: ^9.1.1
   flutter_colorpicker: ^1.1.0
   flutter_countdown_timer: ^4.1.0
   flutter_datetime_picker_plus: ^2.2.0
   flutter_displaymode: ^0.7.0
-
-  flutter_dynamic_tabs:
-    path: dependencies/flutter_dynamic_tabs
+  flutter_local_notifications: ^18.0.0
+  workmanager: ^0.9.0+3
 
   flutter_emoji: ^2.5.1
+  flutter_anchor: ^0.0.13
 
-  # Modified to add background color option.
-  flutter_highlighting:
-    path: dependencies/dart-highlighting/flutter_highlighting
+  re_editor: ^0.8.0
+  re_highlight: ^0.0.3
 
   # Temporary dependency until the following is fixed: https://github.com/pichillilorenzo/flutter_inappwebview/issues/1735#issuecomment-1725248033
   flutter_inappwebview: ^6.2.0-beta.2
 
-  flutter_keyboard_visibility: ^6.0.0
+  flutter_local_ai: ^0.0.6
   flutter_material_design_icons: ^1.1.7447
   flutter_portal: ^1.1.4
   flutter_reaction_button: ^3.0.0+3
@@ -66,155 +78,100 @@ dependencies:
 
   flutter_secure_storage: ^9.2.4
   flutter_slidable: ^4.0.0
-  flutter_svg: ^2.2.0
+  jovial_svg: ^1.1.28
   flutter_vector_icons: ^2.0.0
   flutter_widget_from_html: ^0.17.1
-  #  google_nav_bar: ^5.0.6
-  freezed: ^3.1.0
-  fl_chart: ^0.69.0
+  dartssh2: ^2.8.0
+  xterm: ^4.0.0
+  freezed: ^3.2.3
+  fuzzywuzzy: ^1.2.0
+  google_fonts: ^6.2.1
+  fl_chart: ^1.1.1
+  graphview: ^1.5.1
   contribution_heatmap: ^0.5.1
   liquid_glass_renderer: ^0.2.0-dev.4
-  gql: ^1.0.1-alpha+1730759315362
+  gql: ^1.0.1
   gql_dio_link: ^2.0.0
-  gql_exec: ^1.0.1-alpha+1709845491450
-  #  gql_link: ^1.0.0
-
-  #  highlighting:
-  #    path: dependencies/dart-highlighting/highlighting
+  gql_exec: ^1.1.0
 
   html: ^0.15.6
   http_cache_drift_store: ^7.0.0
+  image_picker: ^1.0.7
   image_stack: ^2.1.1
-  infinite_scroll_pagination: ^5.1.1
   intl: ^0.20.2
-  #  json_annotation: ^4.8.1
-  #  line_icons: ^2.0.3
-  logger: ^2.6.0
+  freezed_annotation: ^3.1.0
+  json_annotation: ^4.9.0
   markdown: ^7.3.0
-
-  # Modified for additional markdown options.
-  markdown_editable_textinput:
-    path: dependencies/markdown-editable-textinput
 
   mime: ^2.0.0
   package_info_plus: ^9.0.0
   path_provider: ^2.1.5
-  pretty_dio_logger: ^1.4.0
-  provider: ^6.1.5
-  pull_down_button:
-    path: dependencies/pull_down_button
+  permission_handler: ^11.3.1
+  device_info_plus: ^11.1.0
+  archive: ^4.0.2
+  file_picker: ^8.0.0
+  receive_sharing_intent: ^1.8.0
   share_plus: ^12.0.1
-  shared_preferences: ^2.5.3
-  shimmer: ^3.0.0
+  shorebird_code_push: ^2.0.5
   sliver_tools: ^0.2.12
+  talker_dio_logger: ^5.1.0
+  talker_flutter: ^5.1.0
+  talker_riverpod_logger: ^5.1.14
   flutter_sticky_header: ^0.8.0
-  sqlite3_flutter_libs: ^0.5.41
-  #  tabbed_view: ^1.18.0
-  #  super_context_menu: ^0.9.0-dev.5
-  timeline_tile: ^2.0.0
-  #  uni_links: ^0.5.1
   url_launcher: ^6.3.1
   uuid: ^4.5.1
-  flutter_bounceable: ^1.2.0
-  liquid_pull_to_refresh: ^3.0.1
+  custom_refresh_indicator: ^4.0.1
+  toastification: ^3.0.3
 
 dev_dependencies:
-  auto_route_generator: ^10.2.3
+  sentry_dart_plugin: ^3.2.1
+  auto_route_generator: ^10.3.1
   build_runner: ^2.5.4
-  # pub run dependency_validator
-  # dependency_validator: ^5.0.2
-  ferry_generator: ^0.12.1-dev.2
+  flutter_flavorizr: ^2.4.2
+  # diohub_lint temporarily removed due to custom_lint_builder analyzer incompatibility
+  # diohub_lint:
+  #   path: packages/diohub_lint
+  drift_dev: ^2.32.0
   flutter_launcher_icons: ^0.14.4
   flutter_lints: ^6.0.0
-  flutter_native_splash: ^2.4.6
+  flutter_native_splash: ^2.4.7
   flutter_test:
     sdk: flutter
   json_serializable: ^6.9.0
   melos: ^7.3.0
-
-#dependency_overrides:
-# Override for conflict between artemis and flutter_test.
-#  collection: ^1.18.0
-# flutter_html 2.1.2 uses a version not compatible with flutter >3.
-#  flutter_layout_grid: ^2.0.4
-#  flutter_math_fork: ^0.7.1
-#  flutter_svg: ^2.0.7
-# Override until https://github.com/comigor/artemis/pull/415 is merged.
-#  gql_link: 1.0.0
-# chucker_flutter incompatibility.
-#  share_plus: ^7.2.0
+  yaml: ^3.1.2
 
 flutter_native_splash:
   color: "#17181c"
-  image: assets/logo.png
+  color_dark: "#17181c"
+  image: assets/icon/splash_logo.png
+  image_dark: assets/icon/splash_logo.png
+
+  android_12:
+    color: "#17181c"
+    color_dark: "#17181c"
+    image: assets/icon/splash_android12.png
+    icon_background_color: "#17181c"
+    icon_background_color_dark: "#17181c"
 
 flutter:
   uses-material-design: true
   assets:
     - assets/
-  fonts:
-    - family: Manrope
-      fonts:
-        - asset: fonts/Manrope/Manrope-ExtraLight.ttf
-          weight: 200
-        - asset: fonts/Manrope/Manrope-ExtraLightItalic.ttf
-          style: italic
-          weight: 200
-        - asset: fonts/Manrope/Manrope-Light.ttf
-          weight: 300
-        - asset: fonts/Manrope/Manrope-LightItalic.ttf
-          style: italic
-          weight: 300
-        - asset: fonts/Manrope/Manrope-Regular.ttf
-          weight: 400
-        - asset: fonts/Manrope/Manrope-Italic.ttf
-          style: italic
-          weight: 400
-        - asset: fonts/Manrope/Manrope-Medium.ttf
-          weight: 500
-        - asset: fonts/Manrope/Manrope-MediumItalic.ttf
-          style: italic
-          weight: 500
-        - asset: fonts/Manrope/Manrope-SemiBold.ttf
-          weight: 600
-        - asset: fonts/Manrope/Manrope-SemiBoldItalic.ttf
-          style: italic
-          weight: 600
-        - asset: fonts/Manrope/Manrope-Bold.ttf
-          weight: 700
-        - asset: fonts/Manrope/Manrope-BoldItalic.ttf
-          style: italic
-          weight: 700
-        - asset: fonts/Manrope/Manrope-ExtraBold.ttf
-          weight: 800
-        - asset: fonts/Manrope/Manrope-ExtraBoldItalic.ttf
-          style: italic
-          weight: 800
-    #    - family: AtkinsonHyperlegible
-    #      fonts:
-    #        - asset: fonts/AtkinsonHyperlegible/Atkinson-Hyperlegible-Regular.ttf
-    #          weight: 400
-    #        - asset: fonts/AtkinsonHyperlegible/Atkinson-Hyperlegible-Italic.ttf
-    #          style: italic
-    #          weight: 400
-    #        - asset: fonts/AtkinsonHyperlegible/Atkinson-Hyperlegible-Bold.ttf
-    #          weight: 700
-    #        - asset: fonts/AtkinsonHyperlegible/Atkinson-Hyperlegible-BoldItalic.ttf
-    #          style: italic
-    #          weight: 700
-    - family: OpenDyslexic3
-      fonts:
-        - asset: fonts/OpenDyslexic3/OpenDyslexic3-Regular.ttf
-          weight: 400
-        - asset: fonts/OpenDyslexic3/OpenDyslexic3-Bold.ttf
-          weight: 700
+    - assets/icon/
+    - assets/icon/svg/
+    - shorebird.yaml
 
 flutter_launcher_icons:
-  #  android: "launcher_icon"
+  android: true
   ios: true
-  image_path: "assets/logo.png"
+  image_path: "assets/icon/ios_default.png"
+  adaptive_icon_foreground: "assets/icon/foreground.png"
+  adaptive_icon_background: "assets/icon/android_bg.png"
+  adaptive_icon_monochrome: "assets/icon/monochrome.png"
   remove_alpha_ios: true
-  background_color_ios: "#17181c"
+  image_path_ios_dark_transparent: "assets/icon/ios_dark.png"
+  image_path_ios_tinted_grayscale: "assets/icon/ios_tinted.png"
 #  min_sdk_android: 21
 #  web:
 #    generate: true
@@ -228,3 +185,11 @@ flutter_launcher_icons:
 #  macos:
 #    generate: true
 #    image_path: "assets/logo.png"
+
+sentry:
+  upload_debug_symbols: true
+  upload_source_maps: true
+  upload_sources: true
+  dart_symbol_map_path: build/app/obfuscation.map.json
+  project: diohub
+  org: diohub

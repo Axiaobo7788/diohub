@@ -1,0 +1,14 @@
+name: Weekly Health Summary
+
+on:
+  schedule:
+    - cron: '0 9 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  call-private:
+    uses: namanshergill/diohub-premium/.github/workflows/_ai-health-summary.yaml@main
+    secrets: inherit

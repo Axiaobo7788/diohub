@@ -1,0 +1,20 @@
+name: AI Issue Triage (Koichi)
+
+on:
+  issues:
+    types: [opened, reopened]
+
+permissions:
+  contents: read
+
+jobs:
+  call-private:
+    uses: namanshergill/diohub-premium/.github/workflows/_ai-issue-triage.yaml@main
+    with:
+      issue_number: ${{ github.event.issue.number }}
+      issue_action: ${{ github.event.action }}
+      issue_title: ${{ github.event.issue.title }}
+      issue_body: ${{ github.event.issue.body }}
+      issue_author: ${{ github.event.issue.user.login }}
+      issue_url: ${{ github.event.issue.html_url }}
+    secrets: inherit

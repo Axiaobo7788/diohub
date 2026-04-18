@@ -1,0 +1,24 @@
+android {
+    flavorDimensions += "flavor-type"
+
+    productFlavors {
+        dev {
+            dimension "flavor-type"
+            applicationId "com.felix.diohub.dev"
+            resValue "string", "app_name", "DioHub - Dev"
+            manifestPlaceholders = [dartEnvironmentVariables: "flavor=dev"]
+        }
+        beta {
+            dimension "flavor-type"
+            applicationId "com.felix.diohub"
+            resValue "string", "app_name", "DioHub Beta"
+            manifestPlaceholders = [dartEnvironmentVariables: "flavor=beta"]
+        }
+        rel {
+            dimension "flavor-type"
+            applicationId "com.felix.diohub"
+            resValue "string", "app_name", "DioHub"
+            manifestPlaceholders = [dartEnvironmentVariables: "flavor=rel"]
+        }
+    }
+}

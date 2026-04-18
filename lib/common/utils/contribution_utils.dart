@@ -1,162 +1,157 @@
 import 'package:diohub/common/charts/contribution_calendar_widget.dart';
-import 'package:diohub/graphql/__generated__/schema.schema.gql.dart';
-import 'package:diohub/models/issues/issue_card_data_model.dart';
-import 'package:diohub/models/pull_requests/pull_request_card_data_model.dart';
+import 'package:diohub/common/utils/github_visual_styles.dart';
+import 'package:diohub_graphql/schema_typedefs.dart' as gql;
+import 'package:diohub_graphql/fragments/fragment_typedefs.dart';
+import 'package:diohub/utils/hex_color.dart';
+import 'package:diohub_models/models/contributions/contribution_day.dart';
+
+import 'package:diohub_models/models/visual_state.dart';
 import 'package:flutter/material.dart';
 
 /// Shared utility functions for contribution data processing
 
+/// Default GitHub contribution colors (for calendar/heatmap visualizations).
+const List<Color> kDefaultContributionColors = <Color>[
+  Color(0xFFEBEDF0), // lightest (no contributions)
+  Color(0xFF9BE9A8), // light green
+  Color(0xFF40C463), // medium green
+  Color(0xFF30A14E), // dark green
+  Color(0xFF216E39), // darkest green
+];
+
 /// Formats a DateTime to YYYY-MM-DD string format
-String formatDateOnly(DateTime date) {
-  return '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
-}
+String formatDateOnly(final DateTime date) =>
+    '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
 
 /// Parses hex color string to Color
 ///
 /// Example: "#9be9a8" -> Color(0xFF9BE9A8)
 /// Returns Colors.grey if parsing fails
-Color parseContributionColor(String hexColor) {
-  try {
-    // Remove # if present and ensure uppercase
-    final hex = hexColor.replaceFirst('#', '').toUpperCase();
-    // Parse as int with alpha channel (FF = fully opaque)
-    final colorValue = int.parse('FF$hex', radix: 16);
-    return Color(colorValue);
-  } catch (e) {
-    return Colors.grey;
-  }
+Color parseContributionColor(final String hexColor) {
+  return tryParseHexColor(hexColor, fallback: Colors.grey) ?? Colors.grey;
 }
 
 /// Parses list of hex color strings to Color list
-List<Color> parseContributionColors(List<String> colors) {
+List<Color> parseContributionColors(final List<String> colors) {
   if (colors.isEmpty) {
-    // Default GitHub colors
-    return [
-      Color(0xFFEBEDF0),
-      Color(0xFF9BE9A8),
-      Color(0xFF40C463),
-      Color(0xFF30A14E),
-      Color(0xFF216E39),
-    ];
+    return kDefaultContributionColors;
   }
   return colors.map(parseContributionColor).toList();
 }
 
 /// Converts GraphQL contribution level to ContributionLevel enum
-ContributionLevel convertContributionLevel(GContributionLevel level) {
+ContributionLevel convertContributionLevel(final gql.ContributionLevel level) {
   switch (level) {
-    case GContributionLevel.NONE:
+    case gql.ContributionLevel.NONE:
       return ContributionLevel.none;
-    case GContributionLevel.FIRST_QUARTILE:
+    case gql.ContributionLevel.FIRST_QUARTILE:
       return ContributionLevel.firstQuartile;
-    case GContributionLevel.SECOND_QUARTILE:
+    case gql.ContributionLevel.SECOND_QUARTILE:
       return ContributionLevel.secondQuartile;
-    case GContributionLevel.THIRD_QUARTILE:
+    case gql.ContributionLevel.THIRD_QUARTILE:
       return ContributionLevel.thirdQuartile;
-    case GContributionLevel.FOURTH_QUARTILE:
+    case gql.ContributionLevel.FOURTH_QUARTILE:
       return ContributionLevel.fourthQuartile;
     default:
       return ContributionLevel.none;
   }
 }
 
-/// Determines the action that occurred based on occurredAt vs issue dates
-/// Returns 'opened' or 'closed' based on which date is closest to occurredAt
-String getIssueAction({
-  required IssueCardDataModel issue,
-  required DateTime occurredAt,
+/// Determines the visual state that occurred based on occurredAt vs issue dates.
+/// Returns [IssueVisualState.closed] or [IssueVisualState.open] based on which
+/// date is closest to occurredAt.
+IssueVisualState getIssueActionState({
+  required final IssueCardData issue,
+  required final DateTime occurredAt,
 }) {
   // If closedAt is available, check if occurredAt is close to it
   if (issue.closedAt != null) {
-    final closedDiff = (occurredAt.difference(issue.closedAt!).inHours).abs();
-    final createdDiff = issue.createdAt != null
-        ? (occurredAt.difference(issue.createdAt!).inHours).abs()
-        : double.infinity;
-    
+    final int closedDiff = occurredAt.difference(issue.closedAt!).inHours.abs();
+    final num createdDiff = occurredAt
+        .difference(issue.createdAt)
+        .inHours
+        .abs();
+
     // If occurredAt is closer to closedAt than createdAt, it was closed
     if (closedDiff < createdDiff && closedDiff < 24) {
-      return 'closed';
+      return IssueVisualState.closed;
     }
   }
-  
+
   // Default to opened (either createdAt is closer, or closedAt not available)
-  if (issue.createdAt != null) {
-    final createdDiff = (occurredAt.difference(issue.createdAt!).inHours).abs();
-    if (createdDiff < 24) {
-      return 'opened';
-    }
+  final int createdDiff = occurredAt.difference(issue.createdAt).inHours.abs();
+  if (createdDiff < 24) {
+    return IssueVisualState.open;
   }
-  
+
   // Fallback to current state if dates don't match
-  return issue.state == 'CLOSED' ? 'closed' : 'opened';
+  return issue.issueState == gql.IssueState.CLOSED
+      ? IssueVisualState.closed
+      : IssueVisualState.open;
 }
 
-/// Determines the action that occurred based on occurredAt vs PR dates
-/// Returns 'opened', 'closed', or 'merged' based on which date is closest to occurredAt
-String getPullRequestAction({
-  required PullRequestCardDataModel pr,
-  required DateTime occurredAt,
+/// Determines the visual state that occurred based on occurredAt vs PR dates.
+/// Returns [PrVisualState.merged], [PrVisualState.closed], or [PrVisualState.open]
+/// based on which date is closest to occurredAt.
+PrVisualState getPullRequestActionState({
+  required final PullCardData pr,
+  required final DateTime occurredAt,
 }) {
   // Check mergedAt first (highest priority)
   if (pr.mergedAt != null) {
-    final mergedDiff = (occurredAt.difference(pr.mergedAt!).inHours).abs();
+    final int mergedDiff = occurredAt.difference(pr.mergedAt!).inHours.abs();
     if (mergedDiff < 24) {
-      return 'merged';
+      return PrVisualState.merged;
     }
   }
-  
+
   // Check closedAt
   if (pr.closedAt != null) {
-    final closedDiff = (occurredAt.difference(pr.closedAt!).inHours).abs();
-    final createdDiff = pr.createdAt != null
-        ? (occurredAt.difference(pr.createdAt!).inHours).abs()
-        : double.infinity;
-    
+    final int closedDiff = occurredAt.difference(pr.closedAt!).inHours.abs();
+    final num createdDiff = occurredAt.difference(pr.createdAt).inHours.abs();
+
     // If occurredAt is closer to closedAt than createdAt, it was closed
     if (closedDiff < createdDiff && closedDiff < 24) {
-      return 'closed';
+      return PrVisualState.closed;
     }
   }
-  
+
   // Default to opened (either createdAt is closer, or other dates not available)
-  if (pr.createdAt != null) {
-    final createdDiff = (occurredAt.difference(pr.createdAt!).inHours).abs();
-    if (createdDiff < 24) {
-      return 'opened';
-    }
+  final int createdDiff = occurredAt.difference(pr.createdAt).inHours.abs();
+  if (createdDiff < 24) {
+    return PrVisualState.open;
   }
-  
+
   // Fallback to current state if dates don't match
-  if (pr.merged) return 'merged';
-  if (pr.state == 'CLOSED') return 'closed';
-  return 'opened';
+  if (pr.pullRequestState == gql.PullRequestState.MERGED)
+    return PrVisualState.merged;
+  if (pr.pullRequestState == gql.PullRequestState.CLOSED)
+    return PrVisualState.closed;
+  return PrVisualState.open;
 }
 
-/// Gets the border/icon color for an issue based on the action that occurred
-/// Uses occurredAt to determine the action, not current state
+/// Gets the border/icon color for an issue based on the action that occurred.
+/// Uses occurredAt to determine the action, not current state.
 Color getIssueActionColor({
-  required IssueCardDataModel issue,
-  required DateTime occurredAt,
+  required final IssueCardData issue,
+  required final DateTime occurredAt,
 }) {
-  final action = getIssueAction(issue: issue, occurredAt: occurredAt);
-  return action == 'closed' ? Colors.red : Colors.green;
+  final IssueVisualState state = getIssueActionState(
+    issue: issue,
+    occurredAt: occurredAt,
+  );
+  return GitHubVisualStyles.fromIssueVisualState(state).color;
 }
 
-/// Gets the border/icon color for a pull request based on the action that occurred
-/// Uses occurredAt to determine the action, not current state
+/// Gets the border/icon color for a pull request based on the action that occurred.
+/// Uses occurredAt to determine the action, not current state.
 Color getPullRequestActionColor({
-  required PullRequestCardDataModel pr,
-  required DateTime occurredAt,
+  required final PullCardData pr,
+  required final DateTime occurredAt,
 }) {
-  final action = getPullRequestAction(pr: pr, occurredAt: occurredAt);
-  switch (action) {
-    case 'merged':
-      return Colors.deepPurple;
-    case 'closed':
-      return Colors.red;
-    case 'opened':
-    default:
-      return Colors.green;
-  }
+  final PrVisualState state = getPullRequestActionState(
+    pr: pr,
+    occurredAt: occurredAt,
+  );
+  return GitHubVisualStyles.fromPrVisualState(state).color;
 }
-

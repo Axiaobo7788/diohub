@@ -1,0 +1,14 @@
+mutation createRef($repositoryId: ID!, $name: String!, $oid: GitObjectID!) {
+  createRef(input: { repositoryId: $repositoryId, name: $name, oid: $oid }) {
+    ref {
+      name
+      prefix
+    }
+  }
+}
+
+mutation deleteRef($refId: ID!) {
+  deleteRef(input: { refId: $refId }) {
+    clientMutationId
+  }
+}

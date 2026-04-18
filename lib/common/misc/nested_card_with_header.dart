@@ -1,5 +1,7 @@
 import 'package:diohub/common/misc/header_card.dart';
-import 'package:diohub/common/misc/nested_card.dart';
+import 'package:diohub/common/misc/inline_container.dart';
+import 'package:diohub/style/app_spacing.dart';
+import 'package:diohub/style/opacities.dart';
 import 'package:diohub/utils/utils.dart';
 import 'package:flutter/material.dart';
 
@@ -44,7 +46,7 @@ class NestedCardWithHeader extends StatelessWidget {
   /// Padding around the header row (default: EdgeInsets.symmetric(horizontal: 4, vertical: 2))
   final EdgeInsetsGeometry? headerPadding;
 
-  /// Padding inside the nested card for child content (default: EdgeInsets.all(8))
+  /// Padding inside the nested card for child content (default: EdgeInsets.all(context.spacing.itemSpacing))
   final EdgeInsetsGeometry? childPadding;
 
   /// Spacing between header and nested card (default: 8)
@@ -63,16 +65,16 @@ class NestedCardWithHeader extends StatelessWidget {
     final Color? headerCardColor = isNested
         ? (context.colorScheme.brightness == Brightness.dark
             ? Color.alphaBlend(
-                Colors.white.withOpacity(0.08),
+                Colors.white.tintSubtle,
                 context.colorScheme.surface,
               )
             : Color.alphaBlend(
-                Colors.black.withOpacity(0.06),
+                Colors.black.faint,
                 context.colorScheme.surface,
               ))
         : null; // null means use default Material card color
 
-    final cardWidget = HeaderCard(
+    final HeaderCard cardWidget = HeaderCard(
       padding: padding,
       headerPadding: headerPadding ??
           (isNested
@@ -85,10 +87,20 @@ class NestedCardWithHeader extends StatelessWidget {
       trailing: trailing,
       footer: footer,
       footerTrailing: footerTrailing,
-      child: NestedCard(
+      child: InlineContainer(
+        backgroundColor: context.colorScheme.brightness == Brightness.dark
+            ? Color.alphaBlend(
+                Colors.white.tintSubtle,
+                context.colorScheme.surface,
+              )
+            : Color.alphaBlend(
+                Colors.black.faint,
+                context.colorScheme.surface,
+              ),
         padding: childPadding ??
-            (isNested ? EdgeInsets.zero : const EdgeInsets.all(8)),
-        // swapColors: isN,
+            (isNested
+                ? EdgeInsets.zero
+                : EdgeInsets.all(context.spacing.itemSpacing)),
         child: child,
       ),
     );

@@ -1,0 +1,7 @@
+# import '../../fragments/repo_card_fields.graphql'
+
+query repoCard($owner: String!, $name: String!) {
+  repository(name: $name, owner: $owner) {
+    ...repoCardFields
+  }
+}

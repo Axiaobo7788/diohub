@@ -1,0 +1,15 @@
+mutation transferIssue($issueId: ID!, $repositoryId: ID!) {
+  transferIssue(input: { issueId: $issueId, repositoryId: $repositoryId }) {
+    issue {
+      id
+      number
+      url
+      repository {
+        name
+        owner {
+          login
+        }
+      }
+    }
+  }
+}

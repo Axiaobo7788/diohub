@@ -1,0 +1,19 @@
+# import '../../fragments/actor.graphql'
+
+mutation dismissVulnerabilityAlert($alertId: ID!, $reason: DismissReason!) {
+  dismissRepositoryVulnerabilityAlert(
+    input: { repositoryVulnerabilityAlertId: $alertId, dismissReason: $reason }
+  ) {
+    repositoryVulnerabilityAlert {
+      id
+      state
+      dismissedAt
+      dismissReason
+      dismisser {
+        ... on Actor {
+          ...actor
+        }
+      }
+    }
+  }
+}

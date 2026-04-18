@@ -1,0 +1,75 @@
+# import '../../fragments/repo_card_fields.graphql'
+# import '../../fragments/repository_info_fields.graphql'
+
+query repositoryInfo(
+  $owner: String!
+  $name: String!
+  $includeInitialRef: Boolean!
+  $initialRef: String!
+  $assignedToYouRepo_issuesQ: String!
+  $yourIssuesRepo_issuesQ: String!
+  $mentionsYouRepo_issuesQ: String!
+  $assignedToYouRepo_pullsQ: String!
+  $yourPullRequestsRepo_pullsQ: String!
+  $mentionsYouRepo_pullsQ: String!
+) {
+  repository(name: $name, owner: $owner) {
+    ...repoCardFields
+    ...repositoryInfoFields
+    initialRef: ref(qualifiedName: $initialRef)
+      @include(if: $includeInitialRef) {
+      name
+      target {
+        __typename
+        ... on Commit {
+          oid
+          tree {
+            oid
+          }
+        }
+      }
+    }
+  }
+  assignedToYouRepo_issues: search(
+    query: $assignedToYouRepo_issuesQ
+    type: ISSUE
+    first: 0
+  ) {
+    issueCount
+  }
+  yourIssuesRepo_issues: search(
+    query: $yourIssuesRepo_issuesQ
+    type: ISSUE
+    first: 0
+  ) {
+    issueCount
+  }
+  mentionsYouRepo_issues: search(
+    query: $mentionsYouRepo_issuesQ
+    type: ISSUE
+    first: 0
+  ) {
+    issueCount
+  }
+  assignedToYouRepo_pulls: search(
+    query: $assignedToYouRepo_pullsQ
+    type: ISSUE
+    first: 0
+  ) {
+    issueCount
+  }
+  yourPullRequestsRepo_pulls: search(
+    query: $yourPullRequestsRepo_pullsQ
+    type: ISSUE
+    first: 0
+  ) {
+    issueCount
+  }
+  mentionsYouRepo_pulls: search(
+    query: $mentionsYouRepo_pullsQ
+    type: ISSUE
+    first: 0
+  ) {
+    issueCount
+  }
+}

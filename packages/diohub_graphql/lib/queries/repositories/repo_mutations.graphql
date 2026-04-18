@@ -1,0 +1,69 @@
+# Repository mutations: star / unstar / update subscription.
+
+mutation addStar($starrableId: ID!) {
+  addStar(input: { starrableId: $starrableId }) {
+    starrable {
+      viewerHasStarred
+      stargazerCount
+    }
+  }
+}
+
+mutation removeStar($starrableId: ID!) {
+  removeStar(input: { starrableId: $starrableId }) {
+    starrable {
+      viewerHasStarred
+      stargazerCount
+    }
+  }
+}
+
+# Named distinctly to avoid serializer name clash with subscription_mutations.updateSubscription.
+mutation updateRepositorySubscription(
+  $subscribableId: ID!
+  $state: SubscriptionState!
+) {
+  updateSubscription(
+    input: { subscribableId: $subscribableId, state: $state }
+  ) {
+    subscribable {
+      viewerSubscription
+      viewerCanSubscribe
+    }
+  }
+}
+
+mutation updateRepositoryTopics($repositoryId: ID!, $topicNames: [String!]!) {
+  updateTopics(
+    input: { repositoryId: $repositoryId, topicNames: $topicNames }
+  ) {
+    invalidTopicNames
+    repository {
+      repositoryTopics(first: 20) {
+        nodes {
+          topic {
+            name
+          }
+        }
+      }
+    }
+  }
+}
+
+mutation archiveRepository($repositoryId: ID!) {
+  archiveRepository(input: { repositoryId: $repositoryId }) {
+    repository {
+      id
+      isArchived
+    }
+  }
+}
+
+mutation unarchiveRepository($repositoryId: ID!) {
+  unarchiveRepository(input: { repositoryId: $repositoryId }) {
+    repository {
+      id
+      isArchived
+    }
+  }
+}

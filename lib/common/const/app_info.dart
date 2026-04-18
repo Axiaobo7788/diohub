@@ -1,5 +1,6 @@
-import 'package:diohub/common/animations/size_expanded_widget.dart';
+import 'package:diohub/common/const/app_tokens.dart';
 import 'package:diohub/common/const/version_info.dart';
+import 'package:diohub/style/app_spacing.dart';
 import 'package:flutter/material.dart';
 
 class AppNameWidget extends StatelessWidget {
@@ -8,16 +9,9 @@ class AppNameWidget extends StatelessWidget {
 
   @override
   Widget build(final BuildContext context) => Text.rich(
-        TextSpan(
+        AppTokens.appNameSpan(
           style:
               Theme.of(context).textTheme.bodyMedium!.copyWith(fontSize: size),
-          children: const <InlineSpan>[
-            TextSpan(text: 'DIO'),
-            TextSpan(
-              text: 'HUB',
-              style: TextStyle(fontWeight: FontWeight.bold),
-            ),
-          ],
         ),
       );
 }
@@ -28,9 +22,9 @@ class AppLogoWidget extends StatelessWidget {
 
   @override
   Widget build(final BuildContext context) => Image.asset(
-        'assets/logo.png',
-        height: size,
+        'assets/icon/splash_logo.png',
         width: size,
+        height: size,
       );
 }
 
@@ -53,22 +47,20 @@ class AppInfoWidget extends StatelessWidget {
         size: nameSize,
       ),
     ];
-    return SizeExpandedSection(
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: <Widget>[
-          if (axis == Axis.vertical)
-            Column(
-              mainAxisSize: MainAxisSize.min,
-              children: children,
-            )
-          else
-            Row(
-              mainAxisSize: MainAxisSize.min,
-              children: children,
-            ),
-        ],
-      ),
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: <Widget>[
+        if (axis == Axis.vertical)
+          Column(
+            mainAxisSize: MainAxisSize.min,
+            children: children,
+          )
+        else
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: children,
+          ),
+      ],
     );
   }
 }
@@ -77,9 +69,9 @@ class AppNameWithVersion extends StatelessWidget {
   const AppNameWithVersion({super.key});
 
   @override
-  Widget build(final BuildContext context) => const Padding(
-        padding: EdgeInsets.all(8),
-        child: Column(
+  Widget build(final BuildContext context) => Padding(
+        padding: context.spacing.chipPadding,
+        child: const Column(
           mainAxisAlignment: MainAxisAlignment.end,
           children: <Widget>[
             AppNameWidget(

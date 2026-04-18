@@ -1,0 +1,53 @@
+query repositoryDeployments(
+  $owner: String!
+  $name: String!
+  $first: Int = 20
+  $after: String
+  $environments: [String!]
+) {
+  repository(owner: $owner, name: $name) {
+    deployments(
+      first: $first
+      after: $after
+      environments: $environments
+      orderBy: { field: CREATED_AT, direction: DESC }
+    ) {
+      totalCount
+      nodes {
+        id
+        commitOid
+        commit {
+          abbreviatedOid
+          message
+        }
+        creator {
+          login
+          avatarUrl
+          ... on User {
+            id
+          }
+        }
+        description
+        environment
+        latestEnvironment
+        latestStatus {
+          state
+          createdAt
+          description
+          logUrl
+        }
+        originalEnvironment
+        state
+        createdAt
+        updatedAt
+        ref {
+          name
+        }
+      }
+      pageInfo {
+        hasNextPage
+        endCursor
+      }
+    }
+  }
+}

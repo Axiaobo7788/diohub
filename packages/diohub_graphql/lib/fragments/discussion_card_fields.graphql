@@ -1,0 +1,68 @@
+# import './actor.graphql'
+# import './label.graphql'
+
+fragment discussionCardFields on Discussion {
+  id
+  number
+  title
+  bodyText
+  url
+  createdAt
+  updatedAt
+  author {
+    ...actor
+  }
+  category {
+    id
+    name
+    emoji
+    isAnswerable
+  }
+  answer {
+    id
+    author {
+      ...actor
+    }
+  }
+  answerChosenAt
+  poll {
+    id
+    question
+    totalVoteCount
+    viewerCanVote
+    viewerHasVoted
+    options(first: 10) {
+      nodes {
+        id
+        option
+        totalVoteCount
+        viewerHasVoted
+      }
+    }
+  }
+  viewerHasUpvoted
+  labels(first: 5) {
+    nodes {
+      ...label
+    }
+  }
+  comments {
+    totalCount
+  }
+  reactions {
+    totalCount
+  }
+  upvoteCount
+  closed
+  closedAt
+  stateReason
+  locked
+  activeLockReason
+  repository {
+    nameWithOwner
+    owner {
+      login
+      avatarUrl
+    }
+  }
+}

@@ -1,0 +1,70 @@
+# import '../../fragments/actor.graphql'
+# import './pr_review_comments.graphql'
+
+query getPullRequestReviewThreads(
+  $owner: String!
+  $name: String!
+  $number: Int!
+  $after: String
+) {
+  repository(owner: $owner, name: $name) {
+    pullRequest(number: $number) {
+      id
+      reviewThreads(first: 25, after: $after) {
+        edges {
+          cursor
+          node {
+            id
+            path
+            line
+            originalLine
+            startLine
+            originalStartLine
+            diffSide
+            startDiffSide
+            isResolved
+            isOutdated
+            isCollapsed
+            resolvedBy {
+              login
+              avatarUrl
+            }
+            viewerCanReply
+            viewerCanResolve
+            viewerCanUnresolve
+            subjectType
+            comments(first: 100) {
+              totalCount
+              pageInfo {
+                hasNextPage
+                endCursor
+              }
+              nodes {
+                ...pullRequestReviewComment
+              }
+            }
+          }
+        }
+        pageInfo {
+          hasNextPage
+          endCursor
+        }
+      }
+    }
+  }
+}
+
+query getSuggestedReviewers($owner: String!, $name: String!, $number: Int!) {
+  repository(owner: $owner, name: $name) {
+    pullRequest(number: $number) {
+      suggestedReviewers {
+        isAuthor
+        isCommenter
+        reviewer {
+          ...actor
+          name
+        }
+      }
+    }
+  }
+}

@@ -1,8 +1,0 @@
-schema: schema.graphql
-extensions:
-  endpoints:
-    Default GraphQL Endpoint:
-      url: https://api.github.com/graphql
-      introspect: false
-      headers:
-        Authorization: token ${auth_token}

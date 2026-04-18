@@ -1,0 +1,17 @@
+fragment repoInfo on Repository {
+  name
+  url
+  viewerHasStarred
+  viewerDefaultMergeMethod
+  mergeCommitTitle
+  mergeCommitMessage
+  squashMergeCommitTitle
+  squashMergeCommitMessage
+  mergeQueue {
+    id
+  }
+  owner {
+    login
+    avatarUrl
+  }
+}

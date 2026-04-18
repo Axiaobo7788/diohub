@@ -1,100 +1,125 @@
 import 'package:diohub/common/markdown_view/markdown_body.dart';
-import 'package:diohub/common/misc/loading_indicator.dart';
-import 'package:diohub/common/wrappers/provider_loading_progress_wrapper.dart';
-import 'package:diohub/common/wrappers/scroll_to_top_wrapper.dart';
-import 'package:diohub/providers/repository/branch_provider.dart';
-import 'package:diohub/providers/repository/readme_provider.dart';
-import 'package:diohub/providers/repository/repository_provider.dart';
-import 'package:flutter/cupertino.dart';
-import 'package:flutter_scroll_to_top/flutter_scroll_to_top.dart';
-import 'package:provider/provider.dart';
+import 'package:diohub/common/misc/markdown_skeleton.dart';
+import 'package:diohub/providers/server_config_provider.dart';
+import 'package:diohub/common/misc/shimmer_scope.dart';
+import 'package:diohub/style/app_spacing.dart';
+import 'package:diohub/utils/utils.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_vector_icons/flutter_vector_icons.dart';
+import 'package:sliver_tools/sliver_tools.dart';
 
-class RepositoryReadme extends StatefulWidget {
-  const RepositoryReadme(
-    this.repoURL, {
+/// Displays a repository README as slivers only for use inside the shell's [AppCustomScrollView].
+/// Use the same [GlobalKey<RepositoryReadmeState>] so [scrollToAnchor] works.
+class RepositoryReadmeSliver extends ConsumerStatefulWidget {
+  const RepositoryReadmeSliver({
+    required this.readmeAsync,
     super.key,
-    this.onHeadingsExtracted,
-    this.onScrollToAnchor,
+    this.branch,
+    this.repoFullName,
   });
 
-  final String? repoURL;
-  final void Function(List<({String text, String id, int level})> headings)?
-      onHeadingsExtracted;
-  final void Function(String anchorId)? onScrollToAnchor;
+  final AsyncValue<String?> readmeAsync;
+  final String? branch;
+  final String? repoFullName;
 
   @override
-  RepositoryReadmeState createState() => RepositoryReadmeState();
+  ConsumerState<RepositoryReadmeSliver> createState() =>
+      RepositoryReadmeState();
 }
 
-class RepositoryReadmeState extends State<RepositoryReadme>
+class RepositoryReadmeState extends ConsumerState<RepositoryReadmeSliver>
     with AutomaticKeepAliveClientMixin {
   @override
   bool get wantKeepAlive => true;
 
-  // GlobalKey to access MarkdownBody state for scrolling to anchors
-  final GlobalKey<MarkdownBodyState> _markdownBodyKey =
-      GlobalKey<MarkdownBodyState>();
+  final GlobalKey<SliverMarkdownBodyState> _markdownBodyKey =
+      GlobalKey<SliverMarkdownBodyState>();
 
-  // Expose scroll function
-  void scrollToAnchor(String anchorId) {
-    print('[RepositoryReadmeState] ====== scrollToAnchor CALLED ======');
-    print('[RepositoryReadmeState] anchorId: "$anchorId"');
-    print(
-        '[RepositoryReadmeState] _markdownBodyKey: ${_markdownBodyKey.toString()}');
-    print(
-        '[RepositoryReadmeState] _markdownBodyKey.currentState is ${_markdownBodyKey.currentState != null ? "not null" : "null"}');
-    if (_markdownBodyKey.currentState != null) {
-      print(
-          '[RepositoryReadmeState] ✓ MarkdownBodyState found, calling scrollToAnchor');
-      print(
-          '[RepositoryReadmeState] MarkdownBodyState type: ${_markdownBodyKey.currentState.runtimeType}');
-      _markdownBodyKey.currentState!.scrollToAnchor(anchorId);
-      print(
-          '[RepositoryReadmeState] scrollToAnchor call to MarkdownBodyState completed');
-    } else {
-      print(
-          '[RepositoryReadmeState] ✗ ERROR: _markdownBodyKey.currentState is null');
-      print(
-          '[RepositoryReadmeState] This means MarkdownBody widget may not be mounted yet');
-    }
+  void scrollToAnchor(final String anchorId) {
+    _markdownBodyKey.currentState?.scrollToAnchor(anchorId);
   }
+
+  List<Widget> _buildSlivers(final BuildContext context) =>
+      widget.readmeAsync.when(
+        loading: () => <Widget>[
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: context.spacing.pagePadding,
+              child: const ShimmerScope(
+                child: MarkdownSkeleton(lineCount: 10),
+              ),
+            ),
+          ),
+        ],
+        error: (final Object error, final StackTrace stack) => <Widget>[
+          SliverFillRemaining(
+            child: Center(
+              child: Text('Error loading README: $error'),
+            ),
+          ),
+        ],
+        data: (final String? readmeHtml) {
+          if (readmeHtml == null) {
+            return const <Widget>[
+              SliverFillRemaining(child: _NoReadmeWidget()),
+            ];
+          }
+          return <Widget>[
+            SliverMarkdownBody(
+              readmeHtml,
+              key: _markdownBodyKey,
+              imgSrcModifiers: createRepoMarkdownImgSrcModifiers(
+                widget.repoFullName,
+                widget.branch,
+                ref.read(activeServerConfigProvider),
+              ),
+              contentPadding: context.spacing.listInset,
+            ),
+          ];
+        },
+      );
 
   @override
   Widget build(final BuildContext context) {
     super.build(context);
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 8),
-      child: ProviderLoadingProgressWrapper<RepoReadmeProvider>(
-        loadingBuilder: (final BuildContext context) => const Padding(
-          padding: EdgeInsets.only(top: 48),
-          child: LoadingIndicator(),
-        ),
-        childBuilder:
-            (final BuildContext context, final RepoReadmeProvider value) {
-          final RepositoryProvider repoProvider =
-              Provider.of<RepositoryProvider>(context);
 
-          return ScrollToTopWrapper(
-            builder: (
-              final BuildContext context,
-              final ScrollViewProperties properties,
-            ) =>
-                SingleChildScrollView(
-              child: MarkdownRenderAPI(
-                value.data!.content!,
-                markdownBodyKey: _markdownBodyKey,
-                repoContext: repoProvider.data.nameWithOwner,
-                branch: Provider.of<RepoBranchProvider>(context).currentSHA,
-                onHeadingsExtracted: (headings) {
-                  // Pass headings to parent callback
-                  widget.onHeadingsExtracted?.call(headings);
-                },
-                onScrollToAnchor: widget.onScrollToAnchor,
-              ),
-            ),
-          );
-        },
-      ),
-    );
+    return MultiSliver(children: _buildSlivers(context));
   }
+}
+
+class _NoReadmeWidget extends StatelessWidget {
+  const _NoReadmeWidget();
+
+  @override
+  Widget build(final BuildContext context) => Center(
+        child: Padding(
+          padding: context.spacing.emptyStatePadding,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: <Widget>[
+              Icon(
+                Octicons.book,
+                size: 48,
+                color: context.colorScheme.onSurfaceVariant.withOpacity(0.4),
+              ),
+              context.spacing.sectionGap,
+              Text(
+                'No README',
+                style: context.textTheme.titleMedium?.copyWith(
+                  color: context.colorScheme.onSurfaceVariant,
+                ),
+              ),
+              context.spacing.tightGap,
+              Text(
+                "This repository doesn't have a README file.",
+                style: context.textTheme.bodySmall?.copyWith(
+                  color: context.colorScheme.onSurfaceVariant.withOpacity(0.7),
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ],
+          ),
+        ),
+      );
 }

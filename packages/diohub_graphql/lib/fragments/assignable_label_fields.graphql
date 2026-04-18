@@ -1,0 +1,39 @@
+# import './actor.graphql'
+# import './label.graphql'
+
+# Concrete-type fragments to avoid gql_code_builder type lookup failure on Assignable/Labelable interfaces.
+fragment assignableAssigneesFieldsIssue on Issue {
+  id
+  assignees(first: 20) {
+    nodes {
+      ...actor
+    }
+  }
+}
+
+fragment assignableAssigneesFieldsPullRequest on PullRequest {
+  id
+  assignees(first: 20) {
+    nodes {
+      ...actor
+    }
+  }
+}
+
+fragment labelableLabelsFieldsIssue on Issue {
+  id
+  labels(first: 100) {
+    nodes {
+      ...label
+    }
+  }
+}
+
+fragment labelableLabelsFieldsPullRequest on PullRequest {
+  id
+  labels(first: 100) {
+    nodes {
+      ...label
+    }
+  }
+}

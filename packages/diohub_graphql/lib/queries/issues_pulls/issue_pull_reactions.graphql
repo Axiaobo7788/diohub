@@ -1,0 +1,65 @@
+# import '../../fragments/actor.graphql'
+
+query getReactors($id: ID!, $reactorsFirst: Int = 11, $reactorsAfter: String) {
+  node(id: $id) {
+    __typename
+    ... on Issue {
+      ...reactableReactionGroups
+    }
+    ... on PullRequest {
+      ...reactableReactionGroups
+    }
+    ... on IssueComment {
+      ...reactableReactionGroups
+    }
+    ... on PullRequestReviewComment {
+      ...reactableReactionGroups
+    }
+    ... on DiscussionComment {
+      ...reactableReactionGroups
+    }
+  }
+}
+
+fragment reactableReactionGroups on Reactable {
+  reactionGroups {
+    ...reactorsGroup
+  }
+}
+
+mutation addReaction($id: ID!, $content: ReactionContent!, $reactorsFirst: Int = 11, $reactorsAfter: String) {
+  addReaction(input: { subjectId: $id, content: $content }) {
+    reactionGroups {
+      ...reactorsGroup
+    }
+  }
+}
+
+mutation removeReaction($id: ID!, $content: ReactionContent!, $reactorsFirst: Int = 11, $reactorsAfter: String) {
+  removeReaction(input: { subjectId: $id, content: $content }) {
+    reaction {
+      createdAt
+    }
+    reactionGroups {
+      ...reactorsGroup
+    }
+  }
+}
+
+fragment reactorsGroup on ReactionGroup {
+  content
+  reactors(first: $reactorsFirst, after: $reactorsAfter) {
+    edges {
+      cursor
+      node {
+        ... on Actor {
+          ...actor
+        }
+      }
+    }
+    pageInfo {
+      hasNextPage
+      endCursor
+    }
+  }
+}

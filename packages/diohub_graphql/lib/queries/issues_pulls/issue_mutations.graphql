@@ -1,0 +1,107 @@
+# import '../../fragments/issue_detail_fields.graphql'
+# import '../../fragments/actor.graphql'
+# import '../../fragments/milestone.graphql'
+
+mutation closeIssue($issueId: ID!, $stateReason: IssueClosedStateReason) {
+  closeIssue(input: { issueId: $issueId, stateReason: $stateReason }) {
+    issue {
+      ...issueDetailFields
+    }
+  }
+}
+
+mutation reopenIssue($issueId: ID!) {
+  reopenIssue(input: { issueId: $issueId }) {
+    issue {
+      ...issueDetailFields
+    }
+  }
+}
+
+mutation updateIssue(
+  $id: ID!
+  $title: String
+  $body: String
+  $state: IssueState
+  $assigneeIds: [ID!]
+  $labelIds: [ID!]
+  $milestoneId: ID
+) {
+  updateIssue(
+    input: {
+      id: $id
+      title: $title
+      body: $body
+      state: $state
+      assigneeIds: $assigneeIds
+      labelIds: $labelIds
+      milestoneId: $milestoneId
+    }
+  ) {
+    issue {
+      ...issueDetailFields
+    }
+  }
+}
+
+mutation editIssueContent($id: ID!, $title: String, $body: String) {
+  updateIssue(input: { id: $id, title: $title, body: $body }) {
+    issue {
+      id
+      title
+      titleHTML
+      body
+      bodyHTML
+      lastEditedAt
+      editor {
+        ... on Actor {
+          ...actor
+        }
+      }
+      userContentEdits {
+        totalCount
+      }
+    }
+  }
+}
+
+mutation setIssueMilestone($id: ID!, $milestoneId: ID) {
+  updateIssue(input: { id: $id, milestoneId: $milestoneId }) {
+    issue {
+      id
+      milestone {
+        ...milestoneFields
+      }
+    }
+  }
+}
+
+mutation createIssue(
+  $repositoryId: ID!
+  $title: String!
+  $body: String
+  $assigneeIds: [ID!]
+  $labelIds: [ID!]
+  $milestoneId: ID
+  $issueTemplate: String
+  $projectIds: [ID!]
+) {
+  createIssue(
+    input: {
+      repositoryId: $repositoryId
+      title: $title
+      body: $body
+      assigneeIds: $assigneeIds
+      labelIds: $labelIds
+      milestoneId: $milestoneId
+      issueTemplate: $issueTemplate
+      projectIds: $projectIds
+    }
+  ) {
+    issue {
+      id
+      number
+      url
+    }
+  }
+}

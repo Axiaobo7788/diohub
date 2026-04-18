@@ -1,0 +1,21 @@
+# import '../../fragments/user_card_fields.graphql'
+# import '../../fragments/organization_card_fields.graphql'
+
+query searchUsers($query: String!, $first: Int!, $after: String) {
+  search(query: $query, type: USER, first: $first, after: $after) {
+    userCount
+    pageInfo {
+      endCursor
+      hasNextPage
+    }
+    nodes {
+      __typename
+      ... on User {
+        ...userCardFields
+      }
+      ... on Organization {
+        ...organizationCardFields
+      }
+    }
+  }
+}

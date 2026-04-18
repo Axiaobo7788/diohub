@@ -1,0 +1,429 @@
+name: Release Pipeline
+
+on:
+  push:
+    branches:
+      - develop
+      - beta
+      - main
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: 'Branch to run pipeline on'
+        required: false
+        type: string
+      force_android:
+        description: 'Force Android release'
+        required: false
+        type: boolean
+        default: false
+      force_ios:
+        description: 'Force iOS release'
+        required: false
+        type: boolean
+        default: false
+
+concurrency:
+  group: pipeline-${{ github.ref_name }}
+  cancel-in-progress: false
+
+jobs:
+  configure:
+    name: Configure (${{ github.ref_name }})
+    runs-on: ubuntu-latest
+    if: "!contains(github.event.head_commit.message, '[skip ci]')"
+    outputs:
+      flavor: ${{ steps.config.outputs.flavor }}
+      build_ios: ${{ steps.config.outputs.build_ios }}
+      play_track: ${{ steps.config.outputs.play_track }}
+      testflight_group: ${{ steps.config.outputs.testflight_group }}
+      prerelease: ${{ steps.config.outputs.prerelease }}
+    steps:
+      - name: Configure build parameters
+        id: config
+        run: |
+          case "${{ github.ref_name }}" in
+            develop)
+              echo "flavor=dev" >> "$GITHUB_OUTPUT"
+              echo "build_ios=true" >> "$GITHUB_OUTPUT"
+              echo "play_track=internal" >> "$GITHUB_OUTPUT"
+              echo "testflight_group=Dev Testers" >> "$GITHUB_OUTPUT"
+              echo "prerelease=true" >> "$GITHUB_OUTPUT"
+              ;;
+            beta)
+              echo "flavor=beta" >> "$GITHUB_OUTPUT"
+              echo "build_ios=true" >> "$GITHUB_OUTPUT"
+              echo "play_track=beta" >> "$GITHUB_OUTPUT"
+              echo "testflight_group=Beta Testers" >> "$GITHUB_OUTPUT"
+              echo "prerelease=true" >> "$GITHUB_OUTPUT"
+              ;;
+            main)
+              echo "flavor=rel" >> "$GITHUB_OUTPUT"
+              echo "build_ios=true" >> "$GITHUB_OUTPUT"
+              echo "play_track=production" >> "$GITHUB_OUTPUT"
+              echo "testflight_group=" >> "$GITHUB_OUTPUT"
+              echo "prerelease=false" >> "$GITHUB_OUTPUT"
+              ;;
+            *)
+              echo "Error: unsupported branch '${{ github.ref_name }}'" >&2
+              exit 1
+              ;;
+          esac
+
+  auto-bump:
+    name: Auto Bump Version
+    runs-on: ubuntu-latest
+    if: "!contains(github.event.head_commit.message, '[skip ci]')"
+    outputs:
+      new_version: ${{ steps.bump.outputs.version }}
+    steps:
+      - name: Generate Bucciarati token
+        id: bucciarati
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ secrets.BUCCIARATI_APP_ID }}
+          private-key: ${{ secrets.BUCCIARATI_APP_KEY }}
+          repositories: diohub,diohub-premium
+
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ steps.bucciarati.outputs.token }}
+          fetch-depth: 0
+
+      - name: Bump version with Cocogitto
+        id: bump
+        run: |
+          # Determine pre-release suffix based on branch
+          case "${{ github.ref_name }}" in
+            develop)
+              cog bump --auto --pre dev || echo "No version bump needed"
+              ;;
+            beta)
+              cog bump --auto --pre beta || echo "No version bump needed"
+              ;;
+            main)
+              cog bump --auto || echo "No version bump needed"
+              ;;
+            *)
+              echo "Branch ${{ github.ref_name }} not configured for auto-bump"
+              exit 0
+              ;;
+          esac
+          
+          # Check if version changed
+          if git diff --quiet HEAD~1 pubspec.yaml 2>/dev/null; then
+            echo "version=unchanged" >> "$GITHUB_OUTPUT"
+          else
+            NEW_VERSION=$(grep '^version:' pubspec.yaml | sed 's/version: *//')
+            echo "version=$NEW_VERSION" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Push changes
+        if: steps.bump.outputs.version != 'unchanged'
+        run: |
+          git push
+          git push --tags
+
+  read-labels:
+    name: Read PR Labels
+    runs-on: ubuntu-latest
+    needs: [configure]
+    if: "!cancelled() && needs.configure.result == 'success'"
+    outputs:
+      do_android: ${{ steps.labels.outputs.do_android }}
+      do_ios: ${{ steps.labels.outputs.do_ios }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Read labels from merged PR
+        id: labels
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # Check for manual override
+          FORCE_ANDROID="${{ inputs.force_android }}"
+          FORCE_IOS="${{ inputs.force_ios }}"
+          
+          if [ "$FORCE_ANDROID" = "true" ] || [ "$FORCE_IOS" = "true" ]; then
+            echo "do_android=${FORCE_ANDROID:-false}" >> "$GITHUB_OUTPUT"
+            echo "do_ios=${FORCE_IOS:-false}" >> "$GITHUB_OUTPUT"
+            echo "Using manual override: Android=$FORCE_ANDROID, iOS=$FORCE_IOS"
+            exit 0
+          fi
+          
+          # Find the merged PR for this commit
+          HEAD_SHA="${{ github.sha }}"
+          PR_JSON=$(gh pr list --state merged --base "${{ github.ref_name }}" \
+            --json labels,mergeCommit --limit 10 2>/dev/null || echo "[]")
+          
+          # Find PR matching this commit
+          MATCHING_PR=$(echo "$PR_JSON" | jq -c \
+            --arg sha "$HEAD_SHA" \
+            '[.[] | select(.mergeCommit.oid == $sha)] | first // empty')
+          
+          if [ -z "$MATCHING_PR" ] || [ "$MATCHING_PR" = "null" ]; then
+            echo "No matching PR found for commit $HEAD_SHA"
+            echo "Defaulting to no release (likely a direct push)"
+            echo "do_android=false" >> "$GITHUB_OUTPUT"
+            echo "do_ios=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          
+          # Extract labels
+          LABELS=$(echo "$MATCHING_PR" | jq -r '.labels[]?.name // empty' || echo "")
+          
+          # Check for release labels
+          DO_ANDROID="false"
+          DO_IOS="false"
+          
+          if echo "$LABELS" | grep -q "^release-android$"; then
+            DO_ANDROID="true"
+          fi
+          
+          if echo "$LABELS" | grep -q "^release-ios$"; then
+            DO_IOS="true"
+          fi
+          
+          echo "do_android=$DO_ANDROID" >> "$GITHUB_OUTPUT"
+          echo "do_ios=$DO_IOS" >> "$GITHUB_OUTPUT"
+          
+          echo "PR labels detected: Android=$DO_ANDROID, iOS=$DO_IOS"
+
+  read-version:
+    name: Read Version Info
+    runs-on: ubuntu-latest
+    needs: [auto-bump, read-labels]
+    if: "!cancelled() && (needs.read-labels.outputs.do_android == 'true' || needs.read-labels.outputs.do_ios == 'true')"
+    outputs:
+      version: ${{ steps.detect.outputs.version }}
+      build_number: ${{ steps.detect.outputs.build_number }}
+      tag: ${{ steps.detect.outputs.tag }}
+      flutter_version: ${{ steps.detect.outputs.flutter_version }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Detect version and build number
+        id: detect
+        run: bash .github/scripts/detect-pipeline-state.sh "${{ github.ref_name }}"
+  
+  detection-briefing:
+    needs: [read-version, read-labels]
+    if: "!cancelled() && needs.read-version.result == 'success' && github.event_name == 'push'"
+    uses: namanshergill/diohub-premium/.github/workflows/_detection-briefing.yaml@main
+    with:
+      do_android: ${{ needs.read-labels.outputs.do_android }}
+      do_ios: ${{ needs.read-labels.outputs.do_ios }}
+      version: ${{ needs.read-version.outputs.version }}
+      build_number: ${{ needs.read-version.outputs.build_number }}
+      tag: ${{ needs.read-version.outputs.tag }}
+      branch: ${{ github.ref_name }}
+      commit_sha: ${{ github.sha }}
+      commit_message: ${{ github.event.head_commit.message }}
+    secrets: inherit
+
+  ensure-draft-release:
+    name: Ensure Draft Release Exists
+    runs-on: ubuntu-latest
+    needs: [read-version, read-labels]
+    if: |
+      !cancelled()
+      && needs.read-version.result == 'success'
+      && (needs.read-labels.outputs.do_android == 'true' || needs.read-labels.outputs.do_ios == 'true')
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Create or verify draft release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          RELEASE_TAG="${{ needs.read-version.outputs.tag }}"
+          
+          echo "Checking for draft release: $RELEASE_TAG"
+          
+          if gh release view "$RELEASE_TAG" --json isDraft --jq '.isDraft' 2>/dev/null | grep -q 'true'; then
+            echo "✓ Draft release already exists: $RELEASE_TAG"
+          elif gh release view "$RELEASE_TAG" 2>/dev/null; then
+            echo "⚠ Release $RELEASE_TAG exists but is not a draft. Will use existing release."
+          else
+            echo "Creating draft release: $RELEASE_TAG"
+            gh release create "$RELEASE_TAG" \
+              --draft \
+              --title "$RELEASE_TAG" \
+              --notes "Draft release for $RELEASE_TAG - will be published after distribution completes"
+            echo "✓ Created draft release: $RELEASE_TAG"
+          fi
+
+  codegen:
+    name: Code Generation
+    needs: [read-version]
+    if: "!cancelled() && needs.read-version.result == 'success'"
+    uses: namanshergill/diohub-premium/.github/workflows/_codegen.yaml@main
+    with:
+      flutter_version: ${{ needs.read-version.outputs.flutter_version }}
+    secrets: inherit
+
+  # ── Release path: build → GitHub release → store distribution ──
+
+  release-android:
+    name: Build Android Release
+    needs: [configure, read-version, read-labels, codegen, ensure-draft-release]
+    if: "!cancelled() && needs.read-labels.outputs.do_android == 'true' && needs.codegen.result == 'success'"
+    uses: namanshergill/diohub-premium/.github/workflows/_release-android.yaml@main
+    with:
+      flavor: ${{ needs.configure.outputs.flavor }}
+      version: ${{ needs.read-version.outputs.version }}
+      build_number: ${{ needs.read-version.outputs.build_number }}
+      flutter_version: ${{ needs.read-version.outputs.flutter_version }}
+      tag: ${{ needs.read-version.outputs.tag }}
+      draft_release_tag: ${{ needs.read-version.outputs.tag }}
+    secrets: inherit
+
+  release-ios:
+    name: Build iOS Release
+    needs: [configure, read-version, read-labels, codegen, ensure-draft-release]
+    if: "!cancelled() && needs.read-labels.outputs.do_ios == 'true' && needs.configure.outputs.build_ios == 'true' && needs.codegen.result == 'success'"
+    uses: namanshergill/diohub-premium/.github/workflows/_release-ios.yaml@main
+    with:
+      flavor: ${{ needs.configure.outputs.flavor }}
+      version: ${{ needs.read-version.outputs.version }}
+      build_number: ${{ needs.read-version.outputs.build_number }}
+      flutter_version: ${{ needs.read-version.outputs.flutter_version }}
+      tag: ${{ needs.read-version.outputs.tag }}
+      draft_release_tag: ${{ needs.read-version.outputs.tag }}
+    secrets: inherit
+
+  release-android-fdroid:
+    name: Build Android OSS (F-Droid)
+    needs: [read-version, read-labels, codegen, ensure-draft-release]
+    if: |
+      !cancelled()
+      && needs.read-labels.outputs.do_android == 'true'
+      && needs.codegen.result == 'success'
+      && github.ref_name == 'main'
+    uses: namanshergill/diohub-premium/.github/workflows/_release-android-fdroid.yaml@main
+    with:
+      version: ${{ needs.read-version.outputs.version }}
+      build_number: ${{ needs.read-version.outputs.build_number }}
+      flutter_version: ${{ needs.read-version.outputs.flutter_version }}
+      tag: ${{ needs.read-version.outputs.tag }}
+      draft_release_tag: ${{ needs.read-version.outputs.tag }}
+    secrets:
+      KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+      KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+      KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+      KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+
+  distribute-android:
+    name: Publish to Google Play
+    needs: [configure, read-version, release-android]
+    if: |
+      always()
+      && needs.read-version.result == 'success'
+      && needs.release-android.result == 'success'
+    uses: namanshergill/diohub-premium/.github/workflows/_distribute-android.yaml@main
+    with:
+      flavor: ${{ needs.configure.outputs.flavor }}
+      version: ${{ needs.read-version.outputs.version }}
+      build_number: ${{ needs.read-version.outputs.build_number }}
+      play_track: ${{ needs.configure.outputs.play_track }}
+      tag: ${{ needs.read-version.outputs.tag }}
+    secrets: inherit
+
+  distribute-ios:
+    name: Publish to TestFlight
+    needs: [configure, read-version, release-ios]
+    if: |
+      always()
+      && needs.read-version.result == 'success'
+      && needs.release-ios.result == 'success'
+      && github.ref_name != 'main'
+    uses: namanshergill/diohub-premium/.github/workflows/_distribute-ios.yaml@main
+    with:
+      flavor: ${{ needs.configure.outputs.flavor }}
+      version: ${{ needs.read-version.outputs.version }}
+      build_number: ${{ needs.read-version.outputs.build_number }}
+      testflight_group: ${{ needs.configure.outputs.testflight_group }}
+      tag: ${{ needs.read-version.outputs.tag }}
+    secrets: inherit
+
+  publish-release:
+    name: Publish GitHub Release
+    needs: [configure, read-version, distribute-android, distribute-ios, release-android-fdroid]
+    if: |
+      always()
+      && needs.read-version.result == 'success'
+      && (needs.distribute-android.result == 'success' || needs.distribute-ios.result == 'success' || needs.release-android-fdroid.result == 'success')
+    uses: namanshergill/diohub-premium/.github/workflows/_publish-release.yaml@main
+    with:
+      tag: ${{ needs.read-version.outputs.tag }}
+      final_tag: ${{ needs.read-version.outputs.tag }}
+      version: ${{ needs.read-version.outputs.version }}
+      build_number: ${{ needs.read-version.outputs.build_number }}
+      prerelease: ${{ needs.configure.outputs.prerelease == 'true' }}
+      branch: ${{ github.ref_name }}
+    secrets: inherit
+
+  bump-build-number:
+    name: Bump Build Number for Next Release
+    runs-on: ubuntu-latest
+    needs: [read-version, publish-release]
+    if: |
+      always()
+      && needs.read-version.result == 'success'
+      && needs.publish-release.result == 'success'
+    steps:
+      - name: Generate Bucciarati token
+        id: bucciarati
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ secrets.BUCCIARATI_APP_ID }}
+          private-key: ${{ secrets.BUCCIARATI_APP_KEY }}
+          repositories: diohub,diohub-premium
+
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ steps.bucciarati.outputs.token }}
+          fetch-depth: 1
+
+      - name: Read pipeline config
+        id: config
+        run: |
+          echo "bot_name=$(yq '.bot.name' .github/pipeline-config.yaml)" >> "$GITHUB_OUTPUT"
+          echo "bot_email=$(yq '.bot.email' .github/pipeline-config.yaml)" >> "$GITHUB_OUTPUT"
+
+      - name: Increment build number
+        run: |
+          CURRENT=$(cat .build-number)
+          NEXT=$((CURRENT + 1))
+          echo "$NEXT" > .build-number
+          
+          echo "✓ Build number bumped: $CURRENT → $NEXT"
+
+      - name: Commit and push
+        run: |
+          git config user.name "${{ steps.config.outputs.bot_name }}"
+          git config user.email "${{ steps.config.outputs.bot_email }}"
+          
+          git add .build-number
+          git commit -m "ci: bump build number to $(cat .build-number) [skip ci]"
+          git push
+          
+          echo "✓ Build number committed and pushed"
+
+  cleanup-on-failure:
+    name: Cleanup on Failure
+    needs: [read-version, release-android, release-ios, distribute-android, distribute-ios]
+    if: failure()
+    uses: namanshergill/diohub-premium/.github/workflows/_cleanup.yaml@main
+    with:
+      platform: ""
+      version: ${{ needs.read-version.outputs.tag }}
+      delete_draft: true
+      delete_tags: false
+    secrets: inherit

@@ -1,168 +1,92 @@
-import 'dart:async';
-
-import 'package:auto_route/auto_route.dart';
-import 'package:diohub/adapters/deep_linking_handler.dart';
-import 'package:diohub/common/misc/shimmer_widget.dart';
-import 'package:diohub/models/events/notifications_model.dart';
-import 'package:diohub/models/issues/issue_comments_model.dart';
-import 'package:diohub/models/issues/issue_event_model.dart';
-import 'package:diohub/models/issues/issue_model.dart';
-import 'package:diohub/services/issues/issues_service.dart';
-import 'package:diohub/view/issues_pulls/issue_pull_screen.dart';
-import 'package:diohub/view/notifications/widgets/notification_cards/basic_notification_card.dart';
-import 'package:diohub/view/notifications/widgets/notification_cards/card_footer.dart';
+import 'package:diohub/common/cards/issue_pull_card.dart';
+import 'package:diohub/common/cards/card_data_state_color_extension.dart';
+import 'package:diohub/common/misc/shimmer_scope.dart';
+import 'package:diohub/common/riverpod/async_value_builder.dart';
+import 'package:diohub_graphql/fragments/fragment_typedefs.dart';
+import 'package:diohub_graphql/queries/issues_pulls/issue_pull_typedefs.dart';
+import 'package:diohub_models/models/entity_ref.dart';
+import 'package:diohub_models/models/events/notifications_model.dart';
+import 'package:diohub/models/events/thread_entity_ref_extension.dart';
+import 'package:diohub/providers/issue_pulls/issue_providers.dart';
+import 'package:diohub/providers/notifications/notifications_service_provider.dart';
+import 'package:diohub/providers/notifications/thread_subscription_provider.dart';
+import 'package:diohub/providers/settings/card_display_provider.dart';
+import 'package:diohub/view/notifications/widgets/notification_cards/notification_card_shared.dart';
+import 'package:diohub/view/notifications/widgets/notification_cards/notification_priority_stripe.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_vector_icons/flutter_vector_icons.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-class IssueNotificationCard extends StatefulWidget {
-  const IssueNotificationCard(
-    this.notification, {
-    required this.refresh,
+/// Issue-type notification: shows loading skeleton then full issue card after fetch.
+///
+/// Uses [issueDetailProvider] so the same cache as the issue screen is used
+/// and optimistic updates are visible. Fallback: if subject URL doesn't parse,
+/// shows nothing.
+class IssueNotificationCard extends ConsumerWidget {
+  const IssueNotificationCard({
+    required this.thread,
+    this.onTap,
     super.key,
   });
-  final NotificationModel notification;
-  final bool refresh;
-  @override
-  IssueNotificationCardState createState() => IssueNotificationCardState();
-}
 
-class IssueNotificationCardState extends State<IssueNotificationCard>
-    with AutomaticKeepAliveClientMixin {
-  late IssueModel issueInfo;
-  late IssueCommentsModel latestComment;
-  IssueEventModel? latestIssueEvent;
-  bool loading = true;
-  double iconSize = 20;
+  final Thread thread;
+  final VoidCallback? onTap;
 
   @override
-  bool get wantKeepAlive => true;
-
-  @override
-  void initState() {
-    unawaited(getInfo());
-    super.initState();
-  }
-
-  Future<void> getInfo() async {
-    // Get more information on issue to display
-    final List<Future<dynamic>> futures = <Future<dynamic>>[
-      IssuesService.getIssueInfo(
-        fullUrl: widget.notification.subject!.url!,
-        refresh: widget.refresh,
-      ),
-      IssuesService.getLatestComment(
-        fullUrl: widget.notification.subject!.latestCommentUrl!,
-        refresh: widget.refresh,
-      ),
-      IssuesService.getIssueEvents(
-        fullUrl: widget.notification.subject!.url!,
-        refresh: widget.refresh,
-      ),
-    ];
-    final List<dynamic> results = await Future.wait(futures);
-    issueInfo = results[0];
-    latestComment = results[1];
-    // Get latest event to compare with the latest comment.
-    final List<IssueEventModel> issueEvents = results[2];
-    if (issueEvents.isNotEmpty) {
-      latestIssueEvent = issueEvents.last;
+  Widget build(final BuildContext context, final WidgetRef ref) {
+    final IssueRef? issueRef = thread.entityRef as IssueRef?;
+    if (issueRef == null) {
+      return const SizedBox.shrink();
     }
-    if (mounted) {
-      setState(() {
-        loading = false;
-      });
-    }
-  }
 
-  @override
-  Widget build(final BuildContext context) {
-    super.build(context);
-    return BasicNotificationCard(
-      iconBuilder: (final BuildContext context) => getIcon(),
-      onTap: () async {
-        await AutoRouter.of(context).push(
-          issuePullScreenRoute(
-            PathData.fromURL(widget.notification.subject!.url!),
+    Future<void> onMarkRead() async =>
+        ref.read(notificationsServiceProvider).markThreadAsRead(thread.id);
+    final AsyncValue<IssueInfo> asyncIssue =
+        ref.watch(issueDetailProvider(issueRef));
+    final bool showPriorityStripe =
+        ref.watch(cardDisplayProvider).showNotificationPriority;
+    Widget wrapWithStripe(Widget card) => showPriorityStripe
+        ? NotificationPriorityStripe(reason: thread.reason, child: card)
+        : card;
+    return AsyncValueBuilder<IssueInfo>(
+      value: asyncIssue,
+      skeleton: (final _) => wrapWithStripe(buildNotificationCardShell(
+        context: context,
+        thread: thread,
+        child: const ShimmerScope(
+          child: IssuePullLoadingCard(),
+        ),
+      )),
+      data: (final IssueInfo data) {
+        final IssueCardData cardFields = data;
+        return wrapWithStripe(buildNotificationCardShell(
+          context: context,
+          thread: thread,
+          onTap: onTap,
+          onMarkRead: onMarkRead,
+          onSwipeMute: () => ref
+              .read(threadSubscriptionProvider(thread.id).notifier)
+              .toggleMute(),
+          borderColor: cardFields.computeStateColor(),
+          child: IssuePullCard.fromIssue(cardFields, compact: true),
+        ));
+      },
+      error: (final _, final __) => wrapWithStripe(buildNotificationCardShell(
+        context: context,
+        thread: thread,
+        onTap: onTap,
+        onMarkRead: onMarkRead,
+        onSwipeMute: () => ref
+            .read(threadSubscriptionProvider(thread.id).notifier)
+            .toggleMute(),
+        child: Text(
+          thread.subject.title,
+          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+            fontWeight: FontWeight.w600,
           ),
-        );
-      },
-      loading: loading,
-      footerBuilder: (final BuildContext context) {
-        if (!loading) {
-          return getIssueFooter();
-        }
-        return Container();
-      },
-      notification: widget.notification,
-    );
-  }
-
-  Widget getIssueFooter() {
-    // If latest event is after latest comment, show in preview.
-    if (latestIssueEvent != null &&
-        latestIssueEvent!.createdAt!.isAfter(latestComment.createdAt!)) {
-      // TODO(namanshergill): Update issue event model and add more cases.
-      if (latestIssueEvent!.event == 'assigned') {
-        return CardFooter(
-          latestIssueEvent!.actor!.avatarUrl,
-          'Assigned #${issueInfo.number} to ${latestIssueEvent!.assignee!.login}',
-          unread: widget.notification.unread,
-        );
-      } else if (latestIssueEvent!.event == 'reopened') {
-        return CardFooter(
-          latestIssueEvent!.actor!.avatarUrl,
-          'Reopened #${issueInfo.number}',
-          unread: widget.notification.unread,
-        );
-      } else if (latestIssueEvent!.event == 'closed') {
-        return CardFooter(
-          latestIssueEvent!.actor!.avatarUrl,
-          'Closed #${issueInfo.number}',
-          unread: widget.notification.unread,
-        );
-      }
-    }
-    // Return latest comment.
-    return CardFooter(
-      latestComment.user!.avatarUrl,
-      latestComment.body,
-      unread: widget.notification.unread,
-    );
-  }
-
-  Widget getIcon() {
-    if (!loading) {
-      if (issueInfo.state == IssueState.CLOSED) {
-        return Icon(
-          Octicons.issue_closed,
-          color: Colors.red,
-          size: iconSize,
-        );
-      } else if (issueInfo.state == IssueState.OPEN) {
-        return Icon(
-          Octicons.issue_opened,
-          color: Colors.green,
-          size: iconSize,
-        );
-      } else if (issueInfo.state == IssueState.REOPENED) {
-        return Icon(
-          Octicons.issue_reopened,
-          color: Colors.green,
-          size: iconSize,
-        );
-      } else {
-        return Icon(
-          Octicons.issue_opened,
-          color: Colors.grey,
-          size: iconSize,
-        );
-      }
-    }
-    return ShimmerWidget(
-      child: Icon(
-        Octicons.issue_opened,
-        size: iconSize,
-      ),
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
+        ),
+      )),
     );
   }
 }

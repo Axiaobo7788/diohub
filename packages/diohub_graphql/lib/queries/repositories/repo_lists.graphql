@@ -1,0 +1,124 @@
+# Repository list queries: labels, assignable users.
+
+query repoLabels(
+  $owner: String!
+  $name: String!
+  $first: Int!
+  $after: String
+  $query: String
+) {
+  repository(owner: $owner, name: $name) {
+    labels(
+      first: $first
+      after: $after
+      query: $query
+      orderBy: { field: NAME, direction: ASC }
+    ) {
+      edges {
+        cursor
+        node {
+          id
+          name
+          color
+          description
+        }
+      }
+      pageInfo {
+        hasNextPage
+        endCursor
+      }
+    }
+  }
+}
+
+query repoAssignableUsers(
+  $owner: String!
+  $name: String!
+  $first: Int!
+  $after: String
+  $query: String
+) {
+  repository(owner: $owner, name: $name) {
+    assignableUsers(first: $first, after: $after, query: $query) {
+      edges {
+        cursor
+        node {
+          id
+          login
+          avatarUrl
+          name
+        }
+      }
+      pageInfo {
+        hasNextPage
+        endCursor
+      }
+    }
+  }
+}
+
+query repositoryMilestones(
+  $owner: String!
+  $name: String!
+  $first: Int!
+  $after: String
+  $states: [MilestoneState!]
+) {
+  repository(owner: $owner, name: $name) {
+    milestones(
+      first: $first
+      after: $after
+      states: $states
+      orderBy: { field: DUE_DATE, direction: ASC }
+    ) {
+      edges {
+        cursor
+        node {
+          id
+          number
+          title
+          description
+          dueOn
+          state
+          progressPercentage
+          closedIssues: issues(states: CLOSED) {
+            totalCount
+          }
+          openIssues: issues(states: OPEN) {
+            totalCount
+          }
+        }
+      }
+      pageInfo {
+        hasNextPage
+        endCursor
+      }
+    }
+  }
+}
+
+query repositoryProjectsV2(
+  $owner: String!
+  $name: String!
+  $first: Int!
+  $after: String
+) {
+  repository(owner: $owner, name: $name) {
+    projectsV2(first: $first, after: $after) {
+      edges {
+        cursor
+        node {
+          id
+          title
+          number
+          url
+          closed
+        }
+      }
+      pageInfo {
+        hasNextPage
+        endCursor
+      }
+    }
+  }
+}

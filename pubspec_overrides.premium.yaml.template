@@ -1,0 +1,12 @@
+# Copy this to pubspec_overrides.yaml for premium builds.
+# This file is gitignored and should never be committed.
+#
+# For local development with the premium plugin:
+#   cp pubspec_overrides.premium.yaml.template pubspec_overrides.yaml
+#   # Then edit the path to point to your local diohub-premium checkout.
+#
+# For CI, the workflow generates this file automatically.
+
+dependency_overrides:
+  diohub_premium_api:
+    path: ../diohub-premium   # Adjust to your local checkout path

@@ -1,3 +1,4 @@
+import 'package:diohub/style/opacities.dart';
 import 'package:flutter/material.dart';
 
 /// Generic timeline widget with left and right children
@@ -67,65 +68,44 @@ class LeftRightTimelineItem extends StatelessWidget {
   final CrossAxisAlignment rightAlignment;
 
   @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final effectiveDotColor = dotColor ?? theme.colorScheme.primary;
-    final effectiveLineColor = lineColor ??
-        theme.colorScheme.outlineVariant.withOpacity(0.5);
-    final effectiveDotBorderColor =
+  Widget build(final BuildContext context) {
+    final ThemeData theme = Theme.of(context);
+    final Color effectiveDotColor = dotColor ?? theme.colorScheme.primary;
+    final Color effectiveLineColor =
+        lineColor ?? theme.colorScheme.outlineVariant.hinted;
+    final Color effectiveDotBorderColor =
         dotBorderColor ?? theme.colorScheme.surface;
 
     return Padding(
       padding: EdgeInsets.symmetric(vertical: verticalPadding),
-      child: IntrinsicHeight(
+      child: CustomPaint(
+        foregroundPainter: _LeftRightTimelinePainter(
+          isFirst: isFirst,
+          isLast: isLast,
+          leftWidth: leftWidth,
+          dotSize: dotSize,
+          horizontalPadding: horizontalPadding,
+          lineThickness: lineThickness,
+          lineColor: effectiveLineColor,
+          dotColor: effectiveDotColor,
+          dotBorderColor: effectiveDotBorderColor,
+        ),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
+          children: <Widget>[
             // Left side
             SizedBox(
               width: leftWidth,
               child: Column(
                 crossAxisAlignment: leftAlignment,
-                children: [leftChild],
+                children: <Widget>[leftChild],
               ),
             ),
 
-            // Timeline line column
-            Padding(
-              padding: EdgeInsets.symmetric(horizontal: horizontalPadding),
-              child: Column(
-                children: [
-                  // Top line (if not first)
-                  if (!isFirst)
-                    Expanded(
-                      child: Container(
-                        width: lineThickness,
-                        color: effectiveLineColor,
-                      ),
-                    ),
-                  // Timeline dot
-                  Container(
-                    width: dotSize,
-                    height: dotSize,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: effectiveDotColor,
-                      border: Border.all(
-                        color: effectiveDotBorderColor,
-                        width: 2,
-                      ),
-                    ),
-                  ),
-                  // Bottom line (if not last)
-                  if (!isLast)
-                    Expanded(
-                      child: Container(
-                        width: lineThickness,
-                        color: effectiveLineColor,
-                      ),
-                    ),
-                ],
-              ),
+            // Timeline dot placeholder (actual dot drawn by painter)
+            SizedBox(
+              width: dotSize + (horizontalPadding * 2),
+              height: dotSize,
             ),
 
             // Right side
@@ -135,7 +115,7 @@ class LeftRightTimelineItem extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: rightAlignment,
                   mainAxisSize: MainAxisSize.min,
-                  children: [rightChild],
+                  children: <Widget>[rightChild],
                 ),
               ),
             ),
@@ -146,4 +126,91 @@ class LeftRightTimelineItem extends StatelessWidget {
   }
 }
 
+/// Custom painter that draws the timeline rail and dot for LeftRightTimelineItem.
+///
+/// Draws vertical lines before and after the dot, and the dot itself,
+/// using the actual widget height determined during layout.
+class _LeftRightTimelinePainter extends CustomPainter {
+  _LeftRightTimelinePainter({
+    required this.isFirst,
+    required this.isLast,
+    required this.leftWidth,
+    required this.dotSize,
+    required this.horizontalPadding,
+    required this.lineThickness,
+    required this.lineColor,
+    required this.dotColor,
+    required this.dotBorderColor,
+  });
 
+  final bool isFirst;
+  final bool isLast;
+  final double leftWidth;
+  final double dotSize;
+  final double horizontalPadding;
+  final double lineThickness;
+  final Color lineColor;
+  final Color dotColor;
+  final Color dotBorderColor;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    // Calculate the center X position of the timeline rail
+    final double centerX = leftWidth + horizontalPadding + (dotSize / 2);
+    final double dotCenterY = dotSize / 2;
+
+    // Draw top line (if not first)
+    if (!isFirst) {
+      final linePaint = Paint()
+        ..color = lineColor
+        ..strokeWidth = lineThickness
+        ..strokeCap = StrokeCap.butt;
+      canvas.drawLine(
+        Offset(centerX, 0),
+        Offset(centerX, dotCenterY),
+        linePaint,
+      );
+    }
+
+    // Draw bottom line (if not last)
+    if (!isLast) {
+      final linePaint = Paint()
+        ..color = lineColor
+        ..strokeWidth = lineThickness
+        ..strokeCap = StrokeCap.butt;
+      canvas.drawLine(
+        Offset(centerX, dotCenterY),
+        Offset(centerX, size.height),
+        linePaint,
+      );
+    }
+
+    // Draw the timeline dot with border
+    final dotRadius = dotSize / 2;
+    
+    // Draw dot background
+    final dotPaint = Paint()
+      ..color = dotColor
+      ..style = PaintingStyle.fill;
+    canvas.drawCircle(Offset(centerX, dotCenterY), dotRadius, dotPaint);
+
+    // Draw dot border
+    final borderPaint = Paint()
+      ..color = dotBorderColor
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2;
+    canvas.drawCircle(Offset(centerX, dotCenterY), dotRadius, borderPaint);
+  }
+
+  @override
+  bool shouldRepaint(covariant _LeftRightTimelinePainter oldDelegate) =>
+      isFirst != oldDelegate.isFirst ||
+      isLast != oldDelegate.isLast ||
+      leftWidth != oldDelegate.leftWidth ||
+      dotSize != oldDelegate.dotSize ||
+      horizontalPadding != oldDelegate.horizontalPadding ||
+      lineThickness != oldDelegate.lineThickness ||
+      lineColor != oldDelegate.lineColor ||
+      dotColor != oldDelegate.dotColor ||
+      dotBorderColor != oldDelegate.dotBorderColor;
+}

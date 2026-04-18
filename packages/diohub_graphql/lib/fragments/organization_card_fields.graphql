@@ -1,0 +1,24 @@
+fragment organizationCardFields on Organization {
+  id
+  login
+  avatarUrl
+  name
+  description
+  url
+  location
+  websiteUrl
+  isVerified
+  viewerIsFollowing
+  membersWithRole(first: 1) {
+    totalCount
+  }
+  pendingMembers(first: 1) {
+    totalCount
+  }
+  repositories(privacy: PUBLIC) {
+    totalCount
+  }
+  teams(first: 1) {
+    totalCount
+  }
+}

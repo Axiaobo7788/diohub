@@ -1,9 +1,11 @@
-import 'dart:math' as math;
-
-import 'package:diohub/utils/utils.dart';
+import 'package:diohub/common/animations/logo_progress_indicator.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-class LoadingIndicator extends StatefulWidget {
+/// A centered loading indicator using the branded logo progress animation.
+///
+/// This is the default loading indicator used throughout the app.
+class LoadingIndicator extends ConsumerWidget {
   const LoadingIndicator({
     super.key,
     this.color,
@@ -14,70 +16,59 @@ class LoadingIndicator extends StatefulWidget {
   final double size;
 
   @override
-  LoadingIndicatorState createState() => LoadingIndicatorState();
-}
-
-class LoadingIndicatorState extends State<LoadingIndicator>
-    with SingleTickerProviderStateMixin {
-  late AnimationController _controller;
-  late Animation<double> _animation;
-
-  @override
-  void initState() {
-    super.initState();
-
-    _controller = (AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 1000),
-    ))
-      ..addListener(() => setState(() {}))
-      ..repeat();
-    _animation = Tween<double>(begin: 0, end: 4).animate(
-      CurvedAnimation(
-        parent: _controller,
-        curve: const Interval(0, 1, curve: Curves.easeOut),
-      ),
-    );
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(final BuildContext context) => Center(
-        child: Transform(
-          transform: Matrix4.identity()..rotateZ((_animation.value) * math.pi),
-          alignment: FractionalOffset.center,
-          child: SizedBox(
-            height: widget.size,
-            width: widget.size,
-            child: Image.asset(
-              'assets/loading.png',
-              color: widget.color ?? context.colorScheme.onBackground,
-              // .withOpacity(0.8),
-            ),
-          ),
+  Widget build(BuildContext context, WidgetRef ref) => Center(
+        child: LogoProgressIndicator(
+          size: size,
+          color: color,
         ),
       );
 }
 
-// import 'package:flutter/material.dart';
-//
-// class LoadingIndicator extends StatelessWidget {
-//   final double size;
-//   final Color color;
-//   final double lineWidth;
-//   LoadingIndicator(
-//       {this.color = white, this.size = 20, this.lineWidth = 3});
-//   @override
-//   Widget build(BuildContext context) {
-//     return SpinKitRing(
-//       color: color,
-//       size: size,
-//       lineWidth: lineWidth,
-//     );
-//   }
-// }
+/// A centered circular progress indicator with customizable size and stroke width.
+///
+/// Used for full-page or section loading states.
+class CenteredSpinner extends ConsumerWidget {
+  const CenteredSpinner({
+    this.size = 36,
+    this.strokeWidth = 4,
+    super.key,
+  });
+
+  final double size;
+  final double strokeWidth;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return Center(
+      child: LogoProgressIndicator(
+        size: size,
+      ),
+    );
+  }
+}
+
+/// A small circular progress indicator for inline button/action loading states.
+///
+/// Optimized for button trailing/leading positions with compact size.
+class ButtonSpinner extends ConsumerWidget {
+  const ButtonSpinner({
+    this.size = 20,
+    this.strokeWidth = 2,
+    this.color,
+    super.key,
+  });
+
+  final double size;
+  final double strokeWidth;
+  final Color? color;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return LogoProgressIndicator(
+      size: size,
+      color: color,
+      showHub: false,
+      showBar: false,
+    );
+  }
+}

@@ -1,6 +1,11 @@
 import 'package:diohub/common/charts/stat_card_widget.dart';
-import 'package:diohub/common/misc/shimmer_widget.dart';
-import 'package:diohub/style/surface_style_theme.dart';
+import 'package:diohub/common/misc/shimmer_bone.dart';
+import 'package:diohub/common/misc/shimmer_scope.dart';
+import 'package:diohub/style/app_spacing.dart';
+import 'package:diohub/style/contribution_colors.dart';
+import 'package:diohub/style/opacities.dart';
+import 'package:diohub/style/surface_ext.dart';
+import 'package:diohub/style/surface_style.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_vector_icons/flutter_vector_icons.dart';
 
@@ -34,30 +39,30 @@ class ContributionStatisticsSection extends StatelessWidget {
   final void Function(String statType)? onStatTap;
 
   @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
+  Widget build(final BuildContext context) {
+    final ThemeData theme = Theme.of(context);
+    final ColorScheme colorScheme = theme.colorScheme;
 
-    final stats = <StatCardData>[
+    final List<StatCardData> stats = <StatCardData>[
       StatCardData(
         icon: Octicons.git_commit,
         value: _formatNumber(commits),
         label: 'Commits',
-        color: Colors.green.shade400,
+        color: ContributionColors.commit,
         onTap: onStatTap != null ? () => onStatTap!('commits') : null,
       ),
       StatCardData(
         icon: Octicons.git_pull_request,
         value: _formatNumber(pullRequests),
         label: 'Pull Requests',
-        color: Colors.blue.shade400,
+        color: ContributionColors.pullRequest,
         onTap: onStatTap != null ? () => onStatTap!('pullRequests') : null,
       ),
       StatCardData(
         icon: Octicons.issue_opened,
         value: _formatNumber(issues),
         label: 'Issues',
-        color: Colors.purple.shade400,
+        color: ContributionColors.issue,
         onTap: onStatTap != null ? () => onStatTap!('issues') : null,
       ),
       if (reviews != null)
@@ -65,34 +70,39 @@ class ContributionStatisticsSection extends StatelessWidget {
           icon: Octicons.check,
           value: _formatNumber(reviews!),
           label: 'Reviews',
-          color: Colors.orange.shade400,
+          color: ContributionColors.review,
           onTap: onStatTap != null ? () => onStatTap!('reviews') : null,
         ),
     ];
 
+    final AppSpacing spacing = context.spacing;
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+      padding: EdgeInsets.symmetric(
+        horizontal: spacing.itemSpacing,
+        vertical: spacing.itemSpacing,
+      ),
       child: Material(
         color: colorScheme.surfaceContainerLow,
-        borderRadius: Theme.of(context)
-            .surfaceStyle
-            .borderRadius(size: BorderRadiusSize.medium),
+        borderRadius: context.radius(RadiusSize.medium),
         child: Padding(
-          padding: const EdgeInsets.all(12),
+          padding: context.spacing.contentPadding,
           child: Row(
-            children: stats.asMap().entries.map((entry) {
-              final index = entry.key;
-              final stat = entry.value;
+            children: stats
+                .asMap()
+                .entries
+                .map((final MapEntry<int, StatCardData> entry) {
+              final int index = entry.key;
+              final StatCardData stat = entry.value;
               return Expanded(
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
+                  children: <Widget>[
                     if (index > 0)
                       Container(
                         width: 1,
                         height: 20,
-                        margin: const EdgeInsets.symmetric(horizontal: 8),
-                        color: colorScheme.outlineVariant.withOpacity(0.3),
+                        margin: context.spacing.listInset,
+                        color: colorScheme.outlineVariant.borderO,
                       ),
                     Expanded(
                       child: StatCardWidget(
@@ -102,8 +112,10 @@ class ContributionStatisticsSection extends StatelessWidget {
                         color: stat.color,
                         onTap: stat.onTap,
                         padding: const EdgeInsets.symmetric(
-                            vertical: 8, horizontal: 4),
-                        iconSize: 12.0,
+                          vertical: 8,
+                          horizontal: 4,
+                        ),
+                        iconSize: 12,
                       ),
                     ),
                   ],
@@ -116,7 +128,7 @@ class ContributionStatisticsSection extends StatelessWidget {
     );
   }
 
-  String _formatNumber(int number) {
+  String _formatNumber(final int number) {
     if (number < 1000) return number.toString();
     if (number < 1000000) return '${(number / 1000).toStringAsFixed(1)}k';
     return '${(number / 1000000).toStringAsFixed(1)}M';
@@ -128,42 +140,45 @@ class ContributionStatisticsSectionLoading extends StatelessWidget {
   const ContributionStatisticsSectionLoading({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
+  Widget build(final BuildContext context) {
+    final ColorScheme colorScheme = Theme.of(context).colorScheme;
+    final AppSpacing spacing = context.spacing;
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+      padding: EdgeInsets.symmetric(
+        horizontal: spacing.itemSpacing,
+        vertical: spacing.itemSpacing,
+      ),
       child: Material(
         color: colorScheme.surfaceContainerLow,
-        borderRadius: Theme.of(context)
-            .surfaceStyle
-            .borderRadius(size: BorderRadiusSize.medium),
+        borderRadius: context.radius(RadiusSize.medium),
         child: Padding(
-          padding: const EdgeInsets.all(12),
-          child: Row(
-            children: List.generate(4, (index) {
-              return Expanded(
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    if (index > 0)
-                      Container(
-                        width: 1,
-                        height: 20,
-                        margin: const EdgeInsets.symmetric(horizontal: 8),
-                        color: Colors.grey.withOpacity(0.3),
+          padding: context.spacing.contentPadding,
+          child: ShimmerScope(
+            child: Row(
+              children: List.generate(
+                4,
+                (final int index) => Expanded(
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: <Widget>[
+                      if (index > 0)
+                        Container(
+                          width: 1,
+                          height: 20,
+                          margin: context.spacing.listInset,
+                          color: Colors.grey.borderO,
+                        ),
+                      const Expanded(
+                        child: ShimmerBone.block(
+                          height: 40,
+                          radiusSize: RadiusSize.small,
+                        ),
                       ),
-                    Expanded(
-                      child: ShimmerWidget.container(
-                        height: 40,
-                        borderRadius: Theme.of(context)
-                            .surfaceStyle
-                            .borderRadius(size: BorderRadiusSize.small),
-                      ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
-              );
-            }),
+              ),
+            ),
           ),
         ),
       ),

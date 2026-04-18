@@ -1,7 +1,7 @@
+import 'package:diohub/style/surface_ext.dart';
+import 'package:diohub/style/surface_style.dart';
 import 'package:diohub/utils/utils.dart';
 import 'package:flutter/material.dart';
-import 'package:diohub/style/surface_style_theme.dart';
-import 'package:diohub/common/misc/surface_shape_resolver.dart';
 
 /// Enum to specify the highlight style
 enum HighlightStyle {
@@ -25,7 +25,7 @@ class HighlightedContainer extends StatelessWidget {
     this.backgroundColor,
     this.borderSide = BorderSideType.bottom,
     this.borderWidth = 0.5,
-    this.size = BorderRadiusSize.medium,
+    this.size = RadiusSize.medium,
     super.key,
   });
 
@@ -45,45 +45,42 @@ class HighlightedContainer extends StatelessWidget {
   final double borderWidth;
 
   /// Border radius size (standardized)
-  final BorderRadiusSize size;
+  final RadiusSize size;
 
-  // TODO: Fetch from app settings
+  // Future: Fetch from app settings.
   static const HighlightStyle _style = HighlightStyle.elevation;
 
-  /// Convert BorderSideType to CornerSide list for opposite corners
-  List<CornerSide> _getOppositeCorners(BorderSideType side) {
+  /// Convert BorderSideType to Corner list for opposite corners
+  List<Corner> _getOppositeCorners(final BorderSideType side) {
     switch (side) {
       case BorderSideType.top:
-        return const [CornerSide.bottom];
+        return CornerGroups.bottom;
       case BorderSideType.bottom:
-        return const [CornerSide.top];
+        return CornerGroups.top;
       case BorderSideType.left:
-        return const [CornerSide.right];
+        return CornerGroups.right;
       case BorderSideType.right:
-        return const [CornerSide.left];
+        return CornerGroups.left;
     }
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(final BuildContext context) {
     if (_style == HighlightStyle.elevation) {
       // Elevation mode: use Material with elevation and squircle shape
-      final shape = SurfaceShapeResolver.shape(
-        context,
-        size: size,
-      );
+      final ShapeBorder shape = context.surfaceShape(size);
 
       return Material(
         color: backgroundColor ?? context.colorScheme.onSurface,
         shape: shape,
         elevation: 1,
-          child: child,
+        child: child,
       );
     } else {
       // Border mode: use colored border on one side with squircle support
-      final clipCorners = _getOppositeCorners(borderSide);
+      final List<Corner> clipCorners = _getOppositeCorners(borderSide);
 
-      final borderSideValue = BorderSide(
+      final BorderSide borderSideValue = BorderSide(
         color: highlightColor.withValues(alpha: 0.7),
         width: borderWidth,
       );
@@ -92,28 +89,23 @@ class HighlightedContainer extends StatelessWidget {
       switch (borderSide) {
         case BorderSideType.top:
           border = Border(top: borderSideValue);
-          break;
         case BorderSideType.bottom:
           border = Border(bottom: borderSideValue);
-          break;
         case BorderSideType.left:
           border = Border(left: borderSideValue);
-          break;
         case BorderSideType.right:
           border = Border(right: borderSideValue);
-          break;
       }
 
-      final decoration = SurfaceShapeResolver.boxDecoration(
-        context,
-        size: size,
+      final Decoration decoration = context.surfaceDecoration(
+        size,
         corners: clipCorners,
-            border: border,
+        border: border,
       );
 
       return DecoratedBox(
         decoration: decoration,
-          child: child,
+        child: child,
       );
     }
   }

@@ -1,57 +1,59 @@
-import 'package:diohub/common/animations/scale_expanded_widget.dart';
+import 'package:diohub/app/app_logger.dart';
+import 'package:diohub/common/animations/animations.dart';
 import 'package:diohub/common/bottom_sheet/bottom_sheets.dart';
-import 'package:diohub/common/misc/ink_pot.dart';
+import 'package:diohub/common/bottom_sheet/paginated_list_sheet.dart';
+import 'package:diohub/common/misc/bordered_container.dart';
 import 'package:diohub/common/misc/profile_banner.dart';
-import 'package:diohub/common/misc/shimmer_widget.dart';
-import 'package:diohub/common/misc/tappable_card.dart';
-import 'package:diohub/common/wrappers/api_wrapper_widget.dart';
-import 'package:diohub/graphql/__generated__/schema.schema.gql.dart';
-import 'package:diohub/graphql/queries/issues_pulls/__generated__/issue_pull_info.data.gql.dart';
-import 'package:diohub/graphql/queries/issues_pulls/__generated__/timeline.data.gql.dart';
-import 'package:diohub/services/issues/issues_service.dart';
+import 'package:diohub/common/misc/shimmer_scope.dart';
+import 'package:diohub/common/pagination/item_patch.dart';
+import 'package:diohub/common/pagination/page_source.dart';
+import 'package:diohub/common/pagination/pagination_controller.dart';
+import 'package:diohub_graphql/schema_typedefs.dart';
+import 'package:diohub_graphql/fragments/fragment_typedefs.dart';
+import 'package:diohub_graphql/fragments/common_exports.dart';
+import 'package:diohub_graphql/queries/issues_pulls/issue_pull_typedefs.dart'
+    show Actor;
+
+import 'package:diohub/common/notifications/notification_service.dart';
+import 'package:diohub/common/riverpod/mutation_state.dart';
+import 'package:diohub/providers/haptic_service_provider.dart';
+import 'package:diohub/providers/issue_pulls/reactions_provider.dart';
+import 'package:diohub/style/app_spacing.dart';
+import 'package:diohub/style/opacities.dart';
 import 'package:diohub/utils/utils.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_reaction_button/flutter_reaction_button.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-String getReaction(final GReactionContent reaction) {
-  switch (reaction) {
-    case GReactionContent.THUMBS_UP:
-      return '👍';
-    case GReactionContent.THUMBS_DOWN:
-      return '👎';
-
-    case GReactionContent.LAUGH:
-      return '😄';
-    case GReactionContent.CONFUSED:
-      return '😕';
-    case GReactionContent.HEART:
-      return '❤️';
-    case GReactionContent.HOORAY:
-      return '🎉';
-    case GReactionContent.ROCKET:
-      return '🚀';
-    case GReactionContent.EYES:
-      return '👀';
-    default:
-      return '';
-  }
+extension ReactionContentEmoji on ReactionContent {
+  String get emoji => switch (this) {
+        ReactionContent.THUMBS_UP => '👍',
+        ReactionContent.THUMBS_DOWN => '👎',
+        ReactionContent.LAUGH => '😄',
+        ReactionContent.HOORAY => '🎉',
+        ReactionContent.CONFUSED => '😕',
+        ReactionContent.HEART => '❤️',
+        ReactionContent.ROCKET => '🚀',
+        ReactionContent.EYES => '👀',
+        _ => '?',
+      };
 }
 
 Widget _shimmer(final Widget child, final bool shimmer) =>
-    shimmer ? ShimmerWidget(child: child) : child;
+    shimmer ? ShimmerScope(child: child) : child;
 
-class ReactionBar extends StatefulWidget {
+class ReactionBar extends ConsumerStatefulWidget {
   const ReactionBar(
     this.reactionGroups, {
     required this.viewerCanReact,
     super.key,
   });
 
-  final List<GreactionGroups> reactionGroups;
+  final List<ReactionGroupData> reactionGroups;
   final bool viewerCanReact;
 
   @override
-  State<ReactionBar> createState() => _ReactionBarState();
+  ConsumerState<ReactionBar> createState() => _ReactionBarState();
 }
 
 class ReactionInfo {
@@ -60,7 +62,7 @@ class ReactionInfo {
   })  : reactorsCount = selectedReaction.reactors.totalCount,
         viewerHasReacted = selectedReaction.viewerHasReacted;
 
-  final GreactionGroups selectedReaction;
+  final ReactionGroupData selectedReaction;
   int reactorsCount;
   bool viewerHasReacted;
 
@@ -75,59 +77,42 @@ class ReactionInfo {
   }
 }
 
-class _ReactionBarState extends State<ReactionBar> {
-  bool loading = false;
+class _ReactionBarState extends ConsumerState<ReactionBar> {
+  MutationState<void> _mutationState = MutationState.idle();
   ReactionInfo? selectedReaction;
   late final List<ReactionInfo> reactionsInfo;
 
-  Future<ReactionInfo> _updateReaction(final ReactionInfo value) async {
-    setState(() {
-      loading = true;
-    });
-    try {
-      return await updateReaction(
-        value,
-        selectedReaction: (selectedReaction) {
-          this.selectedReaction = selectedReaction;
-        },
-      );
-    } finally {
-      setState(() {
-        loading = false;
-      });
-    }
-  }
+  String get _subjectId => widget.reactionGroups.first.subject.id;
 
-  static Future<ReactionInfo> updateReaction(final ReactionInfo value,
-      {final void Function(ReactionInfo? selectedReaction)?
-          selectedReaction}) async {
+  Future<ReactionInfo> _updateReaction(final ReactionInfo value) async {
+    if (_mutationState.isLoading) return value;
+    ref.read(hapticServiceProvider).lightImpact();
+    setState(() => _mutationState = MutationState.loading());
     try {
       if (value.viewerHasReacted) {
-        await IssuesService.removeReaction(
-          value.selectedReaction.content,
-          value.selectedReaction.subject.id,
-        );
-        selectedReaction?.call(null);
+        await ref
+            .read(reactionsProvider(_subjectId).notifier)
+            .removeReaction(value.selectedReaction.content);
+        if (mounted) setState(() => selectedReaction = null);
         return value..unReact();
-
-        // return value.();
-        // final newValue = value.viewerHasReacted;
-        // value.viewerHasReacted = false;
-        // value.reactors.totalCount--;
       } else {
-        await IssuesService.addReaction(
-          value.selectedReaction.content,
-          value.selectedReaction.subject.id,
-        );
-        selectedReaction?.call(value);
+        await ref
+            .read(reactionsProvider(_subjectId).notifier)
+            .addReaction(value.selectedReaction.content);
+        if (mounted) setState(() => selectedReaction = value);
         return value..react();
-
-        // value.viewerHasReacted = true;
-        // value.reactors.totalCount++;
       }
-    } on Exception catch (e) {
-      debugPrint(e.toString());
-      rethrow;
+    } catch (e, st) {
+      AppLogger.warning(
+        'Reaction update failed',
+        error: e,
+        stackTrace: st,
+        tag: 'ReactionBar',
+      );
+      ref.read(notificationServiceProvider).error('Failed to update reaction');
+      return value;
+    } finally {
+      if (mounted) setState(() => _mutationState = MutationState.idle());
     }
   }
 
@@ -135,17 +120,19 @@ class _ReactionBarState extends State<ReactionBar> {
   void initState() {
     reactionsInfo = genInfo(
       widget.reactionGroups,
-      selectedReaction: (selectedReaction) {
+      selectedReaction: (final ReactionInfo? selectedReaction) {
         this.selectedReaction = selectedReaction;
       },
     );
     super.initState();
   }
 
-  static List<ReactionInfo> genInfo(final List<GreactionGroups> reactionGroups,
-      {final void Function(ReactionInfo? selectedReaction)? selectedReaction}) {
+  static List<ReactionInfo> genInfo(
+    final List<ReactionGroupData> reactionGroups, {
+    final void Function(ReactionInfo? selectedReaction)? selectedReaction,
+  }) {
     final List<ReactionInfo> reactionsInfo = <ReactionInfo>[];
-    for (final GreactionGroups element in reactionGroups) {
+    for (final ReactionGroupData element in reactionGroups) {
       if (element.viewerHasReacted) {
         selectedReaction?.call(
           ReactionInfo(
@@ -168,7 +155,7 @@ class _ReactionBarState extends State<ReactionBar> {
           Flexible(
             child: SingleChildScrollView(
               scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.symmetric(horizontal: 8),
+              padding: context.spacing.listInset,
               physics: const BouncingScrollPhysics(),
               child: Row(
                 children: <Widget>[
@@ -178,33 +165,44 @@ class _ReactionBarState extends State<ReactionBar> {
                         horizontal: 2,
                         vertical: 4,
                       ),
-                      child: loading
-                          ? buildReactionButton(loading: loading)
+                      child: _mutationState.isLoading
+                          ? buildReactionButton(
+                              loading: _mutationState.isLoading)
                           : AppReactionButton(
                               reactionGroups: widget.reactionGroups,
-                              loading: loading,
+                              loading: _mutationState.isLoading,
+                              onReactionChanged: _updateReaction,
                             ),
                     ),
                   ...List<Widget>.generate(
                     widget.reactionGroups.length,
-                    (final int index) => ScaleSwitch(
-                      visible: reactionsInfo[index].reactorsCount > 0,
-                      child: IgnorePointer(
-                        ignoring: loading,
-                        child: ReactionItem(
-                          reactionsInfo[index],
-                          onTap: loading || !widget.viewerCanReact
-                              ? null
-                              : (final ReactionInfo group) async {
-                                  try {
-                                    await updateReaction(group);
-                                  } on Exception catch (e) {
-                                    debugPrint(e.toString());
-                                  }
-                                },
-                        ),
-                      ),
-                    ),
+                    (final int index) => reactionsInfo[index].reactorsCount > 0
+                        ? AnimatedContentSwitcher(
+                            transition: AnimationTransition.fadeScale,
+                            key: ValueKey(reactionsInfo[index].reactorsCount),
+                            child: IgnorePointer(
+                              ignoring: _mutationState.isLoading,
+                              child: ReactionItem(
+                                reactionsInfo[index],
+                                onTap: _mutationState.isLoading ||
+                                        !widget.viewerCanReact
+                                    ? null
+                                    : (final ReactionInfo group) async {
+                                        try {
+                                          await _updateReaction(group);
+                                        } on Exception catch (e, stackTrace) {
+                                          AppLogger.error(
+                                            'Failed to update reaction',
+                                            error: e,
+                                            stackTrace: stackTrace,
+                                            tag: 'Reactions',
+                                          );
+                                        }
+                                      },
+                              ),
+                            ),
+                          )
+                        : const SizedBox.shrink(),
                   ),
                 ],
               ),
@@ -223,7 +221,6 @@ class _ReactionBarState extends State<ReactionBar> {
             child: _shimmer(
               const Icon(
                 Icons.emoji_emotions_rounded,
-                // color: Provider.of<PaletteSettings>(
                 //   context,
                 // ).currentSetting.faded3,
                 size: 18,
@@ -235,163 +232,167 @@ class _ReactionBarState extends State<ReactionBar> {
       );
 }
 
-class ReactionItem extends StatefulWidget {
+class ReactionItem extends ConsumerStatefulWidget {
   const ReactionItem(this.reactionGroup, {this.onTap, super.key});
 
   final ReactionInfo reactionGroup;
   final Future<void> Function(ReactionInfo group)? onTap;
 
   @override
-  ReactionItemState createState() => ReactionItemState();
+  ConsumerState<ReactionItem> createState() => ReactionItemState();
 }
 
-class ReactionItemState extends State<ReactionItem> {
-  Future<void> changeReaction() async {
-    if (mounted) {
-      setState(
-        () {
-          loading = true;
-        },
-      );
-    }
-    await widget.onTap?.call(widget.reactionGroup);
+class ReactionItemState extends ConsumerState<ReactionItem> {
+  bool _loading = false;
 
+  Future<void> changeReaction() async {
+    if (_loading) return;
     if (mounted) {
       setState(() {
-        loading = false;
+        _loading = true;
       });
+    }
+    try {
+      await widget.onTap?.call(widget.reactionGroup);
+    } catch (e, st) {
+      AppLogger.warning(
+        'Reaction toggle failed',
+        error: e,
+        stackTrace: st,
+      );
+      if (mounted) {
+        ref.read(notificationServiceProvider).error(e.toString());
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _loading = false;
+        });
+      }
     }
   }
 
-  bool loading = false;
-
   @override
   Widget build(final BuildContext context) {
-    final GreactionGroups reactionGroup = widget.reactionGroup.selectedReaction;
+    final ReactionGroupData reactionGroup =
+        widget.reactionGroup.selectedReaction;
 
-    return BasicCard(
-      color: cardColor(context),
-      child: InkPot(
-        onTap: widget.onTap != null ? changeReaction : null,
-        onLongPress: () async {
-          await _showUsersInSheet(context, reactionGroup);
-        },
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 4),
-          child: SizedBox(
-            height: 36,
-            child: _shimmer(
-              Row(
-                mainAxisSize: MainAxisSize.min,
-                children: <Widget>[
-                  const SizedBox(
-                    width: 8,
-                  ),
-                  Text(
-                    getReaction(
-                      widget.reactionGroup.selectedReaction.content,
-                    ),
-                  ),
-                  const SizedBox(
-                    width: 8,
-                  ),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 8),
-                    child: Text(
-                      widget.reactionGroup.reactorsCount.toString(),
-                      style: context.textTheme.labelMedium?.copyWith(
-                        color: widget.reactionGroup.viewerHasReacted
-                            ? context.colorScheme.onTertiary
-                            : context.colorScheme.onTertiaryContainer,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(
-                    width: 8,
-                  ),
-                ],
+    return BorderedContainer(
+      backgroundColor: cardColor(context),
+      onTap: widget.onTap != null ? changeReaction : null,
+      onLongPress: () async {
+        await _showUsersInSheet(context, reactionGroup);
+      },
+      padding: const EdgeInsets.symmetric(horizontal: 4),
+      child: SizedBox(
+        height: 36,
+        child: _shimmer(
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: <Widget>[
+              context.spacing.itemGap,
+              Text(
+                widget.reactionGroup.selectedReaction.content.emoji,
               ),
-              loading,
-            ),
+              context.spacing.itemGap,
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 8),
+                child: Text(
+                  widget.reactionGroup.reactorsCount.toString(),
+                  style: context.textTheme.labelMedium?.copyWith(
+                    color: widget.reactionGroup.viewerHasReacted
+                        ? context.colorScheme.onTertiary
+                        : context.colorScheme.onTertiaryContainer,
+                  ),
+                ),
+              ),
+              context.spacing.itemGap,
+            ],
           ),
+          _loading,
         ),
       ),
     );
   }
 
   Color cardColor(final BuildContext context) {
-    final color = widget.reactionGroup.viewerHasReacted
+    final Color color = widget.reactionGroup.viewerHasReacted
         ? context.colorScheme.tertiary
         : context.colorScheme.tertiaryContainer;
 
     if (widget.onTap == null) {
-      return color.asDisabled();
+      return color.withValues(alpha: 0.5);
     } else {
       return color;
     }
   }
 
   Future<void> _showUsersInSheet(
-      final BuildContext context, final GreactionGroups reactionGroup) async {
-    await showScrollableBottomSheet(
+    final BuildContext context,
+    final ReactionGroupData reactionGroup,
+  ) async {
+    final subjectId = reactionGroup.subject.id;
+    final content = reactionGroup.content;
+    final getReactorsPage = ref.read(getReactorsPageProvider);
+    await AppSheet.scrollable(
       context,
-      headerBuilder: (final BuildContext context, final StateSetter setState) =>
-          BottomSheetHeaderText(
-        headerText: getReaction(reactionGroup.content),
+      header: AppSheetHeader.text(
+        reactionGroup.content.emoji,
+        trailing: CloseButton(onPressed: () => Navigator.of(context).pop()),
       ),
-      scrollableBodyBuilder: (
+      bodyBuilder: (
         final BuildContext context,
         final StateSetter setState,
         final ScrollController scrollController,
       ) =>
-          APIWrapper<List<GreactorsGroup_reactors_edges?>>.deferred(
-        apiCall: ({required final bool refresh}) => IssuesService.getReactors(
-          reactionGroup.subject.id,
-          reactionGroup.content,
-        ),
-        builder: (
-          final BuildContext context,
-          final List<GreactorsGroup_reactors_edges?> data,
-        ) =>
-            Padding(
-          padding: const EdgeInsets.symmetric(
-            horizontal: 16,
-            vertical: 4,
+          PaginatedListSheetBody<ReactorsGroupEdge?>(
+        scrollController: scrollController,
+        createController: () =>
+            PaginationController<ReactorsGroupEdge?, ReactorsGroupEdge?>(
+          source: CursorForwardSource<ReactorsGroupEdge?>(
+            fetch: ({required int first, String? after}) =>
+                getReactorsPage(subjectId, content, first: first, after: after),
           ),
-          child: ListView(
-            controller: scrollController,
-            children: <Widget>[
-              ...List<Widget>.generate(
-                data.length,
-                // shrinkWrap: true,
-                (final int index) {
-                  final Gactor actor = data[index]!.node as Gactor;
-                  return Card(
-                    margin: const EdgeInsets.symmetric(vertical: 4),
-                    child: Row(
-                      children: <Widget>[
-                        Expanded(
-                          child: ProfileTile.login(
-                            avatarUrl: actor.avatarUrl.toString(),
-                            padding: const EdgeInsets.all(16),
-                            userLogin: actor.login,
-                          ),
-                        ),
-                      ],
+          idOf: (final ReactorsGroupEdge? e) => e?.cursor ?? '',
+          pageSize: 20,
+        ),
+        itemBuilder: (
+          final BuildContext context,
+          final WidgetRef ref,
+          final ReactorsGroupEdge? edge,
+          final int index,
+          final void Function(ItemPatch patch) applyPatch,
+        ) {
+          if (edge == null) return const SizedBox.shrink();
+          final Actor actor = edge.node as Actor;
+          return Padding(
+            padding:
+                EdgeInsets.symmetric(vertical: context.spacing.itemSpacing),
+            child: BorderedContainer(
+              padding: EdgeInsets.zero,
+              child: Row(
+                children: <Widget>[
+                  Expanded(
+                    child: ProfileTile.login(
+                      avatarUrl: actor.avatarUrl.toString(),
+                      padding: context.spacing.pagePadding,
+                      userLogin: actor.login,
                     ),
-                  );
-                },
-              ),
-              if (widget.reactionGroup.selectedReaction.reactors.totalCount -
-                      data.length >
-                  0)
-                Padding(
-                  padding: const EdgeInsets.all(8),
-                  child: Text(
-                    '+ ${widget.reactionGroup.selectedReaction.reactors.totalCount - data.length} more',
                   ),
-                ),
-            ],
+                ],
+              ),
+            ),
+          );
+        },
+        emptyBuilder: (final BuildContext context) => Padding(
+          padding: context.spacing.spaciousPadding,
+          child: Center(
+            child: Text(
+              'No reactors',
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: Theme.of(context).colorScheme.onSurface.muted,
+                  ),
+            ),
           ),
         ),
       ),
@@ -402,12 +403,14 @@ class ReactionItemState extends State<ReactionItem> {
 class AppReactionButton extends StatelessWidget {
   const AppReactionButton({
     required this.reactionGroups,
-    super.key,
     required this.loading,
+    super.key,
+    this.onReactionChanged,
   });
 
-  final List<GreactionGroups> reactionGroups;
+  final List<ReactionGroupData> reactionGroups;
   final bool loading;
+  final Future<void> Function(ReactionInfo)? onReactionChanged;
 
   @override
   Widget build(final BuildContext context) {
@@ -416,7 +419,7 @@ class AppReactionButton extends StatelessWidget {
 
     return ReactionButton<ReactionInfo>(
       // splashColor: transparent,
-      // boxPadding: const EdgeInsets.all(16),
+      // boxPadding: context.spacing.pagePadding,
       itemSize: const Size(36, 36),
       isChecked: true,
       toggle: false,
@@ -426,8 +429,9 @@ class AppReactionButton extends StatelessWidget {
       onReactionChanged: (
         final Reaction<ReactionInfo>? value,
       ) async {
-        await _ReactionBarState.updateReaction(value!.value!);
-        // throw Exception('This exception is just a hacky way to prevent this lib from showing the reaction');
+        if (value?.value != null) {
+          await onReactionChanged?.call(value!.value!);
+        }
       },
       selectedReaction: Reaction<ReactionInfo>(
         icon: _ReactionBarState.buildReactionButton(loading: loading),
@@ -436,17 +440,13 @@ class AppReactionButton extends StatelessWidget {
       // boxPadding: const EdgeInsets.all(4),
       reactions: List<Reaction<ReactionInfo>>.generate(
         reactionGroups.length,
-        (final int index) {
-          return Reaction<ReactionInfo>(
-            icon: Text(
-              getReaction(
-                reactionGroups[index].content,
-              ),
-              // style: const TextStyle(18),
-            ),
-            value: genInfo[index],
-          );
-        },
+        (final int index) => Reaction<ReactionInfo>(
+          icon: Text(
+            reactionGroups[index].content.emoji,
+            // style: const TextStyle(18),
+          ),
+          value: genInfo[index],
+        ),
       ),
     );
   }

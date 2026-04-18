@@ -1,0 +1,89 @@
+name: CI
+
+on:
+  push:
+    branches: [develop, beta, main]
+  pull_request:
+    branches: [develop, beta, main]
+  workflow_dispatch:
+
+jobs:
+  commitlint:
+    name: Conventional Commits
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: cocogitto/cocogitto-action@v4
+        with:
+          command: check
+
+  lint-workflows:
+    name: Lint Workflows
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: reviewdog/action-actionlint@v1
+        with:
+          reporter: github-pr-review
+          fail_level: error
+
+  codegen:
+    name: Code Generation
+    if: github.event_name != 'workflow_dispatch'
+    uses: namanshergill/diohub-premium/.github/workflows/_codegen.yaml@main
+    secrets: inherit
+
+  test:
+    name: Tests
+    needs: [codegen]
+    if: github.event_name != 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+          submodules: recursive
+
+      - name: Generate Bucciarati token
+        id: bucciarati
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ secrets.BUCCIARATI_APP_ID }}
+          private-key: ${{ secrets.BUCCIARATI_APP_KEY }}
+          repositories: diohub,diohub-premium
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version-file: .flutter-version
+          channel: 'stable'
+          cache: true
+
+      - name: Setup premium override
+        uses: namanshergill/diohub-premium/.github/actions/setup-premium@main
+        with:
+          token: ${{ steps.bucciarati.outputs.token }}
+
+      - name: Download generated code
+        uses: actions/download-artifact@v4
+        with:
+          name: generated-code
+
+      - name: Extract generated code
+        run: tar xzf generated-code.tar.gz
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Run tests
+        run: flutter test --coverage
+
+      - name: Upload coverage
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage
+          path: coverage/lcov.info
+          retention-days: 7

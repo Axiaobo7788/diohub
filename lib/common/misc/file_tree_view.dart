@@ -1,9 +1,13 @@
-import 'package:diohub/models/commits/commit_model.dart';
-import 'package:diohub/utils/utils.dart';
-import 'package:diohub/common/misc/highlighted_container.dart';
+import 'package:diohub/common/animations/motion.dart';
 import 'package:diohub/common/misc/file_tree_view_provider.dart';
-import 'package:diohub/common/misc/surface_shape_resolver.dart';
-import 'package:diohub/style/surface_style_theme.dart';
+import 'package:diohub/common/misc/highlighted_container.dart';
+import 'package:diohub/common/misc/tap_feedback.dart';
+import 'package:diohub_models/models/commits/commit_model.dart';
+import 'package:diohub/style/app_spacing.dart';
+import 'package:diohub/style/opacities.dart';
+import 'package:diohub/style/surface_ext.dart';
+import 'package:diohub/style/surface_style.dart';
+import 'package:diohub/utils/utils.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_sticky_header/flutter_sticky_header.dart';
@@ -17,7 +21,7 @@ import 'package:sliver_tools/sliver_tools.dart';
 ///
 /// Uses Riverpod for state management to handle expand/collapse and view mode.
 class FileTreeView extends ConsumerWidget {
-  const FileTreeView({
+  FileTreeView({
     required this.files,
     required this.onFileTap,
     this.showToolbar = true,
@@ -28,30 +32,41 @@ class FileTreeView extends ConsumerWidget {
   final void Function(FileElement file)? onFileTap;
   final bool showToolbar;
 
+  /// Cached directory tree structure, computed once from immutable files list
+  late final DirectoryNode _directoryTree = _buildDirectoryTree();
+
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final state = ref.watch(fileTreeViewProvider(files));
+  Widget build(final BuildContext context, final WidgetRef ref) {
+    final FileTreeViewState state = ref.watch(fileTreeViewProvider(files));
 
     // Build slivers based on current state
-    final slivers = _buildSlivers(context, ref, state);
+    final List<Widget> slivers = _buildSlivers(context, ref, state);
 
     return MultiSliver(children: slivers);
   }
 
   List<Widget> _buildSlivers(
-      BuildContext context, WidgetRef ref, FileTreeViewState state) {
+    final BuildContext context,
+    final WidgetRef ref,
+    final FileTreeViewState state,
+  ) {
     if (!state.showTreeView) {
       // Flat list view
-      return [
+      return <Widget>[
         if (showToolbar)
           SliverToBoxAdapter(
             child: _buildToolbar(context, ref, state),
           ),
         SliverPadding(
-          padding: const EdgeInsets.symmetric(horizontal: 12),
+          padding: EdgeInsets.only(
+            left: context.spacing.contentPadding.left,
+            right: context.spacing.contentPadding.right,
+            top: 0,
+            bottom: 0,
+          ),
           sliver: SliverList(
             delegate: SliverChildBuilderDelegate(
-              (context, index) => Padding(
+              (final BuildContext context, final int index) => Padding(
                 padding: const EdgeInsets.only(bottom: 4),
                 child: _buildFileCard(context, files[index], 0, ''),
               ),
@@ -67,10 +82,11 @@ class FileTreeView extends ConsumerWidget {
   }
 
   List<Widget> _buildTreeViewSlivers(
-      BuildContext context, WidgetRef ref, FileTreeViewState state) {
-    final root = _buildDirectoryTree();
-
-    final slivers = <Widget>[];
+    final BuildContext context,
+    final WidgetRef ref,
+    final FileTreeViewState state,
+  ) {
+    final List<Widget> slivers = <Widget>[];
 
     // Add toolbar if enabled
     if (showToolbar) {
@@ -81,9 +97,9 @@ class FileTreeView extends ConsumerWidget {
       );
     }
 
-    // Add directory slivers
-    slivers
-        .addAll(_buildDirectoryNodeSlivers(context, ref, root, [], '', state));
+    // Add directory slivers using cached tree
+    slivers.addAll(
+        _buildDirectoryNodeSlivers(context, ref, _directoryTree, <String>[], '', state));
 
     return slivers;
   }
@@ -91,9 +107,9 @@ class FileTreeView extends ConsumerWidget {
   DirectoryNode _buildDirectoryTree() {
     final DirectoryNode root = DirectoryNode('');
 
-    for (final file in files) {
-      final filename = file.filename ?? '';
-      final pathParts = filename.split('/');
+    for (final FileElement file in files) {
+      final String filename = file.filename;
+      final List<String> pathParts = filename.split('/');
 
       if (pathParts.length == 1) {
         // Root level file
@@ -102,7 +118,7 @@ class FileTreeView extends ConsumerWidget {
         // File in a directory
         DirectoryNode current = root;
         for (int i = 0; i < pathParts.length - 1; i++) {
-          final dirName = pathParts[i];
+          final String dirName = pathParts[i];
           current = current.getOrCreateChild(dirName);
         }
         current.files.add(file);
@@ -113,50 +129,54 @@ class FileTreeView extends ConsumerWidget {
   }
 
   Widget _buildToolbar(
-      BuildContext context, WidgetRef ref, FileTreeViewState state) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(12, 8, 12, 6),
-      child: _ExpandableToolbar(
-        files: files,
-        state: state,
-        onExpandAll: () =>
-            ref.read(fileTreeViewProvider(files).notifier).expandAll(),
-        onCollapseAll: () =>
-            ref.read(fileTreeViewProvider(files).notifier).collapseAll(),
-        onViewModeChanged: (value) =>
-            ref.read(fileTreeViewProvider(files).notifier).setViewMode(value),
-        showTreeView: state.showTreeView,
-      ),
-    );
-  }
+    final BuildContext context,
+    final WidgetRef ref,
+    final FileTreeViewState state,
+  ) =>
+      Padding(
+        padding: const EdgeInsets.fromLTRB(12, 8, 12, 6),
+        child: _ExpandableToolbar(
+          files: files,
+          state: state,
+          onExpandAll: () =>
+              ref.read(fileTreeViewProvider(files).notifier).expandAll(),
+          onCollapseAll: () =>
+              ref.read(fileTreeViewProvider(files).notifier).collapseAll(),
+          onViewModeChanged: (final bool value) =>
+              ref.read(fileTreeViewProvider(files).notifier).setViewMode(value),
+          showTreeView: state.showTreeView,
+        ),
+      );
 
   List<Widget> _buildDirectoryNodeSlivers(
-    BuildContext context,
-    WidgetRef ref,
-    DirectoryNode node,
-    List<String> pathParts,
-    String currentPath,
-    FileTreeViewState state,
+    final BuildContext context,
+    final WidgetRef ref,
+    final DirectoryNode node,
+    final List<String> pathParts,
+    final String currentPath,
+    final FileTreeViewState state,
   ) {
-    final List<Widget> slivers = [];
+    final List<Widget> slivers = <Widget>[];
 
     // Sort children directories
-    final sortedDirs = node.children.values.toList()
-      ..sort((a, b) => a.name.compareTo(b.name));
+    final List<DirectoryNode> sortedDirs = node.children.values.toList()
+      ..sort((final DirectoryNode a, final DirectoryNode b) =>
+          a.name.compareTo(b.name));
 
     // Add directories with sticky headers
-    for (final dir in sortedDirs) {
-      final newPath =
+    for (final DirectoryNode dir in sortedDirs) {
+      final String newPath =
           currentPath.isEmpty ? dir.name : '$currentPath/${dir.name}';
-      final newPathParts = [...pathParts, dir.name];
-      final isExpanded = state.expandedPaths.contains(newPath);
+      final List<String> newPathParts = <String>[...pathParts, dir.name];
+      final bool isExpanded = state.expandedPaths.contains(newPath);
 
       // Collect files for this directory
-      final sortedFiles = dir.files.toList()
-        ..sort((a, b) => (a.filename ?? '').compareTo(b.filename ?? ''));
+      final List<FileElement> sortedFiles = dir.files.toList()
+        ..sort((final FileElement a, final FileElement b) =>
+            (a.filename).compareTo(b.filename));
 
       // Get nested subdirectories (these are already slivers)
-      final nestedSubdirs = _buildDirectoryNodeSlivers(
+      final List<Widget> nestedSubdirs = _buildDirectoryNodeSlivers(
         context,
         ref,
         dir,
@@ -166,10 +186,10 @@ class FileTreeView extends ConsumerWidget {
       );
 
       // Combine files and nested directories into content slivers
-      final List<Widget> contentSlivers = [];
+      final List<Widget> contentSlivers = <Widget>[];
 
       // Add files first as slivers (wrapped in animated widget)
-      for (final file in sortedFiles) {
+      for (final FileElement file in sortedFiles) {
         contentSlivers.add(
           _AnimatedSliverWrapper(
             expand: isExpanded,
@@ -215,9 +235,10 @@ class FileTreeView extends ConsumerWidget {
     }
 
     // Add root-level files (files in the current node)
-    final sortedFiles = node.files.toList()
-      ..sort((a, b) => (a.filename ?? '').compareTo(b.filename ?? ''));
-    for (final file in sortedFiles) {
+    final List<FileElement> sortedFiles = node.files.toList()
+      ..sort((final FileElement a, final FileElement b) =>
+          (a.filename).compareTo(b.filename));
+    for (final FileElement file in sortedFiles) {
       slivers.add(
         SliverToBoxAdapter(
           child: Padding(
@@ -236,18 +257,20 @@ class FileTreeView extends ConsumerWidget {
   }
 
   Widget _buildDirectoryHeader(
-    BuildContext context,
-    WidgetRef ref,
-    List<String> pathParts,
-    String fullPath,
-    DirectoryNode node,
-    int depth,
-    bool isExpanded,
+    final BuildContext context,
+    final WidgetRef ref,
+    final List<String> pathParts,
+    final String fullPath,
+    final DirectoryNode node,
+    final int depth,
+    final bool isExpanded,
   ) {
-    final totalFiles = node.totalFileCount;
+    final int totalFiles = node.totalFileCount;
     // Show only the directory name (last part of path)
-    final displayName = pathParts.isNotEmpty ? pathParts.last : node.name;
-    final notifier = ref.read(fileTreeViewProvider(files).notifier);
+    final String displayName =
+        pathParts.isNotEmpty ? pathParts.last : node.name;
+    final FileTreeViewNotifier notifier =
+        ref.read(fileTreeViewProvider(files).notifier);
 
     return Padding(
       padding: EdgeInsets.only(
@@ -258,38 +281,34 @@ class FileTreeView extends ConsumerWidget {
       ),
       child: HighlightedContainer(
         highlightColor: context.colorScheme.primary,
-        size: BorderRadiusSize.small,
+        size: RadiusSize.small,
         child: Material(
           color: context.colorScheme.surfaceContainerHighest,
-          borderRadius: Theme.of(context)
-              .surfaceStyle
-              .borderRadius(size: BorderRadiusSize.small),
+          borderRadius: context.radius(RadiusSize.small),
           child: InkWell(
             onTap: () => notifier.toggleDirectory(fullPath),
-            borderRadius: Theme.of(context)
-                .surfaceStyle
-                .borderRadius(size: BorderRadiusSize.small),
+            borderRadius: context.radius(RadiusSize.small),
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+              padding: EdgeInsets.symmetric(
+                  horizontal: context.spacing.itemSpacing, vertical: 6),
               child: Row(
-                children: [
+                children: <Widget>[
                   AnimatedRotation(
                     turns: isExpanded ? 0.25 : 0,
-                    duration: const Duration(milliseconds: 200),
+                    duration: kMicroDuration,
                     child: Icon(
                       Icons.chevron_right_rounded,
                       size: 14,
-                      color:
-                          context.colorScheme.onSurfaceVariant.withOpacity(0.7),
+                      color: context.colorScheme.onSurfaceVariant.secondary,
                     ),
                   ),
-                  const SizedBox(width: 6),
+                  context.spacing.compactGap,
                   Icon(
                     Icons.folder_rounded,
                     size: 14,
                     color: context.colorScheme.primary,
                   ),
-                  const SizedBox(width: 6),
+                  context.spacing.compactGap,
                   Expanded(
                     child: Text(
                       displayName,
@@ -302,21 +321,17 @@ class FileTreeView extends ConsumerWidget {
                       overflow: TextOverflow.ellipsis,
                     ),
                   ),
-                  const SizedBox(width: 6),
+                  context.spacing.compactGap,
                   Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                    decoration: SurfaceShapeResolver.boxDecoration(
-                      context,
-                      size: BorderRadiusSize.small,
-                      color:
-                          context.colorScheme.surfaceContainer.withOpacity(0.5),
+                    padding: context.spacing.badgePadding,
+                    decoration: context.surfaceDecoration(
+                      RadiusSize.small,
+                      color: context.colorScheme.surfaceContainer.hinted,
                     ),
                     child: Text(
                       '$totalFiles',
                       style: context.textTheme.bodySmall?.copyWith(
-                        color: context.colorScheme.onSurfaceVariant
-                            .withOpacity(0.8),
+                        color: context.colorScheme.onSurfaceVariant.strong,
                         fontSize: 9,
                         fontWeight: FontWeight.w600,
                       ),
@@ -332,21 +347,21 @@ class FileTreeView extends ConsumerWidget {
   }
 
   Widget _buildFileCard(
-    BuildContext context,
-    FileElement file,
-    int depth,
-    String currentPath,
+    final BuildContext context,
+    final FileElement file,
+    final int depth,
+    final String currentPath,
   ) {
-    final status = file.status;
+    // final String? status = file.status;
     Color statusColor;
     IconData statusIcon;
     Widget statusTextWidget;
     String subtitleText;
 
-    if (status == CommitStatus.ADDED) {
+    if (file.isAdded) {
       statusColor = Colors.green.shade400;
       statusIcon = Octicons.diff_added;
-      final additions = file.additions ?? 0;
+      final int additions = file.additions;
       statusTextWidget = Text(
         '+$additions',
         style: context.textTheme.bodySmall?.copyWith(
@@ -356,10 +371,10 @@ class FileTreeView extends ConsumerWidget {
         ),
       );
       subtitleText = 'File added';
-    } else if (status == CommitStatus.REMOVED) {
+    } else if (file.isRemoved) {
       statusColor = Colors.red.shade400;
       statusIcon = Octicons.diff_removed;
-      final deletions = file.deletions ?? 0;
+      final int deletions = file.deletions ?? 0;
       statusTextWidget = Text(
         '-$deletions',
         style: context.textTheme.bodySmall?.copyWith(
@@ -372,12 +387,12 @@ class FileTreeView extends ConsumerWidget {
     } else {
       statusColor = context.colorScheme.primary;
       statusIcon = Octicons.diff_modified;
-      final additions = file.additions ?? 0;
-      final deletions = file.deletions ?? 0;
-      final changes = file.changes ?? 0;
+      final int additions = file.additions;
+      final int deletions = file.deletions;
+      final int changes = file.changes;
       statusTextWidget = Row(
         mainAxisSize: MainAxisSize.min,
-        children: [
+        children: <Widget>[
           Text(
             '+$additions',
             style: context.textTheme.bodySmall?.copyWith(
@@ -400,51 +415,46 @@ class FileTreeView extends ConsumerWidget {
       subtitleText = '$changes changes';
     }
 
-    final filename = file.filename ?? '';
+    final String filename = file.filename ?? '';
     // In flat mode (depth 0), show full path. In tree mode, show just filename
-    final displayName = depth == 0 && filename.contains('/')
+    final String displayName = depth == 0 && filename.contains('/')
         ? filename
         : filename.contains('/')
             ? filename.substring(filename.lastIndexOf('/') + 1)
             : filename;
 
     // Show path as subtitle in flat mode
-    final showPath = depth == 0 && filename.contains('/');
-    final pathParts = filename.split('/');
-    final path = pathParts.length > 1
+    final bool showPath = depth == 0 && filename.contains('/');
+    final List<String> pathParts = filename.split('/');
+    final String path = pathParts.length > 1
         ? pathParts.sublist(0, pathParts.length - 1).join('/')
         : '';
 
     return HighlightedContainer(
       highlightColor: statusColor,
-      size: BorderRadiusSize.small,
+      size: RadiusSize.small,
       child: Material(
         color: Color.lerp(
           context.colorScheme.surfaceContainer,
           Colors.black,
           0.1,
         ),
-        borderRadius: Theme.of(context)
-            .surfaceStyle
-            .borderRadius(size: BorderRadiusSize.small),
+        borderRadius: context.radius(RadiusSize.small),
         child: InkWell(
           onTap: file.patch != null && onFileTap != null
               ? () => onFileTap!(file)
               : null,
-          borderRadius: Theme.of(context)
-              .surfaceStyle
-              .borderRadius(size: BorderRadiusSize.small),
+          borderRadius: context.radius(RadiusSize.small),
           child: Padding(
-            padding: const EdgeInsets.all(8),
+            padding: EdgeInsets.all(context.spacing.itemSpacing),
             child: Row(
-              children: [
+              children: <Widget>[
                 Container(
                   width: 28,
                   height: 28,
-                  decoration: SurfaceShapeResolver.boxDecoration(
-                    context,
-                    size: BorderRadiusSize.small,
-                    color: statusColor.withOpacity(0.15),
+                  decoration: context.surfaceDecoration(
+                    RadiusSize.small,
+                    color: statusColor.tintMedium,
                   ),
                   child: Icon(
                     statusIcon,
@@ -452,11 +462,11 @@ class FileTreeView extends ConsumerWidget {
                     color: statusColor,
                   ),
                 ),
-                const SizedBox(width: 8),
+                context.spacing.itemGap,
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
+                    children: <Widget>[
                       Text(
                         displayName,
                         style: context.textTheme.bodySmall?.copyWith(
@@ -472,8 +482,8 @@ class FileTreeView extends ConsumerWidget {
                         Text(
                           path,
                           style: context.textTheme.bodySmall?.copyWith(
-                            color: context.colorScheme.onSurfaceVariant
-                                .withOpacity(0.7),
+                            color:
+                                context.colorScheme.onSurfaceVariant.secondary,
                             fontSize: 9,
                           ),
                           maxLines: 1,
@@ -490,18 +500,17 @@ class FileTreeView extends ConsumerWidget {
                     ],
                   ),
                 ),
-                const SizedBox(width: 8),
+                context.spacing.itemGap,
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
+                  children: <Widget>[
                     statusTextWidget,
-                    if (file.patch != null) ...[
+                    if (file.patch != null) ...<Widget>[
                       const SizedBox(height: 2),
                       Icon(
                         Icons.chevron_right_rounded,
                         size: 12,
-                        color: context.colorScheme.onSurfaceVariant
-                            .withOpacity(0.5),
+                        color: context.colorScheme.onSurfaceVariant.hinted,
                       ),
                     ],
                   ],
@@ -539,7 +548,7 @@ class _AnimatedSliverWrapperState extends State<_AnimatedSliverWrapper>
     super.initState();
     _controller = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 300),
+      duration: kStateDuration,
     );
     _animation = CurvedAnimation(
       parent: _controller,
@@ -551,7 +560,7 @@ class _AnimatedSliverWrapperState extends State<_AnimatedSliverWrapper>
   }
 
   @override
-  void didUpdateWidget(_AnimatedSliverWrapper oldWidget) {
+  void didUpdateWidget(final _AnimatedSliverWrapper oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (widget.expand != oldWidget.expand) {
       if (widget.expand) {
@@ -569,10 +578,10 @@ class _AnimatedSliverWrapperState extends State<_AnimatedSliverWrapper>
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(final BuildContext context) {
     // For SliverToBoxAdapter, extract child and animate it
     if (widget.child is SliverToBoxAdapter) {
-      final sliver = widget.child as SliverToBoxAdapter;
+      final SliverToBoxAdapter sliver = widget.child as SliverToBoxAdapter;
       return SliverToBoxAdapter(
         child: SizeTransition(
           sizeFactor: _animation,
@@ -620,7 +629,7 @@ class _ExpandableToolbarState extends State<_ExpandableToolbar>
     super.initState();
     _controller = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 300),
+      duration: kStateDuration,
     );
     _heightAnimation = CurvedAnimation(
       parent: _controller,
@@ -650,41 +659,45 @@ class _ExpandableToolbarState extends State<_ExpandableToolbar>
   }
 
   @override
-  Widget build(BuildContext context) {
-    return HighlightedContainer(
-      highlightColor: context.colorScheme.primary,
-      size: BorderRadiusSize.small,
-      child: AnimatedBuilder(
-        animation: _controller,
-        builder: (context, child) {
-          return ClipRect(
+  Widget build(final BuildContext context) => HighlightedContainer(
+        highlightColor: context.colorScheme.primary,
+        size: RadiusSize.small,
+        child: AnimatedBuilder(
+          animation: _controller,
+          builder: (final BuildContext context, final Widget? child) =>
+              ClipRect(
             child: AnimatedContainer(
-              duration: const Duration(milliseconds: 300),
-              curve: Curves.easeInOut,
+              duration: kStateDuration,
+              curve: kStateCurve,
               padding: EdgeInsets.symmetric(
                 horizontal: 8 + (_widthAnimation.value * 8),
                 vertical: 6 + (_heightAnimation.value * 4),
               ),
-              decoration: SurfaceShapeResolver.boxDecoration(
-                context,
-                size: BorderRadiusSize.small,
+              decoration: context.surfaceDecoration(
+                RadiusSize.small,
                 color: context.colorScheme.surfaceContainerHighest,
               ),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
+                children: <Widget>[
                   // Main row with icons and prominent action
                   Row(
-                    children: [
-                      // File count icon
-                      _ToolbarIconButton(
-                        icon: Octicons.file_diff,
-                        tooltip:
+                    children: <Widget>[
+                      // File count (display only)
+                      Tooltip(
+                        message:
                             '${widget.files.length} ${widget.files.length == 1 ? 'file' : 'files'}',
-                        onTap: () {},
+                        child: Padding(
+                          padding: const EdgeInsets.all(3),
+                          child: Icon(
+                            Octicons.file_diff,
+                            size: 10,
+                            color: context.colorScheme.onSurfaceVariant,
+                          ),
+                        ),
                       ),
-                      const SizedBox(width: 4),
+                      context.spacing.tightGap,
                       // Expand All icon
                       _ToolbarIconButton(
                         icon: Icons.unfold_more_rounded,
@@ -718,12 +731,28 @@ class _ExpandableToolbarState extends State<_ExpandableToolbar>
                         tooltip: _isExpanded ? 'Collapse' : 'Expand',
                         onTap: _toggleExpanded,
                       ),
-                      const SizedBox(width: 6),
-                      // Prominent action (always visible)
-                      _ProminentAction(
-                        icon: Octicons.file_diff,
-                        label: '${widget.files.length} files',
-                        onTap: () {},
+                      context.spacing.compactGap,
+                      // File count (display only)
+                      Padding(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 6, vertical: 4),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: <Widget>[
+                            Icon(
+                              Octicons.file_diff,
+                              size: 12,
+                              color: context.colorScheme.onSurfaceVariant,
+                            ),
+                            context.spacing.tightGap,
+                            Text(
+                              '${widget.files.length} files',
+                              style: context.textTheme.labelSmall?.copyWith(
+                                color: context.colorScheme.onSurfaceVariant,
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     ],
                   ),
@@ -732,25 +761,41 @@ class _ExpandableToolbarState extends State<_ExpandableToolbar>
                     sizeFactor: _heightAnimation,
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const SizedBox(height: 6),
+                      children: <Widget>[
+                        context.spacing.compactGap,
                         // Divider
                         Container(
                           height: 1,
-                          color: context.colorScheme.outlineVariant
-                              .withOpacity(0.3),
+                          color: context.colorScheme.outlineVariant.borderO,
                         ),
-                        const SizedBox(height: 6),
+                        context.spacing.compactGap,
                         // Actions with labels (vertical stack)
                         Column(
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           mainAxisSize: MainAxisSize.min,
-                          children: [
-                            _ActionWithLabel(
-                              icon: Octicons.file_diff,
-                              label:
-                                  '${widget.files.length} ${widget.files.length == 1 ? 'file' : 'files'}',
-                              onTap: () {},
+                          children: <Widget>[
+                            Padding(
+                              padding: context.spacing.chipPadding,
+                              child: Row(
+                                children: <Widget>[
+                                  Icon(
+                                    Octicons.file_diff,
+                                    size: 10,
+                                    color: context.colorScheme.onSurfaceVariant,
+                                  ),
+                                  context.spacing.itemGap,
+                                  Text(
+                                    '${widget.files.length} ${widget.files.length == 1 ? 'file' : 'files'}',
+                                    style:
+                                        context.textTheme.bodySmall?.copyWith(
+                                      fontSize: 10,
+                                      color:
+                                          context.colorScheme.onSurfaceVariant,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ),
                             _ActionWithLabel(
                               icon: Icons.unfold_more_rounded,
@@ -774,19 +819,33 @@ class _ExpandableToolbarState extends State<_ExpandableToolbar>
                             ),
                           ],
                         ),
-                        const SizedBox(height: 6),
+                        context.spacing.compactGap,
                         // Divider before prominent actions
                         Container(
                           height: 1,
-                          color: context.colorScheme.outlineVariant
-                              .withOpacity(0.3),
+                          color: context.colorScheme.outlineVariant.borderO,
                         ),
-                        const SizedBox(height: 6),
-                        // Prominent actions at bottom (vertical)
-                        _ProminentAction(
-                          icon: Octicons.file_diff,
-                          label: '${widget.files.length} files',
-                          onTap: () {},
+                        context.spacing.compactGap,
+                        // File count at bottom (display only)
+                        Padding(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 8, vertical: 4),
+                          child: Row(
+                            children: <Widget>[
+                              Icon(
+                                Octicons.file_diff,
+                                size: 12,
+                                color: context.colorScheme.onSurfaceVariant,
+                              ),
+                              context.spacing.itemGap,
+                              Text(
+                                '${widget.files.length} files',
+                                style: context.textTheme.labelSmall?.copyWith(
+                                  color: context.colorScheme.onSurfaceVariant,
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
                       ],
                     ),
@@ -794,11 +853,9 @@ class _ExpandableToolbarState extends State<_ExpandableToolbar>
                 ],
               ),
             ),
-          );
-        },
-      ),
-    );
-  }
+          ),
+        ),
+      );
 }
 
 /// Icon button for toolbar (compact mode)
@@ -808,8 +865,7 @@ class _ToolbarIconButton extends StatelessWidget {
     required this.tooltip,
     required this.onTap,
     this.color,
-    // ignore: unused_element
-    this.customColor, // For custom colors like Colors.green (issues) or Colors.purple (PRs)
+    this.customColor,
   });
 
   final IconData icon;
@@ -820,28 +876,23 @@ class _ToolbarIconButton extends StatelessWidget {
       customColor; // For custom colors like Colors.green (issues) or Colors.purple (PRs)
 
   @override
-  Widget build(BuildContext context) {
-    final iconColor = customColor ??
+  Widget build(final BuildContext context) {
+    final Color? iconColor = customColor ??
         (color != null && color != context.colorScheme.primary
             ? color
             : context.colorScheme.onSurfaceVariant);
 
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: Theme.of(context)
-            .surfaceStyle
-            .borderRadius(size: BorderRadiusSize.small),
-        child: Tooltip(
-          message: tooltip,
-          child: Padding(
-            padding: const EdgeInsets.all(3),
-            child: Icon(
-              icon,
-              size: 10,
-              color: iconColor,
-            ),
+    return TapFeedback(
+      onTap: onTap,
+      size: RadiusSize.small,
+      child: Tooltip(
+        message: tooltip,
+        child: Padding(
+          padding: const EdgeInsets.all(3),
+          child: Icon(
+            icon,
+            size: 10,
+            color: iconColor,
           ),
         ),
       ),
@@ -856,8 +907,7 @@ class _ActionWithLabel extends StatelessWidget {
     required this.label,
     required this.onTap,
     this.color,
-    // ignore: unused_element
-    this.customColor, // For custom colors like Colors.green (issues) or Colors.purple (PRs)
+    this.customColor,
   });
 
   final IconData icon;
@@ -868,43 +918,38 @@ class _ActionWithLabel extends StatelessWidget {
       customColor; // For custom colors like Colors.green (issues) or Colors.purple (PRs)
 
   @override
-  Widget build(BuildContext context) {
-    final iconColor = customColor ??
+  Widget build(final BuildContext context) {
+    final Color? iconColor = customColor ??
         (color != null && color != context.colorScheme.primary
             ? color
             : context.colorScheme.onSurfaceVariant);
 
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: Theme.of(context)
-            .surfaceStyle
-            .borderRadius(size: BorderRadiusSize.small),
-        child: SizedBox(
-          width: double.infinity,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-            child: Row(
-              children: [
-                Icon(
-                  icon,
-                  size: 10,
-                  color: iconColor,
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    label,
-                    style: context.textTheme.bodySmall?.copyWith(
-                      fontSize: 10,
-                      color: iconColor,
-                      fontWeight: FontWeight.w500,
-                    ),
+    return TapFeedback(
+      onTap: onTap,
+      size: RadiusSize.small,
+      child: SizedBox(
+        width: double.infinity,
+        child: Padding(
+          padding: context.spacing.chipPadding,
+          child: Row(
+            children: <Widget>[
+              Icon(
+                icon,
+                size: 10,
+                color: iconColor,
+              ),
+              context.spacing.itemGap,
+              Expanded(
+                child: Text(
+                  label,
+                  style: context.textTheme.bodySmall?.copyWith(
+                    fontSize: 10,
+                    color: iconColor,
+                    fontWeight: FontWeight.w500,
                   ),
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
         ),
       ),
@@ -918,8 +963,7 @@ class _ProminentAction extends StatelessWidget {
     required this.icon,
     required this.label,
     required this.onTap,
-    // ignore: unused_element
-    this.customColor, // For custom colors like Colors.green (issues) or Colors.purple (PRs)
+    this.customColor,
   });
 
   final IconData icon;
@@ -929,37 +973,32 @@ class _ProminentAction extends StatelessWidget {
       customColor; // For custom colors like Colors.green (issues) or Colors.purple (PRs)
 
   @override
-  Widget build(BuildContext context) {
-    final color = customColor ?? context.colorScheme.primary;
+  Widget build(final BuildContext context) {
+    final Color color = customColor ?? context.colorScheme.primary;
 
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: Theme.of(context)
-            .surfaceStyle
-            .borderRadius(size: BorderRadiusSize.small),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(
-                icon,
-                size: 10,
+    return TapFeedback(
+      onTap: onTap,
+      size: RadiusSize.small,
+      child: Padding(
+        padding: context.spacing.chipPadding,
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: <Widget>[
+            Icon(
+              icon,
+              size: 10,
+              color: color,
+            ),
+            context.spacing.compactGap,
+            Text(
+              label,
+              style: context.textTheme.bodySmall?.copyWith(
+                fontSize: 10,
+                fontWeight: FontWeight.w600,
                 color: color,
               ),
-              const SizedBox(width: 6),
-              Text(
-                label,
-                style: context.textTheme.bodySmall?.copyWith(
-                  fontSize: 10,
-                  fontWeight: FontWeight.w600,
-                  color: color,
-                ),
-              ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
@@ -970,16 +1009,15 @@ class DirectoryNode {
   DirectoryNode(this.name);
 
   final String name;
-  final Map<String, DirectoryNode> children = {};
-  final List<FileElement> files = [];
+  final Map<String, DirectoryNode> children = <String, DirectoryNode>{};
+  final List<FileElement> files = <FileElement>[];
 
-  DirectoryNode getOrCreateChild(String name) {
-    return children.putIfAbsent(name, () => DirectoryNode(name));
-  }
+  DirectoryNode getOrCreateChild(final String name) =>
+      children.putIfAbsent(name, () => DirectoryNode(name));
 
   int get totalFileCount {
     int count = files.length;
-    for (final child in children.values) {
+    for (final DirectoryNode child in children.values) {
       count += child.totalFileCount;
     }
     return count;

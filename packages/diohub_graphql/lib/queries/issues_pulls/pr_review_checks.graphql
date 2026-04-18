@@ -1,0 +1,17 @@
+query getViewerPendingReview($pullNodeID: ID!) {
+  node(id: $pullNodeID) {
+    __typename
+    ... on PullRequest {
+      reviews(states: [PENDING], first: 1) {
+        nodes {
+          id
+          body
+          bodyHTML
+          comments {
+            totalCount
+          }
+        }
+      }
+    }
+  }
+}

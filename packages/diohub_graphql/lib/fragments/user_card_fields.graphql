@@ -1,0 +1,28 @@
+fragment userCardFields on User {
+  id
+  login
+  avatarUrl
+  name
+  bio
+  url
+  location
+  company
+  pronouns
+  isFollowingViewer
+  createdAt
+  status {
+    emoji
+    message
+  }
+  viewerIsFollowing
+  viewerCanFollow
+  repositories(privacy: PUBLIC) {
+    totalCount
+  }
+  followers {
+    totalCount
+  }
+  following {
+    totalCount
+  }
+}

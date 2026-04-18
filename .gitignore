@@ -15,16 +15,11 @@
 *.iws
 .idea/
 
-# The .vscode folder contains launch configuration and tasks you configure in
-# VS Code which you may wish to be included in version control, so this line
-# is commented out by default.
-#.vscode/
+# VS Code settings (user-specific, should not be in version control)
+.vscode/
 
 # Flutter/Dart/Pub related
 **/doc/api/
-**/__generated__/**.dart
-**/**.freezed.dart
-**/**.g.dart
 **/ios/Flutter/.last_build_id
 .dart_tool/
 .flutter-plugins
@@ -33,6 +28,11 @@
 .pub-cache/
 .pub/
 build/
+pubspec_overrides.yaml
+
+# FVM (Flutter Version Management)
+.fvm/
+.fvmrc
 
 # Web related
 lib/generated_plugin_registrant.dart
@@ -45,8 +45,52 @@ app.*.map.json
 
 # Exceptions to above rules.
 !/packages/flutter_tools/test/data/dart_dependencies_test/**/.packages
-/lib/app/keys.dart
-/android/app/diohub-key.keystore
+*.keystore
+*.keystore.base64.txt
+
+# Environment configs (keep templates, gitignore secrets)
+.env
+.env.json
+!.env.example
 
 # Plans folder
 plans/
+
+# OpenAPI generation artifacts (keep schema committed)
+.openapi-generator/
+
+# IDE run configurations (user-specific)
+.run/
+
+# Python virtual environment
+.venv/
+venv/
+
+# Large generated/API spec files
+lib/graphql/api.github.com*.json
+openapi-generator-config.yaml
+openapitools.json
+
+# Development files directory
+_dev/
+
+sentry.properties
+
+# CI-generated iOS signing config
+ios/Flutter/ci-signing.xcconfig
+
+# AI test artifacts (local testing only)
+test-results/
+.github/ai/test-fixtures/
+.github/ai/LOCAL_TESTING.md
+ai_meta.json
+ai_output.md
+ai_provider.txt
+test_context.json
+test_health_context.json
+test_minimal_context.json
+
+# Generated code (regenerate with build_runner / ferry)
+*.graphql.dart
+*.freezed.dart
+*.g.dart

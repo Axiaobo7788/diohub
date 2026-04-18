@@ -1,0 +1,6 @@
+# Shared fields for Lockable (Issue, PullRequest, Discussion); used by lock/unlock mutations.
+
+fragment lockableFields on Lockable {
+  locked
+  activeLockReason
+}

@@ -1,0 +1,14 @@
+name: AI Stale Assessment (Polnareff)
+
+on:
+  schedule:
+    - cron: '0 0 * * 0'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  call-private:
+    uses: namanshergill/diohub-premium/.github/workflows/_stale.yaml@main
+    secrets: inherit

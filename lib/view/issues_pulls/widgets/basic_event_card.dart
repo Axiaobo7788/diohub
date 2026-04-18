@@ -1,14 +1,18 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:diohub/common/issues/issue_label.dart';
 import 'package:diohub/common/misc/nested_card_with_header.dart';
-import 'package:diohub/common/misc/shimmer_widget.dart';
-import 'package:diohub/graphql/queries/issues_pulls/__generated__/timeline.data.gql.dart';
-import 'package:diohub/models/events/events_model.dart' hide Key;
-import 'package:diohub/models/issues/issue_timeline_event_model.dart';
-import 'package:diohub/models/users/user_info_model.dart';
-import 'package:diohub/style/surface_style_theme.dart';
+import 'package:diohub/common/misc/shimmer_bone.dart';
+import 'package:diohub/common/misc/shimmer_scope.dart';
+import 'package:diohub/common/widgets/tinted_icon.dart';
+import 'package:diohub_graphql/fragments/common_exports.dart';
+import 'package:diohub_graphql/fragments/fragment_typedefs.dart'
+    show LabelFragment;
+import 'package:diohub_graphql/queries/issues_pulls/issue_pull_typedefs.dart'
+    show Actor;
+import 'package:diohub/style/opacities.dart';
 import 'package:diohub/utils/get_date.dart';
 import 'package:diohub/utils/utils.dart';
+import 'package:diohub/style/app_spacing.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_material_design_icons/flutter_material_design_icons.dart';
 
@@ -22,7 +26,7 @@ class BasicEventCard extends StatelessWidget {
     this.iconColor,
     super.key,
   });
-  final Gactor? user;
+  final Actor? user;
   final IconData leading;
   final Color? iconColor;
   final DateTime date;
@@ -30,28 +34,21 @@ class BasicEventCard extends StatelessWidget {
   final List<TextSpan> headerText;
   @override
   Widget build(final BuildContext context) {
+    final ThemeData theme = Theme.of(context);
     final Color effectiveIconColor =
         iconColor ?? context.colorScheme.onSurfaceVariant;
 
     final Widget headerRow = Row(
       mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.center,
       children: <Widget>[
         // Icon in colored container like BaseEventCard
-        Container(
-          width: 22,
-          height: 22,
-          decoration: BoxDecoration(
-            color: effectiveIconColor.withOpacity(0.12),
-            borderRadius: Theme.of(context).surfaceStyle.borderRadiusSmall(),
-          ),
-          child: Icon(
-            leading,
-            size: 12,
-            color: effectiveIconColor,
-          ),
+        TintedIcon(
+          icon: leading,
+          color: effectiveIconColor,
+          iconSize: 12,
+          boxSize: 22,
         ),
-        const SizedBox(width: 6),
+        context.spacing.compactGap,
         // Actor avatar
         if (user?.avatarUrl != null)
           ClipOval(
@@ -59,18 +56,23 @@ class BasicEventCard extends StatelessWidget {
               imageUrl: user!.avatarUrl.toString(),
               width: 18,
               height: 18,
+              memCacheWidth: (18 * MediaQuery.of(context).devicePixelRatio)
+                  .round()
+                  .clamp(1, 512),
+              memCacheHeight: (18 * MediaQuery.of(context).devicePixelRatio)
+                  .round()
+                  .clamp(1, 512),
               fit: BoxFit.cover,
-              placeholder: (context, url) => ShimmerWidget(
-                child: Container(
-                  width: 18,
-                  height: 18,
-                  color: context.colorScheme.surfaceVariant,
-                ),
+              placeholder: (final BuildContext context, final String url) =>
+                  const ShimmerScope(
+                child: ShimmerBone.avatar(size: 18),
               ),
-              errorWidget: (context, url, error) => Container(
+              errorWidget: (final BuildContext context, final String url,
+                      final Object error) =>
+                  Container(
                 width: 18,
                 height: 18,
-                color: context.colorScheme.surfaceVariant,
+                color: context.colorScheme.surfaceContainerHighest,
                 child: Icon(
                   Icons.person,
                   size: 10,
@@ -79,16 +81,15 @@ class BasicEventCard extends StatelessWidget {
               ),
             ),
           ),
-        if (user?.avatarUrl != null) const SizedBox(width: 4),
+        if (user?.avatarUrl != null) context.spacing.tightGap,
         // Actor name and action text
         Flexible(
           child: Text.rich(
             TextSpan(
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    fontWeight: FontWeight.w500,
-                    color: context.colorScheme.onSurface.withOpacity(0.7),
-                    fontSize: 12,
-                  ),
+              style: theme.textTheme.labelMedium?.copyWith(
+                fontWeight: FontWeight.w500,
+                color: context.colorScheme.onSurface.secondary,
+              ),
               children: <TextSpan>[
                 if (user?.login != null)
                   TextSpan(
@@ -106,16 +107,15 @@ class BasicEventCard extends StatelessWidget {
     return NestedCardWithHeader(
       header: headerRow,
       trailing: Text(
-        getDate(date.toString()),
-        style: context.textTheme.bodySmall?.copyWith(
-          color: context.colorScheme.onSurfaceVariant.withOpacity(0.7),
-          fontSize: 11,
+        DateTime.parse(date.toString()).toRelativeDate(),
+        style: theme.textTheme.labelSmall?.copyWith(
+          color: context.colorScheme.onSurfaceVariant.secondary,
         ),
       ),
       headerPadding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-      childPadding: const EdgeInsets.all(8),
+      childPadding: EdgeInsets.all(context.spacing.itemSpacing),
       child: DefaultTextStyle(
-        style: Theme.of(context).textTheme.bodyMedium!.asHint(),
+        style: theme.textTheme.bodyMedium!.asMuted(),
         child: content,
       ),
     );
@@ -132,7 +132,7 @@ class BasicEventTextCard extends StatelessWidget {
     this.iconColor,
     super.key,
   });
-  final Gactor? user;
+  final Actor? user;
   final IconData leading;
   final Color? iconColor;
   final DateTime date;
@@ -147,7 +147,7 @@ class BasicEventTextCard extends StatelessWidget {
         content: footer != null
             ? Padding(
                 padding: const EdgeInsets.only(top: 4),
-                child: footer!,
+                child: footer,
               )
             : const SizedBox.shrink(),
         date: date,
@@ -164,15 +164,16 @@ class BasicEventAssignedCard extends StatelessWidget {
     required this.isAssigned,
     super.key,
   });
-  final Gactor? actor;
-  final Gactor? assignee;
+  final Actor? actor;
+  final Actor? assignee;
   final DateTime createdAt;
   final bool isAssigned;
   @override
   Widget build(final BuildContext context) => BasicEventCard(
         headerText: <TextSpan>[
           TextSpan(text: isAssigned ? 'Assigned' : 'Unassigned'),
-          if (actor?.login != null && actor?.login != assignee?.login) ...[
+          if (actor?.login != null &&
+              actor?.login != assignee?.login) ...<TextSpan>[
             const TextSpan(text: ' '),
             TextSpan(
               text: assignee?.login ?? 'themselves',
@@ -198,10 +199,9 @@ class BasicEventLabeledCard extends StatelessWidget {
     // this.iconColor,
     super.key,
   });
-  final Gactor? actor;
-  // final Color? iconColor;
+  final Actor? actor;
   final DateTime date;
-  final Glabel content;
+  final LabelFragment content;
   final bool added;
   @override
   Widget build(final BuildContext context) => BasicEventCard(
@@ -214,115 +214,4 @@ class BasicEventLabeledCard extends StatelessWidget {
         date: date,
         leading: added ? Icons.label_rounded : Icons.label_off_rounded,
       );
-}
-
-class BasicIssueCrossReferencedCard extends StatelessWidget {
-  const BasicIssueCrossReferencedCard({
-    required this.date,
-    this.user,
-    this.content,
-    this.leading,
-    this.iconColor,
-    super.key,
-  });
-  final UserInfoModel? user;
-  final IconData? leading;
-  final Color? iconColor;
-  final DateTime date;
-  final Source? content;
-  // final String _correctRepo;
-
-  // GitHub API sends the wrong links to the issue where the reference was in.
-  // This is here to fix them.
-  // Ref: https://github.com/NamanShergill/diohub/issues/7
-  // String fixURL(String url) {
-  //   final components = url.split('/');
-  //   components[4] = _correctRepo.split('/').first;
-  //   components[5] = _correctRepo.split('/').last;
-  //   return components.join('/');
-  // }
-
-  @override
-  Widget build(final BuildContext context) {
-    return Container();
-    // return BasicEventCard(
-    //   iconColor: iconColor,
-    //   content: Column(
-    //     mainAxisSize: MainAxisSize.min,
-    //     crossAxisAlignment: CrossAxisAlignment.start,
-    //     children: [
-    //       const Text(
-    //         'Mentioned this.',
-    //         style: AppThemeTextStyles.basicIssueEventCardText,
-    //       ),
-    //       IssueListCard(
-    //         content!.issue!.copyWith(
-    //             url: fixURL(content!.issue!.url!),
-    //             repositoryUrl: fixURL(content!.issue!.repositoryUrl!),
-    //             labelsUrl: fixURL(content!.issue!.labelsUrl!),
-    //             commentsUrl: fixURL(content!.issue!.commentsUrl!),
-    //             eventsUrl: fixURL(content!.issue!.eventsUrl!)),
-    //         compact: true,
-    //         padding: const EdgeInsets.only(top: 8),
-    //       ),
-    //     ],
-    //   ),
-    //   date: date,
-    //   // user: user,
-    //   leading: leading,
-    // );
-  }
-}
-
-class BasicEventCommitCard extends StatelessWidget {
-  const BasicEventCommitCard({
-    required this.date,
-    this.user,
-    this.sha,
-    this.commitURL,
-    this.message,
-    this.leading,
-    this.iconColor,
-    super.key,
-  });
-  final Author? user;
-  final IconData? leading;
-  final Color? iconColor;
-  final DateTime date;
-  final String? sha;
-  final String? message;
-  final String? commitURL;
-  @override
-  Widget build(final BuildContext context) {
-    return Container();
-    // return BasicEventCard(
-    //   iconColor: iconColor,
-    //   user : user,
-    //   content: Column(
-    //     mainAxisSize: MainAxisSize.min,
-    //     crossAxisAlignment: CrossAxisAlignment.start,
-    //     children: [
-    //       Text(
-    //         'Added commit.',
-    //         style: AppThemeTextStyles.basicIssueEventCardText
-    //             .copyWith(fontWeight: FontWeight.bold),
-    //       ),
-    //       const SizedBox(
-    //         height: 4,
-    //       ),
-    //       Text(
-    //         message!,
-    //         style: AppThemeTextStyles.basicIssueEventCardText,
-    //       ),
-    //       const SizedBox(
-    //         height: 8,
-    //       ),
-    //       CommitSHAButton(sha, commitURL),
-    //     ],
-    //   ),
-    //   date: date,
-    //   name: user!.name,
-    //   leading: leading,
-    // );
-  }
 }

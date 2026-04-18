@@ -1,0 +1,24 @@
+mutation updateSupportPreferences(
+  $sponsorableId: ID!
+  $privacyLevel: SponsorshipPrivacy
+  $receiveEmails: Boolean
+) {
+  updateSponsorshipPreferences(
+    input: {
+      sponsorableId: $sponsorableId
+      privacyLevel: $privacyLevel
+      receiveEmails: $receiveEmails
+    }
+  ) {
+    sponsorship {
+      id
+      isActive
+      tier {
+        id
+        name
+        monthlyPriceInDollars
+      }
+      privacyLevel
+    }
+  }
+}

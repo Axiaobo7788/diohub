@@ -1,0 +1,40 @@
+query viewerInfo {
+  viewer {
+    id
+    login
+    name
+    avatarUrl
+    status {
+      message
+      emoji
+      indicatesLimitedAvailability
+    }
+    issues(filterBy: { states: OPEN }) {
+      totalCount
+    }
+    pullRequests(states: OPEN) {
+      totalCount
+    }
+    organizations {
+      totalCount
+    }
+    repositories {
+      totalCount
+    }
+    starredRepositories {
+      totalCount
+    }
+    following {
+      totalCount
+    }
+    followers {
+      totalCount
+    }
+    gists {
+      totalCount
+    }
+    watching {
+      totalCount
+    }
+  }
+}

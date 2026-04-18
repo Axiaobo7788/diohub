@@ -1,0 +1,20 @@
+query supportForViewer($login: String!) {
+  user(login: $login) {
+    sponsorshipForViewerAsSponsor(activeOnly: false) {
+      id
+      createdAt
+      isActive
+      isOneTimePayment
+      privacyLevel
+      tierSelectedAt
+      tier {
+        id
+        name
+        monthlyPriceInDollars
+        monthlyPriceInCents
+        description
+        isOneTime
+      }
+    }
+  }
+}

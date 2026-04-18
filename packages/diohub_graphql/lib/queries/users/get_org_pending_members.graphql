@@ -1,0 +1,11 @@
+# import '../../fragments/user_card_fields.graphql'
+
+query getOrgPendingMembers($org: String!, $first: Int!, $after: String) {
+  organization(login: $org) {
+    pendingMembers(first: $first, after: $after) {
+      totalCount
+      pageInfo { hasNextPage endCursor }
+      edges { cursor node { ...userCardFields } }
+    }
+  }
+}

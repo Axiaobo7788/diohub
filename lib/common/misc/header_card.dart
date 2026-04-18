@@ -1,5 +1,5 @@
-import 'package:diohub/common/misc/surface_shape_resolver.dart';
-import 'package:diohub/style/surface_style_theme.dart';
+import 'package:diohub/common/misc/bordered_container.dart';
+import 'package:diohub/style/surface_style.dart';
 import 'package:flutter/material.dart';
 
 /// A generic card widget that implements the common layout pattern:
@@ -57,76 +57,71 @@ class HeaderCard extends StatelessWidget {
 
   @override
   Widget build(final BuildContext context) {
-    return Card(
+    final Widget content = BorderedContainer(
       elevation: 1,
-      shape: SurfaceShapeResolver.shape(
-        context,
-        size: BorderRadiusSize.medium,
-      ),
-      margin: margin,
-      color: color,
-      child: Padding(
-        padding:
-            padding ?? const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: <Widget>[
-            // Header row with header (left) and trailing (right)
-            if (header != null || trailing != null) ...[
-              Padding(
-                padding: headerPadding ??
-                    const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  mainAxisSize: MainAxisSize.min,
-                  children: <Widget>[
-                    // Header content in nested row
-                    if (header != null)
-                      Expanded(
-                        child: header!,
-                      ),
-                    // Trailing content on the right
-                    if (trailing != null)
-                      Padding(
-                        padding: const EdgeInsets.only(left: 8),
-                        child: trailing!,
-                      ),
-                  ],
-                ),
+      size: RadiusSize.medium,
+      backgroundColor: color,
+      padding: padding ?? const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          // Header row with header (left) and trailing (right)
+          if (header != null || trailing != null) ...<Widget>[
+            Padding(
+              padding: headerPadding ??
+                  const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: <Widget>[
+                  // Header content in nested row
+                  if (header != null)
+                    Expanded(
+                      child: header!,
+                    ),
+                  // Trailing content on the right
+                  if (trailing != null)
+                    Padding(
+                      padding: const EdgeInsets.only(left: 8),
+                      child: trailing,
+                    ),
+                ],
               ),
-              SizedBox(height: spacing ?? 8),
-            ],
-            // Content rendered directly
-            child,
-            // Footer row with footer (left) and footerTrailing (right)
-            if (footer != null || footerTrailing != null) ...[
-              SizedBox(height: spacing ?? 8),
-              Padding(
-                padding: headerPadding ??
-                    const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  mainAxisSize: MainAxisSize.min,
-                  children: <Widget>[
-                    // Footer content in nested row
-                    if (footer != null)
-                      Expanded(
-                        child: footer!,
-                      ),
-                    // Footer trailing content on the right
-                    if (footerTrailing != null)
-                      Padding(
-                        padding: const EdgeInsets.only(left: 8),
-                        child: footerTrailing!,
-                      ),
-                  ],
-                ),
-              ),
-            ],
+            ),
+            SizedBox(height: spacing ?? 8),
           ],
-        ),
+          // Content rendered directly
+          child,
+          // Footer row with footer (left) and footerTrailing (right)
+          if (footer != null || footerTrailing != null) ...<Widget>[
+            SizedBox(height: spacing ?? 8),
+            Padding(
+              padding: headerPadding ??
+                  const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: <Widget>[
+                  // Footer content in nested row
+                  if (footer != null)
+                    Expanded(
+                      child: footer!,
+                    ),
+                  // Footer trailing content on the right
+                  if (footerTrailing != null)
+                    Padding(
+                      padding: const EdgeInsets.only(left: 8),
+                      child: footerTrailing,
+                    ),
+                ],
+              ),
+            ),
+          ],
+        ],
       ),
     );
+    if (margin != null && margin != EdgeInsets.zero) {
+      return Padding(padding: margin!, child: content);
+    }
+    return content;
   }
 }

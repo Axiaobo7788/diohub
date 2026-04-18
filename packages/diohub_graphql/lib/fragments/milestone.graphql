@@ -1,0 +1,16 @@
+fragment milestoneFields on Milestone {
+  id
+  number
+  title
+  description
+  dueOn
+  state
+  url
+  progressPercentage
+  openIssues: issues(states: OPEN, first: 0) {
+    totalCount
+  }
+  closedIssues: issues(states: CLOSED, first: 0) {
+    totalCount
+  }
+}

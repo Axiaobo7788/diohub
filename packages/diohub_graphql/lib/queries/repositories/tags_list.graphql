@@ -1,0 +1,63 @@
+query tagsList(
+  $owner: String!
+  $repo: String!
+  $first: Int!
+  $after: String
+  $query: String
+  $orderBy: RefOrder
+) {
+  repository(name: $repo, owner: $owner) {
+    refs(
+      first: $first
+      after: $after
+      query: $query
+      refPrefix: "refs/tags/"
+      orderBy: $orderBy
+    ) {
+      edges {
+        cursor
+        node {
+          name
+          id
+          prefix
+          target {
+            __typename
+            ... on Tag {
+              name
+              message
+              oid
+              tagger {
+                name
+                avatarUrl(size: 40)
+                date
+              }
+              target {
+                __typename
+                ... on Commit {
+                  oid
+                  tree {
+                    oid
+                  }
+                  committedDate
+                }
+              }
+            }
+            ... on Commit {
+              oid
+              tree {
+                oid
+              }
+              abbreviatedOid
+              committedDate
+              messageHeadline
+            }
+          }
+        }
+      }
+      pageInfo {
+        hasNextPage
+        endCursor
+      }
+    }
+  }
+}

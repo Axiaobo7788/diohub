@@ -1,0 +1,13 @@
+name: diohub_premium_api
+description: Interface and stub for DioHub premium features.
+publish_to: none
+
+environment:
+  sdk: ^3.8.0
+
+dependencies:
+  diohub_premium_interface:
+    path: ../diohub_premium_interface
+  flutter:
+    sdk: flutter
+  flutter_riverpod: ^3.0.3

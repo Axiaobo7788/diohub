@@ -1,0 +1,132 @@
+# import './actor.graphql'
+# import './label.graphql'
+# import './project_item_card_fields.graphql'
+# import './reaction_groups.graphql'
+# import './user_card_fields.graphql'
+fragment pullCardFields on PullRequest {
+  id
+  title
+  number
+  pullRequestState: state
+  url
+  body
+  createdAt
+  updatedAt
+  closedAt
+  mergedAt
+  merged
+  isDraft
+  additions
+  deletions
+  changedFiles
+  comments {
+    totalCount
+  }
+  totalCommentsCount
+  author {
+    ...actor
+  }
+  authorAssociation
+  mergedBy {
+    login
+    avatarUrl
+  }
+  commits {
+    totalCount
+  }
+  isInMergeQueue
+  mergeQueueEntry {
+    position
+  }
+  isCrossRepository
+  reviewThreads(first: 0) {
+    totalCount
+  }
+  labels(first: 100) {
+    nodes {
+      ...label
+    }
+  }
+  assignees(first: 5) {
+    nodes {
+      __typename
+      ... on User {
+        ...userCardFields
+      }
+    }
+  }
+  repository {
+    name
+    nameWithOwner
+    owner {
+      login
+      avatarUrl
+    }
+    url
+    viewerHasStarred
+  }
+  headRefName
+  baseRefName
+  reviewDecision
+  statusCheckRollup {
+    state
+    contextsSummary: contexts(first: 0) {
+      totalCount
+    }
+  }
+  milestone {
+    id
+    title
+    dueOn
+    description
+    state
+    url
+    progressPercentage
+    openIssues: issues(states: OPEN, first: 0) {
+      totalCount
+    }
+    closedIssues: issues(states: CLOSED, first: 0) {
+      totalCount
+    }
+  }
+  locked
+  activeLockReason
+  projectItems(first: 3, includeArchived: false) {
+    nodes {
+      ...projectItemCardFields
+    }
+  }
+  reactionGroups {
+    ...reactionGroups
+  }
+  mergeStateStatus
+  autoMergeRequest {
+    mergeMethod
+  }
+  latestOpinionatedReviews(first: 5) {
+    nodes {
+      author {
+        login
+        avatarUrl
+      }
+      authorAssociation
+      onBehalfOf(first: 1) {
+        nodes {
+          name
+          slug
+          avatarUrl(size: 48)
+        }
+      }
+      state
+      bodyText
+      submittedAt
+      comments(first: 0) {
+        totalCount
+      }
+      url
+    }
+  }
+  viewerCanSubscribe
+  viewerSubscription
+  isReadByViewer
+}

@@ -1,0 +1,32 @@
+# import './reaction_groups.graphql'
+
+# Release row/card fields for list and summary UI reuse.
+fragment releaseListItem on Release {
+  id
+  databaseId
+  name
+  tagName
+  isDraft
+  isLatest
+  isPrerelease
+  publishedAt
+  url
+  shortDescriptionHTML(limit: 200)
+  descriptionHTML
+  author {
+    login
+    avatarUrl(size: 40)
+  }
+  releaseAssets(first: 0) {
+    totalCount
+  }
+  reactionGroups {
+    ...reactionGroups
+  }
+  tagCommit {
+    oid
+    tree {
+      oid
+    }
+  }
+}

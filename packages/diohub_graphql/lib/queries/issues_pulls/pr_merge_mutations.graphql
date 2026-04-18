@@ -1,0 +1,29 @@
+# import '../../fragments/actor.graphql'
+
+mutation mergePullRequest(
+  $pullRequestId: ID!
+  $mergeMethod: PullRequestMergeMethod
+  $commitHeadline: String
+  $commitBody: String
+) {
+  mergePullRequest(
+    input: {
+      pullRequestId: $pullRequestId
+      mergeMethod: $mergeMethod
+      commitHeadline: $commitHeadline
+      commitBody: $commitBody
+    }
+  ) {
+    pullRequest {
+      id
+      state
+      merged
+      mergedAt
+      mergedBy {
+        ... on Actor {
+          ...actor
+        }
+      }
+    }
+  }
+}

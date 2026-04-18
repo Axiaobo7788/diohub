@@ -1,0 +1,39 @@
+ide: vscode
+
+instructions:
+  - assets:download
+  - assets:extract
+  - android:androidManifest
+  - android:buildGradle
+  - flutter:flavors
+  - flutter:app
+  - flutter:pages
+  - flutter:main
+  - ios:xcconfig
+  - ios:buildTargets
+  - ios:schema
+  - ios:plist
+
+flavors:
+  dev:
+    app:
+      name: "DioHub - Dev"
+    android:
+      applicationId: "com.felix.diohub.dev"
+      resValues:
+        app_name:
+          type: "string"
+          value: "DioHub - Dev"
+    ios:
+      bundleId: "com.felix.diohub.dev"
+  rel:
+    app:
+      name: "DioHub"
+    android:
+      applicationId: "com.felix.diohub"
+      resValues:
+        app_name:
+          type: "string"
+          value: "DioHub"
+    ios:
+      bundleId: "com.felix.diohub"

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:diohub/style/app_spacing.dart';
 
 InputDecoration inputDecoration({
   required final BuildContext context,
@@ -15,7 +16,7 @@ InputDecoration inputDecoration({
       hintText: hintText?.replaceRange(0, 0, ' '),
       contentPadding: contentPadding,
       suffixIcon: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: context.spacing.pagePadding,
         child: suffixIcon ??
             Icon(
               icon,

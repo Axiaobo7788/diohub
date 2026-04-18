@@ -1,0 +1,160 @@
+# import '../../fragments/actor.graphql'
+# import '../../fragments/repo_card_fields.graphql'
+# import '../../fragments/user_card_fields.graphql'
+# import '../../fragments/organization_card_fields.graphql'
+
+query userInfo($user: String!) {
+  repositoryOwner(login: $user) {
+    __typename
+    id
+    login
+    avatarUrl
+    repositories(privacy: PUBLIC) {
+      totalCount
+    }
+    ... on User {
+      ...userCardFields
+      name
+      bio
+      location
+      websiteUrl
+      twitterUsername
+      createdAt
+      updatedAt
+      isViewer
+      viewerCanFollow
+      viewerIsFollowing
+      hasSponsorsListing
+      sponsoring {
+        totalCount
+      }
+      sponsors {
+        totalCount
+      }
+      followers {
+        totalCount
+      }
+      pinnedItems(first: 6, types: [REPOSITORY]) {
+        edges {
+          node {
+            __typename
+            ... on Repository {
+              ...repoCardFields
+            }
+          }
+        }
+      }
+      company
+      email
+      pronouns
+      isHireable
+      socialAccounts(first: 10) {
+        nodes {
+          provider
+          displayName
+          url
+        }
+      }
+      isGitHubStar
+      isCampusExpert
+      isDeveloperProgramMember
+      isEmployee
+      isBountyHunter
+      isFollowingViewer
+      viewerCanSponsor
+      isSponsoringViewer
+      viewerIsSponsoring
+      status {
+        message
+        emoji
+        indicatesLimitedAvailability
+      }
+      pullRequests {
+        totalCount
+      }
+      issues {
+        totalCount
+      }
+      starredRepositories {
+        totalCount
+      }
+      watching {
+        totalCount
+      }
+      following {
+        totalCount
+      }
+      organizations {
+        totalCount
+      }
+      gists {
+        totalCount
+      }
+      packages {
+        totalCount
+      }
+      projectsV2 {
+        totalCount
+      }
+    }
+    ... on Organization {
+      ...organizationCardFields
+      name
+      description
+      location
+      websiteUrl
+      twitterUsername
+      createdAt
+      updatedAt
+      viewerIsFollowing
+      viewerIsAMember
+      viewerCanAdminister
+      hasSponsorsListing
+      orgEmail: email
+      isVerified
+      announcementBanner {
+        message
+        expiresAt
+        isUserDismissible
+        createdAt
+      }
+      packages {
+        totalCount
+      }
+      projectsV2 {
+        totalCount
+      }
+      sponsors {
+        totalCount
+      }
+      sponsoring {
+        totalCount
+      }
+      pinnedItems(first: 6, types: [REPOSITORY]) {
+        edges {
+          node {
+            __typename
+            ... on Repository {
+              ...repoCardFields
+            }
+          }
+        }
+      }
+    }
+  }
+  ownerStats: repositoryOwner(login: $user) {
+    repositories {
+      totalCount
+    }
+  }
+  profileReadme: repository(owner: $user, name: $user) {
+    object(expression: "HEAD:README.md") {
+      __typename
+    }
+  }
+  orgProfileReadme: repository(owner: $user, name: ".github") {
+    object(expression: "HEAD:profile/README.md") {
+      __typename
+    }
+  }
+}

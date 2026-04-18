@@ -1,21 +1,16 @@
-import 'package:diohub/graphql/queries/users/__generated__/user_info.data.gql.dart';
+import 'package:diohub_graphql/queries/users/contribution_fragments.graphql.dart';
+import 'package:diohub_graphql/fragments/fragment_typedefs.dart';
+import 'package:diohub_graphql/fragments/issue_card_fields.graphql.dart';
+import 'package:diohub_graphql/fragments/pull_card_fields.graphql.dart';
 
-/// Result for issue chip details with pagination
-class IssueChipDetails {
-  const IssueChipDetails({
-    required this.issues,
-    required this.hasNextPage,
-    required this.endCursor,
-    required this.totalCount,
-  });
+// Lightweight data classes for chip-detail contribution views.
+// These hold GraphQL-returned objects with proper types from the generated
+// GraphQL code. They are *not* REST models and do not need freezed/json.
 
-  final List<IssueChipItem> issues;
-  final bool hasNextPage;
-  final String? endCursor;
-  final int totalCount;
-}
+// ---------------------------------------------------------------------------
+// Item classes (one per contribution entry)
+// ---------------------------------------------------------------------------
 
-/// Individual issue item for chip bottom sheet
 class IssueChipItem {
   const IssueChipItem({
     required this.issue,
@@ -23,27 +18,11 @@ class IssueChipItem {
     required this.occurredAt,
   });
 
-  final dynamic issue; // GissueInfoTimeline type from generated code
-  final GrepositoryFields repository;
+  final Fragment$issueCardFields issue;
+  final Fragment$repositoryFields repository;
   final DateTime occurredAt;
 }
 
-/// Result for pull request chip details with pagination
-class PullRequestChipDetails {
-  const PullRequestChipDetails({
-    required this.pullRequests,
-    required this.hasNextPage,
-    required this.endCursor,
-    required this.totalCount,
-  });
-
-  final List<PullRequestChipItem> pullRequests;
-  final bool hasNextPage;
-  final String? endCursor;
-  final int totalCount;
-}
-
-/// Individual pull request item for chip bottom sheet
 class PullRequestChipItem {
   const PullRequestChipItem({
     required this.pullRequest,
@@ -51,27 +30,11 @@ class PullRequestChipItem {
     required this.occurredAt,
   });
 
-  final dynamic pullRequest; // GpullInfoTimeline type from generated code
-  final GrepositoryFields repository;
+  final Fragment$pullCardFields pullRequest;
+  final Fragment$repositoryFields repository;
   final DateTime occurredAt;
 }
 
-/// Result for review chip details with pagination
-class ReviewChipDetails {
-  const ReviewChipDetails({
-    required this.reviews,
-    required this.hasNextPage,
-    required this.endCursor,
-    required this.totalCount,
-  });
-
-  final List<ReviewChipItem> reviews;
-  final bool hasNextPage;
-  final String? endCursor;
-  final int totalCount;
-}
-
-/// Individual review item for chip bottom sheet
 class ReviewChipItem {
   const ReviewChipItem({
     required this.pullRequest,
@@ -79,38 +42,118 @@ class ReviewChipItem {
     required this.occurredAt,
   });
 
-  final dynamic pullRequest; // GpullInfoTimeline type from generated code
-  final GrepositoryFields repository;
+  final Fragment$pullCardFields pullRequest;
+  final Fragment$repositoryFields repository;
   final DateTime occurredAt;
 }
 
-/// Result for created repos chip details with pagination
-class CreatedRepoChipDetails {
-  const CreatedRepoChipDetails({
-    required this.repositories,
-    required this.hasNextPage,
-    required this.endCursor,
-    required this.totalCount,
-  });
-
-  final List<CreatedRepoChipItem> repositories;
-  final bool hasNextPage;
-  final String? endCursor;
-  final int totalCount;
-}
-
-/// Individual created repo item for chip bottom sheet
 class CreatedRepoChipItem {
   const CreatedRepoChipItem({
     required this.repository,
     required this.occurredAt,
   });
 
-  final GrepositoryFields repository;
+  final RepoCardData repository;
   final DateTime occurredAt;
 }
 
-/// Result for commits chip (repos only, not individual commits)
+class CommitRepoItem {
+  const CommitRepoItem({required this.repository, required this.commitCount});
+
+  final RepoCardData repository;
+  final int commitCount;
+}
+
+// ---------------------------------------------------------------------------
+// Page types (one page from API; used by pagination source)
+// ---------------------------------------------------------------------------
+
+class IssueChipPage {
+  const IssueChipPage({
+    required this.issues,
+    required this.hasNextPage,
+    required this.totalCount,
+    this.endCursor,
+  });
+  final List<IssueChipItem> issues;
+  final bool hasNextPage;
+  final String? endCursor;
+  final int totalCount;
+}
+
+class PullRequestChipPage {
+  const PullRequestChipPage({
+    required this.pullRequests,
+    required this.hasNextPage,
+    required this.totalCount,
+    this.endCursor,
+  });
+  final List<PullRequestChipItem> pullRequests;
+  final bool hasNextPage;
+  final String? endCursor;
+  final int totalCount;
+}
+
+class ReviewChipPage {
+  const ReviewChipPage({
+    required this.reviews,
+    required this.hasNextPage,
+    required this.totalCount,
+    this.endCursor,
+  });
+  final List<ReviewChipItem> reviews;
+  final bool hasNextPage;
+  final String? endCursor;
+  final int totalCount;
+}
+
+class CreatedRepoChipPage {
+  const CreatedRepoChipPage({
+    required this.repositories,
+    required this.hasNextPage,
+    required this.totalCount,
+    this.endCursor,
+  });
+  final List<CreatedRepoChipItem> repositories;
+  final bool hasNextPage;
+  final String? endCursor;
+  final int totalCount;
+}
+
+// ---------------------------------------------------------------------------
+// Detail classes (list + totalCount only; no cursor)
+// ---------------------------------------------------------------------------
+
+class IssueChipDetails {
+  const IssueChipDetails({required this.issues, required this.totalCount});
+  final List<IssueChipItem> issues;
+  final int totalCount;
+}
+
+class PullRequestChipDetails {
+  const PullRequestChipDetails({
+    required this.pullRequests,
+    required this.totalCount,
+  });
+  final List<PullRequestChipItem> pullRequests;
+  final int totalCount;
+}
+
+class ReviewChipDetails {
+  const ReviewChipDetails({required this.reviews, required this.totalCount});
+  final List<ReviewChipItem> reviews;
+  final int totalCount;
+}
+
+class CreatedRepoChipDetails {
+  const CreatedRepoChipDetails({
+    required this.repositories,
+    required this.totalCount,
+  });
+  final List<CreatedRepoChipItem> repositories;
+  final int totalCount;
+}
+
 class CommitChipDetails {
   const CommitChipDetails({
     required this.repositories,
@@ -120,18 +163,3 @@ class CommitChipDetails {
   final List<CommitRepoItem> repositories;
   final int totalCount;
 }
-
-/// Repository with commit count for commits chip
-class CommitRepoItem {
-  const CommitRepoItem({
-    required this.repository,
-    required this.commitCount,
-  });
-
-  final GrepositoryFields repository;
-  final int commitCount;
-}
-
-
-
-

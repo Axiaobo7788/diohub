@@ -1,30 +1,13 @@
 import 'package:contribution_heatmap/contribution_heatmap.dart';
-import 'package:diohub/style/surface_style_theme.dart';
+import 'package:diohub/common/animations/chart_entrance.dart';
+import 'package:diohub_models/models/contributions/contribution_day.dart';
+import 'package:diohub/style/app_spacing.dart';
+import 'package:diohub/style/contribution_colors.dart';
+import 'package:diohub/style/surface_ext.dart';
+import 'package:diohub/style/surface_style.dart';
+import 'package:diohub_models/models/contributions/contribution_day.dart';
 import 'package:flutter/material.dart';
-
-/// A single day in the contribution calendar
-class ContributionDay {
-  const ContributionDay({
-    required this.date,
-    required this.count,
-    this.color,
-    this.level,
-  });
-
-  final DateTime date;
-  final int count;
-  final Color? color;
-  final ContributionLevel? level;
-}
-
-/// Contribution level enum
-enum ContributionLevel {
-  none,
-  firstQuartile,
-  secondQuartile,
-  thirdQuartile,
-  fourthQuartile,
-}
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 /// A reusable contribution calendar widget (GitHub-style heatmap).
 ///
@@ -38,7 +21,7 @@ enum ContributionLevel {
 ///   onDayTap: (day) => showDayDetails(day),
 /// )
 /// ```
-class ContributionCalendarWidget extends StatefulWidget {
+class ContributionCalendarWidget extends ConsumerStatefulWidget {
   const ContributionCalendarWidget({
     required this.weeks,
     this.colors,
@@ -52,7 +35,7 @@ class ContributionCalendarWidget extends StatefulWidget {
     this.dayLabelWidth = 20.0,
     this.legendColors,
     this.showLegend = true,
-    this.legendLabels = const ['Less', 'More'],
+    this.legendLabels = const <String>['Less', 'More'],
     this.shouldScroll = false,
     super.key,
   });
@@ -103,12 +86,12 @@ class ContributionCalendarWidget extends StatefulWidget {
   final bool shouldScroll;
 
   @override
-  State<ContributionCalendarWidget> createState() =>
+  ConsumerState<ContributionCalendarWidget> createState() =>
       _ContributionCalendarWidgetState();
 }
 
 class _ContributionCalendarWidgetState
-    extends State<ContributionCalendarWidget> {
+    extends ConsumerState<ContributionCalendarWidget> {
   // Cached conversion results - only recalculate when weeks change
   List<ContributionEntry>? _cachedEntries;
   DateTime? _cachedMinDate;
@@ -124,17 +107,18 @@ class _ContributionCalendarWidgetState
     }
 
     // Convert weeks format to entries format for the library
-    final entries = <ContributionEntry>[];
-    final dayMap = <String, ContributionDay>{};
+    final List<ContributionEntry> entries = <ContributionEntry>[];
+    final Map<String, ContributionDay> dayMap = <String, ContributionDay>{};
     DateTime? minDate;
     DateTime? maxDate;
 
-    for (final week in widget.weeks) {
-      for (final day in week) {
+    for (final List<ContributionDay> week in widget.weeks) {
+      for (final ContributionDay day in week) {
         entries.add(ContributionEntry(day.date, day.count));
 
         // Create a key for O(1) lookup: "YYYY-MM-DD"
-        final dateKey = '${day.date.year}-${day.date.month}-${day.date.day}';
+        final String dateKey =
+            '${day.date.year}-${day.date.month}-${day.date.day}';
         dayMap[dateKey] = day;
 
         if (minDate == null || day.date.isBefore(minDate)) {
@@ -156,13 +140,13 @@ class _ContributionCalendarWidgetState
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(final BuildContext context) {
     // Update cache if needed (only recalculates when weeks change)
     _updateCacheIfNeeded();
 
     // Build the heatmap widget with high-contrast color scheme
     // Using HeatmapColor.blue for better contrast differences
-    final heatmap = ContributionHeatmap(
+    final ContributionHeatmap heatmap = ContributionHeatmap(
       entries: _cachedEntries!,
       minDate: _cachedMinDate,
       maxDate: _cachedMaxDate,
@@ -170,16 +154,15 @@ class _ContributionCalendarWidgetState
       cellSpacing: widget.cellSpacing,
       // splittedMonthView: true,
       showCellDate: true,
-      cellRadius: 2,
       showMonthLabels: widget.showMonthLabels,
       weekdayLabel: WeekdayLabel.none,
 
       heatmapColor: HeatmapColor.blue, // Higher contrast than green
       onCellTap: widget.onDayTap != null
-          ? (date, value) {
+          ? (final DateTime date, final int value) {
               // O(1) lookup using cached map
-              final dateKey = '${date.year}-${date.month}-${date.day}';
-              final day = _cachedDayMap![dateKey];
+              final String dateKey = '${date.year}-${date.month}-${date.day}';
+              final ContributionDay? day = _cachedDayMap![dateKey];
               if (day != null) {
                 widget.onDayTap!(day);
               }
@@ -188,12 +171,12 @@ class _ContributionCalendarWidgetState
     );
 
     // Use cached calendar width
-    final calendarWidth = _cachedCalendarWidth!;
+    final double calendarWidth = _cachedCalendarWidth!;
 
     // Wrap heatmap in scrollable container if needed
     // Use LayoutBuilder to handle overflow on small screens
-    final heatmapWidget = LayoutBuilder(
-      builder: (context, constraints) {
+    final LayoutBuilder heatmapWidget = LayoutBuilder(
+      builder: (final BuildContext context, final BoxConstraints constraints) {
         // If shouldScroll is true, always make it scrollable
         if (widget.shouldScroll) {
           return SingleChildScrollView(
@@ -212,9 +195,7 @@ class _ContributionCalendarWidgetState
 
         // Fits on screen - use ConstrainedBox to ensure it respects max width
         return ConstrainedBox(
-          constraints: BoxConstraints(
-            maxWidth: constraints.maxWidth,
-          ),
+          constraints: BoxConstraints(maxWidth: constraints.maxWidth),
           child: heatmap,
         );
       },
@@ -222,19 +203,22 @@ class _ContributionCalendarWidgetState
 
     // Build legend if enabled
     if (widget.showLegend) {
-      return Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          heatmapWidget,
-          Padding(
-            padding: const EdgeInsets.only(top: 8.0),
-            child: _buildLegend(context),
-          ),
-        ],
+      final AppSpacing spacing = context.spacing;
+      return ChartEntrance(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: <Widget>[
+            heatmapWidget,
+            Padding(
+              padding: EdgeInsets.only(top: spacing.itemSpacing),
+              child: _buildLegend(context),
+            ),
+          ],
+        ),
       );
     }
 
-    return heatmapWidget;
+    return ChartEntrance(child: heatmapWidget);
   }
 
   // Cached legend widget - only rebuilds when cellSize or legendLabels change
@@ -243,56 +227,54 @@ class _ContributionCalendarWidgetState
   List<String>? _cachedLegendLabels;
 
   /// Build the legend showing color gradient with "Less" and "More" labels
-  Widget _buildLegend(BuildContext context) {
+  Widget _buildLegend(final BuildContext context) {
     // Cache legend widget - only rebuild when cellSize or legendLabels change
     if (_cachedLegend == null ||
         _cachedLegendCellSize != widget.cellSize ||
         _cachedLegendLabels != widget.legendLabels) {
-      final theme = Theme.of(context);
-      final textStyle = theme.textTheme.labelSmall?.copyWith(
+      final ThemeData theme = Theme.of(context);
+      final AppSpacing spacing = context.spacing;
+      final TextStyle? textStyle = theme.textTheme.labelSmall?.copyWith(
         color: theme.colorScheme.onSurfaceVariant,
         fontSize: 10,
       );
 
-      // High-contrast blue color palette (matching HeatmapColor.blue)
-      // Using distinct colors with stronger differences between levels
-      final legendColors = [
-        const Color(0xFFE3F2FD), // 0% - no contributions (very light blue)
-        const Color(0xFF90CAF9), // ~25% - low (light blue)
-        const Color(0xFF42A5F5), // ~50% - medium (medium blue)
-        const Color(0xFF1E88E5), // ~75% - high (darker blue)
-        const Color(0xFF1565C0), // 100% - very high (very dark blue)
+      // Legend gradient aligned with contribution primary (commit blue).
+      // HeatmapColor.blue is used for the grid; legend uses a similar blue scale.
+      final Color baseBlue = ContributionColors.commit;
+      final List<Color> legendColors = <Color>[
+        baseBlue.withOpacity(0.12),
+        baseBlue.withOpacity(0.35),
+        baseBlue.withOpacity(0.58),
+        baseBlue.withOpacity(0.82),
+        baseBlue,
       ];
 
       // Pre-build color containers list
-      final colorContainers = legendColors.map((color) {
-        return Container(
-          width: widget.cellSize,
-          height: widget.cellSize,
-          margin: const EdgeInsets.symmetric(horizontal: 1),
-          decoration: BoxDecoration(
-            color: color,
-            borderRadius: Theme.of(context).surfaceStyle.borderRadiusSoft(),
-          ),
-        );
-      }).toList();
+      final List<Container> colorContainers = legendColors
+          .map(
+            (final Color color) => Container(
+              width: widget.cellSize,
+              height: widget.cellSize,
+              margin: const EdgeInsets.symmetric(horizontal: 1),
+              decoration: BoxDecoration(
+                color: color,
+                borderRadius: context.radius(RadiusSize.soft),
+              ),
+            ),
+          )
+          .toList();
 
       _cachedLegend = Row(
         mainAxisSize: MainAxisSize.min,
-        children: [
+        children: <Widget>[
           if (widget.legendLabels.isNotEmpty)
-            Text(
-              widget.legendLabels.first,
-              style: textStyle,
-            ),
-          const SizedBox(width: 4),
+            Text(widget.legendLabels.first, style: textStyle),
+          spacing.tightGap,
           ...colorContainers,
-          if (widget.legendLabels.length > 1) ...[
-            const SizedBox(width: 4),
-            Text(
-              widget.legendLabels.last,
-              style: textStyle,
-            ),
+          if (widget.legendLabels.length > 1) ...<Widget>[
+            spacing.tightGap,
+            Text(widget.legendLabels.last, style: textStyle),
           ],
         ],
       );

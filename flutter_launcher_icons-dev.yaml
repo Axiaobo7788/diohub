@@ -1,0 +1,16 @@
+flutter_launcher_icons:
+  android: true
+  ios: true
+  remove_alpha_ios: true
+  
+  # Android adaptive icon
+  image_path_android: "assets/icon/foreground.png"
+  adaptive_icon_foreground: "assets/icon/foreground.png"
+  adaptive_icon_background: "assets/icon/android_bg.png"
+  adaptive_icon_monochrome: "assets/icon/monochrome.png"
+  
+  # iOS icons
+  image_path_ios: "assets/icon/ios_default.png"
+  
+  # Flavor config
+  flavor: "dev"

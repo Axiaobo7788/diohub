@@ -1,0 +1,15 @@
+query accountTier($login: String!) {
+  user(login: $login) {
+    sponsorshipForViewerAsSponsor {
+      createdAt
+      isActive
+      isOneTimePayment
+      tier {
+        id
+        name
+        monthlyPriceInDollars
+        description
+      }
+    }
+  }
+}

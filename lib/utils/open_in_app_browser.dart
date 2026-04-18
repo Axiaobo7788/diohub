@@ -1,11 +1,17 @@
+import 'package:diohub_models/models/server_config.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 
-Future<void> openInAppBrowser(final Uri link) async {
+Future<void> openInAppBrowser(
+  final Uri link, {
+  final ServerConfig? server,
+}) async {
   Uri uri = link;
+  final ServerConfig effectiveServer = server ?? ServerConfig.gitHubDotCom;
+  // ignore: prefer_async_await
   await ChromeSafariBrowser.isAvailable().then(
     (final bool value) {
       if (!<String>['http', 'https'].contains(uri.scheme)) {
-        uri = _handleGithubPaths(uri);
+        uri = _handleGithubPaths(uri, effectiveServer);
       }
       if (value) {
         ChromeSafariBrowser().open(
@@ -20,5 +26,5 @@ Future<void> openInAppBrowser(final Uri link) async {
   );
 }
 
-Uri _handleGithubPaths(final Uri uri) =>
-    Uri(scheme: 'https', host: 'github.com', path: uri.path);
+Uri _handleGithubPaths(final Uri uri, final ServerConfig server) =>
+    server.webUrl(uri.path);

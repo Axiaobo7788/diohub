@@ -1,0 +1,33 @@
+query supportListingTiers($login: String!) {
+  user(login: $login) {
+    sponsorsListing {
+      slug
+      name
+      shortDescription
+      fullDescription
+      url
+      activeGoal {
+        title
+        description
+        kind
+        targetValue
+        percentComplete
+      }
+      tiers(
+        first: 20
+        orderBy: { field: MONTHLY_PRICE_IN_CENTS, direction: ASC }
+      ) {
+        nodes {
+          id
+          name
+          description
+          descriptionHTML
+          monthlyPriceInDollars
+          monthlyPriceInCents
+          isOneTime
+          isCustomAmount
+        }
+      }
+    }
+  }
+}

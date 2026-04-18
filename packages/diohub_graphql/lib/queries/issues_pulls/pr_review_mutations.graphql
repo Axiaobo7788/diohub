@@ -1,0 +1,268 @@
+# import '../../fragments/actor.graphql'
+# import '../../fragments/review_requested_reviewer.graphql'
+# import './pr_review_comments.graphql'
+
+mutation addPullRequestReview(
+  $pullRequestId: ID!
+  $body: String
+  $event: PullRequestReviewEvent
+  $commitOID: GitObjectID
+  $threads: [DraftPullRequestReviewThread]
+) {
+  addPullRequestReview(
+    input: {
+      pullRequestId: $pullRequestId
+      body: $body
+      event: $event
+      commitOID: $commitOID
+      threads: $threads
+    }
+  ) {
+    pullRequestReview {
+      id
+      state
+      body
+      bodyHTML
+      author {
+        ... on Actor {
+          ...actor
+        }
+      }
+      comments {
+        totalCount
+      }
+      submittedAt
+      viewerCanDelete
+    }
+  }
+}
+
+mutation submitPullRequestReview(
+  $pullRequestReviewId: ID!
+  $event: PullRequestReviewEvent!
+  $body: String
+) {
+  submitPullRequestReview(
+    input: {
+      pullRequestReviewId: $pullRequestReviewId
+      event: $event
+      body: $body
+    }
+  ) {
+    pullRequestReview {
+      id
+      state
+    }
+  }
+}
+
+mutation deletePullRequestReview($pullRequestReviewId: ID!) {
+  deletePullRequestReview(
+    input: { pullRequestReviewId: $pullRequestReviewId }
+  ) {
+    pullRequestReview {
+      id
+    }
+  }
+}
+
+mutation dismissPullRequestReview(
+  $pullRequestReviewId: ID!
+  $message: String!
+) {
+  dismissPullRequestReview(
+    input: { pullRequestReviewId: $pullRequestReviewId, message: $message }
+  ) {
+    pullRequestReview {
+      id
+      state
+    }
+  }
+}
+
+mutation addPullRequestReviewThread(
+  $pullRequestId: ID
+  $pullRequestReviewId: ID
+  $body: String!
+  $path: String!
+  $line: Int
+  $side: DiffSide
+  $startLine: Int
+  $startSide: DiffSide
+  $subjectType: PullRequestReviewThreadSubjectType
+) {
+  addPullRequestReviewThread(
+    input: {
+      pullRequestId: $pullRequestId
+      pullRequestReviewId: $pullRequestReviewId
+      body: $body
+      path: $path
+      line: $line
+      side: $side
+      startLine: $startLine
+      startSide: $startSide
+      subjectType: $subjectType
+    }
+  ) {
+    thread {
+      id
+      path
+      line
+      diffSide
+      isResolved
+      isOutdated
+      comments(first: 1) {
+        nodes {
+          ...pullRequestReviewComment
+        }
+      }
+    }
+  }
+}
+
+mutation addPullRequestReviewThreadReply(
+  $pullRequestReviewThreadId: ID!
+  $body: String!
+  $pullRequestReviewId: ID
+) {
+  addPullRequestReviewThreadReply(
+    input: {
+      pullRequestReviewThreadId: $pullRequestReviewThreadId
+      body: $body
+      pullRequestReviewId: $pullRequestReviewId
+    }
+  ) {
+    comment {
+      ...pullRequestReviewComment
+    }
+  }
+}
+
+mutation resolveReviewThread($threadId: ID!) {
+  resolveReviewThread(input: { threadId: $threadId }) {
+    thread {
+      id
+      isResolved
+      resolvedBy {
+        ... on Actor {
+          ...actor
+        }
+      }
+    }
+  }
+}
+
+mutation unresolveReviewThread($threadId: ID!) {
+  unresolveReviewThread(input: { threadId: $threadId }) {
+    thread {
+      id
+      isResolved
+    }
+  }
+}
+
+mutation requestReviews(
+  $pullRequestId: ID!
+  $userIds: [ID!]
+  $teamIds: [ID!]
+  $union: Boolean
+) {
+  requestReviews(
+    input: {
+      pullRequestId: $pullRequestId
+      userIds: $userIds
+      teamIds: $teamIds
+      union: $union
+    }
+  ) {
+    pullRequest {
+      id
+      reviewRequests(first: 10) {
+        nodes {
+          __typename
+          requestedReviewer {
+            __typename
+            ... on User {
+              ...requestReviewerUser
+            }
+            ... on Team {
+              ...requestReviewerTeam
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
+mutation updatePullRequestReview($pullRequestReviewId: ID!, $body: String!) {
+  updatePullRequestReview(
+    input: { pullRequestReviewId: $pullRequestReviewId, body: $body }
+  ) {
+    pullRequestReview {
+      id
+      body
+      bodyHTML
+    }
+  }
+}
+
+mutation updatePullRequestReviewComment(
+  $pullRequestReviewCommentId: ID!
+  $body: String!
+) {
+  updatePullRequestReviewComment(
+    input: {
+      pullRequestReviewCommentId: $pullRequestReviewCommentId
+      body: $body
+    }
+  ) {
+    pullRequestReviewComment {
+      id
+      body
+      bodyHTML
+    }
+  }
+}
+
+mutation markFileAsViewed($pullRequestId: ID!, $path: String!) {
+  markFileAsViewed(input: { pullRequestId: $pullRequestId, path: $path }) {
+    clientMutationId
+  }
+}
+
+mutation unmarkFileAsViewed($pullRequestId: ID!, $path: String!) {
+  unmarkFileAsViewed(input: { pullRequestId: $pullRequestId, path: $path }) {
+    pullRequest {
+      id
+    }
+  }
+}
+
+mutation minimizeComment(
+  $subjectId: ID!
+  $classifier: ReportedContentClassifiers!
+) {
+  minimizeComment(input: { subjectId: $subjectId, classifier: $classifier }) {
+    minimizedComment {
+      ... on Minimizable {
+        isMinimized
+      }
+    }
+  }
+}
+
+mutation unminimizeComment($subjectId: ID!) {
+  unminimizeComment(input: { subjectId: $subjectId }) {
+    unminimizedComment {
+      ... on IssueComment {
+        id
+        isMinimized
+      }
+      ... on PullRequestReviewComment {
+        id
+        isMinimized
+      }
+    }
+  }
+}

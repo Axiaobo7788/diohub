@@ -1,0 +1,9 @@
+# import '../../fragments/discussion_card_fields.graphql'
+
+query discussionByNumber($owner: String!, $name: String!, $number: Int!) {
+  repository(owner: $owner, name: $name) {
+    discussion(number: $number) {
+      ...discussionCardFields
+    }
+  }
+}

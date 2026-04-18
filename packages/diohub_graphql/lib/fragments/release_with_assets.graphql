@@ -1,0 +1,18 @@
+# import './release_asset.graphql'
+
+# Release identity plus full asset list for asset sheet / download UI.
+# Uses $first and $after from the operation.
+fragment releaseWithAssets on Release {
+  id
+  tagName
+  name
+  releaseAssets(first: $first, after: $after) {
+    nodes {
+      ...releaseAssetFields
+    }
+    pageInfo {
+      endCursor
+      hasNextPage
+    }
+  }
+}

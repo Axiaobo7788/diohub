@@ -1,0 +1,215 @@
+# import './pull_card_fields.graphql'
+# import './actor.graphql'
+# import './issue_card_fields.graphql'
+# import './review_requested_reviewer.graphql'
+
+# Fragment for PullRequest detail screen.
+# Composes pullCardFields and adds detail-specific fields.
+fragment pullDetailFields on PullRequest {
+  # Inherit ALL card fields (id, title, number, labels, assignees, milestone, etc.)
+  ...pullCardFields
+
+  # ─── Detail-only fields ──────────────────────────────────────────
+  titleHTMLAsString: titleHTML
+  permalink
+  resourcePath
+  publishedAt
+  lastEditedAt
+
+  bodyHTML
+  editor {
+    ... on Actor {
+      ...actor
+    }
+  }
+  includesCreatedEdit
+  userContentEdits {
+    totalCount
+  }
+
+  headRepository {
+    nameWithOwner
+    owner {
+      ... on Actor {
+        ...actor
+      }
+    }
+    url
+    stargazerCount
+    description
+    primaryLanguage {
+      name
+      color
+    }
+  }
+
+  baseRef {
+    name
+    repository {
+      url
+    }
+  }
+  headRef {
+    id
+    name
+    repository {
+      url
+    }
+  }
+  baseRefOid
+  headRefOid
+
+  closed
+  mergeable
+  canBeRebased
+
+  mergeHeadline: viewerMergeHeadlineText(mergeType: MERGE)
+  mergeBody: viewerMergeBodyText(mergeType: MERGE)
+  squashHeadline: viewerMergeHeadlineText(mergeType: SQUASH)
+  squashBody: viewerMergeBodyText(mergeType: SQUASH)
+  rebaseHeadline: viewerMergeHeadlineText(mergeType: REBASE)
+  rebaseBody: viewerMergeBodyText(mergeType: REBASE)
+
+  checksUrl
+  revertUrl
+
+  reviewRequests(first: 20) {
+    nodes {
+      __typename
+      requestedReviewer {
+        __typename
+        ... on User {
+          ...requestReviewerUser
+        }
+        ... on Team {
+          ...requestReviewerTeam
+        }
+      }
+    }
+  }
+  latestReviews(first: 10) {
+    nodes {
+      author {
+        ...actor
+      }
+      state
+    }
+  }
+  viewerLatestReview {
+    id
+    state
+    body
+    createdAt
+  }
+  viewerLatestReviewRequest {
+    id
+    requestedReviewer {
+      __typename
+      ... on User {
+        ...requestReviewerUser
+      }
+      ... on Team {
+        ...requestReviewerTeam
+      }
+    }
+  }
+  suggestedReviewers {
+    isAuthor
+    isCommenter
+    reviewer {
+      id
+      login
+      avatarUrl
+      name
+    }
+  }
+
+  participants(first: 30) {
+    totalCount
+    nodes {
+      ...actor
+    }
+  }
+
+  timelineItems {
+    totalCount
+  }
+
+  repository {
+    viewerDefaultMergeMethod
+    mergeCommitTitle
+    mergeCommitMessage
+    squashMergeCommitTitle
+    squashMergeCommitMessage
+    mergeQueue {
+      id
+    }
+  }
+
+  autoMergeRequest {
+    enabledAt
+    enabledBy {
+      ... on Actor {
+        ...actor
+      }
+    }
+  }
+
+  statusCheckRollup {
+    contexts(first: 50) {
+      pageInfo {
+        hasNextPage
+        endCursor
+      }
+      nodes {
+        __typename
+        ... on CheckRun {
+          name
+          conclusion
+          status
+          detailsUrl
+          startedAt
+          completedAt
+          checkSuite {
+            app {
+              name
+              logoUrl
+            }
+            databaseId
+          }
+        }
+        ... on StatusContext {
+          context
+          state
+          targetUrl
+        }
+      }
+    }
+  }
+
+  closingIssuesReferences(first: 10) {
+    totalCount
+    nodes {
+      ...issueCardFields
+    }
+  }
+
+  projectsV2 {
+    totalCount
+  }
+
+  viewerCanReact
+  viewerCanUpdate
+  viewerDidAuthor
+  viewerCanClose
+  viewerCanReopen
+  viewerCanLabel
+  viewerCanMergeAsAdmin
+  viewerCanEnableAutoMerge
+  viewerCanDisableAutoMerge
+  viewerCanUpdateBranch
+  viewerCanDeleteHeadRef
+  viewerCannotUpdateReasons
+  viewerCanApplySuggestion
+  viewerCanEditFiles
+}

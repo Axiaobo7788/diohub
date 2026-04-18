@@ -1,0 +1,107 @@
+
+# Git tree and blob browsing via GraphQL.
+
+fragment treeFields on Tree {
+  oid
+  entries {
+    name
+    type
+    oid
+    size
+    path
+    lineCount
+    extension
+    isGenerated
+    mode
+    language {
+      name
+      color
+    }
+    submodule {
+      branch
+      gitUrl
+      name
+      path
+      subprojectCommitOid
+    }
+    object {
+      __typename
+      ... on Blob {
+        isBinary
+        byteSize
+      }
+    }
+  }
+}
+
+query getGitTree($owner: String!, $name: String!, $oid: GitObjectID!) {
+  repository(owner: $owner, name: $name) {
+    object(oid: $oid) {
+      __typename
+      ... on Tree {
+        ...treeFields
+      }
+    }
+  }
+}
+
+query getFileByExpression($owner: String!, $name: String!, $expression: String!) {
+  repository(owner: $owner, name: $name) {
+    object(expression: $expression) {
+      __typename
+      ... on Tree {
+        ...treeFields
+      }
+      ... on Blob {
+        oid
+        byteSize
+        isBinary
+        isTruncated
+        text
+      }
+    }
+  }
+}
+
+query getGitBlob($owner: String!, $name: String!, $oid: GitObjectID!) {
+  repository(owner: $owner, name: $name) {
+    object(oid: $oid) {
+      __typename
+      ... on Blob {
+        oid
+        byteSize
+        isBinary
+        isTruncated
+        text
+      }
+    }
+  }
+}
+
+# Last commit that touched the given path (for popup "Last Commit").
+query getLastCommitForPath(
+  $owner: String!
+  $name: String!
+  $expression: String!
+  $path: String!
+) {
+  repository(owner: $owner, name: $name) {
+    object(expression: $expression) {
+      __typename
+      ... on Commit {
+        history(first: 1, path: $path) {
+          nodes {
+            oid
+            abbreviatedOid
+            message
+            committedDate
+            author {
+              name
+              avatarUrl
+            }
+          }
+        }
+      }
+    }
+  }
+}

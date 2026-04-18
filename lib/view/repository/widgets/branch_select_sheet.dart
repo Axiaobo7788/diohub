@@ -1,14 +1,17 @@
-import 'package:diohub/common/misc/ink_pot.dart';
-import 'package:diohub/common/wrappers/infinite_scroll_wrapper.dart';
-import 'package:diohub/models/repositories/branch_list_model.dart';
-import 'package:diohub/services/repositories/repo_services.dart';
-import 'package:diohub/utils/utils.dart';
+import 'package:diohub/common/bottom_sheet/paginated_select_sheet.dart';
+import 'package:diohub_models/models/pagination/page_slice.dart';
+import 'package:diohub/common/pagination/page_source.dart';
+import 'package:diohub_graphql/queries/repositories/repo_typedefs.dart';
+import 'package:diohub_models/models/entity_ref.dart';
+import 'package:diohub/providers/database_providers.dart' show apiClientProvider;
+import 'package:diohub/services/base/service_extensions.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_vector_icons/flutter_vector_icons.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-class BranchSelectSheet extends StatelessWidget {
+/// Thin wrapper around [PaginatedSelectSheet] for single branch selection.
+class BranchSelectSheet extends ConsumerWidget {
   const BranchSelectSheet(
-    this.repoURL, {
+    this.repoRef, {
     this.defaultBranch,
     this.currentBranch,
     this.onSelected,
@@ -16,85 +19,50 @@ class BranchSelectSheet extends StatelessWidget {
     super.key,
   });
 
-  final String repoURL;
+  final RepoRef repoRef;
   final String? defaultBranch;
   final String? currentBranch;
   final ValueChanged<String>? onSelected;
   final ScrollController? controller;
 
   @override
-  Widget build(final BuildContext context) =>
-      InfiniteScrollWrapper<RepoBranchListItemModel>(
-        listEndIndicator: false,
-        separatorBuilder: (final BuildContext context, final int index) =>
-            const SizedBox(
-          height: 16,
-        ),
-        future: (
-          data,
-        ) async =>
-            RepositoryServices.fetchBranchList(
-          repoURL,
-          data.pageNumber,
-          data.pageSize,
-          refresh: data.refresh,
-        ),
-        scrollController: controller,
-        builder: (
-          final BuildContext context,
-          final data,
-        ) =>
-            Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          child: Card(
-            // borderRadius: medBorderRadius,
-            color: data.item.name == currentBranch
-                ? context.colorScheme.primary
-                : null,
-            child: InkPot(
-              onTap: () {
-                onSelected!(data.item.name!);
-                Navigator.pop(context);
-              },
-              child: Padding(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: <Widget>[
-                    Flexible(
-                      child: Row(
-                        children: <Widget>[
-                          const Icon(Octicons.git_branch),
-                          const SizedBox(
-                            width: 8,
-                          ),
-                          Flexible(
-                            child: Text(
-                              data.item.name!,
-                              style: TextStyle(
-                                fontWeight: data.item.name == currentBranch
-                                    ? FontWeight.bold
-                                    : FontWeight.normal,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    Visibility(
-                      visible: defaultBranch == data.item.name,
-                      replacement: Container(),
-                      child: Text(
-                        'Default',
-                        style: context.textTheme.bodySmall,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-        ),
-      );
+  Widget build(BuildContext context, WidgetRef ref) {
+    return PaginatedSelectSheet<BranchEdge>(
+      mode: SelectMode.single,
+      searchable: true,
+      searchHint: 'Search branches…',
+      scrollController: controller,
+      sourceBuilder: (String? query) =>
+          CursorForwardSource<BranchEdge>(
+        fetch: ({required int first, String? after}) async {
+          final apiClient = ref.read(apiClientProvider);
+          final r = await repoRef.branches(apiClient).fetchBranchesPaginated(
+            first: first,
+            after: after,
+            query: query,
+          );
+          return CursorPage<BranchEdge>(
+            items: r.items,
+            hasNextPage: r.hasNextPage,
+            endCursor: r.endCursor,
+          );
+        },
+      ),
+      idOf: (e) => e.node?.name ?? '',
+      titleOf: (e) => e.node?.name ?? '',
+      subtitleOf: (e) {
+        final String name = e.node?.name ?? '';
+        if (name.isEmpty) return null;
+        final List<String> parts = <String>[];
+        if (name == defaultBranch) parts.add('Default');
+        if (name == currentBranch) parts.add('Current');
+        return parts.isEmpty ? null : parts.join(' · ');
+      },
+      onSelectSingle: (BranchEdge item) {
+        final String name = item.node?.name ?? '';
+        onSelected?.call(name);
+        if (context.mounted) Navigator.of(context).pop();
+      },
+    );
+  }
 }

@@ -1,0 +1,11 @@
+[settings]
+tag_prefix = "v"
+skip_ci = "[skip ci]"
+ignore_merge_commits = true
+branch_whitelist = ["main", "beta", "develop"]
+
+pre_bump_hooks = []
+post_bump_hooks = [
+  "sed -i.bak 's/^version: .*/version: {{version}}/' pubspec.yaml && rm -f pubspec.yaml.bak",
+  "git add pubspec.yaml",
+]

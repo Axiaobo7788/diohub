@@ -1,0 +1,10 @@
+query getRateLimit {
+  rateLimit {
+    limit
+    remaining
+    used
+    resetAt
+    nodeCount
+    cost
+  }
+}

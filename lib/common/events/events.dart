@@ -1,516 +1,611 @@
-import 'package:diohub/common/events/timeline_content/timeline_create_content.dart';
-import 'package:diohub/common/events/timeline_content/timeline_delete_content.dart';
-import 'package:diohub/common/events/timeline_content/timeline_fork_content.dart';
-import 'package:diohub/common/events/timeline_content/timeline_member_content.dart';
-import 'package:diohub/common/events/timeline_content/timeline_public_content.dart';
-import 'package:diohub/common/events/timeline_content/timeline_watch_content.dart';
-import 'package:diohub/common/misc/profile_banner.dart';
+import 'package:diohub/app/app_logger.dart';
+import 'package:diohub/common/cards/release_card.dart';
+import 'package:diohub/common/cards/discussion_card.dart';
+import 'package:diohub/common/events/compound_annotation_chips.dart';
+import 'package:diohub/common/events/unified_branch_context.dart';
+import 'package:diohub/common/misc/floating_glass_pill.dart';
+import 'package:diohub/common/misc/glass_pill_constants.dart';
+import 'package:diohub/common/misc/list_loading_shimmers.dart';
+import 'package:diohub/common/misc/repository_card.dart';
+import 'package:diohub/common/misc/tap_feedback.dart';
 import 'package:diohub/common/misc/user_avatar.dart';
-import 'package:diohub/common/timeline/timeline_shimmer_item.dart';
+import 'package:diohub/common/pagination/page_source.dart';
+import 'package:diohub/common/pagination/pagination_controller.dart';
+import 'package:diohub/common/pagination/pagination_state.dart';
+import 'package:diohub/common/pagination/pagination_phase.dart'
+    show FetchDirection, LoadingForward, Refreshing, Failed, PaginationPhase;
 import 'package:diohub/common/timeline/unified_timeline_item.dart';
-import 'package:diohub/common/timeline_content/timeline_commit_content.dart';
 import 'package:diohub/common/timeline_content/timeline_issue_content.dart';
 import 'package:diohub/common/timeline_content/timeline_pull_request_content.dart';
-import 'package:diohub/common/wrappers/infinite_scroll_wrapper.dart';
-import 'package:diohub/models/commits/commit_card_data_model.dart';
-import 'package:diohub/models/events/events_model.dart' hide Key, State;
-import 'package:diohub/models/issues/issue_card_data_model.dart';
-import 'package:diohub/models/issues/issue_model.dart';
-import 'package:diohub/providers/users/current_user_provider.dart';
-import 'package:diohub/services/activity/events_service.dart';
+import 'package:diohub/common/utils/github_visual_styles.dart';
+import 'package:diohub/common/wrappers/sticky_glass_header.dart';
+import 'package:diohub_models/models/entity_ref.dart';
+import 'package:diohub_models/models/events/events_model.dart';
+import 'package:diohub/routes/navigable_actions.dart';
+import 'package:diohub/providers/activity/events_provider.dart';
+import 'package:diohub/providers/settings/events_provider.dart'
+    as settings_events;
+import 'package:diohub/style/app_spacing.dart';
+import 'package:diohub/utils/compound_grouping.dart';
+import 'package:diohub/utils/events/compound_data.dart';
+import 'package:diohub/utils/events/compound_extractors.dart';
+import 'package:diohub/utils/events/event_action.dart';
+import 'package:diohub/utils/events/semantic_interpreter.dart';
+import 'package:diohub/utils/pagination/event_grouping_reducer.dart';
+import 'package:diohub/utils/pagination/infinite_pagination_data_handler.dart';
 import 'package:diohub/utils/utils.dart';
+import 'package:flutter/foundation.dart' show ValueNotifier;
 import 'package:flutter/material.dart';
-import 'package:flutter_vector_icons/flutter_vector_icons.dart';
-import 'package:provider/provider.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_sticky_header/src/widgets/sliver_sticky_header.dart';
+import 'package:sliver_tools/sliver_tools.dart';
 
-class Events extends StatelessWidget {
+class Events extends ConsumerStatefulWidget {
   const Events({
     this.privateEvents = true,
     this.specificUser,
+    this.orgLogin,
+    this.mockEvents,
+    this.refreshRegistrar,
     super.key,
   });
 
+  /// Render pre-built mock events directly, bypassing the API.
+  /// Pass a list of [EventsModel] (e.g. from `mockAllEventTypes()` or
+  /// `mockRealisticFeed()` in `test/mocks/mock_events.dart`).
+  const Events.mock(
+    final List<EventsModel> events, {
+    this.refreshRegistrar,
+    super.key,
+  })  : privateEvents = false,
+        specificUser = null,
+        orgLogin = null,
+        mockEvents = events;
+
   final bool privateEvents;
   final String? specificUser;
+  final String? orgLogin;
 
-  // Spacing constants for consistent user group separation
-  static const double itemSpacing = 8.0; // Between items from same user
-  static const double groupSpacing = 8.0; // Between user groups
+  /// When non-null, the widget renders these events directly instead of
+  /// fetching from the API. Useful for visual testing / Storybook-style
+  /// preview of all event types and compound merging scenarios.
+  final List<EventsModel>? mockEvents;
+
+  /// When non-null, the widget registers its refresh callback here so
+  /// pull-to-refresh (e.g. [SliverBuilderBody.refreshRegistrar]) can trigger it.
+  final ValueNotifier<Future<void> Function()?>? refreshRegistrar;
+
+  /// Whether to apply top padding. Set to false when tab bar is visible.
+  // final bool hasTopPadding;
+
+  @override
+  ConsumerState<Events> createState() => _EventsState();
+}
+
+class _EventsState extends ConsumerState<Events> {
+  // Allowed event types for filtering
+  static const Set<EventsType> _allowedEventTypes = <EventsType>{
+    EventsType.CommitCommentEvent,
+    EventsType.CreateEvent,
+    EventsType.DeleteEvent,
+    EventsType.DiscussionEvent,
+    EventsType.ForkEvent,
+    EventsType.GollumEvent,
+    EventsType.IssueCommentEvent,
+    EventsType.IssuesEvent,
+    EventsType.MemberEvent,
+    EventsType.PublicEvent,
+    EventsType.PullRequestEvent,
+    EventsType.PullRequestReviewEvent,
+    EventsType.PushEvent,
+    EventsType.ReleaseEvent,
+    EventsType.WatchEvent,
+  };
+
+  List<EventsModel> _filterEvents(final List<EventsModel> items) => items
+      .where((final EventsModel item) => _allowedEventTypes.contains(item.type))
+      .toList();
+
+  late final PaginationController<EventsModel, ActorEventSection>
+      _paginationController;
+
+  @override
+  void initState() {
+    super.initState();
+    final EventsQueryKey key = EventsQueryKey(
+      specificUser: widget.specificUser,
+      orgLogin: widget.orgLogin,
+      privateEvents: widget.privateEvents,
+    );
+    _paginationController =
+        PaginationController<EventsModel, ActorEventSection>(
+      source: PageNumberForwardSource<EventsModel>(
+        fetch: ({required int page, required int perPage}) async {
+          if (widget.mockEvents != null) {
+            return page == 1 ? widget.mockEvents! : <EventsModel>[];
+          }
+          return fetchEventsPage(
+            ref,
+            key,
+            PageRequest<EventsModel>(
+              page: page,
+              pageSize: perPage,
+              refresh: false,
+            ),
+          );
+        },
+      ),
+      idOf: (final ActorEventSection s) => s.itemId,
+      transform: (final List<EventsModel> rawItems) {
+        final bool compoundActions =
+            ref.read(settings_events.eventsProvider).compoundActions;
+        final GroupingStrategy<EventsModel, Actor, SemanticAction> strategy =
+            compoundActions
+                ? EventGroupingStrategy()
+                : StandaloneEventGroupingStrategy(EventGroupingStrategy());
+        final CompoundGrouper<EventsModel, Actor, SemanticAction> grouper =
+            CompoundGrouper(strategy);
+        final List<EventsModel> filteredItems = _filterEvents(rawItems);
+        return grouper.group(events: filteredItems).sections;
+      },
+      boundaryMerger:
+          (final ActorEventSection prev, final ActorEventSection next) {
+        final bool compoundActions =
+            ref.read(settings_events.eventsProvider).compoundActions;
+        final GroupingStrategy<EventsModel, Actor, SemanticAction> strategy =
+            compoundActions
+                ? EventGroupingStrategy()
+                : StandaloneEventGroupingStrategy(EventGroupingStrategy());
+        final CompoundGrouper<EventsModel, Actor, SemanticAction> grouper =
+            CompoundGrouper(strategy);
+        return grouper.tryMergeBoundary(prev, next);
+      },
+      pageSize: 10,
+    );
+    widget.refreshRegistrar?.value = () => _paginationController.refresh();
+  }
+
+  @override
+  void dispose() {
+    widget.refreshRegistrar?.value = null;
+    _paginationController.dispose();
+    super.dispose();
+  }
+
+  EdgeInsets _paddingBuilder(final BuildContext context) {
+    final AppSpacing sp = context.spacing;
+    return EdgeInsets.only(
+      top: sp.itemSpacing,
+      left: sp.listInset.left,
+      right: sp.listInset.right,
+    );
+  }
+
+  Widget _buildGroupSliver(
+    final BuildContext context,
+    final ActorEventSection group,
+  ) {
+    final bool shouldShowUserHeader = widget.specificUser == null;
+    
+    if (!shouldShowUserHeader) {
+      return SliverList(
+        delegate: SliverChildBuilderDelegate(
+          (final BuildContext context, final int index) {
+            final Compound<SemanticAction, EventsModel> compound =
+                group.compounds[index];
+            final bool isFirstCompound = index == 0;
+            final bool isLastCompound = index == group.compounds.length - 1;
+            return _buildTimelineEventFromCompound(
+              compound,
+              context,
+              isFirstInUserGroup: isFirstCompound,
+              isLastInUserGroup: isLastCompound,
+            );
+          },
+          childCount: group.compounds.length,
+        ),
+      );
+    }
+    return PinnedGlassHeader(
+      headerBuilder:
+          (final BuildContext context, final SliverStickyHeaderState state) =>
+              _buildActorHeader(context, ref, group.actor),
+      style: GlassPillStyle(
+        context,
+        restingPadding: EdgeInsets.zero,
+        restingInnerPadding: const EdgeInsets.only(top: 4),
+        floatingInnerPadding:
+            const EdgeInsets.symmetric(vertical: 2, horizontal: 8),
+        floatingPadding:
+            context.glassPill.sectionFloatPadding.copyWith(left: 0, right: 0),
+        restingColor: Theme.of(context).scaffoldBackgroundColor,
+      ),
+      sliver: SliverList(
+        delegate: SliverChildBuilderDelegate(
+          (final BuildContext context, final int index) {
+            final Compound<SemanticAction, EventsModel> compound =
+                group.compounds[index];
+            final bool isFirstCompound = index == 0;
+            final bool isLastCompound = index == group.compounds.length - 1;
+            return _buildTimelineEventFromCompound(
+              compound,
+              context,
+              isFirstInUserGroup: isFirstCompound,
+              isLastInUserGroup: isLastCompound,
+            );
+          },
+          childCount: group.compounds.length,
+        ),
+      ),
+    );
+  }
 
   @override
   Widget build(final BuildContext context) {
-    final CurrentUserProvider user = Provider.of<CurrentUserProvider>(context);
-    // Add bottom padding to account for SafeArea/system UI
-    final bottomPadding = MediaQuery.of(context).padding.bottom;
-    return InfiniteScrollWrapper<EventsModel>(
-      // header: (final BuildContext context) => Padding(
-      //   padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-      //   child: Text(
-      //     'Feed',
-      //     style: context.textTheme.headlineSmall?.copyWith(
-      //       fontWeight: FontWeight.bold,
-      //     ),
-      //   ),
-      // ),
-      padding: EdgeInsets.only(
-        top: 16,
-        bottom: 16 + bottomPadding, // Add SafeArea bottom padding
-      ),
-      firstPageLoadingBuilder: (final BuildContext context) => _KeepAlive(
-        child: TimelineShimmerList(
-          itemCount: 5,
-          showAvatar: false,
-          showUserHeaders: true,
-          padding: EdgeInsets.only(
-            top: 16,
-            bottom: 16 + bottomPadding,
-          ),
-        ),
-      ),
-      filterFn: (final List<EventsModel> items) {
-        final List<EventsModel> temp = <EventsModel>[];
-        for (final EventsModel item in items) {
-          if (<EventsType>{
-            // EventsType.CommitCommentEvent,
-            EventsType.CreateEvent,
-            EventsType.DeleteEvent,
-            EventsType.ForkEvent,
-            // EventsType.GollumEvent,
-            EventsType.IssueCommentEvent,
-            EventsType.IssuesEvent,
-            EventsType.MemberEvent,
-            EventsType.PublicEvent,
-            EventsType.PullRequestEvent,
-            // EventsType.PullRequestReviewCommentEvent,
-            EventsType.PushEvent,
-            // EventsType.ReleaseEvent,
-            // EventsType.SponsorshipEvent,
-            EventsType.WatchEvent,
-          }.contains(item.type)) {
-            temp.add(item);
-          }
-        }
+    ref.watch(settings_events.eventsProvider);
+    final AppSpacing sp = context.spacing;
 
-        return temp;
-      },
-      future: (
-        final ScrollWrapperFutureArguments<EventsModel> data,
-      ) async {
-        if (specificUser != null) {
-          return EventsService.getUserEvents(
-            specificUser,
-            page: data.pageNumber,
-            perPage: data.pageSize,
-            refresh: data.refresh,
-          );
-        } else if (privateEvents) {
-          return EventsService.getReceivedEvents(
-            user.data.login,
-            page: data.pageNumber,
-            perPage: data.pageSize,
-            refresh: data.refresh,
-          );
-        } else {
-          return EventsService.getPublicEvents(
-            page: data.pageNumber,
-            perPage: data.pageSize,
-            refresh: data.refresh,
-          );
-        }
-      },
-      builder: (
-        final BuildContext context,
-        final ScrollWrapperBuilderData<EventsModel> data,
-      ) {
-        final EventsModel item = data.item;
+    return ValueListenableBuilder<PaginationState<ActorEventSection>>(
+      valueListenable: _paginationController.state,
+      builder: (final BuildContext context,
+          final PaginationState<ActorEventSection> state, final _) {
+        final List<ActorEventSection> items = state.items;
+        final PaginationPhase phase = state.phase;
+        final bool isLoadingFirst =
+            (phase is LoadingForward || phase is Refreshing) && items.isEmpty;
 
-        // Determine if timeline should break based on user changes
-        final currentUser = item.actor?.login;
-        final previousUser = data.previousItem?.actor?.login;
-        final nextUser = data.nextItem?.actor?.login;
-        final bool shouldShowUserHeader = specificUser == null;
-
-        final isFirstInUserGroup =
-            previousUser != currentUser || data.index == 0;
-        final isLastInUserGroup =
-            nextUser != currentUser || data.isCurrentlyLast;
-
-        return Column(
-          children: [
-            // Divider between groups (not for first item)
-            // if (isFirstInUserGroup && data.index > 0)
-            //   Padding(
-            //     padding: EdgeInsets.symmetric(
-            //       horizontal: MediaQuery.of(context).size.width * 0.05,
-            //       // vertical: groupSpacing / 2,
-            //     ).copyWith(top: 16),
-            //     child: Divider(
-            //       height: 1,
-            //       thickness: 1,
-            //       color: context.colorScheme.outlineVariant.withOpacity(0.2),
-            //     ),
-            //   ),
-            // User group header (only show for first item in group)
-            if (shouldShowUserHeader && isFirstInUserGroup)
-              _buildUserGroupHeader(
+        if (isLoadingFirst) {
+          return SliverPadding(
+            padding: _paddingBuilder(context),
+            sliver: SliverToBoxAdapter(
+              child: ListLoadingShimmers.timeline(
                 context,
-                item.actor,
-                isFirst: data.index == 0,
-              ),
-            // Timeline event
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: buildTimelineEvent(
-                item,
-                data,
-                context,
-                isFirstInUserGroup: isFirstInUserGroup,
-                isLastInUserGroup: isLastInUserGroup,
-              ),
-            ),
-          ],
-        );
-      },
-    );
-  }
-
-  Widget buildTimelineEvent(
-    final EventsModel item,
-    final ScrollWrapperBuilderData<EventsModel> data,
-    final BuildContext context, {
-    required bool isFirstInUserGroup,
-    required bool isLastInUserGroup,
-  }) {
-    final date = item.createdAt;
-    final eventType = item.type;
-
-    String actionText;
-    Widget content;
-
-    switch (item.type) {
-      case EventsType.PushEvent:
-        actionText = 'pushed commits';
-        final commitData = CommitCardDataModel.fromPushEvent(item);
-        // Extract branch name from ref (e.g., "refs/heads/main" -> "main")
-        // for RepoCardLoading which shows it in the card
-        final branchName = item.payload?.ref?.split('/').last;
-        // Pass commit SHA (head) as ref - this is the latest commit SHA
-        final commitSha = item.payload?.head;
-        content = _KeepAlive(
-          child: TimelineCommitContent(
-            commitData: commitData,
-            branchName: branchName,
-            ref: commitSha, // Commit SHA, not branch ref
-          ),
-        );
-
-      case EventsType.WatchEvent:
-        actionText = 'starred repository';
-        content = _KeepAlive(
-          child: TimelineWatchContent(
-            repoName: item.repo?.name ?? '',
-            repoUrl: item.repo?.url ?? '',
-          ),
-        );
-
-      case EventsType.ForkEvent:
-        final forkee = item.payload?.forkee;
-        actionText = 'forked repository';
-        content = _KeepAlive(
-          child: TimelineForkContent(
-            sourceRepoName: item.repo?.name ?? '',
-            sourceRepoUrl: item.repo?.url ?? '',
-            forkRepoName: forkee?.fullName ?? forkee?.name ?? '',
-            forkRepoUrl: forkee?.url ?? '',
-          ),
-        );
-
-      case EventsType.CreateEvent:
-        final refType = item.payload?.refType;
-        final ref = item.payload?.ref;
-
-        if (refType == RefType.REPOSITORY) {
-          actionText = 'created a repository';
-          content = _KeepAlive(
-            child: TimelineCreateContent(
-              refType: 'repository',
-              repoName: item.repo?.name ?? '',
-              repoUrl: item.repo?.url ?? '',
-            ),
-          );
-        } else if (refType == RefType.BRANCH) {
-          actionText = 'created a branch';
-          content = _KeepAlive(
-            child: TimelineCreateContent(
-              refType: 'branch',
-              repoName: item.repo?.name ?? '',
-              repoUrl: item.repo?.url ?? '',
-              refName: ref,
-            ),
-          );
-        } else {
-          final refTypeName = refTypeValues.reverse![refType] ?? 'tag';
-          actionText = 'created a $refTypeName';
-          content = _KeepAlive(
-            child: TimelineCreateContent(
-              refType: refTypeName,
-              repoName: item.repo?.name ?? '',
-              repoUrl: item.repo?.url ?? '',
-              refName: ref,
-            ),
-          );
-        }
-
-      case EventsType.DeleteEvent:
-        final refType = item.payload?.refType;
-        final ref = item.payload?.ref;
-        final refTypeName = refTypeValues.reverse![refType] ?? 'branch';
-        final refName = ref?.split('/').last ?? '';
-
-        actionText = 'deleted a $refTypeName';
-
-        content = _KeepAlive(
-          child: TimelineDeleteContent(
-            refType: refTypeName,
-            refName: refName,
-            repoName: item.repo?.name ?? '',
-            repoUrl: item.repo?.url ?? '',
-          ),
-        );
-
-      case EventsType.PublicEvent:
-        actionText = 'made repository public';
-        content = _KeepAlive(
-          child: TimelinePublicContent(
-            repoName: item.repo?.name ?? '',
-            repoUrl: item.repo?.url ?? '',
-          ),
-        );
-
-      case EventsType.MemberEvent:
-        final member = item.payload?.member;
-        final action = item.payload?.action ?? 'added';
-        actionText = '$action a member';
-        content = _KeepAlive(
-          child: TimelineMemberContent(
-            member: member!,
-            action: action,
-            repoName: item.repo?.name ?? '',
-            repoUrl: item.repo?.url ?? '',
-          ),
-        );
-
-      case EventsType.IssuesEvent:
-        final issue = item.payload?.issue;
-        final action = item.payload?.action ?? 'opened';
-        actionText = '$action an issue';
-        content = TimelineIssueContent(
-          issueData: IssueCardDataModel.fromIssueModel(issue!),
-        );
-
-      case EventsType.IssueCommentEvent:
-        final issue = item.payload?.issue;
-        final comment = item.payload?.comment;
-        actionText = 'commented on issue';
-        content = TimelineIssueContent(
-          issueData: IssueCardDataModel.fromIssueModel(issue!),
-          commentBody: comment?.body,
-          commentsSince: item.createdAt,
-        );
-
-      case EventsType.PullRequestEvent:
-        final pr = item.payload?.pullRequest;
-        final action = item.payload?.action ?? 'opened';
-        final bool isMergedAction = action
-            .toLowerCase()
-            .contains('merged'); // payload can be "merged a pull request"
-        final bool isMerged =
-            isMergedAction || pr?.merged == true || pr?.mergedAt != null;
-        // Use "merged" action text if PR is merged, otherwise use the action from payload
-        if (isMerged) {
-          actionText = 'merged a pull request';
-        } else {
-          actionText = '$action a pull request';
-        }
-        // Extract head (from) and base (to) branch refs
-        final fromRef = pr?.head?.ref; // Source branch
-        final toRef = pr?.base?.ref; // Target/base branch
-        // Use PR URL to fetch full data via SimplePullLoadingCard
-        final prUrl = pr?.htmlUrl ?? pr?.url ?? '';
-        content = _KeepAlive(
-          child: TimelinePullRequestContent(
-            prUrl: prUrl,
-            from: fromRef,
-            to: toRef,
-          ),
-        );
-
-      default:
-        actionText = '${eventsValues.reverse![item.type]}';
-        content = Padding(
-          padding: const EdgeInsets.all(16),
-          child: Center(
-            child: Text('Unimplemented: ${eventsValues.reverse![item.type]}'),
-          ),
-        );
-    }
-
-    return UnifiedTimelineItem(
-      eventIcon: _getEventIcon(eventType, item, actionText),
-      eventIconColor: _getEventIconColor(context, eventType, item, actionText),
-      actionText: actionText,
-      date: date,
-      highlighted: true,
-      isFirst: isFirstInUserGroup,
-      isLast: isLastInUserGroup,
-      actionHeaderTopPadding: isFirstInUserGroup ? 0.0 : 16.0,
-      child: content,
-    );
-  }
-
-  IconData _getEventIcon(
-      EventsType? type, EventsModel item, String actionText) {
-    switch (type) {
-      case EventsType.PushEvent:
-        return Octicons.git_commit;
-      case EventsType.PullRequestEvent:
-        final actionLower = actionText.toLowerCase();
-        // Icon based on action text only (not current state)
-        if (actionLower.contains('merged')) {
-          return Octicons.git_merge;
-        } else if (actionLower.contains('closed')) {
-          return Octicons.git_pull_request_closed;
-        } else if (actionLower.contains('draft')) {
-          return Octicons.git_pull_request_draft;
-        } else {
-          return Octicons.git_pull_request;
-        }
-      case EventsType.IssuesEvent:
-        final actionLower = actionText.toLowerCase();
-        // Icon based on action text only (not current state)
-        if (actionLower.contains('closed')) {
-          return Octicons.issue_closed;
-        } else {
-          return Octicons.issue_opened;
-        }
-      case EventsType.IssueCommentEvent:
-        return Octicons.comment;
-      case EventsType.WatchEvent:
-        return Octicons.star;
-      case EventsType.ForkEvent:
-        return Octicons.repo_forked;
-      case EventsType.CreateEvent:
-        return Octicons.plus;
-      case EventsType.DeleteEvent:
-        return Octicons.trash;
-      case EventsType.PublicEvent:
-        return Octicons.globe;
-      case EventsType.MemberEvent:
-        return Octicons.person_add;
-      default:
-        return Octicons.circle;
-    }
-  }
-
-  Color _getEventIconColor(BuildContext context, EventsType? type,
-      EventsModel item, String actionText) {
-    final colorScheme = context.colorScheme;
-    switch (type) {
-      case EventsType.PushEvent:
-        return const Color(0xFF2196F3); // Blue
-      case EventsType.PullRequestEvent:
-        final actionLower = actionText.toLowerCase();
-        // Color based on action text only (not current state)
-        if (actionLower.contains('merged')) {
-          return Colors.deepPurple; // Purple for merged
-        } else if (actionLower.contains('closed')) {
-          return Colors.red; // Red for closed
-        } else if (actionLower.contains('draft')) {
-          return Colors.grey; // Grey for draft
-        } else {
-          return Colors.green; // Green for open
-        }
-      case EventsType.IssuesEvent:
-        final actionLower = actionText.toLowerCase();
-        // Color based on action text only (not current state)
-        if (actionLower.contains('closed')) {
-          return Colors.red; // Red for closed
-        } else {
-          return Colors.green; // Green for open
-        }
-      case EventsType.IssueCommentEvent:
-        return const Color(0xFF00ACC1); // Cyan/Teal for comments
-      case EventsType.WatchEvent:
-        return const Color(0xFFFFC107); // Amber/Yellow
-      case EventsType.ForkEvent:
-        return const Color(0xFF00BCD4); // Cyan
-      case EventsType.CreateEvent:
-        return const Color(0xFF009688); // Teal
-      case EventsType.DeleteEvent:
-        return const Color(0xFFF44336); // Red
-      case EventsType.PublicEvent:
-        return const Color(0xFF3F51B5); // Indigo
-      case EventsType.MemberEvent:
-        return const Color(0xFFFF9800); // Orange
-      default:
-        return colorScheme.onSurfaceVariant;
-    }
-  }
-
-  Widget _buildUserGroupHeader(
-    BuildContext context,
-    Actor? actor, {
-    required bool isFirst,
-  }) {
-    if (actor == null || actor.login == null) {
-      return const SizedBox.shrink();
-    }
-
-    return Container(
-      margin: EdgeInsets.only(
-        top: isFirst ? 0 : groupSpacing,
-      ),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: () {
-            navigateToProfile(
-              context: context,
-              login: actor.login!,
-            );
-          },
-          child: Padding(
-            padding: EdgeInsets.fromLTRB(
-              16,
-              16,
-              16,
-              0,
-            ),
-            child: Row(
-              children: [
-                UserAvatar(
-                  avatarUrl: actor.avatarUrl,
-                  size: 24,
+                showUserHeaders: true,
+                padding: EdgeInsets.only(
+                  top: sp.itemSpacing,
+                  left: sp.listInset.left,
+                  right: sp.listInset.right,
                 ),
-                const SizedBox(width: 8),
-                Expanded(
+              ),
+            ),
+          );
+        }
+
+        final List<Widget> slivers = <Widget>[];
+        for (var i = 0; i < items.length; i++) {
+          final EdgeInsets padding = _paddingBuilder(context);
+          final bool isFirst = i == 0;
+          final bool isLast = i == items.length - 1;
+          slivers.add(
+            SliverPadding(
+              padding: EdgeInsets.only(
+                left: padding.left,
+                right: padding.right,
+                top: isFirst ? padding.top : 0,
+                bottom: isLast && !state.hasMoreForward ? padding.bottom : 0,
+              ),
+              sliver: _buildGroupSliver(context, items[i]),
+            ),
+          );
+        }
+
+        if (state.hasMoreForward) {
+          switch (phase) {
+            case LoadingForward() || Refreshing():
+              slivers.add(
+                SliverToBoxAdapter(
                   child: Padding(
-                    padding: const EdgeInsets.only(bottom: 4),
-                    child: Text(
-                      actor.login!,
-                      style: context.textTheme.bodyMedium?.copyWith(
-                        fontWeight: FontWeight.w600,
-                      ),
+                    padding: EdgeInsets.only(
+                      left: sp.listInset.left,
+                      right: sp.listInset.right,
+                      bottom: 16,
+                    ),
+                    child: ListLoadingShimmers.timeline(
+                      context,
+                      showUserHeaders: true,
                     ),
                   ),
                 ),
-              ],
+              );
+              break;
+            case Failed(:final error, :final direction):
+              if (direction == FetchDirection.forward) {
+                slivers.add(
+                  SliverToBoxAdapter(
+                    child: Padding(
+                      padding: context.spacing.pagePadding,
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: <Widget>[
+                          Text(
+                            error.toString(),
+                            style: Theme.of(context).textTheme.bodySmall,
+                            textAlign: TextAlign.center,
+                          ),
+                          context.spacing.itemGap,
+                          TextButton(
+                            onPressed: () =>
+                                _paginationController.fetchForward(),
+                            child: const Text('Retry'),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                );
+              }
+              break;
+            default:
+              slivers.add(
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: EdgeInsets.only(
+                      left: sp.listInset.left,
+                      right: sp.listInset.right,
+                      bottom: 16,
+                    ),
+                    child: ListLoadingShimmers.timeline(
+                      context,
+                      showUserHeaders: true,
+                    ),
+                  ),
+                ),
+              );
+          }
+        } else if (items.isNotEmpty) {
+          slivers.add(
+            SliverPadding(
+              padding: EdgeInsets.only(bottom: sp.listInset.bottom),
+              sliver: const SliverToBoxAdapter(child: SizedBox.shrink()),
             ),
-          ),
+          );
+        }
+
+        return MultiSliver(children: slivers);
+      },
+    );
+  }
+
+  /// Build actor header content (avatar + login)
+  Widget _buildActorHeader(
+    final BuildContext context,
+    final WidgetRef ref,
+    final Actor? actor,
+  ) {
+    final String? login = actor?.login;
+    if (actor == null || login == null) {
+      return const SizedBox.shrink();
+    }
+
+    return TapFeedback(
+      onTap: () {
+        UserRef(login: login).navigate(context, ref);
+      },
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 6),
+        child: Row(
+          children: <Widget>[
+            UserAvatar(
+              avatarUrl: actor.avatarUrl,
+              size: 24,
+            ),
+            SizedBox(width: context.spacing.itemSpacing),
+            Expanded(
+              child: Text(
+                login,
+                style: context.textTheme.bodyMedium?.copyWith(
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );
   }
+
+  /// Build issue-scoped compound card. All overrides come from [EventCompoundData].
+  Widget _buildIssueCompoundCard(final EventCompoundData data) =>
+      TimelineIssueContent.fromCompound(data);
+
+  /// Build PR-scoped compound card. All overrides come from [EventCompoundData].
+  Widget _buildPrCompoundCard(final EventCompoundData data) => _KeepAlive(
+        child: TimelinePullRequestContent.fromCompound(data),
+      );
+
+  /// Build repo-scoped compound card.
+  /// Unified layout: repo card(s) first, then conditional annotation chips below.
+  /// Handles push, createRef, deleteRef, fork, member, release, discussion,
+  /// wiki, and generic repo cards for watch/public/etc.
+  /// For cross-target compounds (starred 3 repos, etc.), shows multiple repo cards.
+  ///
+  /// [compound] provides raw event access for push drill-down popups.
+  Widget _buildRepoCompoundCard(
+    final EventCompoundData data,
+    final EventCompound compound,
+  ) {
+    final String? repoUrl = data.repoUrl;
+    if (repoUrl == null) return const SizedBox.shrink();
+
+    // Collect unique repo URLs from all events (for cross-target compounds).
+    final List<String> allRepoUrls = compound.allEvents
+        .map((final EventsModel e) => e.repo.url)
+        .whereType<String>()
+        .toSet()
+        .toList();
+
+    final bool isMultiTarget = allRepoUrls.length > 1;
+
+    final EventCluster? pushCluster = compound.partWith(SemanticAction.push);
+
+    final AppSpacing spacing = context.spacing;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: <Widget>[
+        // Multi-target: show all repo cards (starred 3 repos, forked 2 repos, etc.)
+        if (isMultiTarget)
+          ...allRepoUrls.asMap().entries.map(
+                (final MapEntry<int, String> entry) => Padding(
+                  padding: const EdgeInsets.only(bottom: 6),
+                  child: RepoCardLoading(
+                    RepoRef.fromApiUrl(entry.value),
+                  ),
+                ),
+              )
+        else
+          // Single target: fork repo override or source repo
+          RepoCardLoading(
+            RepoRef.fromApiUrl(data.forkRepoUrl ?? repoUrl),
+          ),
+
+        // Unified branch context (push/create/delete, inline commit expand)
+        if (data.branches.isNotEmpty || pushCluster != null)
+          Padding(
+            padding: EdgeInsets.only(top: spacing.itemSpacing),
+            child: UnifiedBranchContext(
+              data: data,
+              compound: compound,
+              repoUrl: repoUrl,
+            ),
+          ),
+
+        // Release: full card with loading (fetch by repo + tag)
+        if (data.release != null)
+          Padding(
+            padding: EdgeInsets.only(top: spacing.itemSpacing),
+            child: _releaseWidget(data),
+          ),
+
+        // Discussion: full card with loading (fetch by repo + number)
+        if (data.discussion != null)
+          Padding(
+            padding: EdgeInsets.only(top: spacing.itemSpacing),
+            child: _discussionWidget(data),
+          ),
+
+        // Wiki pages annotation
+        if (data.wikiPages.isNotEmpty)
+          Padding(
+            padding: EdgeInsets.only(top: spacing.itemSpacing),
+            child: InlineWikiPages(pages: data.wikiPages),
+          ),
+
+        // Member profile annotation
+        if (data.member != null)
+          Padding(
+            padding: EdgeInsets.only(top: spacing.itemSpacing),
+            child: InlineMember(login: data.member!.login),
+          ),
+      ],
+    );
+  }
+
+  RepoRef? _tryRepoRef(final String? repoName) {
+    if (repoName == null || !repoName.contains('/')) return null;
+    try {
+      return RepoRef.fromFullName(repoName);
+    } catch (e, st) {
+      AppLogger.warning(
+        'Invalid repo name for RepoRef',
+        error: e,
+        stackTrace: st,
+        tag: 'events',
+      );
+      return null;
+    }
+  }
+
+  Widget _releaseWidget(final EventCompoundData data) {
+    final RepoRef? repoRef = _tryRepoRef(data.repoName);
+    final String? tagName = data.release!.tagName;
+    if (repoRef != null && tagName != null && tagName.isNotEmpty) {
+      return ReleaseCardLoading(repoRef: repoRef, tagName: tagName);
+    }
+    return InlineRelease(release: data.release!);
+  }
+
+  Widget _discussionWidget(final EventCompoundData data) {
+    final RepoRef? repoRef = _tryRepoRef(data.repoName);
+    final int? number = data.discussion!.number;
+    if (repoRef != null && number != null) {
+      return DiscussionCardLoading(repoRef: repoRef, number: number);
+    }
+    return InlineDiscussion(discussion: data.discussion!);
+  }
+
+  /// Build timeline event from compound - unified rendering path.
+  /// Uses EventCompoundData for extract-once pattern and compound-type dispatch.
+  /// All visual/content data comes from [EventCompoundData]; no raw model access.
+  Widget _buildTimelineEventFromCompound(
+    final EventCompound compound,
+    final BuildContext context, {
+    required final bool isFirstInUserGroup,
+    required final bool isLastInUserGroup,
+  }) {
+    final EventAction action = interpret(compound);
+    final String actionText = action.displayText;
+
+    // Extract once, use everywhere
+    final EventCompoundData extractedData = compound.toCompoundData();
+
+    final DateTime? date = extractedData.createdAt;
+
+    // Resolve icons from pre-extracted part actions (no raw payload access)
+    final List<({Color color, IconData icon})> icons = extractedData.partActions
+        .map(_resolvePartVisual)
+        .map((final GitHubActionVisual v) => (icon: v.icon, color: v.color))
+        .toList();
+
+    // Deduplicate icons by IconData (keep first occurrence)
+    final Set<IconData> seen = <IconData>{};
+    final List<({Color color, IconData icon})> uniqueIcons = icons
+        .where((final ({Color color, IconData icon}) e) => seen.add(e.icon))
+        .toList();
+
+    // Border color from the first part's action visual
+    final Color? borderColor = icons.isNotEmpty ? icons.first.color : null;
+
+    // Dispatch to compound-specific builder based on scope
+    final Widget child = switch (extractedData.scope) {
+      CompoundScope.repo => _buildRepoCompoundCard(extractedData, compound),
+      CompoundScope.issue => _buildIssueCompoundCard(extractedData),
+      CompoundScope.pullRequest => _buildPrCompoundCard(extractedData),
+      // Fallback: show repo card for rare unknown-scope compounds
+      CompoundScope.unknown => _buildRepoCompoundCard(extractedData, compound),
+    };
+
+    final bool useTimelineView =
+        ref.read(settings_events.eventsProvider).useTimelineView;
+    if (!useTimelineView) {
+      return Padding(
+        padding: EdgeInsets.only(bottom: context.spacing.itemSpacing),
+        child: child,
+      );
+    }
+
+    return UnifiedTimelineItem(
+      eventIcons: uniqueIcons,
+      actionText: actionText,
+      date: date,
+      isFirst: isFirstInUserGroup,
+      isLast: isLastInUserGroup,
+      actionHeaderTopPadding: isFirstInUserGroup ? 0.0 : 16.0,
+      borderColor: borderColor,
+      child: child,
+    );
+  }
+
+  /// Resolve a [GitHubActionVisual] from pre-extracted part action data.
+  /// This is the sole bridge between extracted compound data and visual styles.
+  static GitHubActionVisual _resolvePartVisual(
+          final PartActionData partAction) =>
+      GitHubVisualStyles.fromSemanticAction(
+        partAction.action,
+        payloadAction: partAction.payloadAction,
+        stateReason: partAction.stateReason,
+      );
 }
 
 class _KeepAlive extends StatefulWidget {

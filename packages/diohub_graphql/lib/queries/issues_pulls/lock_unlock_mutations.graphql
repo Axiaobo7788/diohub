@@ -1,0 +1,29 @@
+# import '../../fragments/lockable_fields.graphql'
+
+mutation lockLockable($lockableId: ID!, $lockReason: LockReason) {
+  lockLockable(input: { lockableId: $lockableId, lockReason: $lockReason }) {
+    lockedRecord {
+      __typename
+      ... on Issue {
+        ...lockableFields
+      }
+      ... on PullRequest {
+        ...lockableFields
+      }
+    }
+  }
+}
+
+mutation unlockLockable($lockableId: ID!) {
+  unlockLockable(input: { lockableId: $lockableId }) {
+    unlockedRecord {
+      __typename
+      ... on Issue {
+        ...lockableFields
+      }
+      ... on PullRequest {
+        ...lockableFields
+      }
+    }
+  }
+}

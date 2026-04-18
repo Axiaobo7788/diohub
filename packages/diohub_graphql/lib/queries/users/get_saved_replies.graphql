@@ -1,0 +1,23 @@
+query getSavedReplies($first: Int!, $after: String) {
+  viewer {
+    savedReplies(
+      first: $first
+      after: $after
+      orderBy: { field: UPDATED_AT, direction: DESC }
+    ) {
+      totalCount
+      pageInfo {
+        hasNextPage
+        endCursor
+      }
+      edges {
+        cursor
+        node {
+          id
+          title
+          body
+        }
+      }
+    }
+  }
+}

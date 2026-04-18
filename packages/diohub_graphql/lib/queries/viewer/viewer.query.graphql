@@ -1,0 +1,14 @@
+# import '../../fragments/organization_card_fields.graphql'
+
+query getViewerOrgs($after: String) {
+  viewer {
+    organizations(first: 10, after: $after) {
+      edges {
+        cursor
+        node {
+          ...organizationCardFields
+        }
+      }
+    }
+  }
+}

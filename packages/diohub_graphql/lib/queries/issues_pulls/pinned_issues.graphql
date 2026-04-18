@@ -1,0 +1,14 @@
+# import './issue_fragment.graphql'
+
+query pinnedIssues($name: String!, $owner: String!) {
+  repository(name: $name, owner: $owner) {
+    pinnedIssues(first: 3) {
+      totalCount
+      nodes {
+        issue {
+          ...issue
+        }
+      }
+    }
+  }
+}

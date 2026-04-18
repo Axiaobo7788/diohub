@@ -1,0 +1,24 @@
+name: AI Slash Commands
+
+on:
+  issue_comment:
+    types: [created]
+
+permissions:
+  contents: read
+
+jobs:
+  call-private:
+    if: |
+      (github.event.issue.pull_request || github.event.issue) &&
+      startsWith(github.event.comment.body, '/') &&
+      github.event.comment.user.type != 'Bot'
+    uses: namanshergill/diohub-premium/.github/workflows/_ai-slash-commands.yaml@main
+    with:
+      issue_number: ${{ github.event.issue.number }}
+      comment_id: ${{ github.event.comment.id }}
+      comment_body: ${{ github.event.comment.body }}
+      comment_author: ${{ github.event.comment.user.login }}
+      author_association: ${{ github.event.comment.author_association }}
+      is_pull_request: ${{ github.event.issue.pull_request != null }}
+    secrets: inherit

@@ -1,0 +1,4 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+  <!-- iOS-sized white circle: 820px diameter (80% of canvas per Apple HIG grid) -->
+  <circle cx="512" cy="512" r="410" fill="#FFFFFF"/>
+</svg>

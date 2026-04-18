@@ -1,0 +1,26 @@
+query getUserPackages($user: String!, $first: Int!, $after: String) {
+  user(login: $user) {
+    packages(first: $first, after: $after) {
+      totalCount
+      pageInfo {
+        hasNextPage
+        endCursor
+      }
+      edges {
+        cursor
+        node {
+          id
+          name
+          packageType
+          repository {
+            nameWithOwner
+            owner {
+              login
+            }
+            name
+          }
+        }
+      }
+    }
+  }
+}

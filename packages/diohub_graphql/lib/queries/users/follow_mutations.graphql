@@ -1,0 +1,41 @@
+mutation followUser($user: ID!) {
+  followUser(input: { userId: $user }) {
+    user {
+      login
+      viewerIsFollowing
+      followers {
+        totalCount
+      }
+    }
+  }
+}
+
+mutation unfollowUser($user: ID!) {
+  unfollowUser(input: { userId: $user }) {
+    user {
+      login
+      viewerIsFollowing
+      followers {
+        totalCount
+      }
+    }
+  }
+}
+
+mutation followOrganization($org: ID!) {
+  followOrganization(input: { organizationId: $org }) {
+    organization {
+      login
+      viewerIsFollowing
+    }
+  }
+}
+
+mutation unfollowOrganization($org: ID!) {
+  unfollowOrganization(input: { organizationId: $org }) {
+    organization {
+      login
+      viewerIsFollowing
+    }
+  }
+}

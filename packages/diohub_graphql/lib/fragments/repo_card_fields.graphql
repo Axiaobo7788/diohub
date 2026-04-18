@@ -1,0 +1,90 @@
+# import './actor.graphql'
+
+fragment repoCardFields on Repository {
+  id
+  name
+  nameWithOwner
+  description
+  url
+  stargazerCount
+  forkCount
+  watchers {
+    totalCount
+  }
+  issues(states: [OPEN], first: 0) {
+    totalCount
+  }
+  pullRequests(states: [OPEN], first: 0) {
+    totalCount
+  }
+  repositoryTopics(first: 20) {
+    edges {
+      node {
+        topic {
+          name
+          id
+        }
+      }
+    }
+    totalCount
+  }
+  defaultBranchRef {
+    name
+  }
+  homepageUrl
+  createdAt
+  primaryLanguage {
+    name
+    color
+  }
+  languages(first: 10, orderBy: { field: SIZE, direction: DESC }) {
+    edges {
+      size
+      node {
+        name
+        color
+      }
+    }
+  }
+  owner {
+    ...actor
+  }
+  isPrivate
+  isFork
+  viewerHasStarred
+  viewerSubscription
+  viewerCanSubscribe
+  forkingAllowed
+  parent {
+    nameWithOwner
+    owner {
+      login
+      avatarUrl
+    }
+    name
+    url
+    stargazerCount
+    description
+  }
+  isArchived
+  isMirror
+  isTemplate
+  pushedAt
+  licenseInfo {
+    spdxId
+    name
+    description
+    conditions {
+      key
+      label
+    }
+    permissions {
+      key
+      label
+    }
+    limitations {
+      key
+      label
+    }
+  }
+}

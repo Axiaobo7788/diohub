@@ -1,14 +1,15 @@
-import 'dart:developer';
-
 import 'package:dio/dio.dart';
 import 'package:diohub/app/api_handler/dio.dart';
+import 'package:diohub/services/base/base_service.dart';
+
 
 class MarkdownService {
-  static final RESTHandler _restHandler = RESTHandler(
-      // apiLogSettings: APILoggingSettings(responseBody: true),
-      );
+  MarkdownService(ApiClient client)
+      : _restHandler = client.rest;
 
-  static Future<String> renderMarkdown(
+  final RESTHandler _restHandler;
+
+  Future<String> renderMarkdown(
     final String data, {
     required final String? context,
   }) async {
@@ -20,7 +21,6 @@ class MarkdownService {
         if (context != null) 'context': context,
       },
     );
-    log('markdown', error: res.data);
     return res.data!;
   }
 }

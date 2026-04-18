@@ -1,0 +1,21 @@
+name: diohub_database
+description: Database layer for DioHub using Drift
+version: 1.0.0
+publish_to: none
+
+environment:
+  sdk: ^3.8.0
+
+dependencies:
+  drift: ^2.32.0
+  drift_flutter: ^0.3.0
+  path_provider: ^2.1.5
+  path: ^1.9.0
+  diohub_models:
+    path: ../diohub_models
+  diohub_graphql:
+    path: ../diohub_graphql
+
+dev_dependencies:
+  drift_dev: ^2.32.0
+  build_runner: ^2.5.4

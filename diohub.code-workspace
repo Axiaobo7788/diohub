@@ -1,0 +1,9 @@
+{
+  "folders": [
+    { "path": ".", "name": "diohub (public)" },
+    { "path": "../diohub-premium", "name": "diohub-premium (private)" }
+  ],
+  "settings": {
+    "dart.flutterSdkPath": ".fvm/versions/3.41.6"
+  }
+}

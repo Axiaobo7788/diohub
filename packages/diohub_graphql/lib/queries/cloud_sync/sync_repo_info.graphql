@@ -1,0 +1,15 @@
+# Lightweight query for sync repo: HEAD OID of default branch.
+query syncRepoInfo($owner: String!, $name: String!) {
+  repository(owner: $owner, name: $name) {
+    id
+    defaultBranchRef {
+      name
+      target {
+        __typename
+        ... on Commit {
+          oid
+        }
+      }
+    }
+  }
+}

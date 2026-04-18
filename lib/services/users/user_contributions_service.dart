@@ -1,85 +1,260 @@
-// ignore_for_file: avoid_classes_with_only_static_members
+import 'dart:ui';
 
-import 'package:diohub/app/global.dart';
-import 'package:diohub/common/charts/contribution_calendar_widget.dart';
+import 'package:diohub/app/api_handler/dio.dart' show GQLResponse;
+import 'package:diohub/app/app_logger.dart';
 import 'package:diohub/common/utils/contribution_utils.dart';
-import 'package:diohub/graphql/queries/users/__generated__/user_contributions.data.gql.dart';
-import 'package:diohub/graphql/queries/users/__generated__/user_info.data.gql.dart';
+import 'package:diohub/common/utils/contribution_data_converter.dart';
+import 'package:diohub_graphql/fragments/actor.graphql.dart';
+import 'package:diohub_graphql/fragments/repo_card_fields.graphql.dart';
+import 'package:diohub_graphql/queries/users/user_contributions.graphql.dart';
+import 'package:diohub_graphql/queries/users/user_typedefs.dart'
+    show
+        FirstIssueContribution,
+        FirstPRContribution,
+        FirstRepoContribution,
+        PopularIssueContribution,
+        PopularPRContribution;
+import 'package:diohub_models/models/entity_ref.dart';
+import 'package:diohub_models/models/contributions/contribution_day.dart';
 import 'package:diohub/models/contributions/contribution_query_models.dart';
-import 'package:diohub/models/repositories/repo_card_data_model.dart';
-import 'package:diohub/services/users/user_info_service.dart';
-import 'package:diohub/view/profile/about/widgets/activity_overview_section.dart';
-import 'package:diohub/view/profile/about/widgets/contribution_data_converter.dart';
+import 'package:diohub_models/models/visual_state.dart';
+import 'package:diohub/services/base/base_service.dart';
 import 'package:flutter/foundation.dart';
+import 'package:lens_annotations/lens_annotations.dart';
+
+String _getOwnerLogin(Fragment$repoCardFields$owner owner) => switch (owner) {
+  Fragment$actor actor => actor.login,
+  _ => throw ArgumentError('Invalid owner type: ${owner.runtimeType}'),
+};
 
 /// Service for fetching and aggregating user contribution data.
-/// Handles both single-year and multi-year queries, always returning a unified ContributionCollectionResult.
-class UserContributionsService {
+/// Bound to a user via [UserRef], like [IssueService] with [IssueRef] / [RepositoryServices] with [RepoRef].
+/// Uses [gql] only; no Riverpod refs or providers.
+@LensService(scope: Scope.user, group: 'user')
+class UserContributionsService extends EntityService<UserRef> {
+  UserContributionsService(super.apiClient, super.ref);
+
+  /// Fetches raw contribution data for this user in [from]–[to]. Used internally.
+  Future<Query$userContributions$user> _fetchContributionsGql({
+    required DateTime from,
+    required DateTime to,
+    bool refreshCache = false,
+  }) async {
+    final GQLResponse response = await gql.query(
+      documentNodeQueryuserContributions,
+      Variables$Query$userContributions(
+        user: ref.login,
+        from: from,
+        to: to,
+      ).toJson(),
+      refreshCache: refreshCache,
+    );
+    final Query$userContributions parsed = Query$userContributions.fromJson(
+      response.data!,
+    );
+    final Query$userContributions$user? user = parsed.user;
+    if (user == null) {
+      throw Exception('Contribution data for "${ref.login}" not found');
+    }
+    return user;
+  }
+
+  /// Merges [repos] into [repoMap] by URL. When a URL already exists, [merge] is called to produce the combined repo.
+  static void _mergeContributionReposIntoMap(
+    final Map<String, ContributedRepository> repoMap,
+    final List<ContributedRepository> repos,
+    final ContributedRepository Function(
+      ContributedRepository existing,
+      ContributedRepository repo,
+    )
+    merge,
+  ) {
+    for (final ContributedRepository repo in repos) {
+      final String url = repo.url;
+      if (repoMap.containsKey(url)) {
+        repoMap[url] = merge(repoMap[url]!, repo);
+      } else {
+        repoMap[url] = repo;
+      }
+    }
+  }
+
+  static ContributedRepository _mergeReviewInto(
+    final ContributedRepository existing,
+    final ContributedRepository repo,
+  ) => ContributedRepository(
+    graphQLRepository: existing.graphQLRepository,
+    contributionCount: existing.contributionCount + repo.contributionCount,
+    commitCount: existing.commitCount ?? existing.contributionCount,
+    reviewCount: repo.reviewCount ?? repo.contributionCount,
+    issueCount: existing.issueCount,
+    pullRequestCount: existing.pullRequestCount,
+  );
+
+  static ContributedRepository _mergeIssueInto(
+    final ContributedRepository existing,
+    final ContributedRepository repo,
+  ) => ContributedRepository(
+    graphQLRepository: existing.graphQLRepository,
+    contributionCount: existing.contributionCount + repo.contributionCount,
+    commitCount: existing.commitCount,
+    reviewCount: existing.reviewCount,
+    issueCount: (existing.issueCount ?? 0) + (repo.issueCount ?? 0),
+    pullRequestCount: existing.pullRequestCount,
+  );
+
+  static ContributedRepository _mergePullRequestInto(
+    final ContributedRepository existing,
+    final ContributedRepository repo,
+  ) => ContributedRepository(
+    graphQLRepository: existing.graphQLRepository,
+    contributionCount: existing.contributionCount + repo.contributionCount,
+    commitCount: existing.commitCount,
+    reviewCount: existing.reviewCount,
+    issueCount: existing.issueCount,
+    pullRequestCount:
+        (existing.pullRequestCount ?? 0) + (repo.pullRequestCount ?? 0),
+  );
+
+  static ContributedRepository _mergeCommitInto(
+    final ContributedRepository existing,
+    final ContributedRepository repo,
+  ) => ContributedRepository(
+    graphQLRepository: existing.graphQLRepository,
+    contributionCount: existing.contributionCount + repo.contributionCount,
+    commitCount:
+        (existing.commitCount ?? existing.contributionCount) +
+        repo.contributionCount,
+    reviewCount: existing.reviewCount,
+    issueCount: existing.issueCount,
+    pullRequestCount: existing.pullRequestCount,
+  );
+
   /// Fetch contributions for the given query key.
   /// Returns a unified collection result with both flattened data and per-year highlights.
-  static Future<ContributionCollectionResult> fetchContributions(
-    ContributionQueryKey key,
+  Future<ContributionCollectionResult> fetchContributions(
+    final ContributionQueryKey key,
   ) async {
-    try {
-      final (from, to) = key.dateRange.dates;
-
-      // Check if this is a multi-year range
-      // Use actual day difference instead of year subtraction to correctly handle
-      // "last year" queries that span two calendar years but are only 365 days
-      final daysDiff = to.difference(from).inDays;
-
-      // If the range is 366 days or less, treat it as single-year
-      // (366 accounts for leap years; most years are 365 days)
-      if (daysDiff <= 366) {
-        // Single year - fetch and convert to view model
-        final result = await UserInfoService.getUserContributions(
-          key.userName,
-          from: from,
-          to: to,
-        );
-        return _convertSingleYearToViewModel(result);
-      }
-
-      // Multi-year range: fetch each year in parallel
-      final yearQueries = <Future<GuserContributionsData_user>>[];
-
-      for (int year = from.year; year <= to.year; year++) {
-        final yearStart = year == from.year
-            ? DateTime(year, from.month, from.day)
-            : DateTime(year, 1, 1);
-        final yearEnd = year == to.year
-            ? DateTime(year, to.month, to.day)
-            : DateTime(year, 12, 31);
-
-        yearQueries.add(
-          UserInfoService.getUserContributions(
-            key.userName,
-            from: yearStart,
-            to: yearEnd,
-          ),
-        );
-      }
-
-      // Fetch all years in parallel
-      final results = await Future.wait(yearQueries, eagerError: true);
-
-      // Combine results into unified view model
-      return _combineMultiYearResults(results);
-    } catch (e, stackTrace) {
-      log.e('Error fetching user contributions',
-          error: e, stackTrace: stackTrace);
-      rethrow;
+    if (kDebugMode) {
+      DateTime.now().millisecondsSinceEpoch;
     }
+    var (DateTime from, DateTime to) = key.dateRange.dates;
+
+    // Clamp dates to today to prevent future date queries
+    final DateTime today = DateTime.now();
+    final DateTime todayNormalized = DateTime(
+      today.year,
+      today.month,
+      today.day,
+    );
+    if (to.isAfter(todayNormalized)) {
+      to = todayNormalized;
+    }
+    if (from.isAfter(todayNormalized)) {
+      from = todayNormalized;
+    }
+
+    // Check if this is a multi-year range
+    // Use actual day difference instead of year subtraction to correctly handle
+    // "last year" queries that span two calendar years but are only 365 days
+    final int daysDiff = to
+        .difference(from)
+        .inDays; // If the range is 366 days or less, treat it as single-year
+    // (366 accounts for leap years; most years are 365 days)
+    if (daysDiff <= 366) {
+      // Single year - fetch and convert to view model
+      final Query$userContributions$user result = await _fetchContributionsGql(
+        from: from,
+        to: to,
+      );
+      final ContributionCollectionResult viewModel =
+          _convertSingleYearToViewModel(result);
+      return viewModel;
+    }
+
+    // Multi-year range: fetch each year in parallel with error handling
+    final List<Future<Query$userContributions$user?>> yearQueries =
+        <Future<Query$userContributions$user?>>[];
+    for (int year = from.year; year <= to.year; year++) {
+      DateTime yearStart = year == from.year
+          ? DateTime(year, from.month, from.day)
+          : DateTime(year);
+      DateTime yearEnd = year == to.year
+          ? DateTime(year, to.month, to.day)
+          : DateTime(year, 12, 31);
+
+      // Clamp year dates to today
+      if (yearEnd.isAfter(todayNormalized)) {
+        yearEnd = todayNormalized;
+      }
+      if (yearStart.isAfter(todayNormalized)) {
+        yearStart = todayNormalized;
+      } // Wrap each query in error handling to prevent one failure from failing all
+      yearQueries.add(_fetchContributionsGql(from: yearStart, to: yearEnd));
+    }
+
+    // Fetch all years in parallel (with graceful error handling)
+    final List<Query$userContributions$user?> results = await Future.wait(
+      yearQueries,
+    );
+
+    // Filter out null results (failed years)
+    final List<Query$userContributions$user> successfulResults = results
+        .whereType<Query$userContributions$user>()
+        .toList();
+
+    if (successfulResults.isEmpty) {
+      throw Exception('All year queries failed for user "${ref.login}"');
+    }
+
+    if (successfulResults.length <
+        results.length) {} // Combine results into unified view model
+    final ContributionCollectionResult combined = _combineMultiYearResults(
+      successfulResults,
+    );
+    return combined;
+  }
+
+  /// Tool-friendly entry point: year, or from/to date range, for this user. Replaces hand-written get_user_contributions.
+  @Lens(
+    'get_user_contributions',
+    'Get contribution calendar and stats for a user. Can fetch by year or custom date range. Defaults to last year if no params provided.',
+    category: ToolCategory.user,
+    access: ToolAccess.read,
+  )
+  Future<ContributionCollectionResult> getContributionsForTool({
+    @Desc('Year for contributions') final int? year,
+    @Desc('Start date (ISO 8601)') final String? from,
+    @Desc('End date (ISO 8601)') final String? to,
+  }) async {
+    final ContributionQueryKey key;
+    if (year != null) {
+      key = ContributionQueryKey.year(ref.login, year);
+    } else if (from != null && to != null) {
+      final fromDate = DateTime.tryParse(from);
+      final toDate = DateTime.tryParse(to);
+      key = (fromDate != null && toDate != null)
+          ? ContributionQueryKey.customRange(
+              userName: ref.login,
+              from: fromDate,
+              to: toDate,
+            )
+          : ContributionQueryKey.lastYear(ref.login);
+    } else {
+      key = ContributionQueryKey.lastYear(ref.login);
+    }
+    return fetchContributions(key);
   }
 
   /// Convert single-year GraphQL data to unified collection result
   static ContributionCollectionResult _convertSingleYearToViewModel(
-    GuserContributionsData_user data,
+    final Query$userContributions$user data,
   ) {
-    final collection = data.contributionsCollection;
+    final Query$userContributions$user$contributionsCollection collection =
+        data.contributionsCollection;
 
     // Build flattened view model
-    final viewModel = ContributionViewModel(
+    final ContributionViewModel viewModel = ContributionViewModel(
       weeks: ContributionDataConverter.convertWeeks(
         collection.contributionCalendar.weeks.toList(),
       ),
@@ -94,85 +269,47 @@ class UserContributionsService {
           collection.totalPullRequestReviewContributions,
       commitContributionsByRepository:
           ContributionDataConverter.convertRepositories(
-        collection.commitContributionsByRepository.toList(),
-      ),
+            collection.commitContributionsByRepository.toList(),
+          ),
       contributionYears: collection.contributionYears.toList(),
     );
 
     // Merge commit and PR review repositories for Activity Overview
-    final commitRepos = viewModel.commitContributionsByRepository;
-    final reviewRepos = ContributionDataConverter.convertReviewRepositories(
-      collection.pullRequestReviewContributionsByRepository.toList(),
-    );
-    final issueRepos = ContributionDataConverter.convertIssueRepositories(
-      collection.issueContributionsByRepository.toList(),
-    );
-    final pullRequestRepos =
+    final List<ContributedRepository> commitRepos =
+        viewModel.commitContributionsByRepository;
+    final List<ContributedRepository> reviewRepos =
+        ContributionDataConverter.convertReviewRepositories(
+          collection.pullRequestReviewContributionsByRepository.toList(),
+        );
+    final List<ContributedRepository> issueRepos =
+        ContributionDataConverter.convertIssueRepositories(
+          collection.issueContributionsByRepository.toList(),
+        );
+    final List<ContributedRepository> pullRequestRepos =
         ContributionDataConverter.convertPullRequestRepositories(
-      collection.pullRequestContributionsByRepository.toList(),
-    );
+          collection.pullRequestContributionsByRepository.toList(),
+        );
 
     // Merge repositories by URL, tracking commit, review, issue, and PR counts separately
-    // Preserve GraphQL repository objects to avoid data loss
-    final repoMap = <String, ContributedRepository>{};
-    for (final repo in commitRepos) {
+    final Map<String, ContributedRepository> repoMap =
+        <String, ContributedRepository>{};
+    for (final ContributedRepository repo in commitRepos) {
       repoMap[repo.url] = repo;
     }
-    for (final repo in reviewRepos) {
-      if (repoMap.containsKey(repo.url)) {
-        final existing = repoMap[repo.url]!;
-        repoMap[repo.url] = ContributedRepository(
-          graphQLRepository: existing.graphQLRepository,
-          contributionCount:
-              existing.contributionCount + repo.contributionCount,
-          commitCount: existing.commitCount ?? existing.contributionCount,
-          reviewCount: repo.reviewCount ?? repo.contributionCount,
-          issueCount: existing.issueCount,
-          pullRequestCount: existing.pullRequestCount,
-        );
-      } else {
-        repoMap[repo.url] = repo;
-      }
-    }
-    for (final repo in issueRepos) {
-      if (repoMap.containsKey(repo.url)) {
-        final existing = repoMap[repo.url]!;
-        repoMap[repo.url] = ContributedRepository(
-          graphQLRepository: existing.graphQLRepository,
-          contributionCount:
-              existing.contributionCount + repo.contributionCount,
-          commitCount: existing.commitCount,
-          reviewCount: existing.reviewCount,
-          issueCount: (existing.issueCount ?? 0) + (repo.issueCount ?? 0),
-          pullRequestCount: existing.pullRequestCount,
-        );
-      } else {
-        repoMap[repo.url] = repo;
-      }
-    }
-    for (final repo in pullRequestRepos) {
-      if (repoMap.containsKey(repo.url)) {
-        final existing = repoMap[repo.url]!;
-        repoMap[repo.url] = ContributedRepository(
-          graphQLRepository: existing.graphQLRepository,
-          contributionCount:
-              existing.contributionCount + repo.contributionCount,
-          commitCount: existing.commitCount,
-          reviewCount: existing.reviewCount,
-          issueCount: existing.issueCount,
-          pullRequestCount:
-              (existing.pullRequestCount ?? 0) + (repo.pullRequestCount ?? 0),
-        );
-      } else {
-        repoMap[repo.url] = repo;
-      }
-    }
+    _mergeContributionReposIntoMap(repoMap, reviewRepos, _mergeReviewInto);
+    _mergeContributionReposIntoMap(repoMap, issueRepos, _mergeIssueInto);
+    _mergeContributionReposIntoMap(
+      repoMap,
+      pullRequestRepos,
+      _mergePullRequestInto,
+    );
 
-    final mergedRepos = repoMap.values.toList()
-      ..sort((a, b) => b.contributionCount.compareTo(a.contributionCount));
-
-    // Update viewModel with merged repositories
-    final updatedViewModel = ContributionViewModel(
+    final List<ContributedRepository> mergedRepos = repoMap.values.toList()
+      ..sort(
+        (final ContributedRepository a, final ContributedRepository b) =>
+            b.contributionCount.compareTo(a.contributionCount),
+      ); // Update viewModel with merged repositories
+    final ContributionViewModel updatedViewModel = ContributionViewModel(
       weeks: viewModel.weeks,
       colors: viewModel.colors,
       totalContributions: viewModel.totalContributions,
@@ -186,28 +323,39 @@ class UserContributionsService {
     );
 
     // Extract calendar months
-    final calendarMonths = collection.contributionCalendar.months
-        .map((month) => ContributionMonth(
-              name: month.name,
-              year: month.year,
-              firstDay: month.firstDay,
-              totalWeeks: month.totalWeeks,
-            ))
+    final List<ContributionMonth> calendarMonths = collection
+        .contributionCalendar
+        .months
+        .map(
+          (
+            final Query$userContributions$user$contributionsCollection$contributionCalendar$months
+            month,
+          ) => ContributionMonth(
+            name: month.name,
+            year: month.year,
+            firstDay: month.firstDay,
+            totalWeeks: month.totalWeeks,
+          ),
+        )
         .toList();
 
     // Use API dates for accuracy (fallback to week calculation if not available)
-    final startedAt = collection.startedAt;
-    final endedAt = collection.endedAt;
+    final DateTime startedAt = collection.startedAt;
+    final DateTime endedAt = collection.endedAt;
 
     // Determine year from startedAt
-    final year = startedAt.year;
+    final int year = startedAt.year;
 
-    // Keep fromDate/toDate for backward compatibility (calculated from weeks)
-    final weeks = collection.contributionCalendar.weeks.toList();
-    final firstWeek = weeks.isNotEmpty ? weeks.first : null;
-    final lastWeek = weeks.isNotEmpty ? weeks.last : null;
-    final fromDate = firstWeek?.firstDay ?? startedAt;
-    final toDate = lastWeek != null
+    final List<
+      Query$userContributions$user$contributionsCollection$contributionCalendar$weeks
+    >
+    weeks = collection.contributionCalendar.weeks.toList();
+    final Query$userContributions$user$contributionsCollection$contributionCalendar$weeks?
+    firstWeek = weeks.isNotEmpty ? weeks.first : null;
+    final Query$userContributions$user$contributionsCollection$contributionCalendar$weeks?
+    lastWeek = weeks.isNotEmpty ? weeks.last : null;
+    final DateTime fromDate = firstWeek?.firstDay ?? startedAt;
+    final DateTime toDate = lastWeek != null
         ? lastWeek.firstDay.add(const Duration(days: 6))
         : endedAt;
 
@@ -220,84 +368,71 @@ class UserContributionsService {
     DateTime? joinedGitHub;
 
     try {
-      firstIssue = _extractHighlightItem(
-        contribution: collection.firstIssueContribution,
-        type: 'issue',
+      firstIssue = _extractFromFirstIssue(collection.firstIssueContribution);
+      firstPR = _extractFromFirstPR(collection.firstPullRequestContribution);
+      firstRepo = _extractFromFirstRepo(collection.firstRepositoryContribution);
+      popularIssue = _extractFromPopularIssue(
+        collection.popularIssueContribution,
       );
-      firstPR = _extractHighlightItem(
-        contribution: collection.firstPullRequestContribution,
-        type: 'pullRequest',
+      popularPR = _extractFromPopularPR(
+        collection.popularPullRequestContribution,
       );
-      firstRepo = _extractHighlightItem(
-        contribution: collection.firstRepositoryContribution,
-        type: 'repository',
-      );
-      if (kDebugMode) {
-        log.d(
-            '[UserContributionsService] Extracting popularIssue from: ${collection.popularIssueContribution?.G__typename ?? "null"}');
-      }
-      popularIssue = _extractHighlightItem(
-        contribution: collection.popularIssueContribution,
-        type: 'issue',
-      );
-      if (kDebugMode) {
-        log.d(
-            '[UserContributionsService] Extracted popularIssue: ${popularIssue?.title ?? "null"} (commentCount: ${popularIssue?.commentCount ?? "null"})');
-      }
-      if (kDebugMode) {
-        log.d(
-            '[UserContributionsService] Extracting popularPullRequest from: ${collection.popularPullRequestContribution?.G__typename ?? "null"}');
-      }
-      popularPR = _extractHighlightItem(
-        contribution: collection.popularPullRequestContribution,
-        type: 'pullRequest',
-      );
-      if (kDebugMode) {
-        log.d(
-            '[UserContributionsService] Extracted popularPullRequest: ${popularPR?.title ?? "null"} (commentCount: ${popularPR?.commentCount ?? "null"})');
-      }
       joinedGitHub = collection.joinedGitHubContribution?.occurredAt;
-    } catch (e) {
-      if (kDebugMode) {
-        log.w('Error extracting highlights (run build_runner if types missing)',
-            error: e);
-      }
+    } catch (e, stackTrace) {
+      AppLogger.warning(
+        'Contribution highlight extraction failed',
+        error: e,
+        stackTrace: stackTrace,
+        tag: 'Contributions',
+      );
     }
 
     // Find most reviewed repository
     ContributionHighlightItem? mostReviewedRepo;
     try {
-      final reviewRepos = collection.pullRequestReviewContributionsByRepository
+      final Iterable<
+        Query$userContributions$user$contributionsCollection$pullRequestReviewContributionsByRepository
+      >
+      reviewRepos = collection.pullRequestReviewContributionsByRepository
           .whereType<
-              GuserContributionsData_user_contributionsCollection_pullRequestReviewContributionsByRepository>();
+            Query$userContributions$user$contributionsCollection$pullRequestReviewContributionsByRepository
+          >();
       if (reviewRepos.isNotEmpty) {
-        final topRepo = reviewRepos.reduce((a, b) =>
-            a.contributions.totalCount > b.contributions.totalCount ? a : b);
-        final repoData = topRepo.repository as GrepositoryFields;
-        // Use RepoCardDataModel.fromGraphQL to extract all fields properly
-        final cardData = RepoCardDataModel.fromGraphQL(repoData);
+        final Query$userContributions$user$contributionsCollection$pullRequestReviewContributionsByRepository
+        topRepo = reviewRepos.reduce(
+          (
+            final Query$userContributions$user$contributionsCollection$pullRequestReviewContributionsByRepository
+            a,
+            final Query$userContributions$user$contributionsCollection$pullRequestReviewContributionsByRepository
+            b,
+          ) => a.contributions.totalCount > b.contributions.totalCount ? a : b,
+        );
+        final repoData = topRepo.repository;
         mostReviewedRepo = ContributionHighlightItem(
-          title: cardData.name,
-          url: cardData.url,
-          createdAt:
-              startedAt, // repositoryFields fragment doesn't include createdAt
-          repositoryName: cardData.name,
-          repositoryOwner: repoData.owner.login,
+          title: repoData.name,
+          url: repoData.url.toString(),
+          createdAt: startedAt,
+          repositoryName: repoData.name,
+          repositoryOwner: _getOwnerLogin(repoData.owner),
           type: ContributionHighlightType.repository,
-          stargazerCount: cardData.stargazersCount,
-          isPrivate: cardData.private,
+          stargazerCount: repoData.stargazerCount,
+          isPrivate: repoData.isPrivate,
           commentCount: topRepo.contributions.totalCount,
           graphQLRepository: repoData,
         );
       }
-    } catch (e) {
-      if (kDebugMode) {
-        log.w('Error extracting most reviewed repository', error: e);
-      }
+    } catch (e, stackTrace) {
+      AppLogger.warning(
+        'Most-reviewed repo extraction failed',
+        error: e,
+        stackTrace: stackTrace,
+        tag: 'Contributions',
+      );
     }
 
     // Build yearly highlights for single year
-    final highlights = YearlyContributionHighlights(
+    final YearlyContributionHighlights
+    highlights = YearlyContributionHighlights(
       year: year,
       fromDate: fromDate,
       toDate: toDate,
@@ -332,71 +467,71 @@ class UserContributionsService {
       mostReviewedRepository: mostReviewedRepo,
       joinedGitHub: joinedGitHub,
     );
-
     return ContributionCollectionResult(
       viewModel: updatedViewModel,
-      yearlyHighlights: [highlights],
+      yearlyHighlights: <YearlyContributionHighlights>[highlights],
     );
   }
 
   /// Combine multiple year results into a single unified collection result
   static ContributionCollectionResult _combineMultiYearResults(
-    List<GuserContributionsData_user> results,
+    final List<Query$userContributions$user> results,
   ) {
     if (results.isEmpty) {
       throw Exception('No results to combine');
     }
-
-    if (kDebugMode) {
-      log.d(
-          '[_combineMultiYearResults] Starting to combine ${results.length} year results');
-    }
-
     // Combine all weeks from all years, preserving the original week structure from API
     // Use a map to track days by date (YYYY-MM-DD) to handle duplicates at year boundaries
-    final allDaysMap = <String, ContributionDay>{};
+    final Map<String, ContributionDay> allDaysMap = <String, ContributionDay>{};
     // Track week first days (as date strings) to preserve week structure and avoid duplicates
-    final weekFirstDaysSet = <String>{};
-    final weekFirstDaysList = <String>[];
+    final Set<String> weekFirstDaysSet = <String>{};
+    final List<String> weekFirstDaysList = <String>[];
 
     // Collect per-year highlights (no merging - keep them separate)
-    final yearlyHighlights = <YearlyContributionHighlights>[];
+    final List<YearlyContributionHighlights> yearlyHighlights =
+        <YearlyContributionHighlights>[];
 
     // Collect all weeks and days from all year results
     for (int resultIndex = 0; resultIndex < results.length; resultIndex++) {
-      final result = results[resultIndex];
-      final collection = result.contributionsCollection;
-      final calendar = collection.contributionCalendar;
-      final weeks = calendar.weeks.whereType<
-          GuserContributionsData_user_contributionsCollection_contributionCalendar_weeks>();
-
-      if (kDebugMode) {
-        log.d(
-            '[_combineMultiYearResults] Result $resultIndex: Found ${weeks.length} weeks');
-      }
-
-      // Extract per-year highlights (no merging)
-      final calendarMonths = calendar.months
-          .map((month) => ContributionMonth(
-                name: month.name,
-                year: month.year,
-                firstDay: month.firstDay,
-                totalWeeks: month.totalWeeks,
-              ))
+      final Query$userContributions$user result = results[resultIndex];
+      final Query$userContributions$user$contributionsCollection collection =
+          result.contributionsCollection;
+      final Query$userContributions$user$contributionsCollection$contributionCalendar
+      calendar = collection.contributionCalendar;
+      final Iterable<
+        Query$userContributions$user$contributionsCollection$contributionCalendar$weeks
+      >
+      weeks = calendar.weeks
+          .whereType<
+            Query$userContributions$user$contributionsCollection$contributionCalendar$weeks
+          >(); // Extract per-year highlights (no merging)
+      final List<ContributionMonth> calendarMonths = calendar.months
+          .map(
+            (
+              final Query$userContributions$user$contributionsCollection$contributionCalendar$months
+              month,
+            ) => ContributionMonth(
+              name: month.name,
+              year: month.year,
+              firstDay: month.firstDay,
+              totalWeeks: month.totalWeeks,
+            ),
+          )
           .toList();
 
       // Use API dates for accuracy (fallback to week calculation if not available)
-      final startedAt = collection.startedAt;
-      final endedAt = collection.endedAt;
+      final DateTime startedAt = collection.startedAt;
+      final DateTime endedAt = collection.endedAt;
 
       // Determine year from startedAt
-      final year = startedAt.year;
+      final int year = startedAt.year;
 
-      // Keep fromDate/toDate for backward compatibility (calculated from weeks)
-      final firstWeek = weeks.isNotEmpty ? weeks.first : null;
-      final lastWeek = weeks.isNotEmpty ? weeks.lastOrNull : null;
-      final fromDate = firstWeek?.firstDay ?? startedAt;
-      final toDate = lastWeek != null
+      final Query$userContributions$user$contributionsCollection$contributionCalendar$weeks?
+      firstWeek = weeks.isNotEmpty ? weeks.first : null;
+      final Query$userContributions$user$contributionsCollection$contributionCalendar$weeks?
+      lastWeek = weeks.isNotEmpty ? weeks.lastOrNull : null;
+      final DateTime fromDate = firstWeek?.firstDay ?? startedAt;
+      final DateTime toDate = lastWeek != null
           ? lastWeek.firstDay.add(const Duration(days: 6))
           : endedAt;
 
@@ -410,196 +545,163 @@ class UserContributionsService {
       DateTime? joinedGitHub;
 
       try {
-        firstIssue = _extractHighlightItem(
-          contribution: collection.firstIssueContribution,
-          type: 'issue',
+        firstIssue = _extractFromFirstIssue(collection.firstIssueContribution);
+        firstPR = _extractFromFirstPR(collection.firstPullRequestContribution);
+        firstRepo = _extractFromFirstRepo(
+          collection.firstRepositoryContribution,
         );
-        firstPR = _extractHighlightItem(
-          contribution: collection.firstPullRequestContribution,
-          type: 'pullRequest',
+        popularIssue = _extractFromPopularIssue(
+          collection.popularIssueContribution,
         );
-        firstRepo = _extractHighlightItem(
-          contribution: collection.firstRepositoryContribution,
-          type: 'repository',
+        popularPR = _extractFromPopularPR(
+          collection.popularPullRequestContribution,
         );
-        if (kDebugMode) {
-          log.d(
-              '[UserContributionsService] Year $year: Extracting popularIssue from: ${collection.popularIssueContribution?.G__typename ?? "null"}');
-        }
-        popularIssue = _extractHighlightItem(
-          contribution: collection.popularIssueContribution,
-          type: 'issue',
-        );
-        if (kDebugMode) {
-          log.d(
-              '[UserContributionsService] Year $year: Extracted popularIssue: ${popularIssue?.title ?? "null"} (commentCount: ${popularIssue?.commentCount ?? "null"})');
-        }
-        if (kDebugMode) {
-          log.d(
-              '[UserContributionsService] Year $year: Extracting popularPullRequest from: ${collection.popularPullRequestContribution?.G__typename ?? "null"}');
-        }
-        popularPR = _extractHighlightItem(
-          contribution: collection.popularPullRequestContribution,
-          type: 'pullRequest',
-        );
-        if (kDebugMode) {
-          log.d(
-              '[UserContributionsService] Year $year: Extracted popularPullRequest: ${popularPR?.title ?? "null"} (commentCount: ${popularPR?.commentCount ?? "null"})');
-        }
         joinedGitHub = collection.joinedGitHubContribution?.occurredAt;
-      } catch (e) {
-        if (kDebugMode) {
-          log.w(
-              'Error extracting highlights (run build_runner if types missing)',
-              error: e);
-        }
+      } catch (e, stackTrace) {
+        AppLogger.warning(
+          'Multi-year highlight extraction failed',
+          error: e,
+          stackTrace: stackTrace,
+          tag: 'Contributions',
+        );
       }
 
       // Find most reviewed repository for this year
       try {
-        final reviewRepos =
-            collection.pullRequestReviewContributionsByRepository.whereType<
-                GuserContributionsData_user_contributionsCollection_pullRequestReviewContributionsByRepository>();
+        final Iterable<
+          Query$userContributions$user$contributionsCollection$pullRequestReviewContributionsByRepository
+        >
+        reviewRepos = collection.pullRequestReviewContributionsByRepository
+            .whereType<
+              Query$userContributions$user$contributionsCollection$pullRequestReviewContributionsByRepository
+            >();
         if (reviewRepos.isNotEmpty) {
-          final topRepo = reviewRepos.reduce((a, b) =>
-              a.contributions.totalCount > b.contributions.totalCount ? a : b);
-          final repoData = topRepo.repository as GrepositoryFields;
-          // Use RepoCardDataModel.fromGraphQL to extract all fields properly
-          final cardData = RepoCardDataModel.fromGraphQL(repoData);
+          final Query$userContributions$user$contributionsCollection$pullRequestReviewContributionsByRepository
+          topRepo = reviewRepos.reduce(
+            (
+              final Query$userContributions$user$contributionsCollection$pullRequestReviewContributionsByRepository
+              a,
+              final Query$userContributions$user$contributionsCollection$pullRequestReviewContributionsByRepository
+              b,
+            ) =>
+                a.contributions.totalCount > b.contributions.totalCount ? a : b,
+          );
+          final repoData = topRepo.repository;
           mostReviewedRepo = ContributionHighlightItem(
-            title: cardData.name,
-            url: cardData.url,
-            createdAt:
-                startedAt, // repositoryFields fragment doesn't include createdAt
-            repositoryName: cardData.name,
-            repositoryOwner: repoData.owner.login,
+            title: repoData.name,
+            url: repoData.url.toString(),
+            createdAt: startedAt,
+            repositoryName: repoData.name,
+            repositoryOwner: _getOwnerLogin(repoData.owner),
             type: ContributionHighlightType.repository,
-            stargazerCount: cardData.stargazersCount,
-            isPrivate: cardData.private,
+            stargazerCount: repoData.stargazerCount,
+            isPrivate: repoData.isPrivate,
             commentCount: topRepo.contributions.totalCount,
             graphQLRepository: repoData,
           );
         }
-      } catch (e) {
-        if (kDebugMode) {
-          log.w('Error extracting most reviewed repository for year $year',
-              error: e);
-        }
+      } catch (e, stackTrace) {
+        AppLogger.warning(
+          'Multi-year most-reviewed repo extraction failed',
+          error: e,
+          stackTrace: stackTrace,
+          tag: 'Contributions',
+        );
       }
 
-      yearlyHighlights.add(YearlyContributionHighlights(
-        year: year,
-        fromDate: fromDate,
-        toDate: toDate,
-        startedAt: startedAt,
-        endedAt: endedAt,
-        restrictedContributionsCount: collection.restrictedContributionsCount,
-        totalCommitContributions: collection.totalCommitContributions,
-        totalIssueContributions: collection.totalIssueContributions,
-        totalPullRequestContributions: collection.totalPullRequestContributions,
-        totalPullRequestReviewContributions:
-            collection.totalPullRequestReviewContributions,
-        totalRepositoryContributions: collection.totalRepositoryContributions,
-        totalContributions: collection.contributionCalendar.totalContributions,
-        totalRepositoriesWithContributedCommits:
-            collection.totalRepositoriesWithContributedCommits,
-        totalRepositoriesWithContributedIssues:
-            collection.totalRepositoriesWithContributedIssues,
-        totalRepositoriesWithContributedPullRequests:
-            collection.totalRepositoriesWithContributedPullRequests,
-        totalRepositoriesWithContributedPullRequestReviews:
-            collection.totalRepositoriesWithContributedPullRequestReviews,
-        calendarMonths: calendarMonths,
-        earliestRestrictedContributionDate:
-            collection.earliestRestrictedContributionDate,
-        latestRestrictedContributionDate:
-            collection.latestRestrictedContributionDate,
-        firstIssue: firstIssue,
-        firstPullRequest: firstPR,
-        firstRepository: firstRepo,
-        popularIssue: popularIssue,
-        popularPullRequest: popularPR,
-        mostReviewedRepository: mostReviewedRepo,
-        joinedGitHub: joinedGitHub,
-      ));
+      yearlyHighlights.add(
+        YearlyContributionHighlights(
+          year: year,
+          fromDate: fromDate,
+          toDate: toDate,
+          startedAt: startedAt,
+          endedAt: endedAt,
+          restrictedContributionsCount: collection.restrictedContributionsCount,
+          totalCommitContributions: collection.totalCommitContributions,
+          totalIssueContributions: collection.totalIssueContributions,
+          totalPullRequestContributions:
+              collection.totalPullRequestContributions,
+          totalPullRequestReviewContributions:
+              collection.totalPullRequestReviewContributions,
+          totalRepositoryContributions: collection.totalRepositoryContributions,
+          totalContributions:
+              collection.contributionCalendar.totalContributions,
+          totalRepositoriesWithContributedCommits:
+              collection.totalRepositoriesWithContributedCommits,
+          totalRepositoriesWithContributedIssues:
+              collection.totalRepositoriesWithContributedIssues,
+          totalRepositoriesWithContributedPullRequests:
+              collection.totalRepositoriesWithContributedPullRequests,
+          totalRepositoriesWithContributedPullRequestReviews:
+              collection.totalRepositoriesWithContributedPullRequestReviews,
+          calendarMonths: calendarMonths,
+          earliestRestrictedContributionDate:
+              collection.earliestRestrictedContributionDate,
+          latestRestrictedContributionDate:
+              collection.latestRestrictedContributionDate,
+          firstIssue: firstIssue,
+          firstPullRequest: firstPR,
+          firstRepository: firstRepo,
+          popularIssue: popularIssue,
+          popularPullRequest: popularPR,
+          mostReviewedRepository: mostReviewedRepo,
+          joinedGitHub: joinedGitHub,
+        ),
+      );
 
       for (int weekIndex = 0; weekIndex < weeks.length; weekIndex++) {
-        final week = weeks.elementAt(weekIndex);
+        final Query$userContributions$user$contributionsCollection$contributionCalendar$weeks
+        week = weeks.elementAt(weekIndex);
 
         // Get the first day of the week from the API (more reliable than using contributionDays.first)
-        final firstDayDate = DateTime.parse(week.firstDay.toString());
-        final firstDayKey = formatDateOnly(firstDayDate);
-
-        if (kDebugMode) {
-          log.d(
-              '[_combineMultiYearResults] Result $resultIndex, Week $weekIndex: firstDay=$firstDayKey, days=${week.contributionDays.length}');
-        }
-
-        // Track unique week first days (use set for O(1) lookup, list for ordered output)
+        final DateTime firstDayDate = DateTime.parse(week.firstDay.toString());
+        final String firstDayKey = formatDateOnly(
+          firstDayDate,
+        ); // Track unique week first days (use set for O(1) lookup, list for ordered output)
         if (!weekFirstDaysSet.contains(firstDayKey)) {
           weekFirstDaysSet.add(firstDayKey);
           weekFirstDaysList.add(firstDayKey);
-          if (kDebugMode) {
-            log.d(
-                '[_combineMultiYearResults] Added new week: $firstDayKey (total unique weeks: ${weekFirstDaysList.length})');
-          }
-        } else if (kDebugMode) {
-          log.d(
-              '[_combineMultiYearResults] Skipped duplicate week: $firstDayKey');
-        }
+        } else // Collect all days from this week
+          for (final Query$userContributions$user$contributionsCollection$contributionCalendar$weeks$contributionDays
+              day
+              in week.contributionDays) {
+            final DateTime dayDate = DateTime.parse(day.date.toString());
+            final String dateKey = formatDateOnly(dayDate);
 
-        // Collect all days from this week
-        for (final day in week.contributionDays) {
-          final dayDate = DateTime.parse(day.date.toString());
-          final dateKey = formatDateOnly(dayDate);
-
-          // Use the latest data if there's a duplicate (at year boundaries)
-          if (!allDaysMap.containsKey(dateKey)) {
-            final contributionDay = ContributionDay(
-              date: dayDate,
-              count: day.contributionCount,
-              color: parseContributionColor(day.color),
-              level: convertContributionLevel(day.contributionLevel),
-            );
-            allDaysMap[dateKey] = contributionDay;
+            // Use the latest data if there's a duplicate (at year boundaries)
+            if (!allDaysMap.containsKey(dateKey)) {
+              final ContributionDay contributionDay = ContributionDay(
+                date: dayDate,
+                count: day.contributionCount,
+                color: parseContributionColor(day.color),
+                level: convertContributionLevel(day.contributionLevel),
+              );
+              allDaysMap[dateKey] = contributionDay;
+            }
           }
-        }
       }
-    }
-
-    if (kDebugMode) {
-      log.d(
-          '[_combineMultiYearResults] Collected ${allDaysMap.length} unique days');
-      log.d(
-          '[_combineMultiYearResults] Collected ${weekFirstDaysList.length} unique week first days');
-    }
-
-    // Sort week first days chronologically
-    weekFirstDaysList.sort((a, b) => a.compareTo(b));
-    if (kDebugMode) {
-      log.d(
-          '[_combineMultiYearResults] Sorted weeks. First week: ${weekFirstDaysList.firstOrNull}, Last week: ${weekFirstDaysList.lastOrNull}');
-    }
-
-    // Reconstruct weeks preserving the original structure
+    } // Sort week first days chronologically
+    weekFirstDaysList.sort(
+      (final String a, final String b) => a.compareTo(b),
+    ); // Reconstruct weeks preserving the original structure
     // Each week from API starts on the first day and has 7 days
-    final allWeeks = <List<ContributionDay>>[];
+    final List<List<ContributionDay>> allWeeks = <List<ContributionDay>>[];
     for (int weekIndex = 0; weekIndex < weekFirstDaysList.length; weekIndex++) {
-      final firstDayKey = weekFirstDaysList[weekIndex];
-      final firstDayDate = DateTime.parse(firstDayKey);
-      final week = <ContributionDay>[];
+      final String firstDayKey = weekFirstDaysList[weekIndex];
+      final DateTime firstDayDate = DateTime.parse(firstDayKey);
+      final List<ContributionDay> week = <ContributionDay>[];
 
       // Add 7 days for this week (preserving API structure)
       for (int i = 0; i < 7; i++) {
-        final weekDay = firstDayDate.add(Duration(days: i));
-        final dateKey = formatDateOnly(weekDay);
+        final DateTime weekDay = firstDayDate.add(Duration(days: i));
+        final String dateKey = formatDateOnly(weekDay);
 
         // Get day from map or create empty day
-        final day = allDaysMap[dateKey] ??
+        final ContributionDay day =
+            allDaysMap[dateKey] ??
             ContributionDay(
               date: weekDay,
               count: 0,
-              color: null,
               level: ContributionLevel.none,
             );
 
@@ -609,153 +711,85 @@ class UserContributionsService {
       allWeeks.add(week);
 
       if (kDebugMode &&
-          (weekIndex < 3 || weekIndex >= weekFirstDaysList.length - 3)) {
-        log.d(
-            '[_combineMultiYearResults] Reconstructed week $weekIndex: firstDay=$firstDayKey, days=${week.length}');
-      }
-    }
-
-    if (kDebugMode) {
-      log.d(
-          '[_combineMultiYearResults] Final result: ${allWeeks.length} weeks, ${allDaysMap.length} unique days');
-    }
-
-    // Combine repositories (merge by repository URL, sum contributions)
-    // Use converter methods to preserve GraphQL objects
-    final repoMap = <String, ContributedRepository>{};
-
-    // Convert and merge commit repositories
-    for (final result in results) {
-      final commitRepos = ContributionDataConverter.convertRepositories(
-        result.contributionsCollection.commitContributionsByRepository.toList(),
+          (weekIndex < 3 || weekIndex >= weekFirstDaysList.length - 3)) {}
+    } // Combine repositories (merge by repository URL, sum contributions)
+    final List<ContributedRepository> commitReposAll =
+        <ContributedRepository>[];
+    final List<ContributedRepository> reviewReposAll =
+        <ContributedRepository>[];
+    final List<ContributedRepository> issueReposAll = <ContributedRepository>[];
+    final List<ContributedRepository> pullRequestReposAll =
+        <ContributedRepository>[];
+    for (final Query$userContributions$user result in results) {
+      final collection = result.contributionsCollection;
+      commitReposAll.addAll(
+        ContributionDataConverter.convertRepositories(
+          collection.commitContributionsByRepository.toList(),
+        ),
       );
-      for (final repo in commitRepos) {
-        final url = repo.url;
-        if (repoMap.containsKey(url)) {
-          final existing = repoMap[url]!;
-          repoMap[url] = ContributedRepository(
-            graphQLRepository: existing.graphQLRepository,
-            contributionCount:
-                existing.contributionCount + repo.contributionCount,
-            commitCount: (existing.commitCount ?? existing.contributionCount) +
-                repo.contributionCount,
-            reviewCount: existing.reviewCount,
-            issueCount: existing.issueCount,
-            pullRequestCount: existing.pullRequestCount,
-          );
-        } else {
-          repoMap[url] = repo;
-        }
-      }
-    }
-
-    // Convert and merge PR review repositories
-    for (final result in results) {
-      final reviewRepos = ContributionDataConverter.convertReviewRepositories(
-        result
-            .contributionsCollection.pullRequestReviewContributionsByRepository
-            .toList(),
+      reviewReposAll.addAll(
+        ContributionDataConverter.convertReviewRepositories(
+          collection.pullRequestReviewContributionsByRepository.toList(),
+        ),
       );
-      for (final repo in reviewRepos) {
-        final url = repo.url;
-        if (repoMap.containsKey(url)) {
-          final existing = repoMap[url]!;
-          repoMap[url] = ContributedRepository(
-            graphQLRepository: existing.graphQLRepository,
-            contributionCount:
-                existing.contributionCount + repo.contributionCount,
-            commitCount: existing.commitCount,
-            reviewCount: (existing.reviewCount ?? 0) + (repo.reviewCount ?? 0),
-            issueCount: existing.issueCount,
-            pullRequestCount: existing.pullRequestCount,
-          );
-        } else {
-          repoMap[url] = repo;
-        }
-      }
-    }
-
-    // Convert and merge issue repositories
-    for (final result in results) {
-      final issueRepos = ContributionDataConverter.convertIssueRepositories(
-        result.contributionsCollection.issueContributionsByRepository.toList(),
+      issueReposAll.addAll(
+        ContributionDataConverter.convertIssueRepositories(
+          collection.issueContributionsByRepository.toList(),
+        ),
       );
-      for (final repo in issueRepos) {
-        final url = repo.url;
-        if (repoMap.containsKey(url)) {
-          final existing = repoMap[url]!;
-          repoMap[url] = ContributedRepository(
-            graphQLRepository: existing.graphQLRepository,
-            contributionCount:
-                existing.contributionCount + repo.contributionCount,
-            commitCount: existing.commitCount,
-            reviewCount: existing.reviewCount,
-            issueCount: (existing.issueCount ?? 0) + (repo.issueCount ?? 0),
-            pullRequestCount: existing.pullRequestCount,
-          );
-        } else {
-          repoMap[url] = repo;
-        }
-      }
-    }
-
-    // Convert and merge pull request repositories
-    for (final result in results) {
-      final pullRequestRepos =
-          ContributionDataConverter.convertPullRequestRepositories(
-        result.contributionsCollection.pullRequestContributionsByRepository
-            .toList(),
+      pullRequestReposAll.addAll(
+        ContributionDataConverter.convertPullRequestRepositories(
+          collection.pullRequestContributionsByRepository.toList(),
+        ),
       );
-      for (final repo in pullRequestRepos) {
-        final url = repo.url;
-        if (repoMap.containsKey(url)) {
-          final existing = repoMap[url]!;
-          repoMap[url] = ContributedRepository(
-            graphQLRepository: existing.graphQLRepository,
-            contributionCount:
-                existing.contributionCount + repo.contributionCount,
-            commitCount: existing.commitCount,
-            reviewCount: existing.reviewCount,
-            issueCount: existing.issueCount,
-            pullRequestCount:
-                (existing.pullRequestCount ?? 0) + (repo.pullRequestCount ?? 0),
-          );
-        } else {
-          repoMap[url] = repo;
-        }
+    }
+    final Map<String, ContributedRepository> repoMap =
+        <String, ContributedRepository>{};
+    for (final ContributedRepository repo in commitReposAll) {
+      if (repoMap.containsKey(repo.url)) {
+        repoMap[repo.url] = _mergeCommitInto(repoMap[repo.url]!, repo);
+      } else {
+        repoMap[repo.url] = repo;
       }
     }
+    _mergeContributionReposIntoMap(repoMap, reviewReposAll, _mergeReviewInto);
+    _mergeContributionReposIntoMap(repoMap, issueReposAll, _mergeIssueInto);
+    _mergeContributionReposIntoMap(
+      repoMap,
+      pullRequestReposAll,
+      _mergePullRequestInto,
+    );
 
     // Sort repositories by contribution count (descending)
-    final repositories = repoMap.values.toList()
-      ..sort((a, b) => b.contributionCount.compareTo(a.contributionCount));
-
-    // Sum all statistics
+    final List<ContributedRepository> repositories = repoMap.values.toList()
+      ..sort(
+        (final ContributedRepository a, final ContributedRepository b) =>
+            b.contributionCount.compareTo(a.contributionCount),
+      ); // Sum all statistics
     int totalContributions = 0;
     int totalCommits = 0;
     int totalPRs = 0;
     int totalIssues = 0;
     int totalReviews = 0;
-    final allYears = <int>{};
+    final Set<int> allYears = <int>{};
 
-    for (final result in results) {
-      final collection = result.contributionsCollection;
+    for (final Query$userContributions$user result in results) {
+      final Query$userContributions$user$contributionsCollection collection =
+          result.contributionsCollection;
       totalContributions += collection.contributionCalendar.totalContributions;
       totalCommits += collection.totalCommitContributions;
       totalPRs += collection.totalPullRequestContributions;
       totalIssues += collection.totalIssueContributions;
       totalReviews += collection.totalPullRequestReviewContributions;
       allYears.addAll(collection.contributionYears);
-    }
-
-    // Get colors from the first result (they should be the same)
-    final colors = parseContributionColors(
+    } // Get colors from the first result (they should be the same)
+    final List<Color> colors = parseContributionColors(
       results.first.contributionsCollection.contributionCalendar.colors
           .toList(),
     );
 
     // Build flattened view model
-    final viewModel = ContributionViewModel(
+    final ContributionViewModel viewModel = ContributionViewModel(
       weeks: allWeeks,
       colors: colors,
       totalContributions: totalContributions,
@@ -776,124 +810,159 @@ class UserContributionsService {
 
   /// Extract highlight contribution from GraphQL union type
   /// NOTE: Requires running `flutter pub run build_runner build` after adding highlight fields to query
-  static ContributionHighlightItem? _extractHighlightItem({
-    required dynamic contribution,
-    required String type,
-  }) {
+  static ContributionHighlightItem? _extractFromFirstIssue(
+    final FirstIssueContribution? contribution,
+  ) {
     if (contribution == null) return null;
+    return contribution.maybeWhen<ContributionHighlightItem?>(
+      createdIssueContribution: (final created) {
+        final issue = created.issue;
+        final createdAt = created.occurredAt;
+        return ContributionHighlightItem(
+          title: issue.title,
+          url: created.url.toString(),
+          createdAt: createdAt,
+          repositoryName: issue.repository.name,
+          repositoryOwner: issue.repository.owner.login,
+          type: ContributionHighlightType.issue,
+          number: issue.number,
+          commentCount: issue.comments.totalCount,
+          state: IssueVisualState.fromNames(issue.issueState.name),
+          body: issue.body,
+          isRestricted: created.isRestricted,
+          graphQLIssue: issue,
+        );
+      },
+      restrictedContribution: (final restricted) => ContributionHighlightItem(
+        title: 'Private contribution',
+        url: '',
+        createdAt: restricted.occurredAt,
+        repositoryName: '',
+        repositoryOwner: '',
+        type: ContributionHighlightType.restricted,
+        isRestricted: true,
+      ),
+      orElse: () => null,
+    );
+  }
 
-    try {
-      // Use when() method for type-safe pattern matching on union types
-      return contribution.when(
-        createdIssueContribution: (created) {
-          if (type != 'issue') return null;
-          final issue = created.issue;
-          if (issue == null) {
-            if (kDebugMode) {
-              log.d(
-                  '[UserContributionsService] _extractHighlightItem: issue is null for CreatedIssueContribution');
-            }
-            return null;
-          }
-          // Use occurredAt from contribution wrapper, fallback to issue.createdAt
-          final createdAt = created.occurredAt ?? issue.createdAt;
-          final item = ContributionHighlightItem(
-            title: issue.title ?? '',
-            url: created.url.toString(),
-            createdAt: createdAt,
-            repositoryName: issue.repository?.name ?? '',
-            repositoryOwner: issue.repository?.owner?.login ?? '',
-            type: ContributionHighlightType.issue,
-            number: issue.number,
-            commentCount: issue.comments?.totalCount,
-            state: issue.state?.name ?? 'OPEN',
-            body: issue.body,
-            isRestricted: created.isRestricted,
-            graphQLIssue: issue,
-          );
-          if (kDebugMode) {
-            log.d(
-                '[UserContributionsService] _extractHighlightItem: Extracted issue "${item.title}" with ${item.commentCount ?? 0} comments, isRestricted: ${item.isRestricted}');
-          }
-          return item;
-        },
-        createdPullRequestContribution: (created) {
-          if (type != 'pullRequest') return null;
-          final pr = created.pullRequest;
-          if (pr == null) {
-            if (kDebugMode) {
-              log.d(
-                  '[UserContributionsService] _extractHighlightItem: pullRequest is null for CreatedPullRequestContribution');
-            }
-            return null;
-          }
-          // Use occurredAt from contribution wrapper, fallback to pr.createdAt
-          final createdAt = created.occurredAt ?? pr.createdAt;
-          final item = ContributionHighlightItem(
-            title: pr.title ?? '',
-            url: created.url.toString(),
-            createdAt: createdAt,
-            repositoryName: pr.repository?.name ?? '',
-            repositoryOwner: pr.repository?.owner?.login ?? '',
-            type: ContributionHighlightType.pullRequest,
-            number: pr.number,
-            commentCount: pr.comments?.totalCount,
-            state: pr.state?.name ?? 'OPEN',
-            body: pr.body,
-            mergedAt: pr.mergedAt,
-            isRestricted: created.isRestricted,
-            graphQLPullRequest: pr,
-          );
-          if (kDebugMode) {
-            log.d(
-                '[UserContributionsService] _extractHighlightItem: Extracted PR "${item.title}" with ${item.commentCount ?? 0} comments, isRestricted: ${item.isRestricted}');
-          }
-          return item;
-        },
-        createdRepositoryContribution: (created) {
-          if (type != 'repository') return null;
-          final repo = created.repository;
-          if (repo == null) return null;
-          // Use occurredAt from contribution wrapper, fallback to repo.createdAt
-          final createdAt = created.occurredAt ?? repo.createdAt;
-          return ContributionHighlightItem(
-            title: repo.name,
-            url: created.url.toString(),
-            createdAt: createdAt,
-            repositoryName: repo.name,
-            repositoryOwner: repo.owner?.login ?? '',
-            type: ContributionHighlightType.repository,
-            stargazerCount: repo.stargazerCount,
-            isPrivate: repo.isPrivate ?? false,
-            isRestricted: created.isRestricted,
-            graphQLRepository: repo,
-          );
-        },
-        restrictedContribution: (restricted) {
-          return ContributionHighlightItem(
-            title: 'Private contribution',
-            url: '',
-            createdAt: restricted.occurredAt ?? DateTime.now(),
-            repositoryName: '',
-            repositoryOwner: '',
-            type: ContributionHighlightType.restricted,
-            isRestricted: true,
-          );
-        },
-        orElse: () {
-          if (kDebugMode) {
-            log.w(
-                '[UserContributionsService] _extractHighlightItem: Unknown contribution type: ${contribution.G__typename}');
-          }
-          return null;
-        },
-      );
-    } catch (e) {
-      if (kDebugMode) {
-        log.e('Error extracting highlight item', error: e);
-      }
-    }
+  static ContributionHighlightItem? _extractFromFirstPR(
+    final FirstPRContribution? contribution,
+  ) {
+    if (contribution == null) return null;
+    return contribution.maybeWhen<ContributionHighlightItem?>(
+      createdPullRequestContribution: (final created) {
+        final pr = created.pullRequest;
+        final createdAt = created.occurredAt;
+        return ContributionHighlightItem(
+          title: pr.title,
+          url: created.url.toString(),
+          createdAt: createdAt,
+          repositoryName: pr.repository.name,
+          repositoryOwner: pr.repository.owner.login,
+          type: ContributionHighlightType.pullRequest,
+          number: pr.number,
+          commentCount: pr.comments.totalCount,
+          state: PrVisualState.fromNames(
+            pr.pullRequestState.name,
+            merged: pr.mergedAt != null,
+          ),
+          body: pr.body,
+          mergedAt: pr.mergedAt,
+          isRestricted: created.isRestricted,
+          graphQLPullRequest: pr,
+        );
+      },
+      restrictedContribution: (final restricted) => ContributionHighlightItem(
+        title: 'Private contribution',
+        url: '',
+        createdAt: restricted.occurredAt,
+        repositoryName: '',
+        repositoryOwner: '',
+        type: ContributionHighlightType.restricted,
+        isRestricted: true,
+      ),
+      orElse: () => null,
+    );
+  }
 
-    return null;
+  static ContributionHighlightItem? _extractFromFirstRepo(
+    final FirstRepoContribution? contribution,
+  ) {
+    if (contribution == null) return null;
+    return contribution.maybeWhen<ContributionHighlightItem?>(
+      createdRepositoryContribution: (final created) {
+        final repo = created.repository;
+        final createdAt = created.occurredAt;
+        return ContributionHighlightItem(
+          title: repo.name,
+          url: created.url.toString(),
+          createdAt: createdAt,
+          repositoryName: repo.name,
+          repositoryOwner: _getOwnerLogin(repo.owner),
+          type: ContributionHighlightType.repository,
+          stargazerCount: repo.stargazerCount,
+          isPrivate: repo.isPrivate,
+          isRestricted: created.isRestricted,
+          graphQLRepository: repo,
+        );
+      },
+      restrictedContribution: (final restricted) => ContributionHighlightItem(
+        title: 'Private contribution',
+        url: '',
+        createdAt: restricted.occurredAt,
+        repositoryName: '',
+        repositoryOwner: '',
+        type: ContributionHighlightType.restricted,
+        isRestricted: true,
+      ),
+      orElse: () => null,
+    );
+  }
+
+  static ContributionHighlightItem? _extractFromPopularIssue(
+    final PopularIssueContribution? contribution,
+  ) {
+    if (contribution == null) return null;
+    final issue = contribution.issue;
+    return ContributionHighlightItem(
+      title: issue.title,
+      url: issue.url.toString(),
+      createdAt: contribution.occurredAt,
+      repositoryName: issue.repository.name,
+      repositoryOwner: issue.repository.owner.login,
+      type: ContributionHighlightType.issue,
+      number: issue.number,
+      commentCount: issue.comments.totalCount,
+      state: IssueVisualState.fromNames(issue.issueState.name),
+      body: issue.body,
+      isRestricted: contribution.isRestricted,
+      graphQLIssue: issue,
+    );
+  }
+
+  static ContributionHighlightItem? _extractFromPopularPR(
+    final PopularPRContribution? contribution,
+  ) {
+    if (contribution == null) return null;
+    final pr = contribution.pullRequest;
+    return ContributionHighlightItem(
+      title: pr.title,
+      url: pr.url.toString(),
+      createdAt: contribution.occurredAt,
+      repositoryName: pr.repository.name,
+      repositoryOwner: pr.repository.owner.login,
+      type: ContributionHighlightType.pullRequest,
+      number: pr.number,
+      commentCount: pr.comments.totalCount,
+      state: PrVisualState.fromNames(
+        pr.pullRequestState.name,
+        merged: pr.mergedAt != null,
+      ),
+      body: pr.body,
+      mergedAt: pr.mergedAt,
+      isRestricted: contribution.isRestricted,
+      graphQLPullRequest: pr,
+    );
   }
 }

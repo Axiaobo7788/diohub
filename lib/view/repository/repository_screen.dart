@@ -1,281 +1,227 @@
 import 'package:auto_route/auto_route.dart';
-import 'package:diohub/adapters/deep_linking_handler.dart';
-import 'package:diohub/common/misc/app_bar.dart';
-import 'package:diohub/common/misc/collapsible_action_buttons.dart';
-import 'package:diohub/common/misc/collapsible_app_bar.dart';
-import 'package:diohub/common/misc/action_card_builder.dart';
-import 'package:diohub/common/misc/floating_action_toolbar.dart';
-import 'package:diohub/common/misc/floating_toolbar_wrapper.dart';
-import 'package:diohub/common/misc/animated_tab_bar.dart';
-import 'package:diohub/common/misc/deep_link_widget.dart';
+import 'package:diohub/common/misc/loading_indicator.dart';
+import 'package:diohub/common/misc/scoped_image_theme.dart';
 import 'package:diohub/common/misc/scaffold_body.dart';
-import 'package:diohub/common/misc/theme_from_image.dart';
-import 'package:diohub/common/wrappers/dynamic_tabs_parent.dart';
-import 'package:diohub/common/wrappers/provider_loading_progress_wrapper.dart';
-import 'package:diohub/graphql/queries/repositories/__generated__/repo_info.data.gql.dart';
-import 'package:diohub/providers/base_provider.dart';
-import 'package:diohub/providers/repository/branch_provider.dart';
-import 'package:diohub/providers/repository/code_provider.dart';
-import 'package:diohub/providers/repository/readme_provider.dart';
-import 'package:diohub/providers/repository/repository_provider.dart';
-import 'package:diohub/routes/router.gr.dart';
+import 'package:diohub/common/nav_center/models/nav_center_models.dart';
+import 'package:diohub/common/nav_center/shell/nav_center_shell_widgets.dart';
+import 'package:diohub_premium_api/diohub_premium_api.dart';
+import 'package:diohub_graphql/queries/repositories/repo_typedefs.dart';
+import 'package:diohub_models/models/entity_ref.dart';
+import 'package:diohub_models/models/entity_snapshot.dart';
+import 'package:diohub/providers/account/account_provider.dart';
+import 'package:diohub/providers/entity_store_notifier.dart';
+import 'package:diohub/providers/repository/repository_providers.dart';
+import 'package:diohub/providers/settings/repository_provider.dart'
+    as repo_settings;
 import 'package:diohub/view/repository/readme/repository_readme.dart';
-import 'package:diohub/view/repository/widgets/branch_button.dart';
-import 'package:diohub/view/repository/widgets/repository_tabs.dart';
-import 'package:diohub/view/repository/widgets/repository_header.dart';
-import 'package:diohub/view/repository/widgets/repository_action_buttons.dart';
-import 'package:diohub/view/repository/widgets/tab_state.dart';
+import 'package:diohub/view/repository/widgets/repo_screen_config.dart';
+import 'package:diohub/view/repository/widgets/repository_screen_skeleton.dart';
+import 'package:diohub/models/repositories/repository_initial_state.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_dynamic_tabs/flutter_dynamic_tabs.dart';
-import 'package:provider/provider.dart';
-import 'package:provider/single_child_widget.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 @RoutePage()
-class RepositoryScreen extends DeepLinkWidget {
-  const RepositoryScreen(
-    this.repositoryURL, {
-    this.branch,
-    this.index = 0,
-    final PathData? deepLinkData,
+class RepositoryScreen extends ConsumerStatefulWidget {
+  const RepositoryScreen({
+    required this.repo,
     super.key,
-    this.initSHA,
-  }) : super(pathData: deepLinkData);
-  final String repositoryURL;
-  final String? branch;
-  final int index;
-  final String? initSHA;
+  });
+  final RepoRef repo;
+
+  String get owner => repo.owner;
+  String get name => repo.name;
 
   @override
   RepositoryScreenState createState() => RepositoryScreenState();
 }
 
-class RepositoryScreenState extends DeepLinkWidgetState<RepositoryScreen>
-    with TickerProviderStateMixin {
-  bool loading = false;
-  late RepoBranchProvider repoBranchProvider;
-  late CodeProvider codeProvider;
-  late RepoReadmeProvider readmeProvider;
-  late DynamicTabsController tabController;
-  late RepositoryProvider repositoryProvider;
+class RepositoryScreenState extends ConsumerState<RepositoryScreen> {
+  @override
+  void initState() {
+    super.initState();
+    final initialRef = RepositoryInitialRef.fromRepo(widget.repo);
+    applyInitialRef(ref, widget.repo, initialRef);
+  }
 
-  // Store readme headings extracted from markdown
-  List<({String text, String id, int level})> _readmeHeadings = [];
+  @override
+  Widget build(final BuildContext context) {
+    final repoAsync = ref.watch(repositoryProvider(widget.repo));
 
-  // GlobalKey to access RepositoryReadmeState for scrolling to anchors
+    return Scaffold(
+      body: ScaffoldBody(
+        child: repoAsync.maybeWhen(
+          loading: () => const RepositoryScreenSkeleton(),
+          error: (error, stack) {
+            return Center(
+              child: Text('Error loading repository: $error'),
+            );
+          },
+          data: (data) {
+            final repo = data.repository!;
+            final ownerAvatarUrl = repo.owner.maybeWhen(
+              user: (u) => u.avatarUrl.toString(),
+              organization: (o) => o.avatarUrl.toString(),
+              orElse: () => null,
+            );
+            RepositoryInitialState initialState =
+                resolveRepoLocation(widget.repo.location);
+            if (initialState.tabKind == null) {
+              initialState = RepositoryInitialState(
+                tabKind: RepositoryInitialState.tabKindFromRepositoryDefaultTab(
+                  ref.read(repo_settings.repositoryProvider).defaultTab,
+                ),
+                branch: initialState.branch,
+                codePath: initialState.codePath,
+              );
+            }
+            return ScopedImageTheme(
+              imageUrl: ownerAvatarUrl,
+              child: _RepositoryTabsContent(
+                repoRef: widget.repo,
+                hasReadme: repo.readmeFile != null,
+                hasLicense: repo.licenseInfo != null,
+                owner: widget.owner,
+                name: widget.name,
+                initialState: initialState,
+              ),
+            );
+          },
+          orElse: () => const CenteredSpinner(),
+        ),
+      ),
+    );
+  }
+}
+
+/// Inner widget that creates tabs after repo data is available.
+class _RepositoryTabsContent extends ConsumerStatefulWidget {
+  const _RepositoryTabsContent({
+    required this.repoRef,
+    required this.hasReadme,
+    required this.hasLicense,
+    required this.owner,
+    required this.name,
+    required this.initialState,
+  });
+
+  final RepoRef repoRef;
+  final bool hasReadme;
+  final bool hasLicense;
+  final String owner;
+  final String name;
+  final RepositoryInitialState initialState;
+
+  @override
+  _RepositoryTabsContentState createState() => _RepositoryTabsContentState();
+}
+
+class _RepositoryTabsContentState
+    extends ConsumerState<_RepositoryTabsContent> {
   final GlobalKey<RepositoryReadmeState> _readmeStateKey =
       GlobalKey<RepositoryReadmeState>();
 
-  // final ScrollController scrollController = ScrollController();
-  late String? initBranch;
- 
+  static String? _deeplinkPathFromTabKind(RepositoryTabKind? kind) {
+    if (kind == null) return null;
+    return switch (kind) {
+      RepositoryTabKind.readme => 'readme',
+      RepositoryTabKind.code => 'code',
+      RepositoryTabKind.issues => 'issues',
+      RepositoryTabKind.pulls => 'pulls',
+      RepositoryTabKind.commits => 'commits',
+      RepositoryTabKind.license => 'license',
+      RepositoryTabKind.releases => 'releases',
+      RepositoryTabKind.discussions => 'discussions',
+      RepositoryTabKind.projects => 'projects',
+      RepositoryTabKind.wiki => 'wiki',
+    };
+  }
 
   @override
-  void handleDeepLink(final PathData deepLinkData) {
-    final PathData data = deepLinkData;
-    if (_isDeepLinkCode(data)) {
-      initBranch = data.component(3);
-    } else if (data.componentIs(2, 'wiki')) {
-      WidgetsBinding.instance
-          .addPostFrameCallback((final Duration timeStamp) async {
-        await AutoRouter.of(context)
-            .push(WikiViewer(repoURL: widget.repositoryURL));
-      });
+  Widget build(final BuildContext context) {
+    final repo =
+        ref.watch(repositoryProvider(widget.repoRef)).requireValue.repository!;
+    final ownerAvatarUrl = repo.owner.maybeWhen(
+      user: (u) => u.avatarUrl.toString(),
+      organization: (o) => o.avatarUrl.toString(),
+      orElse: () => null,
+    );
+    return ScopedImageTheme(
+      imageUrl: ownerAvatarUrl,
+      child: _RepositoryShellContent(
+        repo: repo,
+        repoRef: widget.repoRef,
+        initialState: widget.initialState,
+        readmeStateKey: _readmeStateKey,
+        onRefresh: () => ref.invalidate(repositoryProvider(widget.repoRef)),
+        deeplinkPathFromTabKind: _deeplinkPathFromTabKind,
+      ),
+    );
+  }
+}
+
+/// Builds config in didChangeDependencies / didUpdateWidget so we don't
+/// allocate the full config tree on every build.
+class _RepositoryShellContent extends ConsumerStatefulWidget {
+  const _RepositoryShellContent({
+    required this.repo,
+    required this.repoRef,
+    required this.initialState,
+    required this.readmeStateKey,
+    required this.onRefresh,
+    required this.deeplinkPathFromTabKind,
+  });
+
+  final RepoInfo repo;
+  final RepoRef repoRef;
+  final RepositoryInitialState initialState;
+  final GlobalKey<RepositoryReadmeState> readmeStateKey;
+  final VoidCallback onRefresh;
+  final String? Function(RepositoryTabKind? kind) deeplinkPathFromTabKind;
+
+  @override
+  ConsumerState<_RepositoryShellContent> createState() =>
+      _RepositoryShellContentState();
+}
+
+class _RepositoryShellContentState
+    extends ConsumerState<_RepositoryShellContent> {
+  ScreenConfig? _config;
+  bool _visitRecorded = false;
+
+  void _buildConfig() {
+    if (!_visitRecorded) {
+      _visitRecorded = true;
+      ref.read(entityStoreMutatorProvider).recordVisit(
+            widget.repoRef,
+            snapshot: EntitySnapshot(title: widget.repo.name),
+          );
     }
-  }
-
-  bool _isDeepLinkCode(final PathData? data) =>
-      data?.component(2)?.startsWith(RegExp('(tree)|(blob)|(commits)')) ??
-      false;
-
-  @override
-  void initState() {
-    _setupTabs();
-    tabController = DynamicTabsController(vsync: this, tabs: tabs);
-    initBranch = widget.branch;
-    super.initState();
-    // This HAS to be after the super initState call as some required data
-    // is being set in handleDeepLink()!
-    _setupProviders();
-  }
-
-
-  /// Helper method to centralize tab state information
-  TabState _getTabState(String currentTab) {
-    return TabState(currentTab: currentTab);
-  }
-
-  void _setupProviders() {
-    repositoryProvider = RepositoryProvider(widget.repositoryURL);
-    repoBranchProvider = RepoBranchProvider(
-      initialBranch: initBranch,
-      initCommitSHA: widget.initSHA,
-    );
-    codeProvider = CodeProvider(repoURL: widget.repositoryURL);
-    readmeProvider = RepoReadmeProvider(widget.repositoryURL);
-  }
-
-  void _setupTabs() {
-    tabs = createRepositoryTabs(
-      repositoryURL: widget.repositoryURL,
-      pathData: widget.pathData,
-      readmeStateKey: _readmeStateKey,
-      onHeadingsExtracted: (headings) {
-        setState(() {
-          _readmeHeadings = headings;
-        });
-      },
-      setState: setState,
-      mounted: mounted,
-    );
-  }
-
-  late List<DynamicTab> tabs;
-
-  List<ActionButtonData> _buildAllActions(
-    BuildContext context,
-    GrepositoryInfoData_repository repo,
-    TabState tabState,
-  ) {
-    return buildAllActions(
+    _config = widget.repo.toScreenConfig(
       context,
-      repo,
-      tabState,
-      _readmeHeadings,
-      _readmeStateKey,
-      tabController,
+      ref,
+      repoRef: widget.repoRef,
+      readmeStateKey: widget.readmeStateKey,
+      onRefresh: () async => widget.onRefresh(),
+      onWillPop: (_) => Future.value(true),
+      initialTabPath:
+          widget.deeplinkPathFromTabKind(widget.initialState.tabKind),
     );
   }
 
   @override
-  Widget build(final BuildContext context) => MultiProvider(
-        providers: <SingleChildWidget>[
-          ChangeNotifierProvider<RepositoryProvider>.value(
-            value: repositoryProvider,
-          ),
-          ChangeNotifierProxyProvider<RepositoryProvider, RepoBranchProvider>(
-            create: (final _) => repoBranchProvider,
-            update: (
-              final BuildContext context,
-              final RepositoryProvider value,
-              final RepoBranchProvider? previous,
-            ) =>
-                repoBranchProvider..updateProvider(value),
-          ),
-          ChangeNotifierProxyProvider<RepoBranchProvider, RepoReadmeProvider>(
-            create: (final _) => readmeProvider,
-            update: (final _, final RepoBranchProvider branch, final __) =>
-                readmeProvider..updateProvider(branch),
-          ),
-          ChangeNotifierProxyProvider<RepoBranchProvider, CodeProvider>(
-            create: (final _) => codeProvider,
-            update: (final _, final RepoBranchProvider branch, final __) =>
-                codeProvider..updateProvider(branch),
-          ),
-        ],
-        builder: (final BuildContext context, final _) => Scaffold(
-          appBar:
-              Provider.of<RepositoryProvider>(context).status != Status.loaded
-                  ? AppBar(
-                      elevation: 0,
-                    )
-                  : PreferredSize(
-                      preferredSize: Size.zero,
-                      child: Container(),
-                    ),
-          body: WillPopScope(
-            onWillPop: () async {
-              if (Provider.of<CodeProvider>(context, listen: false)
-                          .tree
-                          .length >
-                      1 &&
-                  tabController.activeIdentifier == 'Code') {
-                Provider.of<CodeProvider>(context, listen: false).popTree();
-                return false;
-              } else {
-                return true;
-              }
-            },
-            child: ScaffoldBody(
-              child: ProviderLoadingProgressWrapper<RepositoryProvider>(
-                childBuilder: (
-                  final BuildContext context,
-                  final RepositoryProvider value,
-                ) {
-                  final repo = value.data;
-                  return ThemeFromImage(
-                    builder: (context) => SizedBox.expand(
-                      child: FloatingToolbarWrapper(
-                        toolbarBuilder: (scrollNotificationNotifier) {
-                          return ValueListenableBuilder<String>(
-                            valueListenable:
-                                tabController.activeIdentifierNotifier,
-                            builder: (context, currentTab, _) {
-                              final tabState = _getTabState(currentTab);
-                              final ownerLogin = repo.owner.when(
-                                user: (u) => u.login,
-                                organization: (o) => o.login,
-                                orElse: () => null,
-                              );
-                              return FloatingActionToolbar(
-                                key: const ValueKey('repository_toolbar'),
-                                // debugLogging: true,
-                                actions:
-                                    _buildAllActions(context, repo, tabState),
-                                actionCardBuilder: buildStandardActionCard,
-                                position: FloatingPosition.bottom,
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 16, vertical: 12),
-                                bottomPadding: 0.0,
-                                title: repo.name,
-                                subtitle: ownerLogin,
-                                scrollNotificationNotifier:
-                                    scrollNotificationNotifier,
-                                onExpandChanged: (isExpanded) {
-                                  
-                                },
-                              );
-                            },
-                          );
-                        },
-                        child: SafeArea(
-                          child: DynamicTabsParent(
-                            controller: tabController,
-                            builder: (
-                              final BuildContext context,
-                              final PreferredSizeWidget tabs,
-                              final Widget tabView,
-                            ) =>
-                                DynamicScroll(
-                              collapsedWidget:
-                                  buildCollapsedHeader(context, repo),
-                              expandedWidget: buildExpandedHeader(
-                                context,
-                                repo,
-                                tabController.activeIdentifierNotifier,
-                                tabController,
-                              ),
-                              actions: <Widget>[
-                                ShareButton(repo.url.toString())
-                              ],
-                              bottom: AnimatedTabBar(
-                                showTabBar: tabController.activeLength > 1,
-                                tabBar: tabs,
-                             
-                              ),
-                              body: loading
-                                  ? const Center(
-                                      child: CircularProgressIndicator())
-                                  : tabView,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                  );
-                },
-              ),
-            ),
-          ),
-        ),
-      );
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_config == null) _buildConfig();
+  }
+
+  @override
+  void didUpdateWidget(covariant _RepositoryShellContent oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.repo != oldWidget.repo) _buildConfig();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return NavCenterShell(config: _config!);
+  }
 }

@@ -1,0 +1,18 @@
+query hasStarred($name: String!, $owner: String!) {
+  repository(name: $name, owner: $owner) {
+    id
+    viewerHasStarred
+    stargazerCount
+  }
+}
+
+query hasWatched($name: String!, $owner: String!) {
+  repository(name: $name, owner: $owner) {
+    id
+    viewerSubscription
+    viewerCanSubscribe
+    watchers {
+      totalCount
+    }
+  }
+}

@@ -1,5 +1,6 @@
 import 'package:cached_network_image/cached_network_image.dart';
-import 'package:diohub/common/misc/shimmer_widget.dart';
+import 'package:diohub/common/misc/shimmer_bone.dart';
+import 'package:diohub/common/misc/shimmer_scope.dart';
 import 'package:diohub/utils/utils.dart';
 import 'package:flutter/material.dart';
 
@@ -16,27 +17,31 @@ class UserAvatar extends StatelessWidget {
   final double size;
 
   @override
-  Widget build(BuildContext context) {
-    final iconSize = size * 0.56; // Proportional icon size (~20 for size 36)
+  Widget build(final BuildContext context) {
+    final double iconSize =
+        size * 0.56; // Proportional icon size (~20 for size 36)
 
+    final int cacheSize =
+        (size * MediaQuery.of(context).devicePixelRatio).round().clamp(1, 512);
     return ClipOval(
       child: avatarUrl != null
           ? CachedNetworkImage(
               imageUrl: avatarUrl!,
               width: size,
               height: size,
+              memCacheWidth: cacheSize,
+              memCacheHeight: cacheSize,
               fit: BoxFit.cover,
-              placeholder: (context, url) => ShimmerWidget(
-                child: Container(
-                  width: size,
-                  height: size,
-                  color: context.colorScheme.surfaceVariant,
-                ),
+              placeholder: (final BuildContext context, final String url) =>
+                  ShimmerScope(
+                child: ShimmerBone.avatar(size: size),
               ),
-              errorWidget: (context, url, error) => Container(
+              errorWidget: (final BuildContext context, final String url,
+                      final Object error) =>
+                  Container(
                 width: size,
                 height: size,
-                color: context.colorScheme.surfaceVariant,
+                color: context.colorScheme.surfaceContainerHighest,
                 child: Icon(
                   Icons.person,
                   size: iconSize,
@@ -47,7 +52,7 @@ class UserAvatar extends StatelessWidget {
           : Container(
               width: size,
               height: size,
-              color: context.colorScheme.surfaceVariant,
+              color: context.colorScheme.surfaceContainerHighest,
               child: Icon(
                 Icons.person,
                 size: iconSize,
@@ -57,4 +62,3 @@ class UserAvatar extends StatelessWidget {
     );
   }
 }
-
