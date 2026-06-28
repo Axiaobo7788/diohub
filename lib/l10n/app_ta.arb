@@ -1,7 +1,7 @@
 {
-    "@@locale": "",
-    "appName": "",
+    "@@locale": "உள்ளே",
+    "appName": "டியோஅப்",
     "@appName": {
-        "description": ""
+        "description": "விண்ணப்பத்தின் பெயர்"
     }
 }
