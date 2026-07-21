@@ -1,0 +1,64 @@
+name: Public Code Generation
+
+on:
+  workflow_call:
+    inputs:
+      flutter_version:
+        description: Optional Flutter version override for release callers
+        required: false
+        type: string
+    secrets:
+      OAUTH_CLIENT_ID:
+        required: false
+      OAUTH_CLIENT_SECRET:
+        required: false
+      SENTRY_DSN:
+        required: false
+      SLACK_CLIENT_ID:
+        required: false
+      SLACK_CLIENT_SECRET:
+        required: false
+
+permissions:
+  contents: read
+
+jobs:
+  generate:
+    name: Generate public sources
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Set up pinned Flutter
+        if: inputs.flutter_version == ''
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version-file: .flutter-version
+          channel: stable
+          cache: true
+
+      - name: Set up requested Flutter
+        if: inputs.flutter_version != ''
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ inputs.flutter_version }}
+          channel: stable
+          cache: true
+
+      - name: Resolve dependencies and generate sources
+        run: dart run tool/bootstrap.dart
+
+      - name: Archive generated sources
+        run: |
+          find lib packages -type f \
+            \( -name '*.g.dart' -o -name '*.freezed.dart' -o -name '*.graphql.dart' \) \
+            -print0 | tar --null -czf generated-code.tar.gz --files-from=-
+
+      - name: Upload generated sources
+        uses: actions/upload-artifact@v4
+        with:
+          name: generated-code
+          path: generated-code.tar.gz
+          retention-days: 1

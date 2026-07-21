@@ -32,7 +32,6 @@ pubspec_overrides.yaml
 
 # FVM (Flutter Version Management)
 .fvm/
-.fvmrc
 
 # Web related
 lib/generated_plugin_registrant.dart

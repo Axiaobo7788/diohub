@@ -62,7 +62,10 @@ import 'package:diohub/app/sentry_talker_observer.dart';
 import 'package:diohub/flavors.dart';
 import 'package:diohub_premium_api/diohub_premium_api.dart';
 
-const String appFlavor = String.fromEnvironment('FLUTTER_APP_FLAVOR');
+const String appFlavor = String.fromEnvironment(
+  'FLUTTER_APP_FLAVOR',
+  defaultValue: 'dev',
+);
 
 /// Heuristic: treat as render/layout/sliver error so we escalate instead of absorbing.
 bool _isRenderOrLayoutError(Object error) {

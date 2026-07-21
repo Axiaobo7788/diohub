@@ -3,20 +3,20 @@ import 'package:analyzer/error/listener.dart';
 import 'package:custom_lint_builder/custom_lint_builder.dart';
 
 /// Enforces that all PilotTool implementations properly implement toJson() and fromJson().
-/// This prevents runtime serialization failures and ensures tools can be properly 
+/// This prevents runtime serialization failures and ensures tools can be properly
 /// marshalled across isolates or persisted.
 class RequireToolSerialization extends DartLintRule {
   RequireToolSerialization()
-      : super(
-          code: const LintCode(
-            name: 'require_tool_serialization',
-            problemMessage:
-                'PilotTool implementations must have proper toJson() and fromJson() methods for serialization.',
-            correctionMessage:
-                'Implement toJson() returning Map<String, dynamic> and a fromJson factory constructor.',
-            errorSeverity: ErrorSeverity.WARNING,
-          ),
-        );
+    : super(
+        code: const LintCode(
+          name: 'require_tool_serialization',
+          problemMessage:
+              'PilotTool implementations must have proper toJson() and fromJson() methods for serialization.',
+          correctionMessage:
+              'Implement toJson() returning Map<String, dynamic> and a fromJson factory constructor.',
+          errorSeverity: ErrorSeverity.WARNING,
+        ),
+      );
 
   @override
   void run(
@@ -25,7 +25,7 @@ class RequireToolSerialization extends DartLintRule {
     CustomLintContext context,
   ) {
     context.registry.addClassDeclaration((node) {
-      final classElement = node.declaredElement;
+      final classElement = node.declaredFragment?.element;
       if (classElement == null) return;
 
       // Check if this class implements or extends PilotTool

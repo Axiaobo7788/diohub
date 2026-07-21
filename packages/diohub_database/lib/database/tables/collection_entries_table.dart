@@ -1,6 +1,9 @@
 import 'package:drift/drift.dart';
 
 import '../mixins/account_scoped_columns.dart';
+// Drift resolves custom-constraint table names from imports during codegen.
+// ignore: unused_import
+import 'accounts_table.dart';
 
 /// A bookmark collection (folder / GitHub List).
 /// Supports flat lists, nested folders (parentId), and GitHub Lists sync (remoteId).

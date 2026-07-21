@@ -160,58 +160,71 @@ WorkManager integration with background isolates opening separate database conne
 ## Building from Source
 
 ### Prerequisites
-- [Flutter SDK](https://flutter.dev/docs/get-started/install) (3.5.0+)
-- Dart SDK 3.5.0+
-- [Melos](https://pub.dev/packages/melos) for monorepo management
+- [Flutter SDK](https://flutter.dev/docs/get-started/install) 3.44.7
+- Dart SDK 3.12.x (included with Flutter 3.44.7)
+- FVM is optional; `.fvmrc` and `.flutter-version` pin the same SDK
+- Android: JDK 17, Android SDK 36, NDK `28.2.13676358`, and accepted SDK licenses
+- Linux: a WPE WebKit pkg-config module (`wpe-webkit-2.0`, `1.1`, or `1.0`)
 
 ### Setup
 
 1. Clone the repository:
 ```bash
-git clone https://github.com/NamanShergill/diohub.git
+git clone --recurse-submodules https://github.com/NamanShergill/diohub.git
 cd diohub
 ```
 
 2. Initialize submodules:
 ```bash
-git submodule update --init
+git submodule update --init --recursive
 ```
 
 3. Create a [GitHub OAuth App](https://docs.github.com/en/developers/apps/building-oauth-apps/creating-an-oauth-app):
    - Set Authorization callback URL to: `auth.felix.diohub://login-callback`
    - Note your Client ID and Client Secret
 
-4. Create environment configuration:
-Create `lib/app/keys.dart`:
-```dart
-class PrivateKeys {
-  static const clientID = '<your-github-oauth-client-id>';
-  static const clientSecret = '<your-github-oauth-client-secret>';
-}
+4. Create the local environment configuration and fill in the OAuth values you use:
+
+```bash
+cp .env.example .env.json
 ```
 
-5. Install dependencies:
+Do not commit `.env.json`; it is ignored by Git. Authentication credentials are
+injected with `--dart-define-from-file` and are not generated into source files.
+
+5. Resolve application dependencies and generate sources in dependency order:
+
 ```bash
-melos bootstrap
-flutter pub get
+dart run tool/bootstrap.dart
 ```
 
-6. Generate code:
+6. Run the app. Android uses the configured product flavor; desktop defaults to
+the `dev` application flavor:
+
 ```bash
-flutter pub run build_runner build --delete-conflicting-outputs
+# Android
+flutter run --flavor dev -t lib/main.dart \
+  --dart-define-from-file=.env.json
+
+# Linux
+flutter run -d linux -t lib/main.dart \
+  --dart-define-from-file=.env.json
 ```
 
-7. Run the app:
+After changing GraphQL operations, models, database tables, or generated root
+sources, regenerate without resolving dependencies again:
+
 ```bash
-flutter run
+dart run tool/bootstrap.dart --codegen-only
 ```
 
 ### Build Variants
-- **Debug**: `flutter build <platform> --debug`
-- **Release**: `flutter build <platform> --release`
-- **Profile**: `flutter build <platform> --profile`
+- **Android debug**: `flutter build apk --debug --flavor dev -t lib/main.dart`
+- **Android release**: `flutter build apk --release --flavor rel -t lib/main.dart`
+- **Linux debug**: `flutter build linux --debug -t lib/main.dart`
 
-Platform targets: `apk`, `appbundle`, `ios`, `macos`, `linux`, `windows`
+Other Flutter platform runners are present, but each host still needs its native
+toolchain and plugin dependencies before it can be treated as a validated build.
 
 ---
 

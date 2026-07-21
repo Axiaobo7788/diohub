@@ -6,7 +6,7 @@ Thank you for your interest in contributing to DioHub! This guide will help you 
 
 Before you begin, ensure you have the following installed:
 
-- **Flutter SDK**: `>=3.5.0` (stable channel)
+- **Flutter SDK**: `3.44.7` (stable channel)
 - **FVM** (Flutter Version Management): [Installation guide](https://fvm.app/docs/getting_started/installation)
 - **Lefthook**: Git hooks manager - `brew install lefthook` or [other methods](https://github.com/evilmartians/lefthook#install)
 - **Cocogitto**: Conventional commit tool - `brew install cocogitto` or [cargo install](https://github.com/cocogitto/cocogitto#installation)
@@ -28,10 +28,11 @@ fvm use
 
 This will install and use the Flutter version specified in `.fvmrc`.
 
-3. **Install dependencies**
+3. **Initialize submodules and bootstrap public dependencies**
 
 ```bash
-fvm flutter pub get
+git submodule update --init --recursive
+fvm dart run tool/bootstrap.dart
 ```
 
 4. **Install Git hooks**
@@ -57,6 +58,7 @@ Edit `.env.json` and fill in your values (get GitHub OAuth credentials from [Git
   "GITHUB_CLIENT_ID": "your_client_id",
   "GITHUB_CLIENT_SECRET": "your_client_secret",
   "SENTRY_DSN": "",
+  "SENTRY_AUTH_TOKEN": "",
   "SLACK_CLIENT_ID": "",
   "SLACK_CLIENT_SECRET": ""
 }
@@ -64,10 +66,10 @@ Edit `.env.json` and fill in your values (get GitHub OAuth credentials from [Git
 
 Note: Leave empty strings for services you don't need. The app gracefully handles missing credentials.
 
-6. **Run code generation**
+6. **Run code generation after source changes**
 
 ```bash
-dart run build_runner build --delete-conflicting-outputs
+fvm dart run tool/bootstrap.dart --codegen-only
 ```
 
 This generates files for:
@@ -79,11 +81,11 @@ This generates files for:
 7. **Run the app**
 
 ```bash
-# Development flavor
-fvm flutter run --flavor dev -t lib/main_dev.dart --dart-define-from-file=.env.json
+# Android development flavor
+fvm flutter run --flavor dev -t lib/main.dart --dart-define-from-file=.env.json
 
-# Production flavor (local testing)
-fvm flutter run --flavor rel -t lib/main_rel.dart --dart-define-from-file=.env.json
+# Linux desktop (defaults to the dev application flavor)
+fvm flutter run -d linux -t lib/main.dart --dart-define-from-file=.env.json
 ```
 
 ## Branching Model
@@ -183,14 +185,12 @@ Re-run code generation when you:
 Note: Environment variables are injected at build/run time via `--dart-define-from-file`, not via code generation.
 
 ```bash
-dart run build_runner build --delete-conflicting-outputs
+fvm dart run tool/bootstrap.dart --codegen-only
 ```
 
-**Tip**: Use `watch` mode during active development:
-
-```bash
-dart run build_runner watch --delete-conflicting-outputs
-```
+The bootstrap script runs GraphQL, model, database, and root generators in the
+required order. Run a package's `build_runner watch` directly only when working
+inside that package.
 
 ## Flavors
 
@@ -206,26 +206,26 @@ DioHub uses three flavors for different environments:
 
 ```bash
 # Development
-fvm flutter run --flavor dev -t lib/main_dev.dart
+fvm flutter run --flavor dev -t lib/main.dart --dart-define-from-file=.env.json
 
 # Beta
-fvm flutter run --flavor beta -t lib/main_beta.dart
+fvm flutter run --flavor beta -t lib/main.dart --dart-define-from-file=.env.json
 
 # Production (local)
-fvm flutter run --flavor rel -t lib/main_rel.dart
+fvm flutter run --flavor rel -t lib/main.dart --dart-define-from-file=.env.json
 ```
 
 ### Building for release:
 
 ```bash
 # Android APK
-fvm flutter build apk --flavor rel -t lib/main_rel.dart --release
+fvm flutter build apk --flavor rel -t lib/main.dart --release
 
 # Android App Bundle
-fvm flutter build appbundle --flavor rel -t lib/main_rel.dart --release
+fvm flutter build appbundle --flavor rel -t lib/main.dart --release
 
 # iOS
-fvm flutter build ipa --flavor rel -t lib/main_rel.dart --release
+fvm flutter build ipa --flavor rel -t lib/main.dart --release
 ```
 
 ## CI/CD Checks

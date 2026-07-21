@@ -3,7 +3,7 @@
 	url = https://github.com/NamanShergill/markdown-editable-textinput.git
 [submodule "dependencies/extended_text_field"]
 	path = dependencies/extended_text_field
-	url = https://github.com/NamanShergill/extended_text_field.git
+	url = https://github.com/fluttercandies/extended_text_field.git
 [submodule "dependencies/flutter_dynamic_tabs"]
 	path = dependencies/flutter_dynamic_tabs
 	url = https://github.com/NamanShergill/flutter_dynamic_tabs.git

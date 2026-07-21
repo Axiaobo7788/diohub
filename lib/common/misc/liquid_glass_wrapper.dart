@@ -8,14 +8,12 @@ import 'package:diohub/style/surface_ext.dart';
 import 'package:diohub/style/surface_style.dart';
 import 'package:diohub/utils/utils.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/rendering.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:liquid_glass_renderer/liquid_glass_renderer.dart';
 
-/// Middleware settings for liquid glass effects with app-tuned defaults.
+/// Settings for portable glass effects with app-tuned defaults.
 ///
-/// Wraps [LiquidGlassSettings] but uses callbacks for context-dependent colors,
-/// allowing dynamic color resolution and consistent border configuration.
+/// Keeps the material controls independent from the renderer so callers do not
+/// depend on a platform-specific shader package.
 class GlassSettings {
   const GlassSettings({
     this.blur = 8,
@@ -60,15 +58,14 @@ class GlassSettings {
   static GlassSettings fromAppearance(
     final app_settings.AppearanceSettings app,
     final BuildContext context,
-  ) =>
-      GlassSettings(
-        blur: app.glassBlur,
-        thickness: app.glassThickness,
-        lightIntensity: app.glassLightIntensity,
-        visibility: app.glassVisibility,
-        borderWidth: app.glassBorderWidth,
-        specularAlpha: 0.03,
-      );
+  ) => GlassSettings(
+    blur: app.glassBlur,
+    thickness: app.glassThickness,
+    lightIntensity: app.glassLightIntensity,
+    visibility: app.glassVisibility,
+    borderWidth: app.glassBorderWidth,
+    specularAlpha: 0.03,
+  );
 
   /// Creates a scaled variant of this settings.
   ///
@@ -81,30 +78,29 @@ class GlassSettings {
     final double? borderRadiusDelta,
     final double? borderWidth,
     final Color Function(BuildContext)? borderColor,
-  }) =>
-      GlassSettings(
-        blur: blur * blurScale,
-        thickness: thickness,
-        refractiveIndex: refractiveIndex,
-        chromaticAberration: chromaticAberration,
-        lightIntensity: lightIntensity,
-        saturation: saturation,
-        visibility: visibility,
-        lightAngle: lightAngle,
-        ambientStrength: ambientStrength,
-        glassColor: opacityScale == 1.0
-            ? glassColor
-            : (final BuildContext context) {
-                final ui.Color base = glassColor(context);
-                return base.withValues(
-                  alpha: (base.opacity * opacityScale).clamp(0.0, 1.0),
-                );
-              },
-        borderWidth: borderWidth ?? this.borderWidth,
-        borderColor: borderColor ?? this.borderColor,
-        borderRadiusDelta: borderRadiusDelta ?? this.borderRadiusDelta,
-        specularAlpha: specularAlpha,
-      );
+  }) => GlassSettings(
+    blur: blur * blurScale,
+    thickness: thickness,
+    refractiveIndex: refractiveIndex,
+    chromaticAberration: chromaticAberration,
+    lightIntensity: lightIntensity,
+    saturation: saturation,
+    visibility: visibility,
+    lightAngle: lightAngle,
+    ambientStrength: ambientStrength,
+    glassColor: opacityScale == 1.0
+        ? glassColor
+        : (final BuildContext context) {
+            final ui.Color base = glassColor(context);
+            return base.withValues(
+              alpha: (base.opacity * opacityScale).clamp(0.0, 1.0),
+            );
+          },
+    borderWidth: borderWidth ?? this.borderWidth,
+    borderColor: borderColor ?? this.borderColor,
+    borderRadiusDelta: borderRadiusDelta ?? this.borderRadiusDelta,
+    specularAlpha: specularAlpha,
+  );
 
   /// Returns a copy with the given fields replaced. Used to merge app defaults
   /// with animation overrides (e.g. glass pill reveal).
@@ -116,44 +112,28 @@ class GlassSettings {
     final Color Function(BuildContext)? glassColor,
     final Color Function(BuildContext)? borderColor,
     final double? specularAlpha,
-  }) =>
-      GlassSettings(
-        blur: blur ?? this.blur,
-        thickness: thickness ?? this.thickness,
-        refractiveIndex: refractiveIndex,
-        chromaticAberration: chromaticAberration,
-        lightIntensity: lightIntensity,
-        saturation: saturation,
-        visibility: visibility,
-        lightAngle: lightAngle,
-        ambientStrength: ambientStrength,
-        glassColor: glassColor ?? this.glassColor,
-        borderWidth: borderWidth ?? this.borderWidth,
-        borderColor: borderColor ?? this.borderColor,
-        borderRadiusDelta: borderRadiusDelta ?? this.borderRadiusDelta,
-        specularAlpha: specularAlpha ?? this.specularAlpha,
-      );
-
-  /// Resolves this middleware settings to [LiquidGlassSettings].
-  LiquidGlassSettings resolve(final BuildContext context) =>
-      LiquidGlassSettings(
-        blur: blur,
-        thickness: thickness,
-        refractiveIndex: refractiveIndex,
-        chromaticAberration: chromaticAberration,
-        lightIntensity: lightIntensity,
-        saturation: saturation,
-        visibility: visibility,
-        lightAngle: lightAngle,
-        ambientStrength: ambientStrength,
-        glassColor: glassColor(context),
-      );
+  }) => GlassSettings(
+    blur: blur ?? this.blur,
+    thickness: thickness ?? this.thickness,
+    refractiveIndex: refractiveIndex,
+    chromaticAberration: chromaticAberration,
+    lightIntensity: lightIntensity,
+    saturation: saturation,
+    visibility: visibility,
+    lightAngle: lightAngle,
+    ambientStrength: ambientStrength,
+    glassColor: glassColor ?? this.glassColor,
+    borderWidth: borderWidth ?? this.borderWidth,
+    borderColor: borderColor ?? this.borderColor,
+    borderRadiusDelta: borderRadiusDelta ?? this.borderRadiusDelta,
+    specularAlpha: specularAlpha ?? this.specularAlpha,
+  );
 }
 
-/// A reusable wrapper for liquid glass effects with tuned defaults.
+/// A reusable wrapper for glass effects with tuned defaults.
 ///
 /// Reads [app_settings.SurfaceRendering] from [appearanceProvider] and branches:
-/// glass (liquid glass), blur (BackdropFilter), or solid (opaque surface).
+/// glass, blur (both BackdropFilter variants), or solid (opaque surface).
 ///
 /// **Basic usage:**
 /// ```dart
@@ -215,8 +195,9 @@ class LiquidGlassWrapper extends ConsumerWidget {
 
   @override
   Widget build(final BuildContext context, final WidgetRef ref) {
-    final app_settings.AppearanceSettings appearance =
-        ref.watch(appearanceProvider);
+    final app_settings.AppearanceSettings appearance = ref.watch(
+      appearanceProvider,
+    );
     final GlassSettings effectiveSettings =
         settings ?? GlassSettings.fromAppearance(appearance, context);
     final app_settings.SurfaceRendering surfaceRendering =
@@ -228,56 +209,49 @@ class LiquidGlassWrapper extends ConsumerWidget {
 
     final ShapeBorder clipShape;
     final Border? border;
-    final double shapeRadiusForGlass;
 
     if (borderRadiusOverride != null) {
-      clipShape = RoundedRectangleBorder(
-        borderRadius: borderRadiusOverride!,
-      );
-      border = borderOverride ??
+      clipShape = RoundedRectangleBorder(borderRadius: borderRadiusOverride!);
+      border =
+          borderOverride ??
           (effectiveSettings.borderWidth > 0
               ? Border.all(
                   color: effectiveSettings.borderColor(context),
                   width: effectiveSettings.borderWidth,
                 )
               : null);
-      final BorderRadius r = borderRadiusOverride!;
-      // For asymmetric corners (e.g. attached app bar top=0, bottom=rounded),
-      // use min radius so the glass shader radius smoothly decreases to 0 as
-      // the smallest corner shrinks, avoiding a one-frame snap.
-      shapeRadiusForGlass = _minRadius(r);
     } else {
       clipShape = context.surfaceShape(
         size,
         corners: corners,
         radiusOverride: effectiveRadius,
       );
-      border = borderOverride ??
+      border =
+          borderOverride ??
           (effectiveSettings.borderWidth > 0
               ? Border.all(
                   color: effectiveSettings.borderColor(context),
                   width: effectiveSettings.borderWidth,
                 )
               : null);
-      shapeRadiusForGlass = _hasCustomCorners ? 0 : effectiveRadius;
     }
 
     final BorderRadius? effectiveBorderRadius =
         borderRadiusOverride ?? BorderRadius.circular(effectiveRadius);
-    final Border? safeBorder =
-        _safeBorderForDecoration(border, effectiveBorderRadius);
+    final Border? safeBorder = _safeBorderForDecoration(
+      border,
+      effectiveBorderRadius,
+    );
 
     switch (surfaceRendering) {
       case app_settings.SurfaceRendering.glass:
-        return _buildGlass(
+        return _buildBlur(
           context,
-          surface,
           effectiveRadius,
           clipShape,
           safeBorder,
-          colorScheme,
+          effectiveSettings.glassColor(context),
           effectiveSettings,
-          shapeRadiusForGlass,
         );
       case app_settings.SurfaceRendering.blur:
         return _buildBlur(
@@ -300,44 +274,6 @@ class LiquidGlassWrapper extends ConsumerWidget {
     }
   }
 
-  static double _maxRadius(BorderRadius r) {
-    return _max4(
-      r.topLeft.x,
-      r.topRight.x,
-      r.bottomLeft.x,
-      r.bottomRight.x,
-    );
-  }
-
-  static double _minRadius(BorderRadius r) {
-    return _min4(
-      r.topLeft.x,
-      r.topRight.x,
-      r.bottomLeft.x,
-      r.bottomRight.x,
-    );
-  }
-
-  static double _min4(double a, double b, double c, double d) {
-    if (a <= b && a <= c && a <= d) return a;
-    if (b <= c && b <= d) return b;
-    if (c <= d) return c;
-    return d;
-  }
-
-  static bool _isUniformRadius(BorderRadius r) {
-    return r.topLeft == r.topRight &&
-        r.topLeft == r.bottomLeft &&
-        r.topLeft == r.bottomRight;
-  }
-
-  static double _max4(double a, double b, double c, double d) {
-    if (a >= b && a >= c && a >= d) return a;
-    if (b >= c && b >= d) return b;
-    if (c >= d) return c;
-    return d;
-  }
-
   /// Returns a border safe to use with [BoxDecoration] when [borderRadius] is
   /// non-zero. Flutter asserts that a hairline border (any side with width 0)
   /// can only be drawn when borderRadius is null or zero. When radius is
@@ -348,63 +284,20 @@ class LiquidGlassWrapper extends ConsumerWidget {
     final BorderRadius? borderRadius,
   ) {
     if (border == null) return null;
-    final bool radiusIsZero = borderRadius == null ||
+    final bool radiusIsZero =
+        borderRadius == null ||
         (borderRadius.topLeft.x == 0 &&
             borderRadius.topRight.x == 0 &&
             borderRadius.bottomLeft.x == 0 &&
             borderRadius.bottomRight.x == 0);
     if (radiusIsZero) return border;
-    final bool hasHairline = border.left.width == 0 ||
+    final bool hasHairline =
+        border.left.width == 0 ||
         border.top.width == 0 ||
         border.right.width == 0 ||
         border.bottom.width == 0;
     if (!hasHairline) return border;
     return null;
-  }
-
-  Widget _buildGlass(
-    final BuildContext context,
-    final SurfaceStyle surface,
-    final double effectiveRadius,
-    final ShapeBorder clipShape,
-    final Border? border,
-    final ColorScheme colorScheme,
-    final GlassSettings effectiveSettings,
-    final double shapeRadiusForGlass,
-  ) {
-    final LiquidGlassSettings resolvedSettings =
-        effectiveSettings.resolve(context);
-
-    final Widget glassLayer = _ZeroDimensionGlassGuard(
-      child: LiquidGlassLayer(
-        settings: resolvedSettings,
-        child: LiquidGlass(
-          shape: surface.shape == SurfaceShape.squircle
-              ? LiquidRoundedSuperellipse(
-                  borderRadius: shapeRadiusForGlass,
-                )
-              : LiquidRoundedRectangle(
-                  borderRadius: shapeRadiusForGlass,
-                ),
-          child: child,
-        ),
-      ),
-    );
-
-    if (borderRadiusOverride != null) {
-      return ClipPath(
-        clipper: ShapeBorderClipper(shape: clipShape),
-        child: glassLayer,
-      );
-    }
-    if (!_hasCustomCorners) {
-      return glassLayer;
-    }
-
-    return ClipPath(
-      clipper: ShapeBorderClipper(shape: clipShape),
-      child: glassLayer,
-    );
   }
 
   Widget _buildBlur(
@@ -434,10 +327,7 @@ class LiquidGlassWrapper extends ConsumerWidget {
         sigmaX: effectiveSettings.blur,
         sigmaY: effectiveSettings.blur,
       ),
-      child: DecoratedBox(
-        decoration: decoration,
-        child: child,
-      ),
+      child: DecoratedBox(decoration: decoration, child: child),
     );
 
     final Widget content = Stack(
@@ -455,7 +345,10 @@ class LiquidGlassWrapper extends ConsumerWidget {
 
   static const double _kSpecularHeight = 4.0;
 
-  Widget _topEdgeSpecular(final BuildContext context, final double specularAlpha) {
+  Widget _topEdgeSpecular(
+    final BuildContext context,
+    final double specularAlpha,
+  ) {
     final ColorScheme colorScheme = Theme.of(context).colorScheme;
     return Positioned(
       top: 0,
@@ -503,10 +396,7 @@ class LiquidGlassWrapper extends ConsumerWidget {
 
     final Widget content = Stack(
       children: <Widget>[
-        DecoratedBox(
-          decoration: decoration,
-          child: child,
-        ),
+        DecoratedBox(decoration: decoration, child: child),
         _topEdgeSpecular(context, effectiveSettings.specularAlpha),
       ],
     );
@@ -515,35 +405,5 @@ class LiquidGlassWrapper extends ConsumerWidget {
       clipper: ShapeBorderClipper(shape: clipShape),
       child: content,
     );
-  }
-}
-
-/// Paint guard that prevents [LiquidGlassLayer] from painting when the layout
-/// size is zero, avoiding [Picture.toImageSync] crashes in liquid_glass_renderer.
-class _ZeroDimensionGlassGuard extends SingleChildRenderObjectWidget {
-  const _ZeroDimensionGlassGuard({required super.child});
-
-  @override
-  RenderObject createRenderObject(final BuildContext context) =>
-      _RenderZeroDimensionGuard();
-}
-
-class _RenderZeroDimensionGuard extends RenderProxyBox {
-  @override
-  void paint(final PaintingContext context, final Offset offset) {
-    if (child == null) return;
-    // Guard 1: layout-zero (SizedBox(height:0), collapsed delegates, etc.)
-    if (size.width <= 0 || size.height <= 0) return;
-    // Guard 2: transform-zero (Transform.scale(0), etc.)
-    // The liquid_glass_renderer computes projected bounds via getTransformTo
-    // and calls toImageSync with those dimensions — crashes if zero.
-    final Matrix4 transform = getTransformTo(null);
-    final Rect projected =
-        MatrixUtils.transformRect(transform, Offset.zero & size);
-    final double w = projected.width;
-    final double h = projected.height;
-    // Guard 3: NaN/Infinity check. !(w >= 0.5) catches NaN, negative, and <0.5.
-    if (!(w >= 0.5) || !(h >= 0.5) || w.isInfinite || h.isInfinite) return;
-    super.paint(context, offset);
   }
 }

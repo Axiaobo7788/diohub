@@ -11,9 +11,8 @@ analyzer:
     #     - custom_lint
     exclude: [
             dependencies/**,
-            # packages/pilot_generator/**,
-            # packages/pilot_annotations/**,
-            # Only analyze the root lib/ directory
+            # Internal packages use their own package configs and analysis options.
+            packages/**,
         ]
     errors:
         # Workaround for Ferry also adding ignore all lint rules.

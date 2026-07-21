@@ -4,11 +4,11 @@ version: 1.0.0
 publish_to: none
 
 environment:
-  sdk: ^3.8.0
+  sdk: ">=3.12.0 <4.0.0"
 
 dependencies:
-  drift: ^2.32.0
-  drift_flutter: ^0.3.0
+  drift: ^2.34.2
+  drift_flutter: ^0.3.1
   path_provider: ^2.1.5
   path: ^1.9.0
   diohub_models:
@@ -17,5 +17,6 @@ dependencies:
     path: ../diohub_graphql
 
 dev_dependencies:
-  drift_dev: ^2.32.0
-  build_runner: ^2.5.4
+  drift_dev: ^2.34.4
+  build_runner: ^2.15.1
+  lints: ^6.1.0

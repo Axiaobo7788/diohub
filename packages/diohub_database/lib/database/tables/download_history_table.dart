@@ -1,6 +1,9 @@
 import 'package:drift/drift.dart';
 
 import '../mixins/account_scoped_columns.dart';
+// Drift resolves custom-constraint table names from imports during codegen.
+// ignore: unused_import
+import 'accounts_table.dart';
 import 'entity_cache_entries_table.dart';
 
 /// A download record — file-level metadata + state. Uses nodeId FK to EntityCache.
@@ -9,10 +12,10 @@ import 'entity_cache_entries_table.dart';
 class DownloadHistoryEntries extends Table with AccountScopedColumns {
   IntColumn get id => integer().autoIncrement()();
   TextColumn get nodeId => text().references(
-        EntityCacheEntries,
-        #nodeId,
-        onDelete: KeyAction.restrict,
-      )();
+    EntityCacheEntries,
+    #nodeId,
+    onDelete: KeyAction.restrict,
+  )();
   TextColumn get downloadId => text()();
   TextColumn get displayName => text()();
   TextColumn get fileName => text()();
@@ -28,6 +31,6 @@ class DownloadHistoryEntries extends Table with AccountScopedColumns {
 
   @override
   List<Set<Column>> get uniqueKeys => [
-        {accountKey, downloadId}
-      ];
+    {accountKey, downloadId},
+  ];
 }

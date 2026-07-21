@@ -43,6 +43,10 @@ targets:
               type: String
             GitSSHRemote:
               type: String
+            GitRefname:
+              type: String
+            CustomPropertyValue:
+              type: String
             X509Certificate:
               type: String
             BigInt:

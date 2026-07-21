@@ -44,9 +44,10 @@ void main() {
       expect(strategy.matches('react', 'fltr'), isFalse);
     });
 
-    test('skips fuzzy for single-char query', () {
+    test('keeps exact substring matching for single-char query', () {
       const strategy = FuzzyMatch(threshold: 70);
-      expect(strategy.matches('flutter', 'f'), isFalse);
+      expect(strategy.matches('flutter', 'f'), isTrue);
+      expect(strategy.matches('flutter', 'z'), isFalse);
     });
   });
 
@@ -71,9 +72,7 @@ void main() {
     });
 
     test('empty query returns all', () {
-      final matcher = ClientTextMatcher<_User>(
-        fields: [(u) => u.login],
-      );
+      final matcher = ClientTextMatcher<_User>(fields: [(u) => u.login]);
       final users = [_User('a', null), _User('b', null)];
       expect(matcher.filter(users, ''), equals(users));
       expect(matcher.filter(users, '   '), equals(users));
@@ -93,9 +92,7 @@ void main() {
     });
 
     test('toClientFilter produces compatible callback', () {
-      final matcher = ClientTextMatcher<_User>(
-        fields: [(u) => u.login],
-      );
+      final matcher = ClientTextMatcher<_User>(fields: [(u) => u.login]);
       final fn = matcher.toClientFilter();
       expect(fn(_User('alice', null), 'ali'), isTrue);
       expect(fn(_User('bob', null), 'ali'), isFalse);

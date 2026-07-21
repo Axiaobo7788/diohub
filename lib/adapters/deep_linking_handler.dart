@@ -11,6 +11,7 @@ import 'package:diohub_models/models/unrecognized_destination.dart';
 import 'package:diohub/providers/router_provider.dart';
 import 'package:diohub/providers/settings/links_provider.dart';
 import 'package:diohub/utils/open_in_app_browser.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:receive_sharing_intent/receive_sharing_intent.dart';
@@ -24,16 +25,24 @@ Future<String?> initUniLink() async {
 /// Get the initial shared media from iOS Share Extension (if any).
 /// Sets [pendingDeepLinkProvider] on [container] when a URL is found.
 Future<void> getInitialSharedMedia(ProviderContainer container) async {
-  final List<SharedMediaFile> sharedMediaList =
-      await ReceiveSharingIntent.instance.getInitialMedia();
+  if (kIsWeb ||
+      (defaultTargetPlatform != TargetPlatform.android &&
+          defaultTargetPlatform != TargetPlatform.iOS)) {
+    return;
+  }
+
+  final List<SharedMediaFile> sharedMediaList = await ReceiveSharingIntent
+      .instance
+      .getInitialMedia();
   if (sharedMediaList.isNotEmpty) {
     for (final SharedMediaFile media in sharedMediaList) {
       if (media.type == SharedMediaType.url ||
           media.type == SharedMediaType.text) {
         final String url = media.path;
         if (url.isNotEmpty) {
-          container.read(pendingDeepLinkProvider.notifier).state =
-              Uri.parse(url);
+          container.read(pendingDeepLinkProvider.notifier).state = Uri.parse(
+            url,
+          );
           break; // Only handle first URL
         }
       }
@@ -47,7 +56,9 @@ Future<void> getInitialSharedMedia(ProviderContainer container) async {
 /// or opens it in a browser if it's unrecognized.
 /// [context] is used for navigation; pass from the widget tree.
 Future<void> deepLinkNavigate(
-    final Uri link, final BuildContext context) async {
+  final Uri link,
+  final BuildContext context,
+) async {
   // Theme sharing links: not yet implemented; open in browser instead of dead UI.
   if (_themeLinkPattern.hasMatch(link.toString())) {
     await openInAppBrowser(link);
@@ -89,9 +100,7 @@ RegExp get _themeLinkPattern =>
 class AppLinkHandler {
   AppLinkHandler({required this.uri});
 
-  AppLinkHandler.fromString({
-    required final String uri,
-  }) : uri = Uri.parse(uri);
+  AppLinkHandler.fromString({required final String uri}) : uri = Uri.parse(uri);
 
   final Uri uri;
 
@@ -103,8 +112,9 @@ class AppLinkHandler {
     final links = ProviderScope.containerOf(context).read(linksProvider);
     return URLActions(
       uri: uri,
-      clipboard:
-          ProviderScope.containerOf(context).read(clipboardServiceProvider),
+      clipboard: ProviderScope.containerOf(
+        context,
+      ).read(clipboardServiceProvider),
       shareDescription: shareDescription,
       showOpenAction: showOpenAction,
       openGitHubInApp: links.openGitHubInApp,

@@ -1,1 +1,12 @@
 name: diohub
+
+packages:
+  - packages/*
+
+scripts:
+  bootstrap:
+    description: Resolve public dependencies and regenerate all source files.
+    run: dart run tool/bootstrap.dart
+  codegen:
+    description: Regenerate all source files without resolving dependencies.
+    run: dart run tool/bootstrap.dart --codegen-only

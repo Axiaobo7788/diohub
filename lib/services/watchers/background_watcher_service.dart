@@ -50,7 +50,7 @@ class BackgroundWatcherService {
       requestAlertPermission: true,
     );
     await _notifPlugin!.initialize(
-      const InitializationSettings(android: android, iOS: ios),
+      settings: const InitializationSettings(android: android, iOS: ios),
       onDidReceiveNotificationResponse: _onNotificationTapped,
     );
 
@@ -100,10 +100,13 @@ class BackgroundWatcherService {
       interruptionLevel: _interruptionLevel(alert.priority),
     );
     await _notifPlugin!.show(
-      alert.id.hashCode & 0x7FFFFFFF,
-      alert.title,
-      alert.body,
-      NotificationDetails(android: androidDetails, iOS: iosDetails),
+      id: alert.id.hashCode & 0x7FFFFFFF,
+      title: alert.title,
+      body: alert.body,
+      notificationDetails: NotificationDetails(
+        android: androidDetails,
+        iOS: iosDetails,
+      ),
       payload: alert.entityRef?.webUrl.toString(),
     );
   }
