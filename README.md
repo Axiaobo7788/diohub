@@ -179,9 +179,11 @@ cd diohub
 git submodule update --init --recursive
 ```
 
-3. Create a [GitHub OAuth App](https://docs.github.com/en/developers/apps/building-oauth-apps/creating-an-oauth-app):
-   - Set Authorization callback URL to: `auth.felix.diohub://login-callback`
-   - Note your Client ID and Client Secret
+3. DioHub signs in with GitHub's OAuth Device Flow. The public Client ID is
+   included for reproducible builds. Downstream distributions can create their
+   own [GitHub OAuth App](https://docs.github.com/en/apps/oauth-apps/building-oauth-apps/creating-an-oauth-app),
+   enable Device Flow, and override `GITHUB_CLIENT_ID`. A Client Secret and
+   callback URL are not required for sign-in.
 
 4. Create the local environment configuration and fill in the OAuth values you use:
 
@@ -189,8 +191,8 @@ git submodule update --init --recursive
 cp .env.example .env.json
 ```
 
-Do not commit `.env.json`; it is ignored by Git. Authentication credentials are
-injected with `--dart-define-from-file` and are not generated into source files.
+Do not commit `.env.json`; it is ignored by Git. Optional build configuration is
+injected with `--dart-define-from-file` and is not generated into source files.
 
 5. Resolve application dependencies and generate sources in dependency order:
 

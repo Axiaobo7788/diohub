@@ -1,10 +1,4 @@
 PODS:
-  - AppAuth (1.6.2):
-    - AppAuth/Core (= 1.6.2)
-    - AppAuth/ExternalUserAgent (= 1.6.2)
-  - AppAuth/Core (1.6.2)
-  - AppAuth/ExternalUserAgent (1.6.2):
-    - AppAuth/Core
   - audio_session (0.0.1):
     - FlutterMacOS
   - connectivity_plus (0.0.1):
@@ -12,12 +6,6 @@ PODS:
     - ReachabilitySwift
   - dynamic_color (0.0.2):
     - FlutterMacOS
-  - flutter_appauth (0.0.1):
-    - AppAuth (= 1.6.2)
-    - FlutterMacOS
-  - flutter_inappwebview (0.0.1):
-    - FlutterMacOS
-    - OrderedSet (~> 5.0)
   - flutter_secure_storage_macos (6.1.1):
     - FlutterMacOS
   - FlutterMacOS (1.0.0)
@@ -26,7 +14,6 @@ PODS:
   - FMDB/standard (2.7.5)
   - just_audio (0.0.1):
     - FlutterMacOS
-  - OrderedSet (5.0.0)
   - package_info_plus (0.0.1):
     - FlutterMacOS
   - path_provider_foundation (0.0.1):
@@ -68,8 +55,6 @@ DEPENDENCIES:
   - audio_session (from `Flutter/ephemeral/.symlinks/plugins/audio_session/macos`)
   - connectivity_plus (from `Flutter/ephemeral/.symlinks/plugins/connectivity_plus/macos`)
   - dynamic_color (from `Flutter/ephemeral/.symlinks/plugins/dynamic_color/macos`)
-  - flutter_appauth (from `Flutter/ephemeral/.symlinks/plugins/flutter_appauth/macos`)
-  - flutter_inappwebview (from `Flutter/ephemeral/.symlinks/plugins/flutter_inappwebview/macos`)
   - flutter_secure_storage_macos (from `Flutter/ephemeral/.symlinks/plugins/flutter_secure_storage_macos/macos`)
   - FlutterMacOS (from `Flutter/ephemeral`)
   - just_audio (from `Flutter/ephemeral/.symlinks/plugins/just_audio/macos`)
@@ -85,9 +70,7 @@ DEPENDENCIES:
 
 SPEC REPOS:
   trunk:
-    - AppAuth
     - FMDB
-    - OrderedSet
     - ReachabilitySwift
     - sqlite3
 
@@ -98,10 +81,6 @@ EXTERNAL SOURCES:
     :path: Flutter/ephemeral/.symlinks/plugins/connectivity_plus/macos
   dynamic_color:
     :path: Flutter/ephemeral/.symlinks/plugins/dynamic_color/macos
-  flutter_appauth:
-    :path: Flutter/ephemeral/.symlinks/plugins/flutter_appauth/macos
-  flutter_inappwebview:
-    :path: Flutter/ephemeral/.symlinks/plugins/flutter_inappwebview/macos
   flutter_secure_storage_macos:
     :path: Flutter/ephemeral/.symlinks/plugins/flutter_secure_storage_macos/macos
   FlutterMacOS:
@@ -128,17 +107,13 @@ EXTERNAL SOURCES:
     :path: Flutter/ephemeral/.symlinks/plugins/wakelock_plus/macos
 
 SPEC CHECKSUMS:
-  AppAuth: 3bb1d1cd9340bd09f5ed189fb00b1cc28e1e8570
   audio_session: dea1f41890dbf1718f04a56f1d6150fd50039b72
   connectivity_plus: 18d3c32514c886e046de60e9c13895109866c747
   dynamic_color: 2eaa27267de1ca20d879fbd6e01259773fb1670f
-  flutter_appauth: b91dffc2477d9b24a32983ca523a91812f228552
-  flutter_inappwebview: 62e949df616a9f6e1b0366326381f208c7fcad37
   flutter_secure_storage_macos: d56e2d218c1130b262bef8b4a7d64f88d7f9c9ea
   FlutterMacOS: 8f6f14fa908a6fb3fba0cd85dbd81ec4b251fb24
   FMDB: 2ce00b547f966261cd18927a3ddb07cb6f3db82a
   just_audio: 9b67ca7b97c61cfc9784ea23cd8cc55eb226d489
-  OrderedSet: aaeb196f7fef5a9edf55d89760da9176ad40b93c
   package_info_plus: 02d7a575e80f194102bef286361c6c326e4c29ce
   path_provider_foundation: 29f094ae23ebbca9d3d0cec13889cd9060c0e943
   ReachabilitySwift: 985039c6f7b23a1da463388634119492ff86c825

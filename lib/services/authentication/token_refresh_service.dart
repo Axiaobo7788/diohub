@@ -1,12 +1,13 @@
 import 'dart:async';
 
+import 'package:dio/dio.dart';
 import 'package:diohub/app/app_logger.dart';
-import 'package:diohub_models/models/authentication/access_token_model.dart';
-import 'package:diohub_models/models/authentication/authenticated_session.dart';
-import 'package:diohub/services/authentication/token_store.dart';
 import 'package:diohub/services/authentication/token_set_io.dart';
+import 'package:diohub/services/authentication/token_store.dart';
+import 'package:diohub_models/models/authentication/access_token_model.dart';
+import 'package:diohub_models/models/authentication/access_token_response.dart';
+import 'package:diohub_models/models/authentication/authenticated_session.dart';
 import 'package:flutter/foundation.dart';
-import 'package:flutter_appauth/flutter_appauth.dart';
 
 /// Service for refreshing GitHub access tokens using the refresh token flow.
 ///
@@ -14,9 +15,19 @@ import 'package:flutter_appauth/flutter_appauth.dart';
 /// (on 401 error). Uses a Completer-based concurrency guard to prevent
 /// simultaneous refresh attempts.
 class TokenRefreshService {
-  TokenRefreshService(this._tokenStore, {this.onTokenRefreshed});
+  TokenRefreshService(this._tokenStore, {this.onTokenRefreshed, final Dio? dio})
+    : _dio =
+          dio ??
+          Dio(
+            BaseOptions(
+              connectTimeout: const Duration(seconds: 15),
+              receiveTimeout: const Duration(seconds: 15),
+              sendTimeout: const Duration(seconds: 15),
+            ),
+          );
 
   final TokenStore _tokenStore;
+  final Dio _dio;
   final VoidCallback? onTokenRefreshed;
   static Completer<bool>? _refreshLock;
 
@@ -38,7 +49,8 @@ class TokenRefreshService {
     }
 
     // Check if token is expired or about to expire
-    final shouldRefresh = tokenSet.accessTokenExpiresAt != null &&
+    final shouldRefresh =
+        tokenSet.accessTokenExpiresAt != null &&
         DateTime.now()
             .add(Duration(minutes: expiryBufferMinutes))
             .isAfter(tokenSet.accessTokenExpiresAt!);
@@ -47,7 +59,7 @@ class TokenRefreshService {
       return tokenSet.accessToken;
     }
 
-    return _doRefresh(session, tokenSet.refreshToken!);
+    return _doRefresh(session, tokenSet);
   }
 
   /// Force a token refresh regardless of expiry.
@@ -57,7 +69,7 @@ class TokenRefreshService {
   Future<String?> forceRefresh(AuthenticatedSession session) async {
     final tokenSet = await _tokenStore.readTokenSet(session.storageKey);
     if (tokenSet == null || !tokenSet.canRefresh) return null;
-    return _doRefresh(session, tokenSet.refreshToken!);
+    return _doRefresh(session, tokenSet);
   }
 
   /// Internal refresh implementation with concurrency guard.
@@ -66,7 +78,7 @@ class TokenRefreshService {
   /// If a refresh is already in progress, subsequent calls wait for it to complete.
   Future<String?> _doRefresh(
     AuthenticatedSession session,
-    String refreshToken,
+    AccessTokenModel currentTokenSet,
   ) async {
     // If a refresh is already in progress, wait for it
     if (_refreshLock != null) {
@@ -87,19 +99,33 @@ class TokenRefreshService {
         );
       }
 
-      const appAuth = FlutterAppAuth();
-      final result = await appAuth.token(
-        TokenRequest(
-          oauth.clientId,
-          oauth.redirectUri,
-          // GitHub App uses PKCE, no client secret
-          serviceConfiguration: AuthorizationServiceConfiguration(
-            authorizationEndpoint: oauth.authorizationEndpoint,
-            tokenEndpoint: oauth.tokenEndpoint,
-          ),
-          refreshToken: refreshToken,
-        ),
-      );
+      final String refreshToken = currentTokenSet.refreshToken!;
+      final Response<Map<String, dynamic>> response = await _dio
+          .postUri<Map<String, dynamic>>(
+            Uri.parse(oauth.tokenEndpoint),
+            data: <String, String>{
+              'client_id': oauth.clientId,
+              if (oauth.clientSecret.isNotEmpty)
+                'client_secret': oauth.clientSecret,
+              'grant_type': 'refresh_token',
+              'refresh_token': refreshToken,
+            },
+            options: Options(
+              contentType: Headers.formUrlEncodedContentType,
+              headers: const <String, String>{
+                'Accept': 'application/json',
+                'User-Agent': 'com.felix.diohub',
+              },
+            ),
+          );
+      final Map<String, dynamic>? json = response.data;
+      if (json == null) {
+        throw const FormatException('GitHub returned an empty token response.');
+      }
+      final AccessTokenResponse result = AccessTokenResponse.fromJson(json);
+      if (result.error case final String error) {
+        throw StateError(result.errorDescription ?? error);
+      }
 
       if (result.accessToken == null) {
         AppLogger.warning(
@@ -114,22 +140,25 @@ class TokenRefreshService {
       final newTokenSet = AccessTokenModel(
         accessToken: result.accessToken,
         refreshToken: result.refreshToken ?? refreshToken,
-        accessTokenExpiresAt: result.accessTokenExpirationDateTime,
-        refreshTokenExpiresAt:
-            _parseRefreshTokenExpiry(result.tokenAdditionalParameters),
+        scope: result.scope ?? currentTokenSet.scope,
+        accessTokenExpiresAt: result.expiresIn != null
+            ? DateTime.now().add(Duration(seconds: result.expiresIn!))
+            : null,
+        refreshTokenExpiresAt: result.refreshTokenExpiresIn != null
+            ? DateTime.now().add(
+                Duration(seconds: result.refreshTokenExpiresIn!),
+              )
+            : currentTokenSet.refreshTokenExpiresAt,
       );
 
       await _tokenStore.writeTokenSet(session.storageKey, newTokenSet);
 
-      AppLogger.info(
-        'Token refreshed successfully',
-        tag: 'TokenRefresh',
-      );
+      AppLogger.info('Token refreshed successfully', tag: 'TokenRefresh');
 
       _refreshLock?.complete(true);
       onTokenRefreshed?.call();
       return result.accessToken;
-    } catch (e, st) {
+    } on Object catch (e, st) {
       AppLogger.error(
         'Token refresh failed',
         error: e,
@@ -141,16 +170,5 @@ class TokenRefreshService {
     } finally {
       _refreshLock = null;
     }
-  }
-
-  /// Parse the refresh token expiry from tokenAdditionalParameters.
-  ///
-  /// GitHub returns refresh_token_expires_in (seconds) in the OAuth response.
-  static DateTime? _parseRefreshTokenExpiry(Map<String, dynamic>? params) {
-    if (params == null) return null;
-    final raw = params['refresh_token_expires_in'];
-    final seconds = raw is int ? raw : int.tryParse(raw?.toString() ?? '');
-    if (seconds == null) return null;
-    return DateTime.now().add(Duration(seconds: seconds));
   }
 }

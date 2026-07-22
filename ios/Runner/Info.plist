@@ -41,16 +41,6 @@
 					<string>diohub</string>
 				</array>
 			</dict>
-			<dict>
-				<key>CFBundleTypeRole</key>
-				<string>Editor</string>
-				<key>CFBundleURLName</key>
-				<string>auth.felix.diohub</string>
-				<key>CFBundleURLSchemes</key>
-				<array>
-					<string>auth.felix.diohub</string>
-				</array>
-			</dict>
 		</array>
 		<key>CFBundleVersion</key>
 		<string>$(FLUTTER_BUILD_NUMBER)</string>

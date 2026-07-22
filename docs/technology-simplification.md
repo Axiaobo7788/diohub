@@ -40,7 +40,7 @@
 
 | 技术 | 决定 | 边界 |
 | --- | --- | --- |
-| Flutter | 保留 | Android + Linux 共用 UI，平台能力通过适配器隔离 |
+| Flutter | 保留 | Android + Windows/macOS/Linux 共用 UI，平台能力通过适配器隔离 |
 | Riverpod | 保留 | 用于组合、依赖注入和 ViewState，不进入纯 Domain |
 | Dio + GraphQL | 保留 | 只由 Service/Gateway 层接触传输与生成类型 |
 | Drift | 保留 | 作为 Workbench 类型化持久快照与同步状态来源 |
@@ -131,7 +131,7 @@ UI 不应同时理解 HTTP Cache、GraphQL 生成类型和 Drift 表。
 ## 8. 实施护栏
 
 - 每次只移除一类依赖或一个结构泄漏。
-- 每次都记录 `pub get`、analyze、tests、Android 和 Linux 状态。
+- 每次都记录 `pub get`、analyze、tests、Android 与 Windows/macOS/Linux 状态；未在对应 runner 验证的平台必须明示标注。
 - 不依赖“搜索不到 import”一个证据批量删除 plugin。
 - 不在精简阶段同时更换状态管理、路由、网络层或数据库。
 - 不更改 OAuth scope、密钥或发布签名。

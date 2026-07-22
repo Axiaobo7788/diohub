@@ -1,14 +1,13 @@
+import 'dart:async';
+
 import 'package:auto_route/auto_route.dart';
 import 'package:diohub/common/animations/animations.dart';
 import 'package:diohub/common/const/app_info.dart';
 import 'package:diohub/common/const/version_info.dart';
-import 'package:diohub/common/misc/loading_indicator.dart';
 import 'package:diohub/providers/account/auth_provider.dart';
-import 'package:diohub/style/opacities.dart';
-import 'package:diohub/view/authentication/widgets/code_info_box.dart';
-import 'package:diohub/view/authentication/widgets/error_popup.dart';
-import 'package:diohub/view/authentication/widgets/login_popup.dart';
 import 'package:diohub/style/app_spacing.dart';
+import 'package:diohub/style/opacities.dart';
+import 'package:diohub/view/authentication/widgets/auth_flow_content.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -18,10 +17,18 @@ class AuthScreen extends ConsumerWidget {
 
   @override
   Widget build(final BuildContext context, final WidgetRef ref) {
+    ref.listen<AuthenticationState>(authProvider, (
+      final AuthenticationState? previous,
+      final AuthenticationState next,
+    ) {
+      if (previous is AuthenticationAccountLinking &&
+          next is AuthenticationUnauthenticated) {
+        unawaited(context.router.maybePop());
+      }
+    });
+
     final double screenHeight = MediaQuery.of(context).size.height;
     final double screenWidth = MediaQuery.of(context).size.width;
-
-    final AuthenticationState authState = ref.watch(authProvider);
 
     return Scaffold(
       body: SafeArea(
@@ -47,9 +54,7 @@ class AuthScreen extends ConsumerWidget {
                             context.spacing.sectionGap,
                             const DelayedFadeAnimation(
                               delay: Duration(milliseconds: 200),
-                              child: Center(
-                                child: AppNameWidget(size: 28),
-                              ),
+                              child: Center(child: AppNameWidget(size: 28)),
                             ),
                             context.spacing.itemGap,
                             DelayedFadeAnimation(
@@ -57,14 +62,11 @@ class AuthScreen extends ConsumerWidget {
                               child: Center(
                                 child: Text(
                                   'Sign in to continue',
-                                  style: Theme.of(context)
-                                      .textTheme
-                                      .bodyMedium
+                                  style: Theme.of(context).textTheme.bodyMedium
                                       ?.copyWith(
-                                        color: Theme.of(context)
-                                            .colorScheme
-                                            .onSurface
-                                            .secondary,
+                                        color: Theme.of(
+                                          context,
+                                        ).colorScheme.onSurface.secondary,
                                       ),
                                 ),
                               ),
@@ -73,7 +75,10 @@ class AuthScreen extends ConsumerWidget {
                         ),
                       ),
                       SizedBox(height: screenHeight * 0.08),
-                      _buildAuthContent(authState),
+                      const DelayedFadeAnimation(
+                        delay: Duration(milliseconds: 400),
+                        child: AuthFlowContent(),
+                      ),
                       SizedBox(height: screenHeight * 0.1),
                     ],
                   ),
@@ -91,28 +96,5 @@ class AuthScreen extends ConsumerWidget {
         ),
       ),
     );
-  }
-
-  Widget _buildAuthContent(final AuthenticationState state) {
-    if (state is AuthenticationUnauthenticated) {
-      return const DelayedFadeAnimation(
-        delay: Duration(milliseconds: 400),
-        child: LoginPopup(),
-      );
-    } else if (state is AuthenticationChecking ||
-        state is AuthenticationAccountLinking) {
-      return const LoadingIndicator();
-    } else if (state is AuthenticationInitialized) {
-      return DelayedFadeAnimation(
-        delay: const Duration(milliseconds: 100),
-        child: CodeInfoBox(state.deviceCodeResponse),
-      );
-    } else if (state is AuthenticationError) {
-      return DelayedFadeAnimation(
-        delay: const Duration(milliseconds: 100),
-        child: ErrorPopup(state.error),
-      );
-    }
-    return Container();
   }
 }

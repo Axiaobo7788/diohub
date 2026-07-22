@@ -1,19 +1,12 @@
 import 'package:auto_route/annotations.dart';
 import 'package:diohub/app/settings/appearance.dart';
-import 'package:diohub/common/animations/animated_content_switcher.dart';
 import 'package:diohub/common/animations/animations.dart';
-import 'package:diohub/common/animations/logo_asset.dart';
 import 'package:diohub/common/animations/logo_progress_indicator.dart';
-import 'package:diohub/common/animations/motion.dart';
-import 'package:diohub/common/const/app_info.dart';
 import 'package:diohub/common/const/app_tokens.dart';
-import 'package:diohub/common/const/version_info.dart';
-import 'package:diohub/common/widgets/animated_splash_content.dart';
 import 'package:diohub/common/widgets/splash_content.dart';
 import 'package:diohub/providers/settings/appearance_provider.dart';
 import 'package:diohub/providers/startup/app_startup_provider.dart';
 import 'package:diohub/style/app_spacing.dart';
-import 'package:diohub/view/authentication/widgets/login_popup.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -47,28 +40,37 @@ class _LandingLoadingScreenState extends ConsumerState<LandingLoadingScreen> {
         onRetry: () => ref.invalidate(appStartupProvider),
       ),
       data: (final AppStartupState state) => switch (state) {
-        StartupLoading() =>
-          _buildSplash(context, screenWidth, preset: preset, animated: true),
-        StartupUnauthenticated() =>
-          _buildAuth(context, screenWidth, preset: preset),
+        StartupLoading() => _buildSplash(
+          context,
+          screenWidth,
+          preset: preset,
+          animated: true,
+        ),
+        StartupPublic() => _buildSplash(
+          context,
+          screenWidth,
+          preset: preset,
+          animated: false,
+        ),
         StartupError(:final message) => _buildError(
-            context,
-            preset,
-            message,
-            onRetry: () => ref.invalidate(appStartupProvider),
-          ),
-        StartupReady() =>
-          _buildSplash(context, screenWidth, preset: preset, animated: false),
+          context,
+          preset,
+          message,
+          onRetry: () => ref.invalidate(appStartupProvider),
+        ),
+        StartupReady() => _buildSplash(
+          context,
+          screenWidth,
+          preset: preset,
+          animated: false,
+        ),
       },
     );
 
     final bool isPremium =
         preset == AnimationPreset.normal || preset == AnimationPreset.enhanced;
     if (isPremium) {
-      return Scaffold(
-        backgroundColor: AppTokens.backgroundDark,
-        body: body,
-      );
+      return Scaffold(backgroundColor: AppTokens.backgroundDark, body: body);
     }
     return Scaffold(
       backgroundColor: AppTokens.backgroundDark,
@@ -133,8 +135,9 @@ class _LandingLoadingScreenState extends ConsumerState<LandingLoadingScreen> {
               child: LogoProgressIndicator(
                 size: screenWidth * 0.2,
                 value: 0.0,
-                trackColor:
-                    Theme.of(context).colorScheme.error.withOpacity(0.2),
+                trackColor: Theme.of(
+                  context,
+                ).colorScheme.error.withOpacity(0.2),
                 showPercentage: false,
               ),
             ),
@@ -150,43 +153,11 @@ class _LandingLoadingScreenState extends ConsumerState<LandingLoadingScreen> {
             context.spacing.itemGap,
             DelayedFadeAnimation(
               delay: const Duration(milliseconds: 300),
-              child: FilledButton(onPressed: onRetry, child: const Text('Retry')),
+              child: FilledButton(
+                onPressed: onRetry,
+                child: const Text('Retry'),
+              ),
             ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildAuth(
-    final BuildContext context,
-    final double screenWidth, {
-    required final AnimationPreset preset,
-  }) {
-    final bool isPremium =
-        preset == AnimationPreset.normal || preset == AnimationPreset.enhanced;
-
-    if (!isPremium) {
-      return SplashContent(animated: false);
-    }
-
-    // Auth as in-place transform: logo stays on screen from splash -> auth
-    return SafeArea(
-      child: SingleChildScrollView(
-        child: Column(
-          children: <Widget>[
-            const SizedBox(height: 48),
-            LogoAsset(size: screenWidth * 0.25),
-            const SizedBox(height: 16),
-            const AppNameWidget(size: 20),
-            const SizedBox(height: 8),
-            const VersionInfoWidget(),
-            const SizedBox(height: 48),
-            const DelayedFadeAnimation(
-              delay: Duration(milliseconds: 300),
-              child: LoginPopup(),
-            ),
-            const SizedBox(height: 48),
           ],
         ),
       ),
@@ -202,10 +173,7 @@ class _LandingLoadingScreenState extends ConsumerState<LandingLoadingScreen> {
     final bool isPremium =
         preset == AnimationPreset.normal || preset == AnimationPreset.enhanced;
     if (isPremium) {
-      return AnimatedSplashContent(
-        key: _splashKey,
-        preset: preset,
-      );
+      return AnimatedSplashContent(key: _splashKey, preset: preset);
     }
     return SplashContent(
       animated: preset == AnimationPreset.reduced && animated,

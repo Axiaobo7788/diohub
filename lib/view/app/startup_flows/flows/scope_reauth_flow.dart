@@ -1,16 +1,19 @@
+import 'dart:async';
+
+import 'package:auto_route/auto_route.dart';
+import 'package:diohub/providers/account/account_provider.dart';
+import 'package:diohub/providers/account/auth_provider.dart';
+import 'package:diohub/providers/database_providers.dart'
+    show scopeGateProvider;
+import 'package:diohub/providers/startup_flows/startup_flow.dart';
+import 'package:diohub/providers/startup_flows/startup_flows_provider.dart';
+import 'package:diohub/routes/router.gr.dart';
+import 'package:diohub/view/home/widgets/startup_flow_banners.dart';
+import 'package:diohub_models/models/server_config.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
-
-import 'package:diohub/common/notifications/notification_service.dart';
-import 'package:diohub/providers/account/account_provider.dart';
-import 'package:diohub/providers/account/auth_provider.dart';
-import 'package:diohub/providers/database_providers.dart' show scopeGateProvider;
-import 'package:diohub/providers/startup_flows/startup_flow.dart';
-import 'package:diohub/providers/startup_flows/startup_flows_provider.dart';
-import 'package:diohub/view/home/widgets/startup_flow_banners.dart';
-import 'package:diohub_models/models/server_config.dart';
 
 /// Prompted flow: shows a dismissable banner when the app adds new optional
 /// scopes that the user's token doesn't have. Never blocks the app.
@@ -68,32 +71,36 @@ class ScopeReauthFlow extends StartupFlow {
   Widget? buildModal(
     final BuildContext context, {
     required final VoidCallback onComplete,
-  }) =>
-      null;
+  }) => null;
 
   @override
   Future<void> markHandled(final ProviderContainer container) async {
     final info = await PackageInfo.fromPlatform();
     final currentVersion = info.version;
-    
+
     // Store the current version in dismissedUntil so we don't show again
     // until the next app version that adds more scopes
     final notifier = container.read(startupFlowsProvider.notifier);
     final current = container.read(startupFlowsProvider);
-    await notifier.update((_) => current.copyWith(
-      dismissedUntil: {...current.dismissedUntil, id: currentVersion},
-    ));
+    await notifier.update(
+      (_) => current.copyWith(
+        dismissedUntil: {...current.dismissedUntil, id: currentVersion},
+      ),
+    );
   }
 
   /// Handle the "Update Permissions" action based on auth method.
   static Future<void> handleUpdateAction(BuildContext context) async {
     final container = ProviderScope.containerOf(context);
     final accountSession = await container.read(accountProvider.future);
-    if (accountSession == null) return;
+    if (accountSession == null || !context.mounted) {
+      return;
+    }
 
     final authMethod = accountSession.activeAuthMethod;
     final serverConfig =
-        accountSession.activeAccountModel?.serverConfig ?? ServerConfig.gitHubDotCom;
+        accountSession.activeAccountModel?.serverConfig ??
+        ServerConfig.gitHubDotCom;
 
     if (authMethod == AuthMethod.pat) {
       // PAT: open the createTokenUrl in browser
@@ -102,17 +109,10 @@ class ScopeReauthFlow extends StartupFlow {
         await launchUrl(uri, mode: LaunchMode.externalApplication);
       }
     } else {
-      // OAuth/Device Code: trigger inline re-auth flow
-      try {
-        await container.read(authProvider.notifier).loginWithBrowser();
-      } on Exception catch (e) {
-        if (context.mounted) {
-          container
-              .read(notificationServiceProvider)
-              .error('Re-authentication failed: $e');
-        }
-      }
+      // Device Flow: show the shared auth route while polling GitHub.
+      container.read(authProvider.notifier).reset();
+      unawaited(container.read(authProvider.notifier).requestDeviceCode());
+      await AutoRouter.of(context).push(const AuthRoute());
     }
   }
 }
-

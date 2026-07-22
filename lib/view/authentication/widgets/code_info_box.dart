@@ -1,19 +1,19 @@
 import 'dart:async';
 
-import 'package:diohub/common/bottom_sheet/url_actions.dart';
+import 'package:diohub/app/app_logger.dart';
 import 'package:diohub/common/clipboard/clipboard_service.dart';
-import 'package:diohub_models/models/authentication/device_code_response.dart';
 import 'package:diohub/providers/account/auth_provider.dart';
-import 'package:diohub/providers/settings/links_provider.dart';
+import 'package:diohub/style/app_spacing.dart';
 import 'package:diohub/style/opacities.dart';
 import 'package:diohub/style/surface_ext.dart';
 import 'package:diohub/style/surface_style.dart';
-import 'package:diohub/style/app_spacing.dart';
+import 'package:diohub_models/models/authentication/device_code_response.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_countdown_timer/countdown_timer_controller.dart';
 import 'package:flutter_countdown_timer/current_remaining_time.dart';
 import 'package:flutter_countdown_timer/flutter_countdown_timer.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class CodeInfoBox extends ConsumerStatefulWidget {
   const CodeInfoBox(this.deviceCodeResponse, {super.key});
@@ -25,23 +25,86 @@ class CodeInfoBox extends ConsumerStatefulWidget {
 class CodeInfoBoxState extends ConsumerState<CodeInfoBox> {
   CountdownTimerController? timerController;
   bool copied = false;
+  bool browserLaunchFailed = false;
 
   @override
   void initState() {
+    super.initState();
     timerController = CountdownTimerController(
-      endTime: DateTime.now().millisecondsSinceEpoch +
+      endTime:
+          DateTime.now().millisecondsSinceEpoch +
           widget.deviceCodeResponse.expiresIn * 1000,
       onEnd: () {
         ref.read(authProvider.notifier).reset();
       },
     );
-    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((final _) {
+      unawaited(_prepareAuthorization());
+    });
   }
 
   @override
   void dispose() {
-    timerController!.dispose();
+    timerController?.dispose();
     super.dispose();
+  }
+
+  Future<void> _prepareAuthorization() async {
+    try {
+      await copyCode();
+      if (mounted) {
+        setState(() {
+          copied = true;
+        });
+        unawaited(_clearCopiedIndicator());
+      }
+    } on Object catch (e, st) {
+      AppLogger.warning(
+        'Copying the GitHub device code failed',
+        error: e,
+        stackTrace: st,
+        tag: 'Auth',
+      );
+    }
+    await _openVerificationPage();
+  }
+
+  Future<void> _clearCopiedIndicator() async {
+    await Future<void>.delayed(const Duration(seconds: 4));
+    if (mounted) {
+      setState(() {
+        copied = false;
+      });
+    }
+  }
+
+  Future<void> _openVerificationPage() async {
+    try {
+      final bool launched = await launchUrl(
+        Uri.parse(widget.deviceCodeResponse.verificationUri),
+        mode: LaunchMode.externalApplication,
+      );
+      if (!launched) {
+        throw StateError('No system browser is available.');
+      }
+      if (mounted && browserLaunchFailed) {
+        setState(() {
+          browserLaunchFailed = false;
+        });
+      }
+    } on Object catch (e, st) {
+      AppLogger.warning(
+        'Opening the GitHub device verification page failed',
+        error: e,
+        stackTrace: st,
+        tag: 'Auth',
+      );
+      if (mounted) {
+        setState(() {
+          browserLaunchFailed = true;
+        });
+      }
+    }
   }
 
   Future<void> copyCode({final bool pop = false}) async {
@@ -49,7 +112,7 @@ class CodeInfoBoxState extends ConsumerState<CodeInfoBox> {
         .read(clipboardServiceProvider)
         .copy(widget.deviceCodeResponse.userCode);
     if (pop) {
-      if (context.mounted) {
+      if (mounted) {
         Navigator.pop(context);
       }
     } else {
@@ -69,9 +132,7 @@ class CodeInfoBoxState extends ConsumerState<CodeInfoBox> {
           controller: timerController,
           endWidget: Text(
             'Time Expired.',
-            style: textTheme.bodyMedium?.copyWith(
-              color: colorScheme.error,
-            ),
+            style: textTheme.bodyMedium?.copyWith(color: colorScheme.error),
           ),
           widgetBuilder: (final _, final CurrentRemainingTime? time) => Column(
             children: <Widget>[
@@ -94,7 +155,8 @@ class CodeInfoBoxState extends ConsumerState<CodeInfoBox> {
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 32),
                 child: LinearProgressIndicator(
-                  value: ((time.min ?? 0) * 60 + time.sec!) /
+                  value:
+                      ((time.min ?? 0) * 60 + time.sec!) /
                       widget.deviceCodeResponse.expiresIn,
                 ),
               ),
@@ -168,43 +230,35 @@ class CodeInfoBoxState extends ConsumerState<CodeInfoBox> {
           textAlign: TextAlign.center,
         ),
         context.spacing.contentGap,
-        Builder(
-          builder: (final BuildContext context) {
-            final links = ref.read(linksProvider);
-            final URLActions urlActions = URLActions(
-              uri: Uri.parse(widget.deviceCodeResponse.verificationUri!),
-              clipboard: ref.read(clipboardServiceProvider),
-              shareDescription:
-                  'Enter the code ${widget.deviceCodeResponse.userCode} on:',
-              openGitHubInApp: links.openGitHubInApp,
-              confirmBeforeBrowser: links.confirmBeforeBrowser,
-            );
-            return Material(
-              color: Colors.transparent,
-              child: InkWell(
-                onTap: () => urlActions.launchURL(context),
-                onLongPress: () async {
-                  await urlActions.showMenu(context);
-                },
-                borderRadius: context.radius(RadiusSize.small),
-                child: Padding(
-                  padding: EdgeInsets.symmetric(
-                    vertical: 12,
-                    horizontal: context.spacing.sectionSpacing,
-                  ),
-                  child: Text(
-                    widget.deviceCodeResponse.verificationUri,
-                    style: textTheme.bodyMedium?.copyWith(
-                      color: colorScheme.primary,
-                      decoration: TextDecoration.underline,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                ),
+        Material(
+          color: Colors.transparent,
+          child: InkWell(
+            onTap: _openVerificationPage,
+            borderRadius: context.radius(RadiusSize.small),
+            child: Padding(
+              padding: EdgeInsets.symmetric(
+                vertical: 12,
+                horizontal: context.spacing.sectionSpacing,
               ),
-            );
-          },
+              child: Text(
+                widget.deviceCodeResponse.verificationUri,
+                style: textTheme.bodyMedium?.copyWith(
+                  color: colorScheme.primary,
+                  decoration: TextDecoration.underline,
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ),
+          ),
         ),
+        if (browserLaunchFailed) ...<Widget>[
+          context.spacing.itemGap,
+          Text(
+            'The browser did not open automatically. Tap the link above to retry.',
+            style: textTheme.bodySmall?.copyWith(color: colorScheme.error),
+            textAlign: TextAlign.center,
+          ),
+        ],
         context.spacing.spaciousGap,
         TextButton(
           onPressed: () {

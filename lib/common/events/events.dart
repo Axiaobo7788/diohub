@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:diohub/app/app_logger.dart';
 import 'package:diohub/common/cards/release_card.dart';
 import 'package:diohub/common/cards/discussion_card.dart';
@@ -13,7 +15,13 @@ import 'package:diohub/common/pagination/page_source.dart';
 import 'package:diohub/common/pagination/pagination_controller.dart';
 import 'package:diohub/common/pagination/pagination_state.dart';
 import 'package:diohub/common/pagination/pagination_phase.dart'
-    show FetchDirection, LoadingForward, Refreshing, Failed, PaginationPhase;
+    show
+        Failed,
+        FetchDirection,
+        Idle,
+        LoadingForward,
+        PaginationPhase,
+        Refreshing;
 import 'package:diohub/common/timeline/unified_timeline_item.dart';
 import 'package:diohub/common/timeline_content/timeline_issue_content.dart';
 import 'package:diohub/common/timeline_content/timeline_pull_request_content.dart';
@@ -57,10 +65,10 @@ class Events extends ConsumerStatefulWidget {
     final List<EventsModel> events, {
     this.refreshRegistrar,
     super.key,
-  })  : privateEvents = false,
-        specificUser = null,
-        orgLogin = null,
-        mockEvents = events;
+  }) : privateEvents = false,
+       specificUser = null,
+       orgLogin = null,
+       mockEvents = events;
 
   final bool privateEvents;
   final String? specificUser;
@@ -107,7 +115,7 @@ class _EventsState extends ConsumerState<Events> {
       .toList();
 
   late final PaginationController<EventsModel, ActorEventSection>
-      _paginationController;
+  _paginationController;
 
   @override
   void initState() {
@@ -119,49 +127,51 @@ class _EventsState extends ConsumerState<Events> {
     );
     _paginationController =
         PaginationController<EventsModel, ActorEventSection>(
-      source: PageNumberForwardSource<EventsModel>(
-        fetch: ({required int page, required int perPage}) async {
-          if (widget.mockEvents != null) {
-            return page == 1 ? widget.mockEvents! : <EventsModel>[];
-          }
-          return fetchEventsPage(
-            ref,
-            key,
-            PageRequest<EventsModel>(
-              page: page,
-              pageSize: perPage,
-              refresh: false,
-            ),
-          );
-        },
-      ),
-      idOf: (final ActorEventSection s) => s.itemId,
-      transform: (final List<EventsModel> rawItems) {
-        final bool compoundActions =
-            ref.read(settings_events.eventsProvider).compoundActions;
-        final GroupingStrategy<EventsModel, Actor, SemanticAction> strategy =
-            compoundActions
+          source: PageNumberForwardSource<EventsModel>(
+            fetch: ({required int page, required int perPage}) async {
+              if (widget.mockEvents != null) {
+                return page == 1 ? widget.mockEvents! : <EventsModel>[];
+              }
+              return fetchEventsPage(
+                ref,
+                key,
+                PageRequest<EventsModel>(
+                  page: page,
+                  pageSize: perPage,
+                  refresh: false,
+                ),
+              );
+            },
+          ),
+          idOf: (final ActorEventSection s) => s.itemId,
+          transform: (final List<EventsModel> rawItems) {
+            final bool compoundActions = ref
+                .read(settings_events.eventsProvider)
+                .compoundActions;
+            final GroupingStrategy<EventsModel, Actor, SemanticAction>
+            strategy = compoundActions
                 ? EventGroupingStrategy()
                 : StandaloneEventGroupingStrategy(EventGroupingStrategy());
-        final CompoundGrouper<EventsModel, Actor, SemanticAction> grouper =
-            CompoundGrouper(strategy);
-        final List<EventsModel> filteredItems = _filterEvents(rawItems);
-        return grouper.group(events: filteredItems).sections;
-      },
-      boundaryMerger:
-          (final ActorEventSection prev, final ActorEventSection next) {
-        final bool compoundActions =
-            ref.read(settings_events.eventsProvider).compoundActions;
-        final GroupingStrategy<EventsModel, Actor, SemanticAction> strategy =
-            compoundActions
-                ? EventGroupingStrategy()
-                : StandaloneEventGroupingStrategy(EventGroupingStrategy());
-        final CompoundGrouper<EventsModel, Actor, SemanticAction> grouper =
-            CompoundGrouper(strategy);
-        return grouper.tryMergeBoundary(prev, next);
-      },
-      pageSize: 10,
-    );
+            final CompoundGrouper<EventsModel, Actor, SemanticAction> grouper =
+                CompoundGrouper(strategy);
+            final List<EventsModel> filteredItems = _filterEvents(rawItems);
+            return grouper.group(events: filteredItems).sections;
+          },
+          boundaryMerger:
+              (final ActorEventSection prev, final ActorEventSection next) {
+                final bool compoundActions = ref
+                    .read(settings_events.eventsProvider)
+                    .compoundActions;
+                final GroupingStrategy<EventsModel, Actor, SemanticAction>
+                strategy = compoundActions
+                    ? EventGroupingStrategy()
+                    : StandaloneEventGroupingStrategy(EventGroupingStrategy());
+                final CompoundGrouper<EventsModel, Actor, SemanticAction>
+                grouper = CompoundGrouper(strategy);
+                return grouper.tryMergeBoundary(prev, next);
+              },
+          pageSize: 10,
+        );
     widget.refreshRegistrar?.value = () => _paginationController.refresh();
   }
 
@@ -186,24 +196,24 @@ class _EventsState extends ConsumerState<Events> {
     final ActorEventSection group,
   ) {
     final bool shouldShowUserHeader = widget.specificUser == null;
-    
+
     if (!shouldShowUserHeader) {
       return SliverList(
-        delegate: SliverChildBuilderDelegate(
-          (final BuildContext context, final int index) {
-            final Compound<SemanticAction, EventsModel> compound =
-                group.compounds[index];
-            final bool isFirstCompound = index == 0;
-            final bool isLastCompound = index == group.compounds.length - 1;
-            return _buildTimelineEventFromCompound(
-              compound,
-              context,
-              isFirstInUserGroup: isFirstCompound,
-              isLastInUserGroup: isLastCompound,
-            );
-          },
-          childCount: group.compounds.length,
-        ),
+        delegate: SliverChildBuilderDelegate((
+          final BuildContext context,
+          final int index,
+        ) {
+          final Compound<SemanticAction, EventsModel> compound =
+              group.compounds[index];
+          final bool isFirstCompound = index == 0;
+          final bool isLastCompound = index == group.compounds.length - 1;
+          return _buildTimelineEventFromCompound(
+            compound,
+            context,
+            isFirstInUserGroup: isFirstCompound,
+            isLastInUserGroup: isLastCompound,
+          );
+        }, childCount: group.compounds.length),
       );
     }
     return PinnedGlassHeader(
@@ -214,28 +224,32 @@ class _EventsState extends ConsumerState<Events> {
         context,
         restingPadding: EdgeInsets.zero,
         restingInnerPadding: const EdgeInsets.only(top: 4),
-        floatingInnerPadding:
-            const EdgeInsets.symmetric(vertical: 2, horizontal: 8),
-        floatingPadding:
-            context.glassPill.sectionFloatPadding.copyWith(left: 0, right: 0),
+        floatingInnerPadding: const EdgeInsets.symmetric(
+          vertical: 2,
+          horizontal: 8,
+        ),
+        floatingPadding: context.glassPill.sectionFloatPadding.copyWith(
+          left: 0,
+          right: 0,
+        ),
         restingColor: Theme.of(context).scaffoldBackgroundColor,
       ),
       sliver: SliverList(
-        delegate: SliverChildBuilderDelegate(
-          (final BuildContext context, final int index) {
-            final Compound<SemanticAction, EventsModel> compound =
-                group.compounds[index];
-            final bool isFirstCompound = index == 0;
-            final bool isLastCompound = index == group.compounds.length - 1;
-            return _buildTimelineEventFromCompound(
-              compound,
-              context,
-              isFirstInUserGroup: isFirstCompound,
-              isLastInUserGroup: isLastCompound,
-            );
-          },
-          childCount: group.compounds.length,
-        ),
+        delegate: SliverChildBuilderDelegate((
+          final BuildContext context,
+          final int index,
+        ) {
+          final Compound<SemanticAction, EventsModel> compound =
+              group.compounds[index];
+          final bool isFirstCompound = index == 0;
+          final bool isLastCompound = index == group.compounds.length - 1;
+          return _buildTimelineEventFromCompound(
+            compound,
+            context,
+            isFirstInUserGroup: isFirstCompound,
+            isLastInUserGroup: isLastCompound,
+          );
+        }, childCount: group.compounds.length),
       ),
     );
   }
@@ -247,122 +261,171 @@ class _EventsState extends ConsumerState<Events> {
 
     return ValueListenableBuilder<PaginationState<ActorEventSection>>(
       valueListenable: _paginationController.state,
-      builder: (final BuildContext context,
-          final PaginationState<ActorEventSection> state, final _) {
-        final List<ActorEventSection> items = state.items;
-        final PaginationPhase phase = state.phase;
-        final bool isLoadingFirst =
-            (phase is LoadingForward || phase is Refreshing) && items.isEmpty;
+      builder:
+          (
+            final BuildContext context,
+            final PaginationState<ActorEventSection> state,
+            final _,
+          ) {
+            final List<ActorEventSection> items = state.items;
+            final PaginationPhase phase = state.phase;
+            final bool isLoadingFirst =
+                (phase is LoadingForward || phase is Refreshing) &&
+                items.isEmpty;
 
-        if (isLoadingFirst) {
-          return SliverPadding(
-            padding: _paddingBuilder(context),
-            sliver: SliverToBoxAdapter(
-              child: ListLoadingShimmers.timeline(
-                context,
-                showUserHeaders: true,
-                padding: EdgeInsets.only(
-                  top: sp.itemSpacing,
-                  left: sp.listInset.left,
-                  right: sp.listInset.right,
-                ),
-              ),
-            ),
-          );
-        }
-
-        final List<Widget> slivers = <Widget>[];
-        for (var i = 0; i < items.length; i++) {
-          final EdgeInsets padding = _paddingBuilder(context);
-          final bool isFirst = i == 0;
-          final bool isLast = i == items.length - 1;
-          slivers.add(
-            SliverPadding(
-              padding: EdgeInsets.only(
-                left: padding.left,
-                right: padding.right,
-                top: isFirst ? padding.top : 0,
-                bottom: isLast && !state.hasMoreForward ? padding.bottom : 0,
-              ),
-              sliver: _buildGroupSliver(context, items[i]),
-            ),
-          );
-        }
-
-        if (state.hasMoreForward) {
-          switch (phase) {
-            case LoadingForward() || Refreshing():
-              slivers.add(
-                SliverToBoxAdapter(
-                  child: Padding(
+            if (isLoadingFirst) {
+              return SliverPadding(
+                padding: _paddingBuilder(context),
+                sliver: SliverToBoxAdapter(
+                  child: ListLoadingShimmers.timeline(
+                    context,
+                    showUserHeaders: true,
                     padding: EdgeInsets.only(
+                      top: sp.itemSpacing,
                       left: sp.listInset.left,
                       right: sp.listInset.right,
-                      bottom: 16,
-                    ),
-                    child: ListLoadingShimmers.timeline(
-                      context,
-                      showUserHeaders: true,
                     ),
                   ),
                 ),
               );
-              break;
-            case Failed(:final error, :final direction):
-              if (direction == FetchDirection.forward) {
-                slivers.add(
-                  SliverToBoxAdapter(
-                    child: Padding(
-                      padding: context.spacing.pagePadding,
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: <Widget>[
-                          Text(
-                            error.toString(),
-                            style: Theme.of(context).textTheme.bodySmall,
-                            textAlign: TextAlign.center,
-                          ),
-                          context.spacing.itemGap,
-                          TextButton(
-                            onPressed: () =>
-                                _paginationController.fetchForward(),
-                            child: const Text('Retry'),
-                          ),
-                        ],
+            }
+
+            if (items.isEmpty && phase is Idle && !state.hasMoreForward) {
+              return SliverFillRemaining(
+                hasScrollBody: false,
+                child: Center(
+                  child: Padding(
+                    padding: context.spacing.emptyStatePadding,
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: <Widget>[
+                        Icon(
+                          Icons.dynamic_feed_outlined,
+                          size: 48,
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
+                        ),
+                        context.spacing.sectionGap,
+                        Text(
+                          'No recent activity',
+                          style: Theme.of(context).textTheme.titleMedium,
+                        ),
+                        context.spacing.itemGap,
+                        const Text(
+                          'Activity from people and repositories you follow will appear here.',
+                          textAlign: TextAlign.center,
+                        ),
+                        context.spacing.sectionGap,
+                        OutlinedButton.icon(
+                          onPressed: () =>
+                              unawaited(_paginationController.refresh()),
+                          icon: const Icon(Icons.refresh),
+                          label: const Text('Refresh'),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              );
+            }
+
+            final List<Widget> slivers = <Widget>[];
+            for (var i = 0; i < items.length; i++) {
+              final EdgeInsets padding = _paddingBuilder(context);
+              final bool isFirst = i == 0;
+              final bool isLast = i == items.length - 1;
+              slivers.add(
+                SliverPadding(
+                  padding: EdgeInsets.only(
+                    left: padding.left,
+                    right: padding.right,
+                    top: isFirst ? padding.top : 0,
+                    bottom: isLast && !state.hasMoreForward
+                        ? padding.bottom
+                        : 0,
+                  ),
+                  sliver: _buildGroupSliver(context, items[i]),
+                ),
+              );
+            }
+
+            if (state.hasMoreForward) {
+              switch (phase) {
+                case LoadingForward() || Refreshing():
+                  slivers.add(
+                    SliverToBoxAdapter(
+                      child: Padding(
+                        padding: EdgeInsets.only(
+                          left: sp.listInset.left,
+                          right: sp.listInset.right,
+                          bottom: 16,
+                        ),
+                        child: ListLoadingShimmers.timeline(
+                          context,
+                          showUserHeaders: true,
+                        ),
                       ),
                     ),
-                  ),
-                );
+                  );
+                  break;
+                case Failed(:final error, :final direction):
+                  if (direction == FetchDirection.forward) {
+                    slivers.add(
+                      SliverToBoxAdapter(
+                        child: Padding(
+                          padding: context.spacing.pagePadding,
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: <Widget>[
+                              Text(
+                                error.toString(),
+                                style: Theme.of(context).textTheme.bodySmall,
+                                textAlign: TextAlign.center,
+                              ),
+                              context.spacing.itemGap,
+                              TextButton(
+                                onPressed: () =>
+                                    _paginationController.fetchForward(),
+                                child: const Text('Retry'),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    );
+                  }
+                  break;
+                default:
+                  slivers.add(
+                    SliverToBoxAdapter(
+                      child: Padding(
+                        padding: EdgeInsets.only(
+                          left: sp.listInset.left,
+                          right: sp.listInset.right,
+                          bottom: 16,
+                        ),
+                        child: Center(
+                          child: OutlinedButton.icon(
+                            onPressed: () =>
+                                unawaited(_paginationController.fetchForward()),
+                            icon: const Icon(Icons.expand_more),
+                            label: const Text('Load more activity'),
+                          ),
+                        ),
+                      ),
+                    ),
+                  );
               }
-              break;
-            default:
+            } else if (items.isNotEmpty) {
               slivers.add(
-                SliverToBoxAdapter(
-                  child: Padding(
-                    padding: EdgeInsets.only(
-                      left: sp.listInset.left,
-                      right: sp.listInset.right,
-                      bottom: 16,
-                    ),
-                    child: ListLoadingShimmers.timeline(
-                      context,
-                      showUserHeaders: true,
-                    ),
-                  ),
+                SliverPadding(
+                  padding: EdgeInsets.only(bottom: sp.listInset.bottom),
+                  sliver: const SliverToBoxAdapter(child: SizedBox.shrink()),
                 ),
               );
-          }
-        } else if (items.isNotEmpty) {
-          slivers.add(
-            SliverPadding(
-              padding: EdgeInsets.only(bottom: sp.listInset.bottom),
-              sliver: const SliverToBoxAdapter(child: SizedBox.shrink()),
-            ),
-          );
-        }
+            }
 
-        return MultiSliver(children: slivers);
-      },
+            return MultiSliver(children: slivers);
+          },
     );
   }
 
@@ -385,10 +448,7 @@ class _EventsState extends ConsumerState<Events> {
         padding: const EdgeInsets.symmetric(vertical: 6),
         child: Row(
           children: <Widget>[
-            UserAvatar(
-              avatarUrl: actor.avatarUrl,
-              size: 24,
-            ),
+            UserAvatar(avatarUrl: actor.avatarUrl, size: 24),
             SizedBox(width: context.spacing.itemSpacing),
             Expanded(
               child: Text(
@@ -409,9 +469,8 @@ class _EventsState extends ConsumerState<Events> {
       TimelineIssueContent.fromCompound(data);
 
   /// Build PR-scoped compound card. All overrides come from [EventCompoundData].
-  Widget _buildPrCompoundCard(final EventCompoundData data) => _KeepAlive(
-        child: TimelinePullRequestContent.fromCompound(data),
-      );
+  Widget _buildPrCompoundCard(final EventCompoundData data) =>
+      _KeepAlive(child: TimelinePullRequestContent.fromCompound(data));
 
   /// Build repo-scoped compound card.
   /// Unified layout: repo card(s) first, then conditional annotation chips below.
@@ -447,18 +506,14 @@ class _EventsState extends ConsumerState<Events> {
         // Multi-target: show all repo cards (starred 3 repos, forked 2 repos, etc.)
         if (isMultiTarget)
           ...allRepoUrls.asMap().entries.map(
-                (final MapEntry<int, String> entry) => Padding(
-                  padding: const EdgeInsets.only(bottom: 6),
-                  child: RepoCardLoading(
-                    RepoRef.fromApiUrl(entry.value),
-                  ),
-                ),
-              )
+            (final MapEntry<int, String> entry) => Padding(
+              padding: const EdgeInsets.only(bottom: 6),
+              child: RepoCardLoading(RepoRef.fromApiUrl(entry.value)),
+            ),
+          )
         else
           // Single target: fork repo override or source repo
-          RepoCardLoading(
-            RepoRef.fromApiUrl(data.forkRepoUrl ?? repoUrl),
-          ),
+          RepoCardLoading(RepoRef.fromApiUrl(data.forkRepoUrl ?? repoUrl)),
 
         // Unified branch context (push/create/delete, inline commit expand)
         if (data.branches.isNotEmpty || pushCluster != null)
@@ -576,8 +631,9 @@ class _EventsState extends ConsumerState<Events> {
       CompoundScope.unknown => _buildRepoCompoundCard(extractedData, compound),
     };
 
-    final bool useTimelineView =
-        ref.read(settings_events.eventsProvider).useTimelineView;
+    final bool useTimelineView = ref
+        .read(settings_events.eventsProvider)
+        .useTimelineView;
     if (!useTimelineView) {
       return Padding(
         padding: EdgeInsets.only(bottom: context.spacing.itemSpacing),
@@ -600,12 +656,12 @@ class _EventsState extends ConsumerState<Events> {
   /// Resolve a [GitHubActionVisual] from pre-extracted part action data.
   /// This is the sole bridge between extracted compound data and visual styles.
   static GitHubActionVisual _resolvePartVisual(
-          final PartActionData partAction) =>
-      GitHubVisualStyles.fromSemanticAction(
-        partAction.action,
-        payloadAction: partAction.payloadAction,
-        stateReason: partAction.stateReason,
-      );
+    final PartActionData partAction,
+  ) => GitHubVisualStyles.fromSemanticAction(
+    partAction.action,
+    payloadAction: partAction.payloadAction,
+    stateReason: partAction.stateReason,
+  );
 }
 
 class _KeepAlive extends StatefulWidget {

@@ -1,7 +1,10 @@
-import 'package:diohub/common/notifications/notification_service.dart';
+import 'dart:async';
+
+import 'package:auto_route/auto_route.dart';
 import 'package:diohub/providers/account/account_provider.dart';
 import 'package:diohub/providers/account/auth_provider.dart';
 import 'package:diohub/providers/database_providers.dart';
+import 'package:diohub/routes/router.gr.dart';
 import 'package:diohub/style/app_spacing.dart';
 import 'package:diohub/style/opacities.dart';
 import 'package:diohub_models/models/server_config.dart';
@@ -29,10 +32,7 @@ class ScopeGatedWidget extends ConsumerWidget {
     if (scopes.every(gate.hasScope)) {
       return child;
     }
-    return ScopeMissingPlaceholder(
-      scopes: scopes,
-      featureName: featureName,
-    );
+    return ScopeMissingPlaceholder(scopes: scopes, featureName: featureName);
   }
 }
 
@@ -53,8 +53,8 @@ class ScopeMissingPlaceholder extends ConsumerWidget {
     final spacing = context.spacing;
     final session = ref.watch(accountProvider).value;
     final authMethod = session?.activeAuthMethod;
-    final serverConfig = session?.activeAccountModel?.serverConfig ??
-        ServerConfig.gitHubDotCom;
+    final serverConfig =
+        session?.activeAccountModel?.serverConfig ?? ServerConfig.gitHubDotCom;
 
     final gate = ref.watch(scopeGateProvider);
     final missingScopes = scopes.where((s) => !gate.hasScope(s)).toList();
@@ -98,7 +98,8 @@ class ScopeMissingPlaceholder extends ConsumerWidget {
             ),
             SizedBox(height: spacing.sectionSpacing),
             FilledButton.icon(
-              onPressed: () => _handleUpdatePermissions(context, authMethod, serverConfig),
+              onPressed: () =>
+                  _handleUpdatePermissions(context, authMethod, serverConfig),
               icon: const Icon(Icons.edit),
               label: Text(
                 authMethod == AuthMethod.pat
@@ -124,17 +125,11 @@ class ScopeMissingPlaceholder extends ConsumerWidget {
         await launchUrl(uri, mode: LaunchMode.externalApplication);
       }
     } else {
-      // OAuth: trigger inline re-auth flow
+      // Device Flow: show the shared auth route while polling GitHub.
       final container = ProviderScope.containerOf(context);
-      try {
-        await container.read(authProvider.notifier).loginWithBrowser();
-      } on Exception catch (e) {
-        if (context.mounted) {
-          container
-              .read(notificationServiceProvider)
-              .error('Re-authentication failed: $e');
-        }
-      }
+      container.read(authProvider.notifier).reset();
+      unawaited(container.read(authProvider.notifier).requestDeviceCode());
+      await AutoRouter.of(context).push(const AuthRoute());
     }
   }
 }

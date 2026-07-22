@@ -3,6 +3,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 class _PendingDeepLinkNotifier extends Notifier<Uri?> {
   @override
   Uri? build() => null;
+
+  void set(final Uri uri) {
+    state = uri;
+  }
+
+  void clear() {
+    state = null;
+  }
 }
 
 /// Pending deep link (cold start or in-app). Set when app is launched via
@@ -10,5 +18,5 @@ class _PendingDeepLinkNotifier extends Notifier<Uri?> {
 /// [RootApp] and cleared after navigation.
 final pendingDeepLinkProvider =
     NotifierProvider<_PendingDeepLinkNotifier, Uri?>(
-  _PendingDeepLinkNotifier.new,
-);
+      _PendingDeepLinkNotifier.new,
+    );

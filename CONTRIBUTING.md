@@ -51,12 +51,12 @@ Create a `.env.json` file in the project root:
 cp .env.example .env.json
 ```
 
-Edit `.env.json` and fill in your values (get GitHub OAuth credentials from [GitHub Developer Settings](https://github.com/settings/developers)):
+Edit `.env.json` and fill in any values you want to override. GitHub sign-in
+uses Device Flow, so only the public Client ID is needed:
 
 ```json
 {
   "GITHUB_CLIENT_ID": "your_client_id",
-  "GITHUB_CLIENT_SECRET": "your_client_secret",
   "SENTRY_DSN": "",
   "SENTRY_AUTH_TOKEN": "",
   "SLACK_CLIENT_ID": "",
@@ -64,7 +64,8 @@ Edit `.env.json` and fill in your values (get GitHub OAuth credentials from [Git
 }
 ```
 
-Note: Leave empty strings for services you don't need. The app gracefully handles missing credentials.
+Enable Device Flow for a custom OAuth App. A callback URL and Client Secret are
+not required for sign-in. Leave empty strings for services you do not need.
 
 6. **Run code generation after source changes**
 

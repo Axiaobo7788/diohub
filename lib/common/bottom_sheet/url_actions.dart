@@ -5,14 +5,12 @@ import 'package:diohub/common/clipboard/clipboard_service.dart';
 import 'package:diohub/common/const/app_info.dart';
 import 'package:diohub/common/misc/collapsible_action_buttons.dart';
 import 'package:diohub/common/popup/show_popup_menu.dart';
+import 'package:diohub/utils/open_in_app_browser.dart';
 import 'package:diohub_models/models/navigable.dart';
 import 'package:diohub_models/models/unrecognized_destination.dart';
-import 'package:diohub/utils/open_in_app_browser.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import 'package:flutter_material_design_icons/flutter_material_design_icons.dart';
 import 'package:share_plus/share_plus.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 class URLActions {
   URLActions({
@@ -76,13 +74,13 @@ class URLActions {
       ];
 
   IconData get _getOpenIcon => switch (uri.scheme) {
-        'mailto' => MdiIcons.email,
-        _ => MdiIcons.openInNew,
-      };
+    'mailto' => MdiIcons.email,
+    _ => MdiIcons.openInNew,
+  };
   String get _getOpenText => switch (uri.scheme) {
-        'mailto' => 'Mail',
-        _ => 'Open${_isDeepLink ? ' in Browser' : ''}',
-      };
+    'mailto' => 'Mail',
+    _ => 'Open${_isDeepLink ? ' in Browser' : ''}',
+  };
 
   Future<void> openInApp(final BuildContext context) async {
     if (!_isDeepLink) {
@@ -109,13 +107,7 @@ class URLActions {
       );
       if (confirmed != true) return;
     }
-    if (await ChromeSafariBrowser.isAvailable()) {
-      await openInAppBrowser(uri);
-    } else if (await canLaunchUrl(uri)) {
-      await launchUrl(uri);
-    } else {
-      throw Exception('Cannot launch url');
-    }
+    await openInAppBrowser(uri);
   }
 
   Future<void> showMenu(final BuildContext context) async {

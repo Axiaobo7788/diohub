@@ -78,6 +78,3 @@ post_install do |installer|
     end
   end
 end
-
-# Modified AppAuth SDK with content-accept JSON header for GitHub OAuth.
-pod 'AppAuth', :git => 'https://github.com/NamanShergill/AppAuth-iOS.git', :branch => '2.0.0'

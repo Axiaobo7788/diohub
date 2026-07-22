@@ -4,9 +4,9 @@ import 'package:diohub/app/app_logger.dart';
 import 'package:diohub/providers/router_provider.dart';
 import 'package:diohub/providers/startup/app_startup_provider.dart';
 import 'package:diohub/routes/router.gr.dart';
+import 'package:diohub_premium_api/diohub_premium_api.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:diohub_premium_api/diohub_premium_api.dart';
 
 StackRouter autoRoute(final BuildContext context) => AutoRouter.of(context);
 
@@ -76,8 +76,8 @@ class AppRouter extends RootStackRouter {
 /// The single navigation authority for the entire app.
 ///
 /// Listens to [appStartupProvider] to drive all route-stack transitions.
-/// No splash-complete gate: on [StartupReady], navigate to [HomeRoute] immediately
-/// when on [LandingLoadingRoute] or [AuthRoute]. Framework handles route transition.
+/// No splash-complete gate: public and authenticated startup both navigate to
+/// [HomeRoute]. [AuthRoute] is replaced only after an explicit sign-in succeeds.
 class AppNavigationObserver extends NavigatorObserver {
   AppNavigationObserver(this._container) {
     _startupSub = _container.listen<AsyncValue<AppStartupState>>(
@@ -124,11 +124,8 @@ class AppNavigationObserver extends NavigatorObserver {
                 _deepLinkConsumed = false;
                 router.replaceAll(<PageRouteInfo>[LandingLoadingRoute()]);
               }
-            case StartupUnauthenticated():
-              // Stay on LandingLoadingRoute - auth UI rendered in-place
-              if (currentRoute != LandingLoadingRoute.name) {
-                router.replaceAll(<PageRouteInfo>[LandingLoadingRoute()]);
-              }
+            case StartupPublic():
+              _maybeNavigateToHome(router);
             case StartupError():
               if (currentRoute != LandingLoadingRoute.name) {
                 router.replaceAll(<PageRouteInfo>[LandingLoadingRoute()]);
@@ -152,20 +149,20 @@ class AppNavigationObserver extends NavigatorObserver {
     final AsyncValue<AppStartupState>? startup = _lastStartup;
     if (startup == null || startup is! AsyncData<AppStartupState>) return;
     final AppStartupState state = startup.value;
-    if (state is! StartupReady) return;
+    if (state is! StartupReady && state is! StartupPublic) return;
 
     final String currentRoute = router.current.name;
     if (currentRoute != LandingLoadingRoute.name &&
-        currentRoute != AuthRoute.name) {
+        (state is! StartupReady || currentRoute != AuthRoute.name)) {
       return;
     }
 
     Uri? pendingLink;
-    if (!_deepLinkConsumed) {
+    if (state is StartupReady && !_deepLinkConsumed) {
       _deepLinkConsumed = true;
       pendingLink = _container.read(pendingDeepLinkProvider);
       if (pendingLink != null) {
-        _container.read(pendingDeepLinkProvider.notifier).state = null;
+        _container.read(pendingDeepLinkProvider.notifier).clear();
       }
     }
 

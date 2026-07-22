@@ -1,7 +1,10 @@
 import 'package:diohub/app/env_config.dart';
 import 'package:diohub_models/models/server_config.dart';
 
-/// GitHub.com OAuth app credentials.
+/// GitHub.com Device Flow configuration.
+///
+/// The client ID is public. The optional client secret is never sent during
+/// Device Flow sign-in and is retained only for compatible token refresh flows.
 final OAuthConfig gitHubDotComOAuth = OAuthConfig(
   clientId: EnvConfig.gitHubClientId,
   clientSecret: EnvConfig.gitHubClientSecret,
@@ -10,7 +13,7 @@ final OAuthConfig gitHubDotComOAuth = OAuthConfig(
   deviceCodeEndpoint: 'https://github.com/login/device/code',
 );
 
-/// GitHub.com server config with OAuth credentials injected.
+/// GitHub.com server config with Device Flow endpoints injected.
 final ServerConfig gitHubDotComWithOAuth = ServerConfig(
   id: 'github.com',
   displayName: 'GitHub',

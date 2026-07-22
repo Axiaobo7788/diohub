@@ -33,8 +33,7 @@ void main() {
     });
 
     test('gitHubEnterprise strips trailing slash from hostUrl', () {
-      final config =
-          ServerConfig.gitHubEnterprise('https://ghes.company.com/');
+      final config = ServerConfig.gitHubEnterprise('https://ghes.company.com/');
       expect(config.webBaseUrl, 'https://ghes.company.com');
       expect(config.restBaseUrl, 'https://ghes.company.com/api/v3');
     });
@@ -74,8 +73,11 @@ void main() {
     });
 
     test('wikiRawUrl builds correct URI', () {
-      final uri =
-          ServerConfig.gitHubDotCom.wikiRawUrl('o', 'r', 'images/foo.png');
+      final uri = ServerConfig.gitHubDotCom.wikiRawUrl(
+        'o',
+        'r',
+        'images/foo.png',
+      );
       expect(
         uri.toString(),
         'https://raw.githubusercontent.com/wiki/o/r/images/foo.png',
@@ -90,11 +92,19 @@ void main() {
 
   group('OAuthConfig', () {
     test('gitHubDotCom has required endpoints', () {
-      expect(gitHubDotComOAuth.clientId, isA<String>());
-      expect(gitHubDotComOAuth.tokenEndpoint,
-          'https://github.com/login/oauth/access_token');
-      expect(gitHubDotComOAuth.authorizationEndpoint,
-          'https://github.com/login/oauth/authorize');
+      expect(gitHubDotComOAuth.clientId, isNotEmpty);
+      expect(
+        gitHubDotComOAuth.tokenEndpoint,
+        'https://github.com/login/oauth/access_token',
+      );
+      expect(
+        gitHubDotComOAuth.authorizationEndpoint,
+        'https://github.com/login/oauth/authorize',
+      );
+      expect(
+        gitHubDotComOAuth.deviceCodeEndpoint,
+        'https://github.com/login/device/code',
+      );
     });
 
     test('round-trips through toJson/fromJson', () {

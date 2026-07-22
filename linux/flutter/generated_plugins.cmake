@@ -6,7 +6,6 @@ list(APPEND FLUTTER_PLUGIN_LIST
   audioplayers_linux
   dynamic_color
   file_selector_linux
-  flutter_inappwebview_linux
   flutter_secure_storage_linux
   gtk
   sentry_flutter
