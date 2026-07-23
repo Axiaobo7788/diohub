@@ -1,7 +1,7 @@
 import 'package:diohub/common/search_overlay/filter_section_def.dart';
+import 'package:diohub/common/search_overlay/filter_localizations.dart';
 import 'package:diohub/common/search_overlay/search_filter_helpers.dart';
-import 'package:diohub_models/models/search/qualifier.dart';
-import 'package:diohub/models/search/qualifier_parser_registry.dart';
+import 'package:diohub/l10n/l10n.dart';
 import 'package:diohub_models/models/search/search_expression.dart';
 import 'package:diohub/models/search/search_scope.dart';
 import 'package:diohub/models/search/search_state.dart';
@@ -41,10 +41,16 @@ class DateRangePicker extends StatelessWidget {
           Padding(
             padding: const EdgeInsets.only(bottom: 8),
             child: Chip(
-              label: Text('${section.displayName}: $activeValue'),
+              label: Text(
+                '${localizedFilterSectionName(context, section)}: '
+                '$activeValue',
+              ),
               onDeleted: () {
-                final QualifierExpression? qe =
-                    findQualifierExpression(state, key, activeValue);
+                final QualifierExpression? qe = findQualifierExpression(
+                  state,
+                  key,
+                  activeValue,
+                );
                 if (qe != null) notifier.removeQualifier(qe);
               },
             ),
@@ -54,7 +60,7 @@ class DateRangePicker extends StatelessWidget {
           runSpacing: 4,
           children: <Widget>[
             ActionChip(
-              label: const Text('After...'),
+              label: Text(context.l10n.filterAfter),
               onPressed: () async {
                 final DateTime? date = await showDatePicker(
                   context: context,
@@ -63,17 +69,25 @@ class DateRangePicker extends StatelessWidget {
                 );
                 if (date != null) {
                   if (activeValue != null) {
-                    final QualifierExpression? qe =
-                        findQualifierExpression(state, key, activeValue);
+                    final QualifierExpression? qe = findQualifierExpression(
+                      state,
+                      key,
+                      activeValue,
+                    );
                     if (qe != null) notifier.removeQualifier(qe);
                   }
                   addQualifierFromValue(
-                      notifier, state, section, key, '>${_formatDate(date)}');
+                    notifier,
+                    state,
+                    section,
+                    key,
+                    '>${_formatDate(date)}',
+                  );
                 }
               },
             ),
             ActionChip(
-              label: const Text('Before...'),
+              label: Text(context.l10n.filterBefore),
               onPressed: () async {
                 final DateTime? date = await showDatePicker(
                   context: context,
@@ -82,17 +96,25 @@ class DateRangePicker extends StatelessWidget {
                 );
                 if (date != null) {
                   if (activeValue != null) {
-                    final QualifierExpression? qe =
-                        findQualifierExpression(state, key, activeValue);
+                    final QualifierExpression? qe = findQualifierExpression(
+                      state,
+                      key,
+                      activeValue,
+                    );
                     if (qe != null) notifier.removeQualifier(qe);
                   }
                   addQualifierFromValue(
-                      notifier, state, section, key, '<${_formatDate(date)}');
+                    notifier,
+                    state,
+                    section,
+                    key,
+                    '<${_formatDate(date)}',
+                  );
                 }
               },
             ),
             ActionChip(
-              label: const Text('Range...'),
+              label: Text(context.l10n.filterRange),
               onPressed: () async {
                 final DateTimeRange? range = await showDateRangePicker(
                   context: context,
@@ -101,8 +123,11 @@ class DateRangePicker extends StatelessWidget {
                 );
                 if (range != null) {
                   if (activeValue != null) {
-                    final QualifierExpression? qe =
-                        findQualifierExpression(state, key, activeValue);
+                    final QualifierExpression? qe = findQualifierExpression(
+                      state,
+                      key,
+                      activeValue,
+                    );
                     if (qe != null) notifier.removeQualifier(qe);
                   }
                   addQualifierFromValue(

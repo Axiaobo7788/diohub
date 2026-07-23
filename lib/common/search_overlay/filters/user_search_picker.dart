@@ -1,7 +1,7 @@
 import 'package:diohub/common/search_overlay/filter_section_def.dart';
+import 'package:diohub/common/search_overlay/filter_localizations.dart';
 import 'package:diohub/common/search_overlay/search_filter_helpers.dart';
-import 'package:diohub_models/models/search/qualifier.dart';
-import 'package:diohub/models/search/qualifier_parser_registry.dart';
+import 'package:diohub/l10n/l10n.dart';
 import 'package:diohub_models/models/search/search_expression.dart';
 import 'package:diohub/models/search/search_scope.dart';
 import 'package:diohub/models/search/search_state.dart';
@@ -64,8 +64,11 @@ class _UserSearchPickerState extends ConsumerState<UserSearchPicker> {
             spacing: 8,
             runSpacing: 4,
             children: activeValues.map((String v) {
-              final QualifierExpression? qe =
-                  findQualifierExpression(widget.state, key, v);
+              final QualifierExpression? qe = findQualifierExpression(
+                widget.state,
+                key,
+                v,
+              );
               return Chip(
                 label: Text(v),
                 onDeleted: qe != null
@@ -78,7 +81,9 @@ class _UserSearchPickerState extends ConsumerState<UserSearchPicker> {
         TextField(
           controller: _controller,
           decoration: InputDecoration(
-            hintText: 'Search ${widget.section.displayName.toLowerCase()}...',
+            hintText: context.l10n.filterSearch(
+              localizedFilterSectionName(context, widget.section),
+            ),
             isDense: true,
             suffixIcon: IconButton(
               icon: const Icon(Icons.add_rounded, size: 20),

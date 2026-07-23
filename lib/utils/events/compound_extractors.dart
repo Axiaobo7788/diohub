@@ -20,8 +20,8 @@ int commitCountFromEvents(final List<EventsModel> events) => events
 enum BranchStatus { created, deleted, normal }
 
 /// Scope of a compound group, determined by the first event's payload.
-/// Invariant: all parts in a compound share the same (repoId, number) tuple,
-/// so checking the first event is safe.
+/// Invariant: all parts in a compound share the same repository target key and
+/// issue/PR number, so checking the first event is safe.
 enum CompoundScope { repo, issue, pullRequest, unknown }
 
 /// Branch highlight for repository card display.
@@ -105,7 +105,7 @@ extension EventCompoundExtractors on EventCompound {
 
   /// Determines the scope of this compound.
   /// Safe to check only the first event because EventTarget guarantees
-  /// all parts in a compound share the same (repoId, number) tuple.
+  /// all parts in a compound share the same repository target and number.
   CompoundScope get scope {
     if (parts.isEmpty) return CompoundScope.unknown;
     final EventsModel firstEvent = parts.first.events.first;

@@ -12,6 +12,7 @@ import 'package:diohub_graphql/queries/repositories/watchers.graphql.dart';
 import 'package:diohub_models/models/entity_ref.dart';
 import 'package:diohub_models/models/repositories/secret_scanning_alert.dart';
 import 'package:diohub_models/models/pagination/paginated_result.dart';
+import 'package:diohub/models/repository_contributor_preview.dart';
 import 'package:diohub/services/base/base_service.dart';
 
 /// Service for repository paginated list operations:
@@ -23,6 +24,36 @@ import 'package:diohub/services/base/base_service.dart';
 /// - Secret scanning alerts (REST pagination)
 class RepoListService extends EntityService<RepoRef> {
   RepoListService(super.apiClient, super.ref);
+
+  /// Lightweight contributor preview for the Repository Code sidebar.
+  ///
+  /// This intentionally uses `/contributors`, not `/stats/contributors`:
+  /// the latter returns weekly statistics and is substantially heavier.
+  Future<List<RepositoryContributorPreview>> fetchContributorPreview({
+    final int limit = 12,
+    final bool refresh = false,
+  }) async {
+    final Response<dynamic> response = await rest.get<dynamic>(
+      '${ref.apiPath}/contributors',
+      queryParameters: <String, dynamic>{'per_page': limit, 'page': 1},
+      refreshCache: refresh,
+    );
+    final List<Object?> raw = extractListFromResponse<Object?>(response);
+    return <RepositoryContributorPreview>[
+      for (final Object? value in raw)
+        if (value case final Map<String, dynamic> json)
+          if (json['login'] case final String login)
+            RepositoryContributorPreview(
+              login: login,
+              avatarUrl: json['avatar_url']?.toString(),
+              contributions: switch (json['contributions']) {
+                final int count => count,
+                final num count => count.toInt(),
+                _ => 0,
+              },
+            ),
+    ];
+  }
 
   // ============================================================================
   // Discussions

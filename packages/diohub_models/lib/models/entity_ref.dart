@@ -314,8 +314,17 @@ abstract class RepoRef extends EntityRef with _$RepoRef {
   factory RepoRef.fromPrBranchRepo(final PrBranchRepo repo) =>
       RepoRef(owner: repo.owner.login, name: repo.name);
 
-  factory RepoRef.fromEventRepo(final EventRepo repo) =>
-      RepoRef.fromFullName(repo.name);
+  factory RepoRef.fromEventRepo(final EventRepo repo) {
+    final String? fullName = repo.name?.trim();
+    if (fullName == null || fullName.isEmpty) {
+      throw ArgumentError.value(
+        repo.name,
+        'repo.name',
+        'Cannot create a repository reference from a redacted event repo',
+      );
+    }
+    return RepoRef.fromFullName(fullName);
+  }
 
   factory RepoRef.fromMinimalRepository(final MinimalRepository repo) =>
       RepoRef.fromFullName(repo.fullName);

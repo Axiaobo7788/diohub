@@ -192,14 +192,15 @@ class TimelineShimmerList extends StatelessWidget {
   }
 
   Widget _buildWithUserHeaders(final BuildContext context) {
-    // When showing user headers, group items into user groups
-    // Show 3-4 user groups with varying items each
-    final List<int> userGroups = <int>[
-      2, // First user has 2 items
-      3, // Second user has 3 items
-      2, // Third user has 2 items
-      1, // Fourth user has 1 item
-    ];
+    // Keep the requested skeleton count bounded. The previous hard-coded
+    // groups rendered eight large cards even when callers requested fewer.
+    final List<int> userGroups = <int>[];
+    int remaining = itemCount;
+    while (remaining > 0) {
+      final int groupSize = remaining >= 2 ? 2 : 1;
+      userGroups.add(groupSize);
+      remaining -= groupSize;
+    }
 
     final List<Widget> children = <Widget>[];
 

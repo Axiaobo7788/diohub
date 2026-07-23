@@ -27,6 +27,7 @@ import 'package:diohub/common/timeline_content/timeline_issue_content.dart';
 import 'package:diohub/common/timeline_content/timeline_pull_request_content.dart';
 import 'package:diohub/common/utils/github_visual_styles.dart';
 import 'package:diohub/common/wrappers/sticky_glass_header.dart';
+import 'package:diohub/l10n/l10n.dart';
 import 'package:diohub_models/models/entity_ref.dart';
 import 'package:diohub_models/models/events/events_model.dart';
 import 'package:diohub/routes/navigable_actions.dart';
@@ -38,15 +39,17 @@ import 'package:diohub/utils/compound_grouping.dart';
 import 'package:diohub/utils/events/compound_data.dart';
 import 'package:diohub/utils/events/compound_extractors.dart';
 import 'package:diohub/utils/events/event_action.dart';
+import 'package:diohub/utils/events/event_texts.dart';
 import 'package:diohub/utils/events/semantic_interpreter.dart';
 import 'package:diohub/utils/pagination/event_grouping_reducer.dart';
 import 'package:diohub/utils/pagination/infinite_pagination_data_handler.dart';
 import 'package:diohub/utils/utils.dart';
-import 'package:flutter/foundation.dart' show ValueNotifier;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_sticky_header/src/widgets/sliver_sticky_header.dart';
 import 'package:sliver_tools/sliver_tools.dart';
+
+typedef ActivityLoadMoreCallback = Future<bool> Function();
 
 class Events extends ConsumerStatefulWidget {
   const Events({
@@ -55,6 +58,7 @@ class Events extends ConsumerStatefulWidget {
     this.orgLogin,
     this.mockEvents,
     this.refreshRegistrar,
+    this.loadMoreRegistrar,
     super.key,
   });
 
@@ -64,6 +68,7 @@ class Events extends ConsumerStatefulWidget {
   const Events.mock(
     final List<EventsModel> events, {
     this.refreshRegistrar,
+    this.loadMoreRegistrar,
     super.key,
   }) : privateEvents = false,
        specificUser = null,
@@ -82,6 +87,11 @@ class Events extends ConsumerStatefulWidget {
   /// When non-null, the widget registers its refresh callback here so
   /// pull-to-refresh (e.g. [SliverBuilderBody.refreshRegistrar]) can trigger it.
   final ValueNotifier<Future<void> Function()?>? refreshRegistrar;
+
+  /// Registers a callback that fetches the next page and reports whether
+  /// another page may still be available. The enclosing scroll view uses this
+  /// to prefetch before the user reaches the end of the feed.
+  final ValueNotifier<ActivityLoadMoreCallback?>? loadMoreRegistrar;
 
   /// Whether to apply top padding. Set to false when tab bar is visible.
   // final bool hasTopPadding;
@@ -116,6 +126,21 @@ class _EventsState extends ConsumerState<Events> {
 
   late final PaginationController<EventsModel, ActorEventSection>
   _paginationController;
+
+  Future<bool> _loadMore() async {
+    final PaginationState<ActorEventSection> before =
+        _paginationController.state.value;
+    if (!before.hasMoreForward ||
+        before.phase is LoadingForward ||
+        before.phase is Refreshing ||
+        before.phase is Failed) {
+      return false;
+    }
+    await _paginationController.fetchForward();
+    final PaginationState<ActorEventSection> after =
+        _paginationController.state.value;
+    return after.hasMoreForward && after.phase is! Failed;
+  }
 
   @override
   void initState() {
@@ -173,13 +198,28 @@ class _EventsState extends ConsumerState<Events> {
           pageSize: 10,
         );
     widget.refreshRegistrar?.value = () => _paginationController.refresh();
+    widget.loadMoreRegistrar?.value = _loadMore;
   }
 
   @override
   void dispose() {
     widget.refreshRegistrar?.value = null;
+    widget.loadMoreRegistrar?.value = null;
     _paginationController.dispose();
     super.dispose();
+  }
+
+  @override
+  void didUpdateWidget(covariant final Events oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.refreshRegistrar != widget.refreshRegistrar) {
+      oldWidget.refreshRegistrar?.value = null;
+      widget.refreshRegistrar?.value = () => _paginationController.refresh();
+    }
+    if (oldWidget.loadMoreRegistrar != widget.loadMoreRegistrar) {
+      oldWidget.loadMoreRegistrar?.value = null;
+      widget.loadMoreRegistrar?.value = _loadMore;
+    }
   }
 
   EdgeInsets _paddingBuilder(final BuildContext context) {
@@ -279,6 +319,7 @@ class _EventsState extends ConsumerState<Events> {
                 sliver: SliverToBoxAdapter(
                   child: ListLoadingShimmers.timeline(
                     context,
+                    itemCount: 3,
                     showUserHeaders: true,
                     padding: EdgeInsets.only(
                       top: sp.itemSpacing,
@@ -306,12 +347,12 @@ class _EventsState extends ConsumerState<Events> {
                         ),
                         context.spacing.sectionGap,
                         Text(
-                          'No recent activity',
+                          context.l10n.activityNoRecent,
                           style: Theme.of(context).textTheme.titleMedium,
                         ),
                         context.spacing.itemGap,
-                        const Text(
-                          'Activity from people and repositories you follow will appear here.',
+                        Text(
+                          context.l10n.activityNoRecentBody,
                           textAlign: TextAlign.center,
                         ),
                         context.spacing.sectionGap,
@@ -319,7 +360,7 @@ class _EventsState extends ConsumerState<Events> {
                           onPressed: () =>
                               unawaited(_paginationController.refresh()),
                           icon: const Icon(Icons.refresh),
-                          label: const Text('Refresh'),
+                          label: Text(context.l10n.activityRefresh),
                         ),
                       ],
                     ),
@@ -357,11 +398,14 @@ class _EventsState extends ConsumerState<Events> {
                         padding: EdgeInsets.only(
                           left: sp.listInset.left,
                           right: sp.listInset.right,
-                          bottom: 16,
+                          top: sp.itemSpacing,
+                          bottom: sp.sectionSpacing,
                         ),
-                        child: ListLoadingShimmers.timeline(
-                          context,
-                          showUserHeaders: true,
+                        child: const Center(
+                          child: SizedBox.square(
+                            dimension: 24,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          ),
                         ),
                       ),
                     ),
@@ -377,7 +421,9 @@ class _EventsState extends ConsumerState<Events> {
                             mainAxisSize: MainAxisSize.min,
                             children: <Widget>[
                               Text(
-                                error.toString(),
+                                context.l10n.activityLoadMoreError(
+                                  error.toString(),
+                                ),
                                 style: Theme.of(context).textTheme.bodySmall,
                                 textAlign: TextAlign.center,
                               ),
@@ -385,7 +431,7 @@ class _EventsState extends ConsumerState<Events> {
                               TextButton(
                                 onPressed: () =>
                                     _paginationController.fetchForward(),
-                                child: const Text('Retry'),
+                                child: Text(context.l10n.commonRetry),
                               ),
                             ],
                           ),
@@ -396,21 +442,10 @@ class _EventsState extends ConsumerState<Events> {
                   break;
                 default:
                   slivers.add(
-                    SliverToBoxAdapter(
-                      child: Padding(
-                        padding: EdgeInsets.only(
-                          left: sp.listInset.left,
-                          right: sp.listInset.right,
-                          bottom: 16,
-                        ),
-                        child: Center(
-                          child: OutlinedButton.icon(
-                            onPressed: () =>
-                                unawaited(_paginationController.fetchForward()),
-                            icon: const Icon(Icons.expand_more),
-                            label: const Text('Load more activity'),
-                          ),
-                        ),
+                    const SliverToBoxAdapter(
+                      child: SizedBox(
+                        key: ValueKey<String>('activity-prefetch-sentinel'),
+                        height: 48,
                       ),
                     ),
                   );
@@ -483,15 +518,30 @@ class _EventsState extends ConsumerState<Events> {
     final EventCompoundData data,
     final EventCompound compound,
   ) {
-    final String? repoUrl = data.repoUrl;
-    if (repoUrl == null) return const SizedBox.shrink();
+    // Fork events can outlive their source repository. In that case GitHub
+    // returns repo: {}, while payload.forkee still identifies the visible
+    // fork. Prefer the fork target for the card and retain the source URL for
+    // source-only operations such as branch context.
+    final String? sourceRepoUrl = data.repoUrl;
 
-    // Collect unique repo URLs from all events (for cross-target compounds).
+    // Collect unique displayable repo URLs from all events (for cross-target
+    // compounds such as "forked 2 repositories").
     final List<String> allRepoUrls = compound.allEvents
-        .map((final EventsModel e) => e.repo.url)
+        .map(
+          (final EventsModel e) => e.type == EventsType.ForkEvent
+              ? (e.payload.forkee?.url ?? e.repo.url)
+              : e.repo.url,
+        )
         .whereType<String>()
         .toSet()
         .toList();
+
+    final String? displayRepoUrl = allRepoUrls.isNotEmpty
+        ? allRepoUrls.first
+        : (data.forkRepoUrl ?? sourceRepoUrl);
+    if (displayRepoUrl == null) {
+      return const SizedBox.shrink();
+    }
 
     final bool isMultiTarget = allRepoUrls.length > 1;
 
@@ -512,17 +562,17 @@ class _EventsState extends ConsumerState<Events> {
             ),
           )
         else
-          // Single target: fork repo override or source repo
-          RepoCardLoading(RepoRef.fromApiUrl(data.forkRepoUrl ?? repoUrl)),
+          RepoCardLoading(RepoRef.fromApiUrl(displayRepoUrl)),
 
         // Unified branch context (push/create/delete, inline commit expand)
-        if (data.branches.isNotEmpty || pushCluster != null)
+        if ((data.branches.isNotEmpty || pushCluster != null) &&
+            sourceRepoUrl != null)
           Padding(
             padding: EdgeInsets.only(top: spacing.itemSpacing),
             child: UnifiedBranchContext(
               data: data,
               compound: compound,
-              repoUrl: repoUrl,
+              repoUrl: sourceRepoUrl,
             ),
           ),
 
@@ -600,7 +650,7 @@ class _EventsState extends ConsumerState<Events> {
     required final bool isLastInUserGroup,
   }) {
     final EventAction action = interpret(compound);
-    final String actionText = action.displayText;
+    final String actionText = _localizedActionText(context, action);
 
     // Extract once, use everywhere
     final EventCompoundData extractedData = compound.toCompoundData();
@@ -652,6 +702,77 @@ class _EventsState extends ConsumerState<Events> {
       child: child,
     );
   }
+
+  String _localizedActionText(
+    final BuildContext context,
+    final EventAction action,
+  ) => switch (action) {
+    StateChangeAction(:final verb, :final noun, :final count) =>
+      EventTexts.localizedStateChange(
+        l10n: context.l10n,
+        verb: verb,
+        noun: noun,
+        count: count,
+      ),
+    PushAction(:final commitCount, :final branchCount) =>
+      EventTexts.localizedPush(
+        l10n: context.l10n,
+        commits: commitCount,
+        branches: branchCount,
+      ),
+    LabelAction(:final added, :final removed) =>
+      EventTexts.localizedLabelChange(
+        l10n: context.l10n,
+        added: added,
+        removed: removed,
+      ),
+    CommentAction(:final verb, :final count) => EventTexts.localizedComment(
+      l10n: context.l10n,
+      verb: verb,
+      count: count,
+    ),
+    RefAction(:final verb, :final refTypeName, :final count) =>
+      EventTexts.localizedRefChange(
+        l10n: context.l10n,
+        verb: verb,
+        refType: refTypeName,
+        count: count,
+      ),
+    CountedItemAction(:final verb, :final singularNoun, :final count) =>
+      EventTexts.localizedCountedItem(
+        l10n: context.l10n,
+        verb: verb,
+        singular: singularNoun,
+        count: count,
+      ),
+    AssignAction(:final verb, :final count) => EventTexts.localizedAssign(
+      l10n: context.l10n,
+      verb: verb,
+      count: count,
+    ),
+    ReviewAction(:final reviewState, :final count) =>
+      EventTexts.localizedReview(
+        l10n: context.l10n,
+        state: reviewState,
+        count: count,
+      ),
+    ReleaseAction(:final count) => context.l10n.activityPublishedReleases(
+      count,
+    ),
+    DiscussionAction(:final count) => context.l10n.activityStartedDiscussions(
+      count,
+    ),
+    WikiAction(:final pageCount) => context.l10n.activityUpdatedWikiPages(
+      pageCount,
+    ),
+    SimpleAction(:final count) => context.l10n.activityPerformedActions(count),
+    CompoundAction(:final parts) => EventTexts.localizedNaturalJoin(
+      context.l10n,
+      parts
+          .map((final EventAction part) => _localizedActionText(context, part))
+          .toList(),
+    ),
+  };
 
   /// Resolve a [GitHubActionVisual] from pre-extracted part action data.
   /// This is the sole bridge between extracted compound data and visual styles.

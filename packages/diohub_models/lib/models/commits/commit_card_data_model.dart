@@ -40,7 +40,13 @@ abstract class CommitCardDataModel with _$CommitCardDataModel {
     final DateTime date = event.createdAt;
 
     final EventRepo repo = event.repo;
-    final String repoName = repo.name;
+    final String? rawRepoName = repo.name?.trim();
+    if (rawRepoName == null || rawRepoName.isEmpty) {
+      throw StateError(
+        'Cannot create commit card data from an event with a redacted repo',
+      );
+    }
+    final String repoName = rawRepoName;
     final RepoRef repoRef = RepoRef.fromFullName(repoName);
     final ServerConfig cfg = server ?? ServerConfig.gitHubDotCom;
     final String url = repo.url ?? cfg.webUrl('/$repoName').toString();

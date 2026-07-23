@@ -98,7 +98,7 @@ class EventGroupingStrategy
   ///
   /// By the time this is called, the engine has already verified:
   ///   - same actor
-  ///   - same target (repo + issue/PR number)
+  ///   - same target (repository identity + issue/PR number)
   ///   - same action
   /// This method only handles sub-action splits.
   @override

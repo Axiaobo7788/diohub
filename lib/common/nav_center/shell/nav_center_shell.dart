@@ -1,9 +1,4 @@
 import 'package:diohub/common/context_dock/context_dock.dart';
-import 'package:diohub/common/context_dock/pills/basic_dock_pill.dart';
-import 'package:diohub/common/context_dock/pills/filter_dock_pill.dart';
-import 'package:diohub/common/context_dock/pills/inline_search_dock_pill.dart';
-import 'package:diohub/common/context_dock/pills/search_dock_pill.dart';
-import 'package:diohub/common/context_dock/pills/sort_chip_pill.dart';
 import 'package:diohub/common/context_dock/widgets/dock_overlay.dart';
 import 'package:diohub/common/misc/collapsible_action_buttons.dart';
 import 'package:diohub/common/misc/collapsible_app_bar.dart';
@@ -113,10 +108,13 @@ class NavCenterShellState extends ConsumerState<NavCenterShell> {
       if (found >= 0) index = found;
     }
     _tabIndex = ValueNotifier<int>(index);
+    _tabIndex.addListener(_initializeActiveTabDefaultPreset);
+    _initializeActiveTabDefaultPreset();
   }
 
   @override
   void dispose() {
+    _tabIndex.removeListener(_initializeActiveTabDefaultPreset);
     _tabIndex.dispose();
     _isRefreshing.dispose();
     super.dispose();
@@ -133,7 +131,20 @@ class NavCenterShellState extends ConsumerState<NavCenterShell> {
         final current = _tabIndex.value;
         _tabIndex.value = current.clamp(0, length - 1);
       }
+      _initializeActiveTabDefaultPreset();
     }
+  }
+
+  void _initializeActiveTabDefaultPreset() {
+    if (visibleTabs.isEmpty) return;
+    final int index = _tabIndex.value.clamp(0, visibleTabs.length - 1);
+    final TabConfig tab = visibleTabs[index];
+    final scope = tab.searchScope;
+    final presets = tab.presets;
+    if (scope == null || presets == null || presets.isEmpty) return;
+    ref
+        .read(searchStateNotifierProvider(scope).notifier)
+        .initializeDefaultPreset(presets);
   }
 
   // ── Build ───────────────────────────────────────────────────────────
@@ -167,8 +178,6 @@ class NavCenterShellState extends ConsumerState<NavCenterShell> {
                 builder: (_, index, __) {
                   if (visibleTabs.isEmpty) return const SizedBox.shrink();
                   final tab = visibleTabs[index];
-                  final positionKey =
-                      tab.searchScope?.tabKey ?? tab.deeplinkPath;
                   final screenPills =
                       widget.config.screenDockActions?.call(context, ref) ?? [];
 

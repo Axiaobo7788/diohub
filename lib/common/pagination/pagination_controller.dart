@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:diohub/app/app_logger.dart';
 import 'package:diohub/common/pagination/item_patch.dart';
 import 'package:diohub/common/pagination/page_source.dart';
@@ -43,8 +45,9 @@ class PaginationController<T, R> {
   int _epoch = 0;
 
   ValueListenable<PaginationState<R>> get state => _state;
-  final ValueNotifier<PaginationState<R>> _state =
-      ValueNotifier(const PaginationState());
+  final ValueNotifier<PaginationState<R>> _state = ValueNotifier(
+    const PaginationState(),
+  );
 
   final List<R> _items = [];
   int _syntheticTailCount = 0;
@@ -70,6 +73,10 @@ class PaginationController<T, R> {
   bool _disposed = false;
   bool _fetchingForward = false;
   bool _fetchingBackward = false;
+  Completer<void>? _forwardDone;
+  Completer<void>? _backwardDone;
+  int _refreshSerial = 0;
+  Completer<void>? _refreshCompleter;
 
   List<R> _process(List<T> raw) {
     final transformed = transform != null ? transform!(raw) : raw as List<R>;
@@ -84,12 +91,25 @@ class PaginationController<T, R> {
   }
 
   /// Fetch the next page forward. No-op if already loading or no more data.
-  Future<void> fetchForward() async {
-    if (_disposed || _fetchingForward) return;
+  Future<void> fetchForward() => _fetchForward();
+
+  Future<void> _fetchForward({final bool fromRefresh = false}) async {
+    if (_disposed) return;
+    final refresh = _refreshCompleter;
+    if (!fromRefresh && refresh != null) {
+      await refresh.future;
+      return;
+    }
+    if (_fetchingForward) {
+      await _forwardDone?.future;
+      return;
+    }
     final current = _state.value;
     if (!current.hasMoreForward) return;
 
     final myEpoch = _epoch;
+    final done = Completer<void>();
+    _forwardDone = done;
     _fetchingForward = true;
     _publishState(phase: const LoadingForward());
 
@@ -107,23 +127,42 @@ class PaginationController<T, R> {
         stackTrace: st,
         tag: 'Pagination',
       );
-      if (!_disposed) {
+      if (!_disposed && _epoch == myEpoch) {
         _publishState(phase: Failed(e, FetchDirection.forward));
       }
     } finally {
-      if (!_disposed) _fetchingForward = false;
+      if (identical(_forwardDone, done)) {
+        _fetchingForward = false;
+        _forwardDone = null;
+      }
+      if (!done.isCompleted) {
+        done.complete();
+      }
     }
   }
 
   /// Fetch the previous page backward. No-op if source is forward-only.
-  Future<void> fetchBackward() async {
-    if (_disposed || _fetchingBackward) return;
+  Future<void> fetchBackward() => _fetchBackward();
+
+  Future<void> _fetchBackward() async {
+    if (_disposed) return;
+    final refresh = _refreshCompleter;
+    if (refresh != null) {
+      await refresh.future;
+      return;
+    }
+    if (_fetchingBackward) {
+      await _backwardDone?.future;
+      return;
+    }
     final s = source;
     if (s is! BidirectionalSource<T>) return;
     final current = _state.value;
     if (!current.hasMoreBackward) return;
 
     final myEpoch = _epoch;
+    final done = Completer<void>();
+    _backwardDone = done;
     _fetchingBackward = true;
     _publishState(phase: const LoadingBackward());
 
@@ -141,30 +180,58 @@ class PaginationController<T, R> {
         stackTrace: st,
         tag: 'Pagination',
       );
-      if (!_disposed) {
+      if (!_disposed && _epoch == myEpoch) {
         _publishState(phase: Failed(e, FetchDirection.backward));
       }
     } finally {
-      if (!_disposed) _fetchingBackward = false;
+      if (identical(_backwardDone, done)) {
+        _fetchingBackward = false;
+        _backwardDone = null;
+      }
+      if (!done.isCompleted) {
+        done.complete();
+      }
     }
   }
 
   /// Clear and re-fetch from the beginning.
-  Future<void> refresh() async {
-    _epoch++;
-    source.reset();
-    if (source is BidirectionalSource<T>) {
-      (source as BidirectionalSource<T>).resetBackward();
+  ///
+  /// A refresh invalidates any in-flight page immediately, but waits for that
+  /// request to settle before resetting the source. This matters for cursor
+  /// sources: their request may update an internal cursor after its future
+  /// completes, so resetting earlier would let a stale response overwrite the
+  /// reset cursor.
+  ///
+  /// Repeated refresh calls share one operation. If another refresh arrives
+  /// while the replacement first page is loading, that response is discarded
+  /// and the loop performs one final reset/fetch for the newest request.
+  Future<void> refresh() {
+    if (_disposed) {
+      return Future<void>.value();
     }
+
+    _epoch++;
+    _refreshSerial++;
     _items.clear();
     _syntheticTailCount = 0;
     _clearLocalPatches();
 
     _publishState(
-        phase: const Refreshing(),
-        hasMoreForward: true,
-        hasMoreBackward: false);
-    await fetchForward();
+      phase: const Refreshing(),
+      hasMoreForward: true,
+      hasMoreBackward: false,
+      clearTotalCount: true,
+    );
+
+    final existing = _refreshCompleter;
+    if (existing != null) {
+      return existing.future;
+    }
+
+    final completer = Completer<void>();
+    _refreshCompleter = completer;
+    unawaited(_runRefreshLoop(completer));
+    return completer.future;
   }
 
   /// Find item index by id, or resolve via anchor if source is bidirectional.
@@ -336,12 +403,60 @@ class PaginationController<T, R> {
 
   void dispose() {
     _disposed = true;
+    final refreshCompleter = _refreshCompleter;
+    if (refreshCompleter != null && !refreshCompleter.isCompleted) {
+      refreshCompleter.complete();
+    }
     _state.dispose();
   }
 
   // -------------------------------------------------------------------------
   // Internal
   // -------------------------------------------------------------------------
+
+  Future<void> _runRefreshLoop(final Completer<void> completer) async {
+    try {
+      while (!_disposed) {
+        final requestedSerial = _refreshSerial;
+        await _waitForInFlightPageRequests();
+        if (_disposed) return;
+
+        // Several calls made while the old request was settling coalesce into
+        // the latest serial and therefore only require one source reset.
+        if (requestedSerial != _refreshSerial) {
+          continue;
+        }
+
+        source.reset();
+        final s = source;
+        if (s is BidirectionalSource<T>) {
+          s.resetBackward();
+        }
+
+        await _fetchForward(fromRefresh: true);
+        if (requestedSerial == _refreshSerial) {
+          return;
+        }
+      }
+    } finally {
+      if (identical(_refreshCompleter, completer)) {
+        _refreshCompleter = null;
+      }
+      if (!completer.isCompleted) {
+        completer.complete();
+      }
+    }
+  }
+
+  Future<void> _waitForInFlightPageRequests() async {
+    final requests = <Future<void>>[
+      if (_forwardDone case final forward?) forward.future,
+      if (_backwardDone case final backward?) backward.future,
+    ];
+    if (requests.isNotEmpty) {
+      await Future.wait(requests);
+    }
+  }
 
   void _appendForward(List<R> newItems, bool hasMore, int? totalCount) {
     if (newItems.isEmpty) {
@@ -429,6 +544,7 @@ class PaginationController<T, R> {
     bool? hasMoreBackward,
     String? anchorId,
     int? totalCount,
+    bool clearTotalCount = false,
     PaginationPhase? phase,
     int? syntheticTailCount,
   }) {
@@ -441,7 +557,7 @@ class PaginationController<T, R> {
       hasMoreForward: hasMoreForward ?? prev.hasMoreForward,
       hasMoreBackward: hasMoreBackward ?? prev.hasMoreBackward,
       anchorId: anchorId ?? prev.anchorId,
-      totalCount: totalCount ?? prev.totalCount,
+      totalCount: clearTotalCount ? null : totalCount ?? prev.totalCount,
       phase: phase ?? prev.phase,
       syntheticTailCount: syntheticTailCount ?? _syntheticTailCount,
     );

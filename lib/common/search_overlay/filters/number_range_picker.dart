@@ -1,7 +1,7 @@
 import 'package:diohub/common/search_overlay/filter_section_def.dart';
+import 'package:diohub/common/search_overlay/filter_localizations.dart';
 import 'package:diohub/common/search_overlay/search_filter_helpers.dart';
-import 'package:diohub_models/models/search/qualifier.dart';
-import 'package:diohub/models/search/qualifier_parser_registry.dart';
+import 'package:diohub/l10n/l10n.dart';
 import 'package:diohub_models/models/search/search_expression.dart';
 import 'package:diohub/models/search/search_scope.dart';
 import 'package:diohub/models/search/search_state.dart';
@@ -48,20 +48,38 @@ class _NumberRangePickerState extends State<NumberRangePicker> {
     final List<String> values = widget.state.activeQualifierValues(key);
     final String? activeValue = values.isEmpty ? null : values.first;
     if (activeValue != null) {
-      final QualifierExpression? qe =
-          findQualifierExpression(widget.state, key, activeValue);
+      final QualifierExpression? qe = findQualifierExpression(
+        widget.state,
+        key,
+        activeValue,
+      );
       if (qe != null) widget.notifier.removeQualifier(qe);
     }
 
     if (min.isNotEmpty && max.isNotEmpty) {
       addQualifierFromValue(
-          widget.notifier, widget.state, widget.section, key, '$min..$max');
+        widget.notifier,
+        widget.state,
+        widget.section,
+        key,
+        '$min..$max',
+      );
     } else if (min.isNotEmpty) {
       addQualifierFromValue(
-          widget.notifier, widget.state, widget.section, key, '>=$min');
+        widget.notifier,
+        widget.state,
+        widget.section,
+        key,
+        '>=$min',
+      );
     } else if (max.isNotEmpty) {
       addQualifierFromValue(
-          widget.notifier, widget.state, widget.section, key, '<=$max');
+        widget.notifier,
+        widget.state,
+        widget.section,
+        key,
+        '<=$max',
+      );
     }
   }
 
@@ -79,10 +97,16 @@ class _NumberRangePickerState extends State<NumberRangePicker> {
           Padding(
             padding: const EdgeInsets.only(bottom: 8),
             child: Chip(
-              label: Text('${widget.section.displayName}: $activeValue'),
+              label: Text(
+                '${localizedFilterSectionName(context, widget.section)}: '
+                '$activeValue',
+              ),
               onDeleted: () {
-                final QualifierExpression? qe =
-                    findQualifierExpression(widget.state, key, activeValue);
+                final QualifierExpression? qe = findQualifierExpression(
+                  widget.state,
+                  key,
+                  activeValue,
+                );
                 if (qe != null) widget.notifier.removeQualifier(qe);
               },
             ),
@@ -93,31 +117,29 @@ class _NumberRangePickerState extends State<NumberRangePicker> {
               child: TextField(
                 controller: _minController,
                 keyboardType: TextInputType.number,
-                decoration: const InputDecoration(
-                  hintText: 'Min',
+                decoration: InputDecoration(
+                  hintText: context.l10n.filterMinimum,
                   isDense: true,
                 ),
               ),
             ),
             Padding(
               padding: context.spacing.listInset,
-              child: Text(
-                '–',
-                style: context.textTheme.bodyMedium,
-              ),
+              child: Text('–', style: context.textTheme.bodyMedium),
             ),
             Expanded(
               child: TextField(
                 controller: _maxController,
                 keyboardType: TextInputType.number,
-                decoration: const InputDecoration(
-                  hintText: 'Max',
+                decoration: InputDecoration(
+                  hintText: context.l10n.filterMaximum,
                   isDense: true,
                 ),
               ),
             ),
             context.spacing.itemGap,
             IconButton(
+              tooltip: context.l10n.filterApply,
               icon: const Icon(Icons.check_rounded, size: 20),
               onPressed: _apply,
             ),

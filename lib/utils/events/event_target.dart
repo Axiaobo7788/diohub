@@ -8,12 +8,24 @@ part 'event_target.freezed.dart';
 abstract class EventTarget with _$EventTarget {
   const EventTarget._();
 
-  const factory EventTarget(int repoId, int? number) = _EventTarget;
+  const factory EventTarget(String repositoryKey, int? number) = _EventTarget;
 
   static EventTarget from(EventsModel e) {
     final int? number = e.payload.issue?.number ??
         e.payload.pullRequest?.number ??
         e.payload.number;
-    return EventTarget(e.repo.id, number);
+    final int? repositoryId = e.repo.id;
+    final String? repositoryName = e.repo.name?.trim().toLowerCase();
+    final String repositoryKey;
+    if (repositoryId != null) {
+      repositoryKey = 'id:$repositoryId';
+    } else if (repositoryName != null && repositoryName.isNotEmpty) {
+      repositoryKey = 'name:$repositoryName';
+    } else {
+      // Keep redacted repository events distinct. A shared sentinel would
+      // incorrectly compound unrelated events into the same repository.
+      repositoryKey = 'event:${e.id}';
+    }
+    return EventTarget(repositoryKey, number);
   }
 }

@@ -85,8 +85,9 @@ List<MarkdownImgSrcModifiers> createWikiMarkdownImgSrcModifiers(
           final int wikiIdx = uri.pathSegments.indexOf('wiki');
           final List<String> rest = uri.pathSegments.sublist(wikiIdx + 1);
           if (rest.isNotEmpty) {
-            src =
-                serverConfig.wikiRawUrl(owner, repo, rest.join('/')).toString();
+            src = serverConfig
+                .wikiRawUrl(owner, repo, rest.join('/'))
+                .toString();
           }
         }
       }
@@ -99,8 +100,7 @@ extension RepoRefMarkdownImg on RepoRef {
   List<MarkdownImgSrcModifiers> markdownImgModifiers(
     String? branch,
     ServerConfig server,
-  ) =>
-      createRepoMarkdownImgSrcModifiers(fullName, branch, server);
+  ) => createRepoMarkdownImgSrcModifiers(fullName, branch, server);
 
   List<MarkdownImgSrcModifiers> wikiImgModifiers(ServerConfig server) =>
       createWikiMarkdownImgSrcModifiers(fullName, server);
@@ -109,10 +109,8 @@ extension RepoRefMarkdownImg on RepoRef {
 /// Mixin for shared markdown parsing logic
 mixin MarkdownParserMixin {
   /// Parse HTML document, inject heading IDs, and extract heading list
-  ({
-    dom.Document doc,
-    List<({String text, String id, int level})> headings,
-  }) parseMarkdownDoc(final String htmlContent) {
+  ({dom.Document doc, List<({String text, String id, int level})> headings})
+  parseMarkdownDoc(final String htmlContent) {
     final dom.Document document = parse(htmlContent);
     final List<String> tags = <String>['h1', 'h2', 'h3', 'h4', 'h5', 'h6'];
 
@@ -125,8 +123,9 @@ mixin MarkdownParserMixin {
     // Extract all headings
     final List<({String id, int level, String text})> headings =
         <({String text, String id, int level})>[];
-    final List<dom.Element> allHeadingElements =
-        document.querySelectorAll('h1, h2, h3, h4, h5, h6');
+    final List<dom.Element> allHeadingElements = document.querySelectorAll(
+      'h1, h2, h3, h4, h5, h6',
+    );
 
     for (final dom.Element headingElement in allHeadingElements) {
       final String text = headingElement.text.trim();
@@ -143,32 +142,22 @@ mixin MarkdownParserMixin {
   /// Inject IDs into heading elements
   void addHeadingIds(final List<dom.Element> elements) {
     for (final dom.Element node in elements) {
-      node.attributes.addAll(
-        <Object, String>{
-          'id': node.text
-              .toLowerCase()
-              .replaceAll(' ', '-')
-              .replaceAll(_reIdSafe, ''),
-        },
-      );
+      node.attributes.addAll(<Object, String>{
+        'id': node.text
+            .toLowerCase()
+            .replaceAll(' ', '-')
+            .replaceAll(_reIdSafe, ''),
+      });
     }
   }
 
   /// Shared custom styles builder for HtmlWidget
   Map<String, String>? markdownStylesBuilder(final dom.Element element) =>
       switch (element.localName) {
-        'a' => <String, String>{
-            'text-decoration': 'none',
-          },
-        'blockquote' => <String, String>{
-            'margin': '0',
-          },
-        'ol' => <String, String>{
-            'margin': '16',
-          },
-        'ul' => <String, String>{
-            'margin': '16',
-          },
+        'a' => <String, String>{'text-decoration': 'none'},
+        'blockquote' => <String, String>{'margin': '0'},
+        'ol' => <String, String>{'margin': '16'},
+        'ul' => <String, String>{'margin': '16'},
         _ => null,
       };
 
@@ -190,10 +179,7 @@ mixin MarkdownParserMixin {
     }
 
     if (element.isTag('img')) {
-      return buildImageTag(
-        element,
-        imgSrcModifiers: imgSrcModifiers,
-      );
+      return buildImageTag(element, imgSrcModifiers: imgSrcModifiers);
     }
     return null;
   }
@@ -201,10 +187,7 @@ mixin MarkdownParserMixin {
 
 /// Internal data class for grouping nodes during recursive split
 class _NodeGroup {
-  const _NodeGroup({
-    required this.heading,
-    required this.contentNodes,
-  });
+  const _NodeGroup({required this.heading, required this.contentNodes});
 
   /// The heading element (null for preamble)
   final dom.Element? heading;
@@ -229,7 +212,7 @@ class MarkdownBody extends StatefulWidget {
   final List<MarkdownImgSrcModifiers>? imgSrcModifiers;
   final TextStyle? textStyle;
   final void Function(List<({String text, String id, int level})> headings)?
-      onHeadingsExtracted;
+  onHeadingsExtracted;
   final void Function(String anchorId)? onScrollToAnchor;
 
   @override
@@ -249,8 +232,9 @@ class MarkdownBodyState extends State<MarkdownBody> with MarkdownParserMixin {
   void updateData(final String data) {
     final ({
       dom.Document doc,
-      List<({String id, int level, String text})> headings
-    }) result = parseMarkdownDoc(data);
+      List<({String id, int level, String text})> headings,
+    })
+    result = parseMarkdownDoc(data);
     doc = result.doc;
 
     if (widget.onHeadingsExtracted != null && result.headings.isNotEmpty) {
@@ -295,26 +279,25 @@ class MarkdownBodyState extends State<MarkdownBody> with MarkdownParserMixin {
 
   @override
   Widget build(final BuildContext context) => HtmlWidget(
-        doc.outerHtml,
-        key: htmlWidgetKey,
-        buildAsync: widget.buildAsync,
-        factoryBuilder: () => MyWidgetFactory(
-          fetchState: () => currentMarkdownState,
-        ),
-        textStyle: widget.textStyle,
-        onLoadingBuilder: (
+    doc.outerHtml,
+    key: htmlWidgetKey,
+    buildAsync: widget.buildAsync,
+    factoryBuilder: () =>
+        MyWidgetFactory(fetchState: () => currentMarkdownState),
+    textStyle: widget.textStyle,
+    onLoadingBuilder:
+        (
           final BuildContext context,
           final dom.Element element,
           final double? loadingProgress,
-        ) =>
-            const ShimmerScope(child: MarkdownSkeleton()),
-        customStylesBuilder: markdownStylesBuilder,
-        customWidgetBuilder: (final dom.Element element) =>
-            markdownWidgetBuilder(element, widget.imgSrcModifiers),
-      );
+        ) => const ShimmerScope(child: MarkdownSkeleton()),
+    customStylesBuilder: markdownStylesBuilder,
+    customWidgetBuilder: (final dom.Element element) =>
+        markdownWidgetBuilder(element, widget.imgSrcModifiers),
+  );
 }
 
-/// Sliver-based markdown body that splits content at headings and uses PinnedGlassHeader
+/// Sliver-based markdown body with optional legacy sticky headings.
 class SliverMarkdownBody extends StatefulWidget {
   const SliverMarkdownBody(
     this.content, {
@@ -326,6 +309,7 @@ class SliverMarkdownBody extends StatefulWidget {
     this.onScrollToAnchor,
     this.contentPadding,
     this.onTapLink,
+    this.stickyHeadings = true,
   });
 
   final String content;
@@ -333,9 +317,17 @@ class SliverMarkdownBody extends StatefulWidget {
   final bool? buildAsync;
   final TextStyle? textStyle;
   final void Function(List<({String text, String id, int level})> headings)?
-      onHeadingsExtracted;
+  onHeadingsExtracted;
   final void Function(String anchorId)? onScrollToAnchor;
   final EdgeInsets? contentPadding;
+
+  /// Whether headings use the legacy nested sticky-header renderer.
+  ///
+  /// Repository README pages disable this. A README can contain dozens of
+  /// nested headings, and combining a [SliverStickyHeader] for every heading
+  /// with nested [MultiSliver] children can leave the third-party sticky
+  /// renderer without child geometry during layout.
+  final bool stickyHeadings;
 
   /// When non-null and returns true for a given href, the link is handled
   /// in-app (e.g. wiki page navigation) and the default launch URL is skipped.
@@ -382,8 +374,9 @@ class SliverMarkdownBodyState extends State<SliverMarkdownBody>
 
     final ({
       dom.Document doc,
-      List<({String id, int level, String text})> headings
-    }) result = parseMarkdownDoc(data);
+      List<({String id, int level, String text})> headings,
+    })
+    result = parseMarkdownDoc(data);
     doc = result.doc;
     _headings = result.headings;
 
@@ -451,7 +444,9 @@ class SliverMarkdownBodyState extends State<SliverMarkdownBody>
   /// Split nodes at a specific heading tag, also detecting headings wrapped
   /// in `<div class="markdown-heading">` wrappers (GitHub's README format).
   List<_NodeGroup> _splitNodesAtTag(
-      final List<dom.Node> nodes, final String tag) {
+    final List<dom.Node> nodes,
+    final String tag,
+  ) {
     final List<_NodeGroup> groups = <_NodeGroup>[];
     dom.Element? currentHeading;
     List<dom.Node> currentNodes = <dom.Node>[];
@@ -486,7 +481,9 @@ class SliverMarkdownBodyState extends State<SliverMarkdownBody>
 
   /// Recursively build slivers from nodes, splitting at each heading level
   List<Widget> _buildSliversFromNodes(
-      final List<dom.Node> nodes, final int currentLevel) {
+    final List<dom.Node> nodes,
+    final int currentLevel,
+  ) {
     if (currentLevel > 6) {
       // Base case: no more heading levels to split at, render as HtmlWidget
       return <Widget>[SliverToBoxAdapter(child: _buildHtmlContent(nodes))];
@@ -519,8 +516,8 @@ class SliverMarkdownBodyState extends State<SliverMarkdownBody>
         final String headingId = group.heading!.attributes['id'] ?? '';
         final GlobalKey<State<StatefulWidget>>? anchorKey =
             headingId.isNotEmpty && _anchorKeys.containsKey(headingId)
-                ? _anchorKeys[headingId]!
-                : null;
+            ? _anchorKeys[headingId]!
+            : null;
 
         final bool isFirst = _nextHeadingIsFirst;
         if (isFirst) _nextHeadingIsFirst = false;
@@ -530,10 +527,10 @@ class SliverMarkdownBodyState extends State<SliverMarkdownBody>
                     .map(
                       (final ({String id, int level, String text}) h) =>
                           SectionTocEntry(
-                        id: h.id,
-                        title: h.text,
-                        level: h.level,
-                      ),
+                            id: h.id,
+                            title: h.text,
+                            level: h.level,
+                          ),
                     )
                     .toList(),
                 onSelect: scrollToAnchor,
@@ -542,9 +539,11 @@ class SliverMarkdownBodyState extends State<SliverMarkdownBody>
 
         slivers.add(
           PinnedGlassHeader(
-            headerBuilder: (final BuildContext context,
-                    final SliverStickyHeaderState state) =>
-                _buildHeadingWidget(group, state, trailing: trailing),
+            headerBuilder:
+                (
+                  final BuildContext context,
+                  final SliverStickyHeaderState state,
+                ) => _buildHeadingWidget(group, state, trailing: trailing),
             style: GlassPillStyle.section(
               context,
               restingColor: Theme.of(context).scaffoldBackgroundColor,
@@ -553,9 +552,7 @@ class SliverMarkdownBodyState extends State<SliverMarkdownBody>
               children: <Widget>[
                 // Place anchor key on SizedBox.shrink at start of content
                 if (anchorKey != null)
-                  SliverToBoxAdapter(
-                    child: SizedBox.shrink(key: anchorKey),
-                  ),
+                  SliverToBoxAdapter(child: SizedBox.shrink(key: anchorKey)),
                 ...childSlivers,
               ],
             ),
@@ -566,19 +563,58 @@ class SliverMarkdownBodyState extends State<SliverMarkdownBody>
     return slivers;
   }
 
+  /// Builds non-sticky documents lazily, one heading section at a time.
+  ///
+  /// A [MultiSliver] must visit every child to determine its combined scroll
+  /// extent. Repository READMEs can contain dozens of expensive HTML/code
+  /// sections, so use one [SliverList] and materialize only the viewport/cache
+  /// range instead.
+  Widget _buildLazyFlatSliverFromNodes(final List<dom.Node> nodes) {
+    final List<List<dom.Node>> sections = <List<dom.Node>>[];
+    List<dom.Node> current = <dom.Node>[];
+
+    for (final dom.Node node in nodes) {
+      dom.Element? heading;
+      for (int level = 1; level <= 6 && heading == null; level++) {
+        heading = _extractHeading(node, 'h$level');
+      }
+      if (heading != null && current.isNotEmpty) {
+        sections.add(current);
+        current = <dom.Node>[];
+      }
+      current.add(node);
+    }
+    if (current.isNotEmpty) {
+      sections.add(current);
+    }
+
+    if (sections.isEmpty) {
+      return SliverToBoxAdapter(child: _buildHtmlContent(nodes));
+    }
+
+    return SliverList.builder(
+      itemCount: sections.length,
+      itemBuilder: (final BuildContext context, final int index) =>
+          _buildHtmlContent(sections[index], sectionIndex: index),
+    );
+  }
+
   /// Build HtmlWidget for a list of nodes, using a pre-allocated GlobalKey.
-  Widget _buildHtmlContent(final List<dom.Node> nodes) {
+  Widget _buildHtmlContent(
+    final List<dom.Node> nodes, {
+    final int? sectionIndex,
+  }) {
     if (nodes.isEmpty) return const SizedBox.shrink();
 
     // Use pre-allocated key by index — stable across parent rebuilds.
     // If we exceed pre-allocated count (edge case), create on the fly.
     final GlobalKey<HtmlWidgetState> sectionHtmlKey;
-    if (_nextSectionIndex < _sectionHtmlKeys.length) {
-      sectionHtmlKey = _sectionHtmlKeys[_nextSectionIndex++];
+    final int keyIndex = sectionIndex ?? _nextSectionIndex++;
+    if (keyIndex < _sectionHtmlKeys.length) {
+      sectionHtmlKey = _sectionHtmlKeys[keyIndex];
     } else {
       sectionHtmlKey = GlobalKey<HtmlWidgetState>();
       _sectionHtmlKeys.add(sectionHtmlKey);
-      _nextSectionIndex++;
     }
 
     final String html = _nodesToHtml(nodes);
@@ -594,22 +630,19 @@ class SliverMarkdownBodyState extends State<SliverMarkdownBody>
         onTapLink: widget.onTapLink,
       ),
       textStyle: widget.textStyle,
-      onLoadingBuilder: (
-        final BuildContext context,
-        final dom.Element element,
-        final double? loadingProgress,
-      ) =>
-          const ShimmerScope(child: MarkdownSkeleton()),
+      onLoadingBuilder:
+          (
+            final BuildContext context,
+            final dom.Element element,
+            final double? loadingProgress,
+          ) => const ShimmerScope(child: MarkdownSkeleton()),
       customStylesBuilder: markdownStylesBuilder,
       customWidgetBuilder: (final dom.Element element) =>
           markdownWidgetBuilder(element, widget.imgSrcModifiers),
     );
 
     if (widget.contentPadding != null) {
-      return Padding(
-        padding: widget.contentPadding!,
-        child: htmlWidget,
-      );
+      return Padding(padding: widget.contentPadding!, child: htmlWidget);
     }
 
     return htmlWidget;
@@ -672,8 +705,7 @@ class SliverMarkdownBodyState extends State<SliverMarkdownBody>
       5 => context.textTheme.bodySmall!,
       6 => context.textTheme.bodySmall!,
       _ => context.textTheme.bodyMedium!,
-    }
-        .copyWith(fontWeight: FontWeight.bold);
+    }.copyWith(fontWeight: FontWeight.bold);
 
     final AnimatedDefaultTextStyle content = AnimatedDefaultTextStyle(
       style: state.isPinned ? pinnedStyle : expandedStyle,
@@ -704,30 +736,12 @@ class SliverMarkdownBodyState extends State<SliverMarkdownBody>
 
     // Match HtmlWidget's default heading sizes
     return switch (level) {
-      1 => baseStyle.copyWith(
-          fontSize: 32,
-          fontWeight: FontWeight.bold,
-        ),
-      2 => baseStyle.copyWith(
-          fontSize: 24,
-          fontWeight: FontWeight.bold,
-        ),
-      3 => baseStyle.copyWith(
-          fontSize: 18.72,
-          fontWeight: FontWeight.bold,
-        ),
-      4 => baseStyle.copyWith(
-          fontSize: 16,
-          fontWeight: FontWeight.bold,
-        ),
-      5 => baseStyle.copyWith(
-          fontSize: 13.28,
-          fontWeight: FontWeight.bold,
-        ),
-      6 => baseStyle.copyWith(
-          fontSize: 10.72,
-          fontWeight: FontWeight.bold,
-        ),
+      1 => baseStyle.copyWith(fontSize: 32, fontWeight: FontWeight.bold),
+      2 => baseStyle.copyWith(fontSize: 24, fontWeight: FontWeight.bold),
+      3 => baseStyle.copyWith(fontSize: 18.72, fontWeight: FontWeight.bold),
+      4 => baseStyle.copyWith(fontSize: 16, fontWeight: FontWeight.bold),
+      5 => baseStyle.copyWith(fontSize: 13.28, fontWeight: FontWeight.bold),
+      6 => baseStyle.copyWith(fontSize: 10.72, fontWeight: FontWeight.bold),
       _ => baseStyle,
     };
   }
@@ -752,6 +766,10 @@ class SliverMarkdownBodyState extends State<SliverMarkdownBody>
       final dom.Element wrapper = nodesToUse.first as dom.Element;
       if (wrapper.nodes.isEmpty) break;
       nodesToUse = wrapper.nodes.toList();
+    }
+
+    if (!widget.stickyHeadings) {
+      return _buildLazyFlatSliverFromNodes(nodesToUse);
     }
 
     final List<Widget> slivers = _buildSliversFromNodes(nodesToUse, 1);

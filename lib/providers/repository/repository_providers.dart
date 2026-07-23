@@ -33,6 +33,8 @@ export 'package:diohub/providers/repository/license_content_notifier.dart'
     show licenseContentProvider, LicenseContentNotifier;
 export 'package:diohub/providers/repository/readme_notifier.dart'
     show readmeProvider, ReadmeNotifier;
+export 'package:diohub/providers/repository/repository_document_provider.dart'
+    show repositoryDocumentProvider, RepositoryDocumentKey;
 export 'package:diohub/providers/repository/repository_providers_core.dart'
     show
         compareResultProvider,

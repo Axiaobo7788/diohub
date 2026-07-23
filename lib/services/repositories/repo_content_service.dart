@@ -5,16 +5,20 @@ import 'package:diohub_graphql/schema.graphql.dart';
 import 'package:diohub_graphql/queries/repositories/commit_info.graphql.dart';
 import 'package:diohub_graphql/queries/repositories/commits_list.graphql.dart';
 import 'package:diohub_graphql/queries/repositories/discussion_by_number.graphql.dart';
+import 'package:diohub_graphql/queries/repositories/repo_card.graphql.dart';
 import 'package:diohub_graphql/queries/repositories/repo_info.graphql.dart';
 import 'package:diohub_graphql/fragments/discussion_card_fields.graphql.dart';
+import 'package:diohub_graphql/fragments/repo_card_fields.graphql.dart';
 import 'package:diohub_models/models/commits/commit_model.dart';
 import 'package:diohub_models/models/entity_ref.dart';
 import 'package:diohub_models/models/repository/compare_result.dart';
 import 'package:diohub_models/models/repositories/commit_comment_item.dart';
 import 'package:diohub_models/models/repositories/community_profile.dart';
 import 'package:diohub_models/models/repositories/pages_info.dart';
+import 'package:diohub/models/repository_document.dart';
 import 'package:diohub/models/search/search_scope.dart';
 import 'package:diohub/services/base/base_service.dart';
+import 'package:diohub/services/repositories/repository_document_service.dart';
 
 /// Service for repository content read operations:
 /// - README rendering
@@ -27,6 +31,24 @@ class RepoContentService extends EntityService<RepoRef> {
   // ============================================================================
   // Repository Info
   // ============================================================================
+
+  /// Fetch only the repository fields used by compact cards.
+  Future<Fragment$repoCardFields> fetchRepositoryCardGraphQL({
+    final bool refresh = false,
+  }) async {
+    final GQLResponse response = await gql.query(
+      documentNodeQueryrepoCard,
+      Variables$Query$repoCard(owner: ref.owner, name: ref.name).toJson(),
+      refreshCache: refresh,
+    );
+    final Fragment$repoCardFields? repository = Query$repoCard.fromJson(
+      response.data!,
+    ).repository;
+    if (repository == null) {
+      throw StateError('Repository ${ref.fullName} was not found');
+    }
+    return repository;
+  }
 
   /// Fetch repository using GraphQL.
   /// [initialRef] when non-null requests the optional `initialRef` field (ref name)
@@ -110,6 +132,20 @@ class RepoContentService extends EntityService<RepoRef> {
     );
     return response.data!;
   }
+
+  /// Fetches a rendered CONTRIBUTING or SECURITY document from the standard
+  /// repository community-file locations.
+  ///
+  /// This remains separate from [fetchRepositoryGraphQL] so a selected
+  /// document tab can load without delaying the initial Code page.
+  Future<RepositoryDocument?> fetchRepositoryDocumentHtml({
+    required final RepositoryDocumentKind kind,
+    required final String branch,
+  }) =>
+      RepositoryDocumentService(rest, ref).fetchHtml(
+        kind: kind,
+        branch: branch,
+      );
 
   // ============================================================================
   // Discussions

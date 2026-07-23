@@ -1,13 +1,12 @@
 import 'package:diohub/common/search_overlay/filter_section_def.dart';
+import 'package:diohub/common/search_overlay/filter_localizations.dart';
 import 'package:diohub/common/search_overlay/search_filter_helpers.dart';
-import 'package:diohub_models/models/search/qualifier.dart';
-import 'package:diohub/models/search/qualifier_parser_registry.dart';
+import 'package:diohub/l10n/l10n.dart';
 import 'package:diohub_models/models/search/search_expression.dart';
 import 'package:diohub/models/search/search_scope.dart';
 import 'package:diohub/models/search/search_state.dart';
 import 'package:diohub/providers/search/search_state_notifier.dart';
 import 'package:diohub/style/app_spacing.dart';
-import 'package:diohub/utils/utils.dart';
 import 'package:flutter/material.dart';
 
 /// Text picker widget for search filters.
@@ -67,8 +66,11 @@ class _TextPickerState extends State<TextPicker> {
             spacing: 8,
             runSpacing: 4,
             children: activeValues.map((String v) {
-              final QualifierExpression? qe =
-                  findQualifierExpression(widget.state, key, v);
+              final QualifierExpression? qe = findQualifierExpression(
+                widget.state,
+                key,
+                v,
+              );
               return Chip(
                 label: Text(v),
                 onDeleted: qe != null
@@ -81,7 +83,9 @@ class _TextPickerState extends State<TextPicker> {
         TextField(
           controller: _controller,
           decoration: InputDecoration(
-            hintText: 'Enter ${widget.section.displayName.toLowerCase()}...',
+            hintText: context.l10n.filterEnter(
+              localizedFilterSectionName(context, widget.section),
+            ),
             isDense: true,
             suffixIcon: IconButton(
               icon: const Icon(Icons.add_rounded, size: 20),

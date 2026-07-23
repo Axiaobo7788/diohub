@@ -50,310 +50,321 @@ sealed class SearchScope with _$SearchScope {
   }) = CustomScope;
 
   SearchType get searchType => switch (this) {
-        HomeIssuesScope() => SearchType.issuesPulls,
-        HomePullsScope() => SearchType.issuesPulls,
-        RepoIssuesScope() => SearchType.issuesPulls,
-        RepoPullsScope() => SearchType.issuesPulls,
-        UserReposScope() => SearchType.repositories,
-        ProfileIssuesScope() => SearchType.issuesPulls,
-        ProfilePullsScope() => SearchType.issuesPulls,
-        TypedGlobalSearchScope(:final searchType) => searchType,
-        RepoDiscussionsScope() => SearchType.discussions,
-        CustomScope(:final searchType) => searchType,
-      };
+    HomeIssuesScope() => SearchType.issuesPulls,
+    HomePullsScope() => SearchType.issuesPulls,
+    RepoIssuesScope() => SearchType.issuesPulls,
+    RepoPullsScope() => SearchType.issuesPulls,
+    UserReposScope() => SearchType.repositories,
+    ProfileIssuesScope() => SearchType.issuesPulls,
+    ProfilePullsScope() => SearchType.issuesPulls,
+    TypedGlobalSearchScope(:final searchType) => searchType,
+    RepoDiscussionsScope() => SearchType.discussions,
+    CustomScope(:final searchType) => searchType,
+  };
 
   List<Qualifier> get hiddenQualifiers => switch (this) {
-        HomeIssuesScope(:final viewerLogin) => [
-            if (viewerLogin != null && viewerLogin.isNotEmpty)
-              Qualifier.involves(UserRef(login: viewerLogin)),
-            Qualifier.typeIssue(),
-          ],
-        HomePullsScope(:final viewerLogin) => [
-            if (viewerLogin != null && viewerLogin.isNotEmpty)
-              Qualifier.involves(UserRef(login: viewerLogin)),
-            Qualifier.typePr(),
-          ],
-        RepoIssuesScope(:final repo) => [
-            Qualifier.typeIssue(),
-            Qualifier.repo(repo)
-          ],
-        RepoPullsScope(:final repo) => [
-            Qualifier.typePr(),
-            Qualifier.repo(repo)
-          ],
-        UserReposScope(:final user) => [Qualifier.user(user)],
-        ProfileIssuesScope(:final user) => [
-            Qualifier.author(user),
-            Qualifier.typeIssue()
-          ],
-        ProfilePullsScope(:final user) => [
-            Qualifier.author(user),
-            Qualifier.typePr()
-          ],
-        TypedGlobalSearchScope() => const [],
-        RepoDiscussionsScope(:final repo) => [Qualifier.repo(repo)],
-        CustomScope(:final hiddenQualifiers) => hiddenQualifiers,
-      };
+    HomeIssuesScope(:final viewerLogin) => [
+      if (viewerLogin != null && viewerLogin.isNotEmpty)
+        Qualifier.involves(UserRef(login: viewerLogin)),
+      Qualifier.typeIssue(),
+    ],
+    HomePullsScope(:final viewerLogin) => [
+      if (viewerLogin != null && viewerLogin.isNotEmpty)
+        Qualifier.involves(UserRef(login: viewerLogin)),
+      Qualifier.typePr(),
+    ],
+    RepoIssuesScope(:final repo) => [
+      Qualifier.typeIssue(),
+      Qualifier.repo(repo),
+    ],
+    RepoPullsScope(:final repo) => [Qualifier.typePr(), Qualifier.repo(repo)],
+    UserReposScope(:final user) => [Qualifier.user(user)],
+    ProfileIssuesScope(:final user) => [
+      Qualifier.author(user),
+      Qualifier.typeIssue(),
+    ],
+    ProfilePullsScope(:final user) => [
+      Qualifier.author(user),
+      Qualifier.typePr(),
+    ],
+    TypedGlobalSearchScope() => const [],
+    RepoDiscussionsScope(:final repo) => [Qualifier.repo(repo)],
+    CustomScope(:final hiddenQualifiers) => hiddenQualifiers,
+  };
 
   String get _quickFilterLogin => switch (this) {
-        HomeIssuesScope(:final viewerLogin) => viewerLogin ?? '',
-        HomePullsScope(:final viewerLogin) => viewerLogin ?? '',
-        RepoIssuesScope(:final viewerLogin) => viewerLogin ?? '',
-        RepoPullsScope(:final viewerLogin) => viewerLogin ?? '',
-        ProfileIssuesScope(:final user) => user.login,
-        ProfilePullsScope(:final user) => user.login,
-        _ => '',
-      };
+    HomeIssuesScope(:final viewerLogin) => viewerLogin ?? '',
+    HomePullsScope(:final viewerLogin) => viewerLogin ?? '',
+    RepoIssuesScope(:final viewerLogin) => viewerLogin ?? '',
+    RepoPullsScope(:final viewerLogin) => viewerLogin ?? '',
+    ProfileIssuesScope(:final user) => user.login,
+    ProfilePullsScope(:final user) => user.login,
+    _ => '',
+  };
 
   List<QuickFilter> get quickFilters => switch (this) {
-        HomeIssuesScope() ||
-        HomePullsScope() ||
-        ProfileIssuesScope() ||
-        ProfilePullsScope() =>
-          [
-            QuickFilter(
-              qualifier: QualifierExpression(
-                  Qualifier.assignee(UserRef(login: _quickFilterLogin))),
-              displayLabel: 'Assigned',
-            ),
-            QuickFilter(
-              qualifier: QualifierExpression(
-                  Qualifier.author(UserRef(login: _quickFilterLogin))),
-              displayLabel: 'Created',
-            ),
-            QuickFilter(
-              qualifier: QualifierExpression(
-                  Qualifier.mentions(UserRef(login: _quickFilterLogin))),
-              displayLabel: 'Mentioned',
-            ),
-          ],
-        RepoIssuesScope() => [
-            QuickFilter(
-              qualifier: QualifierExpression(
-                  Qualifier.assignee(UserRef(login: _quickFilterLogin))),
-              displayLabel: 'Assigned',
-              aliasKey: 'assignedToYou',
-            ),
-            QuickFilter(
-              qualifier: QualifierExpression(
-                  Qualifier.author(UserRef(login: _quickFilterLogin))),
-              displayLabel: 'Created',
-              aliasKey: 'yourIssues',
-            ),
-            QuickFilter(
-              qualifier: QualifierExpression(
-                  Qualifier.mentions(UserRef(login: _quickFilterLogin))),
-              displayLabel: 'Mentioned',
-              aliasKey: 'mentionsYou',
-            ),
-          ],
-        RepoPullsScope() => [
-            QuickFilter(
-              qualifier: QualifierExpression(
-                  Qualifier.assignee(UserRef(login: _quickFilterLogin))),
-              displayLabel: 'Assigned',
-              aliasKey: 'assignedToYou',
-            ),
-            QuickFilter(
-              qualifier: QualifierExpression(
-                  Qualifier.author(UserRef(login: _quickFilterLogin))),
-              displayLabel: 'Created',
-              aliasKey: 'yourPullRequests',
-            ),
-            QuickFilter(
-              qualifier: QualifierExpression(
-                  Qualifier.mentions(UserRef(login: _quickFilterLogin))),
-              displayLabel: 'Mentioned',
-              aliasKey: 'mentionsYou',
-            ),
-          ],
-        UserReposScope() => [
-            QuickFilter(
-                qualifier: QualifierExpression(Qualifier.isPublic),
-                displayLabel: 'Public'),
-            QuickFilter(
-                qualifier: QualifierExpression(Qualifier.isPrivate),
-                displayLabel: 'Private'),
-            QuickFilter(
-                qualifier: QualifierExpression(Qualifier.archived(true)),
-                displayLabel: 'Archived'),
-            QuickFilter(
-                qualifier: QualifierExpression(Qualifier.mirror(true)),
-                displayLabel: 'Mirrors'),
-            QuickFilter(
-                qualifier: QualifierExpression(Qualifier.forkOnly()),
-                displayLabel: 'Forks only'),
-          ],
-        TypedGlobalSearchScope() => const [],
-        RepoDiscussionsScope() => [
-            QuickFilter(
-                qualifier: QualifierExpression(Qualifier.isAnswered),
-                displayLabel: 'Answered'),
-            QuickFilter(
-                qualifier: QualifierExpression(Qualifier.isUnanswered),
-                displayLabel: 'Unanswered'),
-            QuickFilter(
-                qualifier: QualifierExpression(Qualifier.isOpen),
-                displayLabel: 'Open'),
-            QuickFilter(
-                qualifier: QualifierExpression(Qualifier.isClosed),
-                displayLabel: 'Closed'),
-          ],
-        CustomScope(:final quickFilters) => quickFilters,
-      };
+    HomeIssuesScope() ||
+    HomePullsScope() ||
+    ProfileIssuesScope() ||
+    ProfilePullsScope() => [
+      QuickFilter(
+        qualifier: QualifierExpression(
+          Qualifier.assignee(UserRef(login: _quickFilterLogin)),
+        ),
+        displayLabel: 'Assigned',
+      ),
+      QuickFilter(
+        qualifier: QualifierExpression(
+          Qualifier.author(UserRef(login: _quickFilterLogin)),
+        ),
+        displayLabel: 'Created',
+      ),
+      QuickFilter(
+        qualifier: QualifierExpression(
+          Qualifier.mentions(UserRef(login: _quickFilterLogin)),
+        ),
+        displayLabel: 'Mentioned',
+      ),
+    ],
+    RepoIssuesScope() => [
+      QuickFilter(
+        qualifier: QualifierExpression(
+          Qualifier.assignee(UserRef(login: _quickFilterLogin)),
+        ),
+        displayLabel: 'Assigned',
+        aliasKey: 'assignedToYou',
+      ),
+      QuickFilter(
+        qualifier: QualifierExpression(
+          Qualifier.author(UserRef(login: _quickFilterLogin)),
+        ),
+        displayLabel: 'Created',
+        aliasKey: 'yourIssues',
+      ),
+      QuickFilter(
+        qualifier: QualifierExpression(
+          Qualifier.mentions(UserRef(login: _quickFilterLogin)),
+        ),
+        displayLabel: 'Mentioned',
+        aliasKey: 'mentionsYou',
+      ),
+    ],
+    RepoPullsScope() => [
+      QuickFilter(
+        qualifier: QualifierExpression(
+          Qualifier.assignee(UserRef(login: _quickFilterLogin)),
+        ),
+        displayLabel: 'Assigned',
+        aliasKey: 'assignedToYou',
+      ),
+      QuickFilter(
+        qualifier: QualifierExpression(
+          Qualifier.author(UserRef(login: _quickFilterLogin)),
+        ),
+        displayLabel: 'Created',
+        aliasKey: 'yourPullRequests',
+      ),
+      QuickFilter(
+        qualifier: QualifierExpression(
+          Qualifier.mentions(UserRef(login: _quickFilterLogin)),
+        ),
+        displayLabel: 'Mentioned',
+        aliasKey: 'mentionsYou',
+      ),
+    ],
+    UserReposScope() => [
+      QuickFilter(
+        qualifier: QualifierExpression(Qualifier.isPublic),
+        displayLabel: 'Public',
+      ),
+      QuickFilter(
+        qualifier: QualifierExpression(Qualifier.isPrivate),
+        displayLabel: 'Private',
+      ),
+      QuickFilter(
+        qualifier: QualifierExpression(Qualifier.archived(true)),
+        displayLabel: 'Archived',
+      ),
+      QuickFilter(
+        qualifier: QualifierExpression(Qualifier.mirror(true)),
+        displayLabel: 'Mirrors',
+      ),
+      QuickFilter(
+        qualifier: QualifierExpression(Qualifier.forkOnly()),
+        displayLabel: 'Forks only',
+      ),
+    ],
+    TypedGlobalSearchScope() => const [],
+    RepoDiscussionsScope() => [
+      QuickFilter(
+        qualifier: QualifierExpression(Qualifier.isAnswered),
+        displayLabel: 'Answered',
+      ),
+      QuickFilter(
+        qualifier: QualifierExpression(Qualifier.isUnanswered),
+        displayLabel: 'Unanswered',
+      ),
+      QuickFilter(
+        qualifier: QualifierExpression(Qualifier.isOpen),
+        displayLabel: 'Open',
+      ),
+      QuickFilter(
+        qualifier: QualifierExpression(Qualifier.isClosed),
+        displayLabel: 'Closed',
+      ),
+    ],
+    CustomScope(:final quickFilters) => quickFilters,
+  };
 
   List<QuickOption> get quickOptions => switch (this) {
-        HomeIssuesScope() ||
-        HomePullsScope() ||
-        RepoIssuesScope() ||
-        RepoPullsScope() ||
-        ProfileIssuesScope() ||
-        ProfilePullsScope() =>
-          [
-            const QuickOption(
-              qualifier: QualifierExpression(Qualifier.isOpen),
-              displayLabel: 'Open Only',
-            ),
-          ],
-        UserReposScope() => [
-            QuickOption(
-                qualifier: QualifierExpression(Qualifier.forkInclude()),
-                displayLabel: 'Include forks'),
-          ],
-        TypedGlobalSearchScope() ||
-        RepoDiscussionsScope() =>
-          const [],
-        CustomScope(:final quickOptions) => quickOptions,
-      };
+    HomeIssuesScope() ||
+    HomePullsScope() ||
+    RepoIssuesScope() ||
+    RepoPullsScope() ||
+    ProfileIssuesScope() ||
+    ProfilePullsScope() => [
+      const QuickOption(
+        qualifier: QualifierExpression(Qualifier.isOpen),
+        displayLabel: 'Open Only',
+      ),
+    ],
+    UserReposScope() => [
+      QuickOption(
+        qualifier: QualifierExpression(Qualifier.forkInclude()),
+        displayLabel: 'Include forks',
+      ),
+    ],
+    TypedGlobalSearchScope() || RepoDiscussionsScope() => const [],
+    CustomScope(:final quickOptions) => quickOptions,
+  };
 
   SortConfig get sortConfig => switch (this) {
-        HomeIssuesScope() ||
-        HomePullsScope() ||
-        RepoIssuesScope() ||
-        RepoPullsScope() ||
-        ProfileIssuesScope() ||
-        ProfilePullsScope() =>
-          SearchSortConfigs.issuesPullsSort,
-        UserReposScope() => SearchSortConfigs.repositoriesSort,
-        TypedGlobalSearchScope(:final searchType) => switch (searchType) {
-            SearchType.repositories => SortConfig(const [
-                SortOption(key: 'best', displayName: 'Best Match'),
-                SortOption(key: 'stars-desc', displayName: 'Most stars'),
-                SortOption(
-                    key: 'updated-desc', displayName: 'Recently updated'),
-              ]),
-            SearchType.issuesPulls => SortConfig(const [
-                SortOption(key: 'best', displayName: 'Best Match'),
-                SortOption(key: 'created-desc', displayName: 'Newest'),
-                SortOption(key: 'created-asc', displayName: 'Oldest'),
-                SortOption(key: 'comments-desc', displayName: 'Most comments'),
-                SortOption(
-                    key: 'updated-desc', displayName: 'Recently updated'),
-              ]),
-            SearchType.users => SortConfig(const [
-                SortOption(key: 'best', displayName: 'Best Match'),
-                SortOption(
-                    key: 'followers-desc', displayName: 'Most followers'),
-                SortOption(key: 'repositories-desc', displayName: 'Most repos'),
-                SortOption(key: 'joined-desc', displayName: 'Newest'),
-              ]),
-            SearchType.discussions => SortConfig(const [
-                SortOption(key: 'best', displayName: 'Best Match'),
-                SortOption(key: 'created-desc', displayName: 'Newest'),
-                SortOption(
-                    key: 'updated-desc', displayName: 'Recently updated'),
-              ]),
-            _ => SortConfig(const [
-                SortOption(key: 'best', displayName: 'Best Match'),
-              ]),
-          },
-        RepoDiscussionsScope() => SortConfig(const [
-            SortOption(key: 'best', displayName: 'Best Match'),
-            SortOption(key: 'created-desc', displayName: 'Newest'),
-            SortOption(key: 'created-asc', displayName: 'Oldest'),
-            SortOption(key: 'updated-desc', displayName: 'Recently updated'),
-            SortOption(key: 'comments-desc', displayName: 'Most comments'),
-          ]),
-        CustomScope(:final sortConfig) => sortConfig,
-      };
+    HomeIssuesScope() ||
+    HomePullsScope() ||
+    RepoIssuesScope() ||
+    RepoPullsScope() ||
+    ProfileIssuesScope() ||
+    ProfilePullsScope() => SearchSortConfigs.issuesPullsSort,
+    UserReposScope() => SearchSortConfigs.repositoriesSort,
+    TypedGlobalSearchScope(:final searchType) => switch (searchType) {
+      SearchType.repositories => SortConfig(const [
+        SortOption(key: 'best', displayName: 'Best Match'),
+        SortOption(key: 'stars-desc', displayName: 'Most stars'),
+        SortOption(key: 'updated-desc', displayName: 'Recently updated'),
+      ]),
+      SearchType.issuesPulls => SortConfig(const [
+        SortOption(key: 'best', displayName: 'Best Match'),
+        SortOption(key: 'created-desc', displayName: 'Newest'),
+        SortOption(key: 'created-asc', displayName: 'Oldest'),
+        SortOption(key: 'comments-desc', displayName: 'Most comments'),
+        SortOption(key: 'updated-desc', displayName: 'Recently updated'),
+      ]),
+      SearchType.users => SortConfig(const [
+        SortOption(key: 'best', displayName: 'Best Match'),
+        SortOption(key: 'followers-desc', displayName: 'Most followers'),
+        SortOption(key: 'repositories-desc', displayName: 'Most repos'),
+        SortOption(key: 'joined-desc', displayName: 'Newest'),
+      ]),
+      SearchType.discussions => SortConfig(const [
+        SortOption(key: 'best', displayName: 'Best Match'),
+        SortOption(key: 'created-desc', displayName: 'Newest'),
+        SortOption(key: 'updated-desc', displayName: 'Recently updated'),
+      ]),
+      _ => SortConfig(const [
+        SortOption(key: 'best', displayName: 'Best Match'),
+      ]),
+    },
+    RepoDiscussionsScope() => SortConfig(const [
+      SortOption(key: 'best', displayName: 'Best Match'),
+      SortOption(key: 'created-desc', displayName: 'Newest'),
+      SortOption(key: 'created-asc', displayName: 'Oldest'),
+      SortOption(key: 'updated-desc', displayName: 'Recently updated'),
+      SortOption(key: 'comments-desc', displayName: 'Most comments'),
+    ]),
+    CustomScope(:final sortConfig) => sortConfig,
+  };
 
   List<String> get blacklistedQualifiers => switch (this) {
-        CustomScope(:final blacklistedQualifiers) => blacklistedQualifiers,
-        _ => const [],
-      };
+    CustomScope(:final blacklistedQualifiers) => blacklistedQualifiers,
+    _ => const [],
+  };
 
   bool get multiType => switch (this) {
-        TypedGlobalSearchScope() => true,
-        CustomScope(:final multiType) => multiType,
-        _ => false,
-      };
+    TypedGlobalSearchScope() => true,
+    CustomScope(:final multiType) => multiType,
+    _ => false,
+  };
 
   String get tabKey => switch (this) {
-        HomeIssuesScope() => 'issues',
-        HomePullsScope() => 'pulls',
-        RepoIssuesScope() => 'repo_issues',
-        RepoPullsScope() => 'repo_pulls',
-        UserReposScope() => 'user_repos',
-        ProfileIssuesScope() => 'profile_issues',
-        ProfilePullsScope() => 'profile_pulls',
-        TypedGlobalSearchScope() => 'global',
-        RepoDiscussionsScope() => 'repo_discussions',
-        CustomScope(:final tabKey) => tabKey,
-      };
+    HomeIssuesScope() => 'issues',
+    HomePullsScope() => 'pulls',
+    RepoIssuesScope() => 'repo_issues',
+    RepoPullsScope() => 'repo_pulls',
+    UserReposScope() => 'user_repos',
+    ProfileIssuesScope() => 'profile_issues',
+    ProfilePullsScope() => 'profile_pulls',
+    TypedGlobalSearchScope() => 'global',
+    RepoDiscussionsScope() => 'repo_discussions',
+    CustomScope(:final tabKey) => tabKey,
+  };
 
   String get cacheKey => switch (this) {
-        HomeIssuesScope(:final viewerLogin) => 'home:${viewerLogin ?? ''}',
-        HomePullsScope(:final viewerLogin) => 'home:${viewerLogin ?? ''}',
-        RepoIssuesScope(:final repo) => 'repo:${repo.fullName}',
-        RepoPullsScope(:final repo) => 'repo:${repo.fullName}',
-        UserReposScope(:final user) => 'user:${user.login}',
-        ProfileIssuesScope(:final user) => 'user:${user.login}',
-        ProfilePullsScope(:final user) => 'user:${user.login}',
-        TypedGlobalSearchScope() => 'global',
-        RepoDiscussionsScope(:final repo) => 'repo:${repo.fullName}',
-        CustomScope(:final cacheKey) => cacheKey,
-      };
+    HomeIssuesScope(:final viewerLogin) => 'home:${viewerLogin ?? ''}',
+    HomePullsScope(:final viewerLogin) => 'home:${viewerLogin ?? ''}',
+    RepoIssuesScope(:final repo) => 'repo:${repo.fullName}',
+    RepoPullsScope(:final repo) => 'repo:${repo.fullName}',
+    UserReposScope(:final user) => 'user:${user.login}',
+    ProfileIssuesScope(:final user) => 'user:${user.login}',
+    ProfilePullsScope(:final user) => 'user:${user.login}',
+    TypedGlobalSearchScope() => 'global',
+    RepoDiscussionsScope(:final repo) => 'repo:${repo.fullName}',
+    CustomScope(:final cacheKey) => cacheKey,
+  };
 
   List<FilterSectionDef> promotedSections(SearchType type) => switch (this) {
-        HomeIssuesScope() || HomePullsScope() => _homePromotedSections(type),
-        RepoIssuesScope(:final repo) => _repoIssuesPromotedSections(type, repo),
-        RepoPullsScope(:final repo) => _repoPullsPromotedSections(type, repo),
-        UserReposScope() => _userReposPromotedSections(type),
-        ProfileIssuesScope() ||
-        ProfilePullsScope() =>
-          _profileIssuesPullsPromotedSections(type),
-        TypedGlobalSearchScope() =>
-          _globalPromotedSections(type, sortConfig.asMap),
-        RepoDiscussionsScope(:final repo) =>
-          _repoDiscussionsPromotedSections(type, repo),
-        CustomScope(:final promotedSectionsFn) => promotedSectionsFn(type),
-      };
+    HomeIssuesScope() || HomePullsScope() => _homePromotedSections(type),
+    RepoIssuesScope(:final repo) => _repoIssuesPromotedSections(type, repo),
+    RepoPullsScope(:final repo) => _repoPullsPromotedSections(type, repo),
+    UserReposScope() => _userReposPromotedSections(type),
+    ProfileIssuesScope() ||
+    ProfilePullsScope() => _profileIssuesPullsPromotedSections(type),
+    TypedGlobalSearchScope() => _globalPromotedSections(type, sortConfig.asMap),
+    RepoDiscussionsScope(:final repo) => _repoDiscussionsPromotedSections(
+      type,
+      repo,
+    ),
+    CustomScope(:final promotedSectionsFn) => promotedSectionsFn(type),
+  };
 
   List<FilterSectionDef> moreSections(SearchType type) => switch (this) {
-        HomeIssuesScope() || HomePullsScope() => _homeMoreSections(type),
-        RepoIssuesScope(:final repo) => _repoIssuesMoreSections(type, repo),
-        RepoPullsScope(:final repo) => _repoPullsMoreSections(type, repo),
-        UserReposScope() => _userReposMoreSections(type),
-        ProfileIssuesScope() ||
-        ProfilePullsScope() =>
-          _profileIssuesPullsMoreSections(type),
-        TypedGlobalSearchScope() =>
-          _globalMoreSections(type),
-        RepoDiscussionsScope(:final repo) =>
-          _repoDiscussionsMoreSections(type, repo),
-        CustomScope(:final moreSectionsFn) => moreSectionsFn(type),
-      };
+    HomeIssuesScope() || HomePullsScope() => _homeMoreSections(type),
+    RepoIssuesScope(:final repo) => _repoIssuesMoreSections(type, repo),
+    RepoPullsScope(:final repo) => _repoPullsMoreSections(type, repo),
+    UserReposScope() => _userReposMoreSections(type),
+    ProfileIssuesScope() ||
+    ProfilePullsScope() => _profileIssuesPullsMoreSections(type),
+    TypedGlobalSearchScope() => _globalMoreSections(type),
+    RepoDiscussionsScope(:final repo) => _repoDiscussionsMoreSections(
+      type,
+      repo,
+    ),
+    CustomScope(:final moreSectionsFn) => moreSectionsFn(type),
+  };
 
   SearchScope resolveViewerLogin(String login) => switch (this) {
-        HomeIssuesScope() => SearchScope.homeIssues(viewerLogin: login),
-        HomePullsScope() => SearchScope.homePulls(viewerLogin: login),
-        RepoIssuesScope(:final repo) =>
-          SearchScope.repoIssues(repo: repo, viewerLogin: login),
-        RepoPullsScope(:final repo) =>
-          SearchScope.repoPulls(repo: repo, viewerLogin: login),
-        ProfileIssuesScope() || ProfilePullsScope() => this,
-        _ => this,
-      };
+    HomeIssuesScope() => SearchScope.homeIssues(viewerLogin: login),
+    HomePullsScope() => SearchScope.homePulls(viewerLogin: login),
+    RepoIssuesScope(:final repo) => SearchScope.repoIssues(
+      repo: repo,
+      viewerLogin: login,
+    ),
+    RepoPullsScope(:final repo) => SearchScope.repoPulls(
+      repo: repo,
+      viewerLogin: login,
+    ),
+    ProfileIssuesScope() || ProfilePullsScope() => this,
+    _ => this,
+  };
 }
 
 // ─── Home sections ───
@@ -408,14 +419,16 @@ List<FilterSectionDef> _homeMoreSections(SearchType type) {
 
 // ─── Repo issues sections ───
 List<FilterSectionDef> _repoIssuesPromotedSections(
-    SearchType type, RepoRef repo) {
+  SearchType type,
+  RepoRef repo,
+) {
   if (type != SearchType.issuesPulls) return [];
   return [
     StaticFilterSection(
       id: 'status',
       displayName: 'Status',
       icon: Octicons.issue_opened,
-      options: kIssuesPullsStatusOptions,
+      options: kIssueStatusOptions,
     ),
     PaginatedFilterSection(
       id: 'label',
@@ -458,22 +471,6 @@ List<FilterSectionDef> _repoIssuesMoreSections(SearchType type, RepoRef repo) {
       id: 'author',
       displayName: 'Author',
       icon: Octicons.pencil,
-    ),
-    PaginatedFilterSection(
-      id: 'base',
-      displayName: 'Base branch',
-      icon: Octicons.git_branch,
-      repo: repo,
-      searchable: true,
-      searchHint: 'Search branches…',
-    ),
-    PaginatedFilterSection(
-      id: 'head',
-      displayName: 'Head branch',
-      icon: Octicons.git_branch,
-      repo: repo,
-      searchable: true,
-      searchHint: 'Search branches…',
     ),
     const DateFilterSection(
       id: 'created',
@@ -519,14 +516,16 @@ List<FilterSectionDef> _repoIssuesMoreSections(SearchType type, RepoRef repo) {
 
 // ─── Repo pulls sections ───
 List<FilterSectionDef> _repoPullsPromotedSections(
-    SearchType type, RepoRef repo) {
+  SearchType type,
+  RepoRef repo,
+) {
   if (type != SearchType.issuesPulls) return [];
   return [
     StaticFilterSection(
       id: 'status',
       displayName: 'Status',
       icon: Octicons.issue_opened,
-      options: kIssuesPullsStatusOptions,
+      options: kPullRequestStatusOptions,
     ),
     PaginatedFilterSection(
       id: 'label',
@@ -642,10 +641,7 @@ List<FilterSectionDef> _userReposPromotedSections(SearchType type) {
       id: 'status',
       displayName: 'Status',
       icon: Octicons.repo,
-      options: <String, String>{
-        'public': 'Public',
-        'private': 'Private',
-      },
+      options: <String, String>{'public': 'Public', 'private': 'Private'},
     ),
     StaticFilterSection(
       id: 'sort',
@@ -729,7 +725,9 @@ List<FilterSectionDef> _profileIssuesPullsMoreSections(SearchType type) {
 
 // ─── Repo discussions sections ───
 List<FilterSectionDef> _repoDiscussionsPromotedSections(
-    SearchType type, RepoRef repo) {
+  SearchType type,
+  RepoRef repo,
+) {
   if (type != SearchType.discussions) return [];
   return [
     const StaticFilterSection(
@@ -768,7 +766,9 @@ List<FilterSectionDef> _repoDiscussionsPromotedSections(
 }
 
 List<FilterSectionDef> _repoDiscussionsMoreSections(
-    SearchType type, RepoRef repo) {
+  SearchType type,
+  RepoRef repo,
+) {
   if (type != SearchType.discussions) return [];
   return [
     const UserSearchFilterSection(

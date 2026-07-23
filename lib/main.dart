@@ -9,8 +9,6 @@ import 'package:diohub/providers/deep_link/uni_link_stream_provider.dart';
 import 'package:diohub/adapters/internet_connectivity.dart'
     show internetConnectivityProvider;
 import 'package:diohub/app/api_handler/dio.dart';
-import 'package:diohub/common/notifications/notification_service.dart'
-    show notificationServiceProvider;
 import 'package:diohub/app/app_logger.dart';
 import 'package:diohub/app/settings/settings_cache.dart';
 import 'package:diohub/app/settings/error_tracking.dart';
@@ -20,17 +18,19 @@ import 'package:diohub/providers/router_provider.dart';
 import 'package:diohub/providers/startup/app_startup_provider.dart';
 import 'package:diohub/app/drift_log_observer.dart';
 import 'package:diohub/app/talker.dart';
-import 'package:flutter_riverpod/misc.dart';
 import 'package:talker_riverpod_logger/talker_riverpod_logger.dart';
 import 'package:diohub/app/settings/appearance.dart';
 import 'package:diohub/app/settings/glass_pill.dart';
+import 'package:diohub/app/settings/locale_settings.dart';
 import 'package:diohub/app/settings/spacing.dart';
 import 'package:diohub/app/settings/theme_mode.dart';
 import 'package:diohub/app/theme_config/models/flex_theme_settings_model.dart';
 import 'package:diohub/app/theme_config/utils/flex_color_scheme_builder.dart';
+import 'package:diohub/l10n/app_localizations.dart';
+import 'package:diohub/l10n/l10n.dart';
 import 'package:diohub/providers/logging/log_providers.dart';
+import 'package:diohub/providers/settings/locale_provider.dart';
 import 'package:diohub/providers/watchers/watcher_manager_provider.dart';
-import 'package:diohub/common/notifications/notification_service.dart';
 import 'package:diohub/providers/settings/appearance_provider.dart';
 import 'package:diohub/providers/settings/flex_theme_provider.dart';
 import 'package:diohub/providers/settings/glass_pill_provider.dart';
@@ -49,11 +49,9 @@ import 'package:flex_color_scheme/flex_color_scheme.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_portal/flutter_portal.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:google_fonts/google_fonts.dart';
 import 'package:toastification/toastification.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
@@ -67,15 +65,6 @@ const String appFlavor = String.fromEnvironment(
   defaultValue: 'dev',
 );
 
-/// Heuristic: treat as render/layout/sliver error so we escalate instead of absorbing.
-bool _isRenderOrLayoutError(Object error) {
-  final s = error.toString().toLowerCase();
-  return s.contains('render') ||
-      s.contains('layout') ||
-      s.contains('sliver') ||
-      s.contains('viewport');
-}
-
 void main() async {
   // debugPaintSizeEnabled = true;
 
@@ -85,67 +74,10 @@ void main() async {
 
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Global error handlers -- catch anything that escapes all other handlers.
-  FlutterError.onError = (final FlutterErrorDetails details) {
-    AppLogger.error(
-      'Flutter framework error',
-      error: details.exception,
-      stackTrace: details.stack,
-      tag: 'FlutterError',
-    );
-    FlutterError.presentError(details);
-    if (_isRenderOrLayoutError(details.exception)) {
-      Zone.current.handleUncaughtError(
-        details.exception,
-        details.stack ?? StackTrace.current,
-      );
-    }
-  };
-
-  // When a widget throws during build, Flutter replaces it with ErrorWidget (a box).
-  // Inside a Viewport we must return a Sliver or we get "expected RenderSliver but received RenderErrorBox".
-  // Self-contained: no Theme, no provider, no context extensions (avoids infinite recursion when error is outside MaterialApp).
-  ErrorWidget.builder = (final FlutterErrorDetails details) {
-    return Directionality(
-      textDirection: TextDirection.ltr,
-      child: Builder(
-        builder: (final BuildContext context) {
-          final inViewport =
-              context.findAncestorRenderObjectOfType<RenderViewport>() != null;
-          final errorContent = Center(
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: RichText(
-                text: TextSpan(
-                  text: details.exception.toString(),
-                  style: const TextStyle(
-                    color: Color(0xFFFF0000),
-                    fontSize: 14,
-                  ),
-                ),
-              ),
-            ),
-          );
-          if (inViewport) return SliverToBoxAdapter(child: errorContent);
-          return errorContent;
-        },
-      ),
-    );
-  };
-
-  PlatformDispatcher.instance.onError =
-      (final Object error, final StackTrace stack) {
-        if (_isRenderOrLayoutError(error)) {
-          return false; // Do not absorb; let error propagate.
-        }
-        AppLogger.error(
-          'Unhandled platform error',
-          error: error,
-          stackTrace: stack,
-          tag: 'PlatformError',
-        );
-        return true;
-      };
+  // Flutter and Sentry each install a framework-aware error reporter. Do not
+  // re-route FlutterError through Talker, ErrorWidget and the root Zone: doing
+  // so reports one layout failure several times and can turn a recoverable
+  // child error into a RenderBox/RenderSliver type cascade.
 
   // Start heavy init; must complete before ProviderContainer so settings cache can be loaded.
   final Future<void> initFuture = Future.wait(<Future<void>>[
@@ -252,7 +184,7 @@ void main() async {
   );
 
   // Attach Sentry observer to Talker if crash reporting is enabled
-  if (errorTracking.crashReports) {
+  if (errorTracking.crashReports && Sentry.isEnabled) {
     appTalker.configure(observer: SentryTalkerObserver());
   }
 
@@ -387,6 +319,8 @@ class _RootAppState extends ConsumerState<RootApp> with WidgetsBindingObserver {
       final String fontFamily = ref.watch(flexThemeProvider).fontFamily ?? '';
       final SpacingSettings spacingSettings = ref.watch(spacingProvider);
       final GlassPillSettings glassPillSettings = ref.watch(glassPillProvider);
+      final LocaleSettings localeSettings = ref.watch(localeProvider);
+      final Locale? locale = localeSettings.language.locale;
 
       final bool useDynamicColors = materialYouEnabled && supportsMaterialYou;
 
@@ -478,7 +412,6 @@ class _RootAppState extends ConsumerState<RootApp> with WidgetsBindingObserver {
 
               return premiumLifecycle.cloudSyncObserverWrapper(
                 Stack(
-                  textDirection: TextDirection.ltr,
                   children: <Widget>[
                     MediaQuery(
                       data: MediaQuery.of(
@@ -495,12 +428,13 @@ class _RootAppState extends ConsumerState<RootApp> with WidgetsBindingObserver {
         theme: _cachedLightTheme!,
         darkTheme: _cachedDarkTheme!,
         themeMode: themeMode,
+        locale: locale,
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: supportedApplicationLocales,
+        localeListResolutionCallback: resolveApplicationLocale,
+        onGenerateTitle: (final BuildContext context) =>
+            AppLocalizations.of(context).appName,
         scrollBehavior: _BouncingScrollBehavior(),
-        localizationsDelegates: const <LocalizationsDelegate>[
-          DefaultMaterialLocalizations.delegate,
-          DefaultCupertinoLocalizations.delegate,
-          DefaultWidgetsLocalizations.delegate,
-        ],
         routerDelegate: _router.delegate(
           deepLinkBuilder: (final PlatformDeepLink _) =>
               DeepLink(<PageRouteInfo>[LandingLoadingRoute()]),

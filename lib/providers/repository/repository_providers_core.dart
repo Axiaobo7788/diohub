@@ -27,12 +27,12 @@ final repositoryProvider = AsyncNotifierProvider.autoDispose
     .family<RepositoryNotifier, RepoInfoData, RepoRef>(RepositoryNotifier.new);
 
 /// Lightweight provider that fetches repository data for card contexts.
-/// Currently delegates to the full repository fetch; card-specific optimization
-/// can be added to the service layer if needed.
 final repoCardProvider = FutureProvider.autoDispose.family<RepoCardData, RepoRef>((
   final Ref ref,
   final RepoRef repoRef,
 ) async {
+  keepAliveFor(ref);
+
   // Check if repositoryProvider already has data for this repo to avoid redundant fetch
   final fullRepoData = ref.read(repositoryProvider(repoRef));
   if (fullRepoData.hasValue && fullRepoData.value?.repository != null) {
@@ -40,10 +40,10 @@ final repoCardProvider = FutureProvider.autoDispose.family<RepoCardData, RepoRef
     if (repo != null) return repo;
   }
 
-  // Fetch through service layer
+  // The dedicated card query avoids branch resolution and screen-only counts.
   final repository = await repoRef
       .services(ref.read(apiClientProvider))
-      .fetchRepositoryGraphQL(refresh: false);
+      .fetchRepositoryCardGraphQL(refresh: false);
 
   return repository;
 });

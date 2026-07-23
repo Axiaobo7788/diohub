@@ -1,4 +1,5 @@
 import 'package:diohub/common/animations/animated_gradient_bar.dart';
+import 'package:diohub/l10n/l10n.dart';
 import 'package:diohub/style/app_spacing.dart';
 import 'package:diohub/style/opacities.dart';
 import 'package:diohub/style/surface_ext.dart';
@@ -38,7 +39,9 @@ class MetadataLanguageBar extends StatelessWidget {
     }
 
     final int total = entries.fold<int>(
-        0, (final int sum, final LanguageBarEntry e) => sum + e.size);
+      0,
+      (final int sum, final LanguageBarEntry e) => sum + e.size,
+    );
     if (total == 0) {
       return const SizedBox.shrink();
     }
@@ -46,17 +49,27 @@ class MetadataLanguageBar extends StatelessWidget {
     final List<LanguageBarEntry> visible = entries.take(maxVisible).toList();
     final int otherSize = entries.length > maxVisible
         ? entries
-            .skip(maxVisible)
-            .fold<int>(0, (final int s, final LanguageBarEntry e) => s + e.size)
+              .skip(maxVisible)
+              .fold<int>(
+                0,
+                (final int s, final LanguageBarEntry e) => s + e.size,
+              )
         : 0;
 
     final List<LanguageBarEntry> forBar = List<LanguageBarEntry>.from(visible);
     if (otherSize > 0) {
       forBar.add(
-          LanguageBarEntry(name: 'Other', color: '#6e7681', size: otherSize));
+        LanguageBarEntry(
+          name: context.l10n.repoOtherLanguages,
+          color: '#6e7681',
+          size: otherSize,
+        ),
+      );
     }
     final int barTotal = forBar.fold<int>(
-        0, (final int sum, final LanguageBarEntry e) => sum + e.size);
+      0,
+      (final int sum, final LanguageBarEntry e) => sum + e.size,
+    );
     if (barTotal == 0) {
       return const SizedBox.shrink();
     }
@@ -71,10 +84,7 @@ class MetadataLanguageBar extends StatelessWidget {
           flex: e.size,
           child: ClipRRect(
             borderRadius: context.radius(RadiusSize.small),
-            child: Container(
-              height: 6,
-              color: color,
-            ),
+            child: Container(height: 6, color: color),
           ),
         );
       }).toList(),
@@ -134,7 +144,8 @@ class MetadataLanguageBar extends StatelessWidget {
                     ),
                     context.spacing.tightGap,
                     Text(
-                      'Other ${(otherSize * 100 / total).round()}%',
+                      '${context.l10n.repoOtherLanguages} '
+                      '${(otherSize * 100 / total).round()}%',
                       style: textTheme.labelSmall?.copyWith(
                         color: colorScheme.onSurfaceVariant.secondary,
                       ),
@@ -149,6 +160,7 @@ class MetadataLanguageBar extends StatelessWidget {
   }
 
   static Color _parseColor(final String hex, final ColorScheme colorScheme) {
-    return tryParseHexColor(hex, fallback: colorScheme.primary) ?? colorScheme.primary;
+    return tryParseHexColor(hex, fallback: colorScheme.primary) ??
+        colorScheme.primary;
   }
 }

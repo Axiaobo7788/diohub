@@ -1,5 +1,6 @@
 import 'package:built_collection/built_collection.dart';
 import 'package:diohub/app/api_handler/dio.dart';
+import 'package:diohub_graphql/fragments/fragment_typedefs.dart';
 import 'package:diohub_graphql/schema.graphql.dart';
 import 'package:diohub_graphql/queries/repositories/commit_info.graphql.dart';
 import 'package:diohub_graphql/queries/repositories/commits_list.graphql.dart';
@@ -26,6 +27,8 @@ import 'package:diohub_models/models/repositories/secret_scanning_alert.dart';
 import 'package:diohub_models/models/repositories/star_mutation_result.dart';
 import 'package:diohub_models/models/repository/compare_result.dart';
 import 'package:diohub_models/models/pagination/paginated_result.dart';
+import 'package:diohub/models/repository_contributor_preview.dart';
+import 'package:diohub/models/repository_document.dart';
 import 'package:diohub/services/base/base_service.dart';
 import 'package:lens_annotations/lens_annotations.dart';
 import 'package:diohub/services/repositories/repo_content_service.dart';
@@ -50,6 +53,11 @@ class RepositoryServices extends EntityService<RepoRef> {
   // ============================================================================
   // CONTENT SERVICE DELEGATION (15 methods)
   // ============================================================================
+
+  /// Fetch only the fields required by repository cards.
+  Future<RepoCardData> fetchRepositoryCardGraphQL({
+    final bool refresh = false,
+  }) => _content.fetchRepositoryCardGraphQL(refresh: refresh);
 
   /// Fetch repository info via GraphQL.
   Future<RepoInfo> fetchRepositoryGraphQL({
@@ -81,6 +89,12 @@ class RepositoryServices extends EntityService<RepoRef> {
     final String? dir,
   }) =>
       _content.fetchReadmeHtml(branch: branch, dir: dir);
+
+  /// Fetch a rendered CONTRIBUTING or SECURITY document on demand.
+  Future<RepositoryDocument?> fetchRepositoryDocumentHtml({
+    required final RepositoryDocumentKind kind,
+    required final String branch,
+  }) => _content.fetchRepositoryDocumentHtml(kind: kind, branch: branch);
 
   /// Fetch a single discussion by number.
   Future<Fragment$discussionCardFields?> fetchDiscussionByNumber(final int number) =>
@@ -351,6 +365,11 @@ class RepositoryServices extends EntityService<RepoRef> {
   // ============================================================================
   // LIST SERVICE DELEGATION (7 methods)
   // ============================================================================
+
+  Future<List<RepositoryContributorPreview>> fetchContributorPreview({
+    final int limit = 12,
+    final bool refresh = false,
+  }) => _list.fetchContributorPreview(limit: limit, refresh: refresh);
 
   /// Fetch discussions (paginated).
   Future<PaginatedResult<DiscussionEdge>>

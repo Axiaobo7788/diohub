@@ -183,6 +183,7 @@ final class SearchService extends BaseService {
       items: items,
       hasNextPage: search.pageInfo.hasNextPage,
       endCursor: search.pageInfo.endCursor,
+      totalCount: search.issueCount,
     );
   }
 

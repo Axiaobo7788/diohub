@@ -1,10 +1,10 @@
 import 'package:diohub/app/app_logger.dart';
 import 'package:diohub/common/search_overlay/filter_section_def.dart';
 import 'package:diohub/common/search_overlay/filters/dynamic_chip_row.dart';
+import 'package:diohub/l10n/l10n.dart';
 import 'package:diohub/models/search/search_scope.dart';
 import 'package:diohub/models/search/search_state.dart';
 import 'package:diohub/providers/search/search_state_notifier.dart';
-import 'package:diohub/style/app_spacing.dart';
 import 'package:diohub/utils/utils.dart';
 import 'package:flutter/material.dart';
 
@@ -46,7 +46,12 @@ class _PreloadedPickerState extends State<PreloadedPicker> {
       final options = await widget.section.load!();
       if (mounted) setState(() => _options = options);
     } catch (e, st) {
-      AppLogger.warning('Filter options load failed', error: e, stackTrace: st, tag: 'Search');
+      AppLogger.warning(
+        'Filter options load failed',
+        error: e,
+        stackTrace: st,
+        tag: 'Search',
+      );
       if (mounted) setState(() => _error = e);
     }
   }
@@ -55,7 +60,7 @@ class _PreloadedPickerState extends State<PreloadedPicker> {
   Widget build(BuildContext context) {
     if (_error != null) {
       return Text(
-        'Could not load options',
+        context.l10n.filterOptionsLoadError,
         style: context.textTheme.bodySmall?.copyWith(
           color: context.colorScheme.error,
         ),
@@ -78,7 +83,7 @@ class _PreloadedPickerState extends State<PreloadedPicker> {
     }
     if (_options!.isEmpty) {
       return Text(
-        'No options',
+        context.l10n.filterNoOptions,
         style: context.textTheme.bodySmall?.copyWith(
           color: context.colorScheme.onSurfaceVariant,
         ),

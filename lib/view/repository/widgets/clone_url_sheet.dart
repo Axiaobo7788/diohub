@@ -1,5 +1,6 @@
 import 'package:diohub/common/bottom_sheet/bottom_sheets.dart';
 import 'package:diohub/common/clipboard/clipboard_service.dart';
+import 'package:diohub/l10n/l10n.dart';
 import 'package:diohub/style/app_spacing.dart';
 import 'package:diohub/utils/utils.dart';
 import 'package:flutter/material.dart';
@@ -43,11 +44,7 @@ class CloneUrlSheet extends ConsumerWidget {
 }
 
 class _UrlRow extends StatelessWidget {
-  const _UrlRow({
-    required this.label,
-    required this.url,
-    required this.onCopy,
-  });
+  const _UrlRow({required this.label, required this.url, required this.onCopy});
 
   final String label;
   final String url;
@@ -73,9 +70,7 @@ class _UrlRow extends StatelessWidget {
         Expanded(
           child: Text(
             url,
-            style: theme.textTheme.bodySmall?.copyWith(
-              fontFamily: 'monospace',
-            ),
+            style: theme.textTheme.bodySmall?.copyWith(fontFamily: 'monospace'),
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
           ),
@@ -83,7 +78,7 @@ class _UrlRow extends StatelessWidget {
         IconButton(
           icon: const Icon(Octicons.copy),
           onPressed: onCopy,
-          tooltip: 'Copy',
+          tooltip: context.l10n.repoCopyCloneUrl,
         ),
       ],
     );

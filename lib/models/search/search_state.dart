@@ -78,6 +78,36 @@ abstract class SearchState with _$SearchState {
     return copyWith(activeQualifiers: [...others, filter.qualifier]);
   }
 
+  /// Commits parsed search-box input without leaving stale qualifiers behind.
+  ///
+  /// Qualifiers already selected through presets or filter controls are kept
+  /// unless the submitted text contains the same qualifier key. Every
+  /// submitted value for that key is then kept, so valid multi-value queries
+  /// such as `label:bug label:regression` continue to work.
+  SearchState withParsedInput({
+    required String freeText,
+    required Iterable<QualifierExpression> qualifiers,
+  }) {
+    final incoming = List<QualifierExpression>.from(qualifiers);
+    if (incoming.isEmpty) {
+      return copyWith(freeText: freeText);
+    }
+
+    final incomingKeys = incoming
+        .map((expression) => _qualifierKey(expression.qualifier))
+        .toSet();
+    final retained = activeQualifiers
+        .where(
+          (expression) =>
+              !incomingKeys.contains(_qualifierKey(expression.qualifier)),
+        )
+        .toList();
+    return copyWith(
+      freeText: freeText,
+      activeQualifiers: [...retained, ...incoming],
+    );
+  }
+
   SearchState withQuickOption(QuickOption option, {required bool enabled}) {
     if (enabled) {
       final others = activeQualifiers
@@ -93,10 +123,11 @@ abstract class SearchState with _$SearchState {
   }
 
   static bool _sameQualifierKey(Qualifier a, Qualifier b) {
-    final sa = a.toQueryString();
-    final sb = b.toQueryString();
-    final ka = sa.contains(':') ? sa.substring(0, sa.indexOf(':')) : sa;
-    final kb = sb.contains(':') ? sb.substring(0, sb.indexOf(':')) : sb;
-    return ka == kb;
+    return _qualifierKey(a) == _qualifierKey(b);
+  }
+
+  static String _qualifierKey(Qualifier qualifier) {
+    final query = qualifier.toQueryString();
+    return query.contains(':') ? query.substring(0, query.indexOf(':')) : query;
   }
 }

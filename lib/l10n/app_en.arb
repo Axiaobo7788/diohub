@@ -1,0 +1,573 @@
+{
+  "@@locale": "en",
+  "appName": "DioHub",
+  "@appName": {
+    "description": "The application name."
+  },
+  "languageAndRegion": "Language & region",
+  "@languageAndRegion": {
+    "description": "Title for language and regional preferences."
+  },
+  "languageSystem": "System default",
+  "@languageSystem": {
+    "description": "Use the operating system language."
+  },
+  "languageEnglish": "English",
+  "@languageEnglish": {
+    "description": "English language option, written in English."
+  },
+  "languageSimplifiedChinese": "Simplified Chinese",
+  "@languageSimplifiedChinese": {
+    "description": "Simplified Chinese language option."
+  },
+  "commonCancel": "Cancel",
+  "commonSearch": "Search",
+  "commonRetry": "Retry",
+  "commonSignIn": "Sign in",
+  "commonShowMore": "Show more",
+  "commonNew": "New",
+  "commonCode": "Code",
+  "commonFilter": "Filter",
+  "commonAuto": "Auto",
+  "commonFree": "Free",
+  "homeDashboard": "Dashboard",
+  "homeTitle": "Home",
+  "homeSearchGitHub": "Search GitHub",
+  "homeSearchRepositories": "Search GitHub repositories",
+  "homeSearchRepositoriesHint": "Owner, repository, topic...",
+  "homeBackToSearch": "Back to search",
+  "homeNotifications": "Notifications",
+  "homeCouldNotOpenLink": "Could not open the link.",
+  "homeFeatureNotAvailable": "{feature} is not connected in this phase yet.",
+  "@homeFeatureNotAvailable": {
+    "placeholders": {
+      "feature": {
+        "type": "String"
+      }
+    }
+  },
+  "homeNoSystemBrowser": "No system browser is available.",
+  "homeOpenRepositoryOnGitHub": "Open repository on GitHub",
+  "homeDirectoryEmpty": "This directory is empty.",
+  "homeParentDirectory": "Parent directory",
+  "homeBackToDirectory": "Back to directory",
+  "homeOpenFileOnGitHub": "Open file on GitHub",
+  "homeOpenOnGitHub": "Open on GitHub",
+  "homeBrowsingGitHubPublicly": "Browsing GitHub publicly",
+  "homePublicBrowsing": "Public browsing",
+  "homeAskAnything": "Ask anything or type @ to add context",
+  "homeAgent": "Agent",
+  "homeCreateIssue": "Create issue",
+  "homeWriteCode": "Write code",
+  "homePullRequests": "Pull requests",
+  "homeTopRepositories": "Top repositories",
+  "homeTopRepositoriesSignInBody": "Sign in to see repositories you have recently contributed to or created.",
+  "homeFindRepository": "Find a repository...",
+  "homeFindRepositoryTooltip": "Find a repository",
+  "homeRepositoriesLoadError": "Could not load repositories.",
+  "homeNoRepositoriesFound": "No repositories found.",
+  "homeRepositorySearch": "Repository search",
+  "homeCloseSearch": "Close search",
+  "homeSignInToPersonalizeFeed": "Sign in to personalize your feed",
+  "homePublicSearchAvailable": "Public repository search remains available without an account.",
+  "homeFeed": "Feed",
+  "homeRefreshActivity": "Refresh activity",
+  "homeActivityNotConnected": "Activity feed is not connected.",
+  "homeFollowingAndWatched": "Following & watched",
+  "homeSignInToPersonalize": "Sign in to personalize",
+  "homeTopRepositoriesUnavailable": "Top repositories are unavailable.",
+  "navClose": "Close navigation",
+  "navAllIssues": "All issues",
+  "navAllPullRequests": "All pull requests",
+  "navAllRepositories": "All repositories",
+  "navProjects": "Projects",
+  "navDiscussions": "Discussions",
+  "navCodespaces": "Codespaces",
+  "navCopilot": "Copilot",
+  "navExplore": "Explore",
+  "navMarketplace": "Marketplace",
+  "navMcpRegistry": "MCP registry",
+  "accountSwitch": "Switch account",
+  "accountSetStatus": "Set status",
+  "accountProfile": "Profile",
+  "accountRepositories": "Repositories",
+  "accountStars": "Stars",
+  "accountGists": "Gists",
+  "accountOrganizations": "Organizations",
+  "accountEnterprises": "Enterprises",
+  "accountSponsors": "Sponsors",
+  "accountSettings": "Settings",
+  "accountCopilotSettings": "Copilot settings",
+  "accountFeaturePreview": "Feature preview",
+  "accountAppearance": "Appearance",
+  "accountAccessibility": "Accessibility",
+  "accountTryEnterprise": "Try Enterprise",
+  "accountSignOut": "Sign out",
+  "accountSignOutAllTitle": "Sign out of all accounts?",
+  "accountSignOutAllBody": "This removes every saved DioHub account and its local access token from this device.",
+  "changelogLatest": "Latest from our changelog",
+  "changelogEmpty": "No changelog entries are available.",
+  "changelogViewAll": "View changelog →",
+  "changelogLoadError": "Could not load the GitHub changelog.",
+  "relativeJustNow": "just now",
+  "relativeMinutesAgo": "{count, plural, =1{1 minute ago} other{{count} minutes ago}}",
+  "@relativeMinutesAgo": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "relativeHoursAgo": "{count, plural, =1{1 hour ago} other{{count} hours ago}}",
+  "@relativeHoursAgo": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "relativeYesterday": "yesterday",
+  "relativeDaysAgo": "{count} days ago",
+  "@relativeDaysAgo": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "relativeWeeksAgo": "{count, plural, =1{1 week ago} other{{count} weeks ago}}",
+  "@relativeWeeksAgo": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "relativeMonthsAgo": "{count, plural, =1{1 month ago} other{{count} months ago}}",
+  "@relativeMonthsAgo": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "relativeYearsAgo": "{count, plural, =1{1 year ago} other{{count} years ago}}",
+  "@relativeYearsAgo": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "repoDashboard": "Dashboard",
+  "repoRepository": "Repository",
+  "repoLegacyView": "Legacy view",
+  "repoOpenNavigation": "Open navigation",
+  "repoSearchGitHub": "Search GitHub",
+  "repoRefreshRepository": "Refresh repository",
+  "repoOptions": "Repository options",
+  "repoOpenLegacyLayout": "Open legacy layout",
+  "repoOpenNewLayout": "Open new layout",
+  "repoLoading": "Loading repository…",
+  "repoUnavailable": "Repository unavailable",
+  "repoLoadError": "Error loading repository: {error}",
+  "@repoLoadError": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "repoCode": "Code",
+  "repoIssues": "Issues",
+  "repoPullRequests": "Pull requests",
+  "repoActions": "Actions",
+  "repoProjects": "Projects",
+  "repoSecurity": "Security",
+  "repoInsights": "Insights",
+  "repoPublic": "Public",
+  "repoPrivate": "Private",
+  "repoArchived": "Archived",
+  "repoForkedFrom": "Forked from {repository}",
+  "@repoForkedFrom": {
+    "placeholders": {
+      "repository": {
+        "type": "String"
+      }
+    }
+  },
+  "repoAbout": "About",
+  "repoNoDescription": "No description provided.",
+  "repoContributing": "Contributing",
+  "repoSecurityPolicy": "Security policy",
+  "repoStarsCount": "{count} stars",
+  "@repoStarsCount": {
+    "placeholders": {
+      "count": {
+        "type": "String"
+      }
+    }
+  },
+  "repoForksCount": "{count} forks",
+  "@repoForksCount": {
+    "placeholders": {
+      "count": {
+        "type": "String"
+      }
+    }
+  },
+  "repoWatchingCount": "{count} watching",
+  "@repoWatchingCount": {
+    "placeholders": {
+      "count": {
+        "type": "String"
+      }
+    }
+  },
+  "repoBranchesCount": "{count} branches",
+  "@repoBranchesCount": {
+    "placeholders": {
+      "count": {
+        "type": "String"
+      }
+    }
+  },
+  "repoTagsCount": "{count} tags",
+  "@repoTagsCount": {
+    "placeholders": {
+      "count": {
+        "type": "String"
+      }
+    }
+  },
+  "repoReleases": "Releases",
+  "repoLatest": "Latest",
+  "repoSponsorProject": "Sponsor this project",
+  "repoLanguages": "Languages",
+  "repoContributors": "Contributors",
+  "repoLicense": "License",
+  "repoDocumentNotFound": "This document is not available on the selected branch.",
+  "repoDocumentLoadError": "Could not load this document: {error}",
+  "@repoDocumentLoadError": {
+    "placeholders": {
+      "error": {"type": "String"}
+    }
+  },
+  "repoFunding": "Funding",
+  "repoWatchCount": "Watch {count}",
+  "@repoWatchCount": {
+    "placeholders": {
+      "count": {
+        "type": "String"
+      }
+    }
+  },
+  "repoForkCount": "Fork {count}",
+  "@repoForkCount": {
+    "placeholders": {
+      "count": {
+        "type": "String"
+      }
+    }
+  },
+  "repoStarCount": "Star {count}",
+  "@repoStarCount": {
+    "placeholders": {
+      "count": {
+        "type": "String"
+      }
+    }
+  },
+  "repoAllActivity": "All activity",
+  "repoNotWatching": "Not watching",
+  "repoIgnore": "Ignore",
+  "repoNotMigrated": "{tab} is not migrated yet",
+  "@repoNotMigrated": {
+    "placeholders": {
+      "tab": {
+        "type": "String"
+      }
+    }
+  },
+  "repoPhaseCodeOnly": "This phase only rewrites the Repository Code page. Use the legacy layout for the existing implementation.",
+  "repoReadme": "README",
+  "repoEditReadme": "Edit README on GitHub",
+  "repoEditReadmeRequiresWrite": "Write permission is required to edit README",
+  "repoReadmeOutlineUnavailable": "README outline is not available in this phase.",
+  "repoOpenSubmoduleUnavailable": "Opening submodules is not available in this phase.",
+  "repoFileSearchUnavailable": "Repository-wide file search is not available in this phase.",
+  "repoGoToFile": "Go to file",
+  "repoClearFileFilter": "Clear file filter",
+  "repoFilterCurrentDirectory": "Filter current directory",
+  "repoGoToFileUnavailable": "Go to file (not available)",
+  "repoCreateNewFile": "Create new file",
+  "repoCodeOptions": "Code options",
+  "repoBrowsingCommit": "Browsing commit {commit}. Editing is disabled.",
+  "@repoBrowsingCommit": {
+    "placeholders": {
+      "commit": {
+        "type": "String"
+      }
+    }
+  },
+  "repoDefaultBranch": "Default branch",
+  "repoSwitchBranch": "Switch branch…",
+  "repoSwitchTag": "Switch tag…",
+  "repoUploadFilesUnavailable": "Upload files (not available)",
+  "repoAddFile": "Add file",
+  "repoViewUpstream": "View upstream",
+  "repoLoadingLatestCommit": "Loading latest commit…",
+  "repoLatestCommitUnavailable": "Latest commit unavailable",
+  "repoRetryLatestCommit": "Retry latest commit",
+  "repoNoCommitInformation": "No commit information for this directory",
+  "repoUnknownAuthor": "Unknown author",
+  "repoNameColumn": "Name",
+  "repoLastCommitColumn": "Last commit",
+  "repoUpdatedColumn": "Updated",
+  "repoCouldNotLoadFiles": "Could not load repository files",
+  "repoNoMatchingFiles": "No matching files",
+  "repoDirectoryEmpty": "This directory is empty",
+  "repoClearFilterHint": "Clear the file filter to show every entry.",
+  "repoCloneRepository": "Clone repository",
+  "repoDirectory": "Directory",
+  "repoSubmodule": "Submodule",
+  "repoReadmeLoadError": "Could not load README: {error}",
+  "@repoReadmeLoadError": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "repoNoReadme": "No README",
+  "repoNoReadmeBody": "This repository doesn't have a README file.",
+  "repoSearchBranches": "Search branches…",
+  "repoSearchTags": "Search tags…",
+  "repoDefault": "Default",
+  "repoCurrent": "Current",
+  "repoCopyCloneUrl": "Copy clone URL",
+  "repoOtherLanguages": "Other",
+  "repoAllIssues": "All issues",
+  "repoNewIssue": "New issue",
+  "repoNewPullRequest": "New pull request",
+  "repoFilters": "Filters",
+  "repoSearchIssues": "Search issues",
+  "repoSearchPullRequests": "Search pull requests",
+  "repoOpen": "Open",
+  "repoClosed": "Closed",
+  "repoSort": "Sort",
+  "repoAssignedToMe": "Assigned to me",
+  "repoCreatedByMe": "Created by me",
+  "repoMentioned": "Mentioned",
+  "repoRecentActivity": "Recent activity",
+  "repoViews": "Views",
+  "repoMilestones": "Milestones",
+  "repoLabels": "Labels",
+  "repoAuthor": "Author",
+  "repoReviews": "Reviews",
+  "repoAssignee": "Assignee",
+  "filterClearAll": "Clear all",
+  "filterDone": "Done",
+  "filterMoreFilters": "More filters",
+  "filterAdvanced": "Advanced",
+  "filterAdvancedQueryHint": "e.g. is:open label:bug",
+  "filterSelect": "Select {section}",
+  "@filterSelect": {
+    "placeholders": {
+      "section": {"type": "String"}
+    }
+  },
+  "filterSearch": "Search {section}…",
+  "@filterSearch": {
+    "placeholders": {
+      "section": {"type": "String"}
+    }
+  },
+  "filterEnter": "Enter {section}…",
+  "@filterEnter": {
+    "placeholders": {
+      "section": {"type": "String"}
+    }
+  },
+  "filterSearchLabels": "Search labels…",
+  "filterSearchAssignees": "Search assignees…",
+  "filterApply": "Apply",
+  "filterAfter": "After…",
+  "filterBefore": "Before…",
+  "filterRange": "Range…",
+  "filterMinimum": "Min",
+  "filterMaximum": "Max",
+  "filterNoOptions": "No options",
+  "filterOptionsLoadError": "Could not load options",
+  "filterNoMilestone": "No milestone",
+  "filterUnsupportedPicker": "This filter is not supported yet.",
+  "filterNoItemsFound": "No items found",
+  "filterStatus": "Status",
+  "filterLabel": "Label",
+  "filterMilestone": "Milestone",
+  "filterBaseBranch": "Base branch",
+  "filterHeadBranch": "Head branch",
+  "filterCreated": "Created",
+  "filterUpdated": "Updated",
+  "filterComments": "Comments",
+  "filterReactions": "Reactions",
+  "filterInteractions": "Interactions",
+  "filterDraft": "Draft",
+  "filterReviewStatus": "Review status",
+  "filterReviewedBy": "Reviewed by",
+  "filterReviewRequested": "Review requested",
+  "filterTeamRequested": "Team requested",
+  "filterLinkedIssue": "Linked issue",
+  "filterExclude": "Exclude",
+  "filterClosed": "Closed",
+  "filterMerged": "Merged",
+  "filterOptionMerged": "Merged",
+  "filterOptionBestMatch": "Best match",
+  "filterOptionNewest": "Newest",
+  "filterOptionOldest": "Oldest",
+  "filterOptionMostComments": "Most comments",
+  "filterOptionRecentlyUpdated": "Recently updated",
+  "filterOptionNoReview": "No review",
+  "filterOptionReviewRequired": "Review required",
+  "filterOptionApproved": "Approved",
+  "filterOptionChangesRequested": "Changes requested",
+  "filterOptionDraftOnly": "Draft only",
+  "filterOptionNonDraftOnly": "Non-draft only",
+  "filterOptionHasLinkedPullRequest": "Has linked pull request",
+  "filterOptionHasLinkedIssue": "Has linked issue",
+  "filterOptionNoLabels": "No labels",
+  "filterOptionNoMilestone": "No milestone",
+  "filterOptionNoAssignee": "No assignee",
+  "repoIssuesUnavailable": "Issues unavailable",
+  "repoIssuesDisabled": "Issues are disabled for this repository.",
+  "repoNoOpenIssues": "There aren’t any open issues.",
+  "repoNoClosedIssues": "There aren’t any closed issues.",
+  "repoNoOpenPullRequests": "There aren’t any open pull requests.",
+  "repoNoClosedPullRequests": "There aren’t any closed pull requests.",
+  "repoAdjustSearchFilters": "Try adjusting your search filters.",
+  "repoIssuePullLoadError": "Could not load this list.",
+  "repoSignInRequired": "Sign in to continue",
+  "repoAccountStateLoadError": "Could not read the local account state.",
+  "repoSignInToBrowseIssues": "Sign in to browse and filter this repository's issues.",
+  "repoSignInToBrowsePullRequests": "Sign in to browse and filter this repository's pull requests.",
+  "repoListOpened": "opened",
+  "repoListClosed": "closed",
+  "repoListDraft": "draft",
+  "repoListMerged": "merged",
+  "repoIssuePullListMetadata": "#{number} · {author} {action} {time}",
+  "@repoIssuePullListMetadata": {
+    "placeholders": {
+      "number": {"type": "int"},
+      "author": {"type": "String"},
+      "action": {"type": "String"},
+      "time": {"type": "String"}
+    }
+  },
+  "repoCommentsCount": "{count, plural, =1{1 comment} other{{count} comments}}",
+  "@repoCommentsCount": {
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
+  "activityNoRecent": "No recent activity",
+  "activityNoRecentBody": "Activity from people and repositories you follow will appear here.",
+  "activityRefresh": "Refresh",
+  "activityLoadMoreError": "Could not load more activity: {error}",
+  "@activityLoadMoreError": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "activityIssueState": "{action, select, opened{{count, plural, =1{opened an issue} other{opened {count} issues}}} closed{{count, plural, =1{closed an issue} other{closed {count} issues}}} reopened{{count, plural, =1{reopened an issue} other{reopened {count} issues}}} readyForReview{{count, plural, =1{marked an issue as ready} other{marked {count} issues as ready}}} convertedToDraft{{count, plural, =1{converted an issue to draft} other{converted {count} issues to draft}}} other{{count, plural, =1{updated an issue} other{updated {count} issues}}}}",
+  "@activityIssueState": {
+    "placeholders": {
+      "action": {"type": "String"},
+      "count": {"type": "int"}
+    }
+  },
+  "activityPullRequestState": "{action, select, opened{{count, plural, =1{opened a pull request} other{opened {count} pull requests}}} closed{{count, plural, =1{closed a pull request} other{closed {count} pull requests}}} reopened{{count, plural, =1{reopened a pull request} other{reopened {count} pull requests}}} merged{{count, plural, =1{merged a pull request} other{merged {count} pull requests}}} readyForReview{{count, plural, =1{marked a pull request as ready} other{marked {count} pull requests as ready}}} convertedToDraft{{count, plural, =1{converted a pull request to draft} other{converted {count} pull requests to draft}}} other{{count, plural, =1{updated a pull request} other{updated {count} pull requests}}}}",
+  "@activityPullRequestState": {
+    "placeholders": {
+      "action": {"type": "String"},
+      "count": {"type": "int"}
+    }
+  },
+  "activityPush": "{branches, plural, =1{{commits, plural, =1{pushed a commit} other{pushed {commits} commits}}} other{pushed {commits} commits to {branches} branches}}",
+  "@activityPush": {
+    "placeholders": {
+      "commits": {"type": "int"},
+      "branches": {"type": "int"}
+    }
+  },
+  "activityLabelsUpdated": "updated labels",
+  "activityLabelsAdded": "{count, plural, =1{added a label} other{added {count} labels}}",
+  "@activityLabelsAdded": {"placeholders": {"count": {"type": "int"}}},
+  "activityLabelsRemoved": "{count, plural, =1{removed a label} other{removed {count} labels}}",
+  "@activityLabelsRemoved": {"placeholders": {"count": {"type": "int"}}},
+  "activityComments": "{action, select, created{{count, plural, =1{added a comment} other{added {count} comments}}} edited{{count, plural, =1{edited a comment} other{edited {count} comments}}} deleted{{count, plural, =1{deleted a comment} other{deleted {count} comments}}} other{{count, plural, =1{updated a comment} other{updated {count} comments}}}}",
+  "@activityComments": {
+    "placeholders": {
+      "action": {"type": "String"},
+      "count": {"type": "int"}
+    }
+  },
+  "activityReferences": "{action, select, created{{kind, select, branch{{count, plural, =1{created a branch} other{created {count} branches}}} tag{{count, plural, =1{created a tag} other{created {count} tags}}} other{{count, plural, =1{created a reference} other{created {count} references}}}}} deleted{{kind, select, branch{{count, plural, =1{deleted a branch} other{deleted {count} branches}}} tag{{count, plural, =1{deleted a tag} other{deleted {count} tags}}} other{{count, plural, =1{deleted a reference} other{deleted {count} references}}}}} other{{count, plural, =1{updated a reference} other{updated {count} references}}}}",
+  "@activityReferences": {
+    "placeholders": {
+      "action": {"type": "String"},
+      "kind": {"type": "String"},
+      "count": {"type": "int"}
+    }
+  },
+  "activityStarredRepositories": "{count, plural, =1{starred a repository} other{starred {count} repositories}}",
+  "@activityStarredRepositories": {"placeholders": {"count": {"type": "int"}}},
+  "activityForkedRepositories": "{count, plural, =1{forked a repository} other{forked {count} repositories}}",
+  "@activityForkedRepositories": {"placeholders": {"count": {"type": "int"}}},
+  "activityMadeRepositoriesPublic": "{count, plural, =1{made a repository public} other{made {count} repositories public}}",
+  "@activityMadeRepositoriesPublic": {"placeholders": {"count": {"type": "int"}}},
+  "activityMembers": "{action, select, removed{{count, plural, =1{removed a member} other{removed {count} members}}} other{{count, plural, =1{added a member} other{added {count} members}}}}",
+  "@activityMembers": {
+    "placeholders": {
+      "action": {"type": "String"},
+      "count": {"type": "int"}
+    }
+  },
+  "activityAssignedIssues": "{action, select, unassigned{{count, plural, =1{unassigned an issue} other{unassigned {count} issues}}} other{{count, plural, =1{assigned an issue} other{assigned {count} issues}}}}",
+  "@activityAssignedIssues": {
+    "placeholders": {
+      "action": {"type": "String"},
+      "count": {"type": "int"}
+    }
+  },
+  "activityReviews": "{state, select, approved{{count, plural, =1{approved a pull request} other{approved {count} pull requests}}} changesRequested{{count, plural, =1{requested changes on a pull request} other{requested changes on {count} pull requests}}} dismissed{{count, plural, =1{dismissed a review on a pull request} other{dismissed reviews on {count} pull requests}}} other{{count, plural, =1{reviewed a pull request} other{reviewed {count} pull requests}}}}",
+  "@activityReviews": {
+    "placeholders": {
+      "state": {"type": "String"},
+      "count": {"type": "int"}
+    }
+  },
+  "activityPublishedReleases": "{count, plural, =1{published a release} other{published {count} releases}}",
+  "@activityPublishedReleases": {"placeholders": {"count": {"type": "int"}}},
+  "activityStartedDiscussions": "{count, plural, =1{started a discussion} other{started {count} discussions}}",
+  "@activityStartedDiscussions": {"placeholders": {"count": {"type": "int"}}},
+  "activityUpdatedWikiPages": "{count, plural, =0{updated wiki pages} =1{updated a wiki page} other{updated {count} wiki pages}}",
+  "@activityUpdatedWikiPages": {"placeholders": {"count": {"type": "int"}}},
+  "activityPerformedActions": "{count, plural, =1{performed an action} other{performed {count} actions}}",
+  "@activityPerformedActions": {"placeholders": {"count": {"type": "int"}}},
+  "activityJoinTwo": "{first} and {second}",
+  "@activityJoinTwo": {
+    "placeholders": {
+      "first": {"type": "String"},
+      "second": {"type": "String"}
+    }
+  },
+  "activityJoinMany": "{head}, and {last}",
+  "@activityJoinMany": {
+    "placeholders": {
+      "head": {"type": "String"},
+      "last": {"type": "String"}
+    }
+  }
+}

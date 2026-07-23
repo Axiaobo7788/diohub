@@ -1,6 +1,5 @@
 import 'package:diohub/app/app_logger.dart';
 import 'package:diohub/common/misc/profile_card.dart' show ProfileCardLoading;
-import 'package:diohub/common/notifications/notification_service.dart';
 import 'package:diohub/common/riverpod/keep_alive_helper.dart';
 import 'package:diohub/common/riverpod/mutation_error.dart';
 import 'package:diohub/common/riverpod/optimistic_notifier.dart';
@@ -13,9 +12,10 @@ import 'package:diohub_models/models/users/profile_card_input.dart';
 import 'package:diohub_models/models/users/user_info_model.dart';
 import 'package:diohub_models/models/authentication/account_model.dart';
 import 'package:diohub_models/models/authentication/account_session.dart';
+import 'package:diohub_models/models/authentication/authenticated_session.dart';
 import 'package:diohub/providers/account/account_provider.dart';
 import 'package:diohub/providers/database_providers.dart'
-    show authServiceProvider, apiClientProvider;
+    show apiClientProvider, authenticatedSessionProvider, authServiceProvider;
 import 'package:diohub/services/authentication/auth_service.dart';
 import 'package:diohub/services/users/user_activity_service.dart';
 import 'package:diohub/services/users/user_info_service.dart';
@@ -28,7 +28,7 @@ export 'package:diohub/services/users/user_info_service.dart'
 
 /// Single [UserInfoService] instance. Use this in widgets and notifiers instead of static calls.
 final Provider<UserInfoService> userInfoServiceProvider =
-    Provider<UserInfoService>((ref) => UserInfoService(ref.read(apiClientProvider)));
+    Provider<UserInfoService>((ref) => UserInfoService(ref.watch(apiClientProvider)));
 
 /// Single [UserActivityService] instance. Use from providers instead of static calls.
 final Provider<UserActivityService> userActivityServiceProvider =
@@ -53,6 +53,8 @@ final AsyncNotifierProvider<CurrentUserNotifier, ViewerInfo?>
 );
 
 class CurrentUserNotifier extends AsyncNotifier<ViewerInfo?> {
+  String? _viewerAccountKey;
+
   @override
   Future<ViewerInfo?> build() async {
     final AsyncValue<AccountSession?> accountAsync = ref.watch(accountProvider);
@@ -63,29 +65,36 @@ class CurrentUserNotifier extends AsyncNotifier<ViewerInfo?> {
 
     final AccountSession? session =
         accountAsync.hasValue ? accountAsync.value : null;
-    if (session != null && session.activeAccount != null) {
+    final AccountModel? activeAccount = session?.activeAccountModel;
+    if (activeAccount != null) {
       // We already have account; use cached viewer if present and only reconcile profile
       final ViewerInfo? existing = state.value;
-      if (existing != null) {
-        _reconcileAccountProfile(session.activeAccountModel, existing);
+      if (_viewerAccountKey == activeAccount.accountKey &&
+          existing?.id == activeAccount.nodeId) {
+        _reconcileAccountProfile(activeAccount, existing!);
         return existing;
       }
-      final ViewerInfo? viewer =
-          await ref.read(userInfoServiceProvider).getViewerInfo();
-      if (viewer != null) {
-        _reconcileAccountProfile(session.activeAccountModel, viewer);
+      _viewerAccountKey = activeAccount.accountKey;
+      final AuthenticatedSession? authenticatedSession = await ref.watch(
+        authenticatedSessionProvider.future,
+      );
+      if (authenticatedSession == null) {
+        return null;
       }
+      final ViewerInfo viewer =
+          await ref.read(userInfoServiceProvider).getViewerInfo();
+      _reconcileAccountProfile(activeAccount, viewer);
       return viewer;
     }
 
+    _viewerAccountKey = null;
     // Account loading or no session: load viewer in parallel with account load
     final AuthRepository authRepo = ref.read(authServiceProvider);
     final String? activeUsername = await authRepo.getActiveAccount();
     if (activeUsername == null) {
-      final ViewerInfo? previousValue = state.value;
-      return previousValue;
+      return null;
     }
-    final ViewerInfo? viewer =
+    final ViewerInfo viewer =
         await ref.read(userInfoServiceProvider).getViewerInfo();
     return viewer;
   }

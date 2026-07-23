@@ -31,12 +31,16 @@ class PaginatedSliverList<R> extends StatelessWidget {
   final Widget Function(BuildContext context, R item, int index) itemBuilder;
   final Widget Function(BuildContext context)? loadingBuilder;
   final Widget Function(BuildContext context, Object error, VoidCallback retry)?
-      errorBuilder;
+  errorBuilder;
   final Widget Function(BuildContext context)? emptyBuilder;
   final BackwardTrigger backwardTrigger;
   final bool Function(R item)? anchorHighlight;
   final Widget Function(
-      BuildContext context, int? gapEstimate, VoidCallback onTap)? gapBuilder;
+    BuildContext context,
+    int? gapEstimate,
+    VoidCallback onTap,
+  )?
+  gapBuilder;
 
   @override
   Widget build(BuildContext context) {
@@ -61,7 +65,8 @@ class PaginatedSliverList<R> extends StatelessWidget {
             if (items.isEmpty && phase is Idle && !state.hasMoreForward)
               SliverFillRemaining(
                 hasScrollBody: false,
-                child: emptyBuilder?.call(context) ??
+                child:
+                    emptyBuilder?.call(context) ??
                     const EmptyState(message: 'Nothing here yet'),
               )
             else
@@ -90,7 +95,10 @@ class PaginatedSliverList<R> extends StatelessWidget {
                     );
                   }
                   return _buildForwardSlot(
-                      context, state, index - items.length);
+                    context,
+                    state,
+                    index - items.length,
+                  );
                 },
               ),
           ],
@@ -118,57 +126,64 @@ class PaginatedSliverList<R> extends StatelessWidget {
 
     return switch (backwardTrigger) {
       ButtonBackwardTrigger(:final label) => SliverToBoxAdapter(
-          child: phase is LoadingBackward
-              ? Padding(
-                  padding: context.spacing.pagePadding,
-                  child: const Center(child: LoadingIndicator()),
-                )
-              : phase is Failed && phase.direction == FetchDirection.backward
-                  ? _buildErrorTile(
-                      context,
-                      phase.error,
-                      () => controller.fetchBackward(),
-                    )
-                  : LoadEarlierButton(
-                      onTap: () => controller.fetchBackward(),
-                      label: label,
-                    ),
-        ),
+        child: phase is LoadingBackward
+            ? Padding(
+                padding: context.spacing.pagePadding,
+                child: const Center(child: LoadingIndicator()),
+              )
+            : phase is Failed && phase.direction == FetchDirection.backward
+            ? _buildErrorTile(
+                context,
+                phase.error,
+                () => controller.fetchBackward(),
+              )
+            : LoadEarlierButton(
+                onTap: () => controller.fetchBackward(),
+                label: label,
+              ),
+      ),
     };
   }
 
   Widget _buildForwardSlot(
-      BuildContext context, PaginationState<R> state, int slotIndex) {
+    BuildContext context,
+    PaginationState<R> state,
+    int slotIndex,
+  ) {
     final phase = state.phase;
     return switch (phase) {
       LoadingForward() || Refreshing() => Padding(
-          padding: EdgeInsets.only(
-            top: context.spacing.pagePadding.top,
-            bottom: context.spacing.pagePadding.bottom,
-            left: 0,
-            right: 0,
-          ),
-          child: loadingBuilder?.call(context) ??
-              Column(
-                children: [
-                  ListLoadingShimmers.timeline(context, itemCount: 2),
-                  const SizedBox(height: 24),
-                  const Center(child: LogoProgressIndicator(size: 32)),
-                ],
-              ),
+        padding: EdgeInsets.only(
+          top: context.spacing.pagePadding.top,
+          bottom: context.spacing.pagePadding.bottom,
+          left: 0,
+          right: 0,
         ),
+        child:
+            loadingBuilder?.call(context) ??
+            Column(
+              children: [
+                ListLoadingShimmers.timeline(context, itemCount: 2),
+                const SizedBox(height: 24),
+                const Center(child: LogoProgressIndicator(size: 32)),
+              ],
+            ),
+      ),
       Failed(:final error, :final direction)
           when direction == FetchDirection.forward =>
         errorBuilder?.call(context, error, () => controller.fetchForward()) ??
             _buildErrorTile(context, error, () => controller.fetchForward()),
-      _ => Padding(
+      _ => _ForwardPageTrigger(
+        controller: controller,
+        child: Padding(
           padding: EdgeInsets.only(
             top: context.spacing.pagePadding.top,
             bottom: context.spacing.pagePadding.bottom,
             left: 0,
             right: 0,
           ),
-          child: loadingBuilder?.call(context) ??
+          child:
+              loadingBuilder?.call(context) ??
               Column(
                 children: [
                   ListLoadingShimmers.timeline(context, itemCount: 2),
@@ -177,11 +192,15 @@ class PaginatedSliverList<R> extends StatelessWidget {
                 ],
               ),
         ),
+      ),
     };
   }
 
   Widget _buildErrorTile(
-      BuildContext context, Object error, VoidCallback onRetry) {
+    BuildContext context,
+    Object error,
+    VoidCallback onRetry,
+  ) {
     return Padding(
       padding: context.spacing.pagePadding,
       child: Column(
@@ -193,12 +212,46 @@ class PaginatedSliverList<R> extends StatelessWidget {
             textAlign: TextAlign.center,
           ),
           context.spacing.itemGap,
-          TextButton(
-            onPressed: onRetry,
-            child: const Text('Retry'),
-          ),
+          TextButton(onPressed: onRetry, child: const Text('Retry')),
         ],
       ),
     );
+  }
+}
+
+/// Starts the next request only once the forward sentinel is actually laid out.
+///
+/// The controller rejects overlapping requests. When a page completes, the
+/// sentinel moves after the newly appended rows and can trigger the following
+/// page if it is still within the viewport (small result pages are therefore
+/// prefilled without requiring a manual "load more" action).
+class _ForwardPageTrigger extends StatefulWidget {
+  const _ForwardPageTrigger({required this.controller, required this.child});
+
+  final PaginationController<dynamic, dynamic> controller;
+  final Widget child;
+
+  @override
+  State<_ForwardPageTrigger> createState() => _ForwardPageTriggerState();
+}
+
+class _ForwardPageTriggerState extends State<_ForwardPageTrigger> {
+  bool _scheduled = false;
+
+  @override
+  Widget build(BuildContext context) {
+    _scheduleFetch();
+    return widget.child;
+  }
+
+  void _scheduleFetch() {
+    if (_scheduled) return;
+    _scheduled = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _scheduled = false;
+      if (mounted) {
+        widget.controller.fetchForward();
+      }
+    });
   }
 }

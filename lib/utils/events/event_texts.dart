@@ -1,49 +1,136 @@
+import 'package:diohub/l10n/app_localizations.dart';
 import 'package:diohub_models/models/events/event_review.dart';
 import 'package:diohub_models/models/events/events_model.dart';
 
 /// Centralised event text catalog.
 ///
 /// Every user-facing string produced by the events system lives here.
-/// Each method corresponds to a single localisable message — when l10n is
-/// added, swap the body for a delegate to `AppLocalizations`.
+/// Legacy detail pages still use the English-only methods below. The Home feed
+/// uses the `localized*` methods, which delegate exclusively to gen_l10n.
 ///
 /// Design constraints:
-/// - **No UI imports** — this is a pure-text utility.
+/// - **No BuildContext dependency** — callers provide [AppLocalizations].
 /// - **No side-effects** — every method is a pure function.
 /// - **One method per message pattern** — easy to grep, audit, and extract
 ///   into ARB files with ICU plural/select syntax.
 abstract final class EventTexts {
+  // ─────────────────────────────────────────────────────────────────────────
+  // Localized Home activity feed
+  // ─────────────────────────────────────────────────────────────────────────
+
+  static String localizedStateChange({
+    required final AppLocalizations l10n,
+    required final PayloadAction? verb,
+    required final String noun,
+    required final int count,
+  }) {
+    final String action = verb?.name ?? 'other';
+    return noun == 'pull request'
+        ? l10n.activityPullRequestState(action, count)
+        : l10n.activityIssueState(action, count);
+  }
+
+  static String localizedPush({
+    required final AppLocalizations l10n,
+    required final int commits,
+    required final int branches,
+  }) => l10n.activityPush(commits, branches);
+
+  static String localizedLabelChange({
+    required final AppLocalizations l10n,
+    required final int added,
+    required final int removed,
+  }) {
+    if (added > 0 && removed > 0) return l10n.activityLabelsUpdated;
+    if (removed > 0) return l10n.activityLabelsRemoved(removed);
+    return l10n.activityLabelsAdded(added);
+  }
+
+  static String localizedComment({
+    required final AppLocalizations l10n,
+    required final PayloadAction? verb,
+    required final int count,
+  }) => l10n.activityComments(verb?.name ?? 'other', count);
+
+  static String localizedRefChange({
+    required final AppLocalizations l10n,
+    required final String verb,
+    required final String refType,
+    required final int count,
+  }) => l10n.activityReferences(verb, refType, count);
+
+  static String localizedCountedItem({
+    required final AppLocalizations l10n,
+    required final String verb,
+    required final String singular,
+    required final int count,
+  }) {
+    if (verb == 'starred') return l10n.activityStarredRepositories(count);
+    if (verb == 'forked') return l10n.activityForkedRepositories(count);
+    if (verb == 'made') return l10n.activityMadeRepositoriesPublic(count);
+    if (singular == 'a member') {
+      return l10n.activityMembers(verb, count);
+    }
+    return l10n.activityPerformedActions(count);
+  }
+
+  static String localizedAssign({
+    required final AppLocalizations l10n,
+    required final PayloadAction? verb,
+    required final int count,
+  }) => l10n.activityAssignedIssues(verb?.name ?? 'assigned', count);
+
+  static String localizedReview({
+    required final AppLocalizations l10n,
+    required final ReviewState? state,
+    required final int count,
+  }) => l10n.activityReviews(state?.name ?? 'other', count);
+
+  static String localizedNaturalJoin(
+    final AppLocalizations l10n,
+    final List<String> items,
+  ) {
+    if (items.isEmpty) return '';
+    if (items.length == 1) return items.single;
+    if (items.length == 2) return l10n.activityJoinTwo(items[0], items[1]);
+    final String separator = l10n.localeName.startsWith('zh') ? '、' : ', ';
+    return l10n.activityJoinMany(
+      items.sublist(0, items.length - 1).join(separator),
+      items.last,
+    );
+  }
+
   // ─────────────────────────────────────────────────────────────────────────
   // Verb resolution
   // ─────────────────────────────────────────────────────────────────────────
 
   /// Human-readable past-tense verb for a [PayloadAction].
   static String payloadVerb(final PayloadAction? action) => switch (action) {
-        PayloadAction.opened => 'opened',
-        PayloadAction.closed => 'closed',
-        PayloadAction.reopened => 'reopened',
-        PayloadAction.merged => 'merged',
-        PayloadAction.readyForReview => 'marked as ready',
-        PayloadAction.convertedToDraft => 'converted to draft',
-        _ => 'updated',
-      };
+    PayloadAction.opened => 'opened',
+    PayloadAction.closed => 'closed',
+    PayloadAction.reopened => 'reopened',
+    PayloadAction.merged => 'merged',
+    PayloadAction.readyForReview => 'marked as ready',
+    PayloadAction.convertedToDraft => 'converted to draft',
+    _ => 'updated',
+  };
 
   /// Human-readable past-tense verb for a [ReviewState].
   static String reviewVerb(final ReviewState? state) => switch (state) {
-        ReviewState.approved => 'approved',
-        ReviewState.changesRequested => 'requested changes on',
-        ReviewState.commented => 'reviewed',
-        ReviewState.dismissed => 'dismissed a review on',
-        _ => 'reviewed',
-      };
+    ReviewState.approved => 'approved',
+    ReviewState.changesRequested => 'requested changes on',
+    ReviewState.commented => 'reviewed',
+    ReviewState.dismissed => 'dismissed a review on',
+    _ => 'reviewed',
+  };
 
   /// Human-readable past-tense verb for a comment [PayloadAction].
   static String commentVerb(final PayloadAction? action) => switch (action) {
-        PayloadAction.created => 'added',
-        PayloadAction.edited => 'edited',
-        PayloadAction.deleted => 'deleted',
-        _ => 'updated',
-      };
+    PayloadAction.created => 'added',
+    PayloadAction.edited => 'edited',
+    PayloadAction.deleted => 'deleted',
+    _ => 'updated',
+  };
 
   /// Verb for assign/unassign actions.
   static String assignVerb(final PayloadAction? action) =>
@@ -66,10 +153,7 @@ abstract final class EventTexts {
   }
 
   /// "pushed a commit", "pushed 5 commits", "pushed 5 commits to 3 branches"
-  static String push({
-    required final int commits,
-    final int branches = 1,
-  }) {
+  static String push({required final int commits, final int branches = 1}) {
     if (branches > 1) {
       return 'pushed $commits commits to $branches branches';
     }
@@ -104,9 +188,7 @@ abstract final class EventTexts {
     required final int count,
   }) {
     final String p = plural(refType);
-    return count == 1
-        ? '$verb ${article(refType)}$refType'
-        : '$verb $count $p';
+    return count == 1 ? '$verb ${article(refType)}$refType' : '$verb $count $p';
   }
 
   /// Generic counted item: "starred a repository", "forked 3 repositories"
@@ -115,8 +197,7 @@ abstract final class EventTexts {
     required final String singular,
     required final String plural,
     required final int count,
-  }) =>
-      count == 1 ? '$verb $singular' : '$verb $count $plural';
+  }) => count == 1 ? '$verb $singular' : '$verb $count $plural';
 
   /// "assigned an issue", "unassigned 3 issues"
   static String assign({
@@ -155,8 +236,7 @@ abstract final class EventTexts {
   static String simple({
     required final String text,
     required final int count,
-  }) =>
-      count == 1 ? text : '$text $count times';
+  }) => count == 1 ? text : '$text $count times';
 
   // ─────────────────────────────────────────────────────────────────────────
   // Activity feed — short verbs (for compound summaries)
@@ -175,10 +255,9 @@ abstract final class EventTexts {
   static String pushShort({
     required final int commits,
     final int branches = 1,
-  }) =>
-      branches > 1
-          ? 'pushed ($branches branches)'
-          : (commits == 1 ? 'pushed a commit' : 'pushed $commits commits');
+  }) => branches > 1
+      ? 'pushed ($branches branches)'
+      : (commits == 1 ? 'pushed a commit' : 'pushed $commits commits');
 
   /// "commented", "left 3 comments"
   static String commentShort({required final int count}) =>
@@ -245,19 +324,18 @@ abstract final class EventTexts {
   static String timelineStateChange({
     required final String? action,
     required final int count,
-  }) =>
-      switch (action) {
-        'closed' => count == 1 ? 'closed this' : 'closed $count issues',
-        'reopened' => count == 1 ? 'reopened this' : 'reopened $count issues',
-        'merged' =>
-          count == 1 ? 'merged this' : 'merged $count pull requests',
-        'converted to draft' =>
-          count == 1 ? 'converted to draft' : 'converted $count to draft',
-        'marked as ready for review' => count == 1
-            ? 'marked as ready for review'
-            : 'marked $count as ready for review',
-        _ => count == 1 ? 'changed state' : 'changed state $count times',
-      };
+  }) => switch (action) {
+    'closed' => count == 1 ? 'closed this' : 'closed $count issues',
+    'reopened' => count == 1 ? 'reopened this' : 'reopened $count issues',
+    'merged' => count == 1 ? 'merged this' : 'merged $count pull requests',
+    'converted to draft' =>
+      count == 1 ? 'converted to draft' : 'converted $count to draft',
+    'marked as ready for review' =>
+      count == 1
+          ? 'marked as ready for review'
+          : 'marked $count as ready for review',
+    _ => count == 1 ? 'changed state' : 'changed state $count times',
+  };
 
   /// "added to milestone", "removed from 3 milestones", "updated milestones"
   static String timelineMilestone({
@@ -338,7 +416,7 @@ abstract final class EventTexts {
   }
 
   static const Map<String, (String withAction, String noAction)>
-      _eventTypeNouns = <String, (String, String)>{
+  _eventTypeNouns = <String, (String, String)>{
     'issuesevent': ('an issue', 'updated an issue'),
     'pullrequestevent': ('a pull request', 'updated a pull request'),
     'issuecommentevent': ('a comment', 'commented'),
@@ -359,16 +437,16 @@ abstract final class EventTexts {
 
   /// English indefinite article: "an issue", "a repository".
   static String article(final String noun) => switch (noun) {
-        'issue' || 'item' => 'an ',
-        _ => 'a ',
-      };
+    'issue' || 'item' => 'an ',
+    _ => 'a ',
+  };
 
   /// English plural: "branch" → "branches", "repository" → "repositories".
   static String plural(final String noun) => switch (noun) {
-        'branch' => 'branches',
-        'repository' => 'repositories',
-        _ => '${noun}s',
-      };
+    'branch' => 'branches',
+    'repository' => 'repositories',
+    _ => '${noun}s',
+  };
 
   /// Natural-language list join: "a, b, and c".
   static String naturalJoin(final List<String> items) {

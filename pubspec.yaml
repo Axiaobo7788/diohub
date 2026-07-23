@@ -52,6 +52,8 @@ dependencies:
   flex_list: ^1.2.0
   flutter:
     sdk: flutter
+  flutter_localizations:
+    sdk: flutter
 
   flutter_colorpicker: ^1.1.0
   flutter_countdown_timer: ^4.1.0
@@ -155,6 +157,7 @@ flutter_native_splash:
     icon_background_color_dark: "#17181c"
 
 flutter:
+  generate: true
   uses-material-design: true
   assets:
     - assets/

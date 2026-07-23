@@ -1,4 +1,5 @@
 import 'package:diohub/common/bottom_sheet/bottom_sheets.dart';
+import 'package:diohub/l10n/l10n.dart';
 import 'package:diohub/common/search_overlay/filter_section_def.dart';
 import 'package:diohub/common/search_overlay/filters.dart';
 import 'package:diohub/common/search_overlay/filters/filter_section_tile.dart';
@@ -12,7 +13,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 /// Filter bottom sheet: reads/writes [searchStateNotifierProvider(scope)].
 /// Each toggle calls notifier.addQualifier/removeQualifier/updateSort immediately.
-/// "Done" pops; "Clear All" calls notifier.clear().
+/// "Done" pops; "Clear All" calls the supplied reset callback or
+/// notifier.clear().
 ///
 /// Callers must pass [scrollController] from [AppSheet.scrollable] bodyBuilder
 /// and use [SearchFilterSheet.buildHeader] for the sheet header.
@@ -31,10 +33,12 @@ class SearchFilterSheet extends ConsumerStatefulWidget {
   static Widget buildHeader(
     BuildContext context,
     SearchScope scope,
-    WidgetRef ref,
-  ) {
+    WidgetRef ref, {
+    VoidCallback? onClearAll,
+  }) {
     final notifier = ref.read(searchStateNotifierProvider(scope).notifier);
     final spacing = context.spacing;
+    final l10n = context.l10n;
     return Padding(
       padding: EdgeInsets.fromLTRB(
         spacing.pagePadding.left,
@@ -45,7 +49,7 @@ class SearchFilterSheet extends ConsumerStatefulWidget {
       child: Row(
         children: <Widget>[
           Text(
-            'Filters',
+            l10n.repoFilters,
             style: context.textTheme.titleLarge?.copyWith(
               fontWeight: FontWeight.w600,
             ),
@@ -53,14 +57,18 @@ class SearchFilterSheet extends ConsumerStatefulWidget {
           const Spacer(),
           TextButton(
             onPressed: () {
-              notifier.clear();
+              if (onClearAll != null) {
+                onClearAll();
+              } else {
+                notifier.clear();
+              }
               if (context.mounted) Navigator.of(context).pop();
             },
-            child: const Text('Clear All'),
+            child: Text(l10n.filterClearAll),
           ),
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Done'),
+            child: Text(l10n.filterDone),
           ),
         ],
       ),
@@ -83,10 +91,12 @@ class _SearchFilterSheetState extends ConsumerState<SearchFilterSheet> {
 
   @override
   Widget build(BuildContext context) {
-    final SearchState state =
-        ref.watch(searchStateNotifierProvider(widget.scope));
-    final notifier =
-        ref.read(searchStateNotifierProvider(widget.scope).notifier);
+    final SearchState state = ref.watch(
+      searchStateNotifierProvider(widget.scope),
+    );
+    final notifier = ref.read(
+      searchStateNotifierProvider(widget.scope).notifier,
+    );
     final SearchType type = ref.watch(selectedSearchTypeProvider(widget.scope));
     final List<FilterSectionDef> promoted = widget.scope.promotedSections(type);
     final List<FilterSectionDef> more = widget.scope.moreSections(type);
@@ -97,10 +107,7 @@ class _SearchFilterSheetState extends ConsumerState<SearchFilterSheet> {
       slivers: <Widget>[
         ...promoted.map(
           (FilterSectionDef section) => SliverToBoxAdapter(
-            child: FilterSectionTile(
-              scope: widget.scope,
-              section: section,
-            ),
+            child: FilterSectionTile(scope: widget.scope, section: section),
           ),
         ),
         if (more.isNotEmpty) ...<Widget>[
@@ -111,7 +118,7 @@ class _SearchFilterSheetState extends ConsumerState<SearchFilterSheet> {
                 horizontal: spacing.pagePadding.left,
               ),
               child: Text(
-                'More',
+                context.l10n.filterMoreFilters,
                 style: context.textTheme.titleSmall?.copyWith(
                   color: context.colorScheme.onSurfaceVariant,
                 ),
@@ -120,17 +127,14 @@ class _SearchFilterSheetState extends ConsumerState<SearchFilterSheet> {
           ),
           ...more.map(
             (FilterSectionDef section) => SliverToBoxAdapter(
-              child: FilterSectionTile(
-                scope: widget.scope,
-                section: section,
-              ),
+              child: FilterSectionTile(scope: widget.scope, section: section),
             ),
           ),
         ],
         SliverToBoxAdapter(
           child: ExpansionTile(
             title: Text(
-              'Advanced',
+              context.l10n.filterAdvanced,
               style: context.textTheme.titleSmall,
             ),
             initiallyExpanded: _advancedExpanded,
@@ -142,15 +146,13 @@ class _SearchFilterSheetState extends ConsumerState<SearchFilterSheet> {
                 padding: spacing.pagePadding,
                 child: TextField(
                   controller: _advancedController,
-                  decoration: const InputDecoration(
-                    hintText: 'e.g. is:open label:bug',
-                    border: OutlineInputBorder(),
+                  decoration: InputDecoration(
+                    hintText: context.l10n.filterAdvancedQueryHint,
+                    border: const OutlineInputBorder(),
                   ),
                   maxLines: 2,
                   onSubmitted: (String text) {
-                    notifier.updateFreeText(
-                      '${state.freeText} $text'.trim(),
-                    );
+                    notifier.updateFreeText('${state.freeText} $text'.trim());
                   },
                 ),
               ),

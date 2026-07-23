@@ -55,8 +55,10 @@ abstract class Actor with _$Actor {
 @freezed
 abstract class EventRepo with _$EventRepo {
   const factory EventRepo({
-    required final int id,
-    required final String name,
+    // GitHub can return an empty repository object for historical events
+    // whose source repository is no longer available to the viewer.
+    final int? id,
+    final String? name,
     final String? url,
   }) = _EventRepo;
 

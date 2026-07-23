@@ -21,6 +21,16 @@ import 'package:diohub/common/nav_center/models/selection_state.dart';
 /// Optional client-side filter for search result items.
 typedef FilterFn = List<Object> Function(List<Object> items);
 
+/// Optional presentation seam for search-backed pages that share pagination
+/// and query state but render a page-specific row.
+typedef SearchResultItemBuilder =
+    Widget Function(BuildContext context, Object item, int index);
+
+/// Test and integration seam for supplying a search adapter without replacing
+/// the global API client.
+typedef SearchTypeConfigFactory =
+    SearchTypeConfig Function(WidgetRef ref, SearchScope scope);
+
 /// Sliver-building search list for use inside a [CustomScrollView].
 ///
 /// Use this when the list is part of a parent scroll view (e.g. NavCenter shell).
@@ -34,7 +44,13 @@ class SearchScrollSlivers extends ConsumerStatefulWidget {
     this.showRepoNameOnIssues = true,
     this.showRepoOwner = true,
     this.firstPageLoadingBuilder,
+    this.itemBuilder,
+    this.emptyBuilder,
+    this.errorBuilder,
+    this.listPadding,
+    this.configFactory,
     this.onRefreshReady,
+    this.onTotalCountChanged,
     super.key,
   });
 
@@ -43,10 +59,17 @@ class SearchScrollSlivers extends ConsumerStatefulWidget {
   final bool showRepoNameOnIssues;
   final bool showRepoOwner;
   final WidgetBuilder? firstPageLoadingBuilder;
+  final SearchResultItemBuilder? itemBuilder;
+  final WidgetBuilder? emptyBuilder;
+  final Widget Function(BuildContext context, Object error, VoidCallback retry)?
+  errorBuilder;
+  final EdgeInsetsGeometry? listPadding;
+  final SearchTypeConfigFactory? configFactory;
 
   /// When set, called with a callback that performs refresh once the internal
   /// pagination controller is ready. Used by [SearchListBody] for pull-to-refresh.
   final void Function(Future<void> Function()?)? onRefreshReady;
+  final ValueChanged<int?>? onTotalCountChanged;
 
   @override
   ConsumerState<SearchScrollSlivers> createState() =>
@@ -60,28 +83,31 @@ class _SearchScrollSliversState extends ConsumerState<SearchScrollSlivers> {
   @override
   void initState() {
     super.initState();
-    _config = widget.scope.searchType.config(
-      ref,
-      showRepoOwner: widget.showRepoOwner,
-      showRepoNameOnIssues: widget.showRepoNameOnIssues,
-    );
+    _config =
+        widget.configFactory?.call(ref, widget.scope) ??
+        widget.scope.searchType.config(
+          ref,
+          showRepoOwner: widget.showRepoOwner,
+          showRepoNameOnIssues: widget.showRepoNameOnIssues,
+        );
     _paginationController = PaginationController<Object, Object>(
       source: SliceForwardSource<Object>(
         fetch: (final int count) async {
-          final SearchState state =
-              ref.read(searchStateNotifierProvider(widget.scope));
+          final SearchState state = ref.read(
+            searchStateNotifierProvider(widget.scope),
+          );
           final String query = state.apiQuery;
           final void Function(Map<String, dynamic>? rawData)? onCounts =
               widget.scope is TypedGlobalSearchScope
-                  ? (final Map<String, dynamic>? rawData) {
-                      ref
-                          .read(searchTypeCountsNotifierProvider.notifier)
-                          .mergeFromResponse(
-                            (widget.scope as TypedGlobalSearchScope).searchType,
-                            rawData,
-                          );
-                    }
-                  : null;
+              ? (final Map<String, dynamic>? rawData) {
+                  ref
+                      .read(searchTypeCountsNotifierProvider.notifier)
+                      .mergeFromResponse(
+                        (widget.scope as TypedGlobalSearchScope).searchType,
+                        rawData,
+                      );
+                }
+              : null;
           AppLogger.info(
             'SearchScroll: fetching type=${ref.read(selectedSearchTypeProvider(widget.scope)).name} '
             'query="$query"',
@@ -109,13 +135,22 @@ class _SearchScrollSliversState extends ConsumerState<SearchScrollSlivers> {
       filter: widget.filterFn,
       pageSize: 20,
     );
+    _paginationController.state.addListener(_notifyTotalCount);
     widget.onRefreshReady?.call(() => _paginationController.refresh());
   }
 
   @override
   void dispose() {
+    widget.onRefreshReady?.call(null);
+    _paginationController.state.removeListener(_notifyTotalCount);
     _paginationController.dispose();
     super.dispose();
+  }
+
+  void _notifyTotalCount() {
+    widget.onTotalCountChanged?.call(
+      _paginationController.state.value.totalCount,
+    );
   }
 
   Widget _buildItem(
@@ -125,6 +160,10 @@ class _SearchScrollSliversState extends ConsumerState<SearchScrollSlivers> {
     final SelectionState selection,
     final String positionKey,
   ) {
+    final SearchResultItemBuilder? itemBuilder = widget.itemBuilder;
+    if (itemBuilder != null) {
+      return itemBuilder(context, item, index);
+    }
     final Widget card = _config.buildItem(context, item, index);
     if (widget.scope.searchType == SearchType.issuesPulls) {
       return _wrapIssuePullWithSelection(
@@ -193,44 +232,45 @@ class _SearchScrollSliversState extends ConsumerState<SearchScrollSlivers> {
 
   @override
   Widget build(final BuildContext context) {
-    final SearchState state =
-        ref.watch(searchStateNotifierProvider(widget.scope));
-    ref.listen<SearchState>(searchStateNotifierProvider(widget.scope),
-        (_, final SearchState next) {
+    final SearchState state = ref.watch(
+      searchStateNotifierProvider(widget.scope),
+    );
+    ref.listen<SearchState>(searchStateNotifierProvider(widget.scope), (
+      _,
+      final SearchState next,
+    ) {
       if (next.apiQuery != state.apiQuery) _paginationController.refresh();
     });
     ref.listen<SearchType>(selectedSearchTypeProvider(widget.scope), (_, __) {
       _paginationController.refresh();
     });
 
-    final SearchType selectedType =
-        ref.watch(selectedSearchTypeProvider(widget.scope));
+    final SearchType selectedType = ref.watch(
+      selectedSearchTypeProvider(widget.scope),
+    );
     final Widget listSliver = PaginatedSliverList<Object>(
-      key: ValueKey<String>(
-        '${state.apiQuery}_${selectedType.name}',
-      ),
+      key: ValueKey<String>('${state.apiQuery}_${selectedType.name}'),
       controller: _paginationController,
-      itemBuilder: (
-        final BuildContext context,
-        final Object item,
-        final int index,
-      ) =>
-          _buildItem(
-        context,
-        item,
-        index,
-        ref.watch(selectionModeProvider(widget.scope.tabKey)),
-        widget.scope.tabKey,
-      ),
+      itemBuilder:
+          (final BuildContext context, final Object item, final int index) =>
+              _buildItem(
+                context,
+                item,
+                index,
+                ref.watch(selectionModeProvider(widget.scope.tabKey)),
+                widget.scope.tabKey,
+              ),
       loadingBuilder:
           widget.firstPageLoadingBuilder ?? _defaultFirstPageLoadingBuilder,
+      emptyBuilder: widget.emptyBuilder,
+      errorBuilder: widget.errorBuilder,
     );
 
     final spacing = context.spacing;
     return MultiSliver(
       children: <Widget>[
         SliverPadding(
-          padding: spacing.listInset,
+          padding: widget.listPadding ?? spacing.listInset,
           sliver: listSliver,
         ),
       ],
@@ -253,6 +293,12 @@ class SearchScrollWrapper extends ConsumerWidget {
     this.showRepoNameOnIssues = true,
     this.showRepoOwner = true,
     this.firstPageLoadingBuilder,
+    this.itemBuilder,
+    this.emptyBuilder,
+    this.errorBuilder,
+    this.listPadding,
+    this.configFactory,
+    this.onTotalCountChanged,
     super.key,
   });
 
@@ -261,6 +307,13 @@ class SearchScrollWrapper extends ConsumerWidget {
   final bool showRepoNameOnIssues;
   final bool showRepoOwner;
   final WidgetBuilder? firstPageLoadingBuilder;
+  final SearchResultItemBuilder? itemBuilder;
+  final WidgetBuilder? emptyBuilder;
+  final Widget Function(BuildContext context, Object error, VoidCallback retry)?
+  errorBuilder;
+  final EdgeInsetsGeometry? listPadding;
+  final SearchTypeConfigFactory? configFactory;
+  final ValueChanged<int?>? onTotalCountChanged;
 
   @override
   Widget build(final BuildContext context, final WidgetRef _ref) {
@@ -272,6 +325,12 @@ class SearchScrollWrapper extends ConsumerWidget {
           showRepoNameOnIssues: showRepoNameOnIssues,
           showRepoOwner: showRepoOwner,
           firstPageLoadingBuilder: firstPageLoadingBuilder,
+          itemBuilder: itemBuilder,
+          emptyBuilder: emptyBuilder,
+          errorBuilder: errorBuilder,
+          listPadding: listPadding,
+          configFactory: configFactory,
+          onTotalCountChanged: onTotalCountChanged,
         ),
       ],
     );

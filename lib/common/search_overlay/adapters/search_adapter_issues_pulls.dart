@@ -29,19 +29,25 @@ final class IssuePullSearchAdapter extends SearchTypeAdapter<IssueOrPull> {
   }) async {
     if (!_hasNextPage) {
       return const PageSlice<IssueOrPull>(
-          items: <IssueOrPull>[], hasNextPage: false);
+        items: <IssueOrPull>[],
+        hasNextPage: false,
+      );
     }
-    final page = await ref.read(globalServicesProvider).search.searchIssuesPulls(
-      query,
-      first: count,
-      after: _cursor,
-      onRawResponse: onRawResponse,
-    );
+    final page = await ref
+        .read(globalServicesProvider)
+        .search
+        .searchIssuesPulls(
+          query,
+          first: count,
+          after: _cursor,
+          onRawResponse: onRawResponse,
+        );
     _cursor = page.endCursor;
     _hasNextPage = page.hasNextPage;
     return PageSlice<IssueOrPull>(
       items: page.items,
       hasNextPage: page.hasNextPage,
+      totalCount: page.totalCount,
     );
   }
 

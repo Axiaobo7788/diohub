@@ -1,59 +1,71 @@
+import 'package:diohub/l10n/l10n.dart';
+import 'package:diohub/models/home_repository_item.dart';
+import 'package:diohub/view/app_chrome/app_chrome.dart';
+import 'package:diohub/view/app_chrome/global_header.dart';
 import 'package:diohub/view/repository/md3/repository_md3_layout.dart';
 import 'package:diohub/view/repository/md3/repository_md3_theme.dart';
+import 'package:diohub_models/models/authentication/account_model.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-/// Shared responsive shell for the new Repository information architecture.
+/// Shared GitHub-style responsive shell for migrated Repository pages.
 ///
-/// The shell owns only layout and global navigation. Repository data remains
-/// in the existing Riverpod providers and is supplied by the page widgets.
+/// It owns the global app bar, repository navigation, and desktop aside. All
+/// repository data and mutations remain in the existing providers/page widgets.
 class RepositoryMd3Shell extends StatelessWidget {
   const RepositoryMd3Shell({
     required this.repositoryLabel,
-    required this.header,
     required this.repositoryNavigation,
     required this.body,
-    required this.onBack,
-    required this.onSearch,
     required this.onRefresh,
     required this.onOpenLegacy,
+    required this.onGlobalSearch,
+    required this.onSearchRepositories,
+    required this.account,
+    required this.accountLoading,
+    required this.topRepositories,
+    this.header,
     this.aside,
     super.key,
   });
 
   final String repositoryLabel;
-  final Widget header;
+  final Widget? header;
   final Widget repositoryNavigation;
   final Widget body;
   final Widget? aside;
-  final VoidCallback onBack;
-  final VoidCallback onSearch;
   final VoidCallback onRefresh;
-  final VoidCallback onOpenLegacy;
+  final VoidCallback? onOpenLegacy;
+  final ValueChanged<String?> onGlobalSearch;
+  final VoidCallback onSearchRepositories;
+  final AccountModel? account;
+  final bool accountLoading;
+  final AsyncValue<List<HomeRepositoryItem>> topRepositories;
 
   @override
   Widget build(final BuildContext context) {
-    return Theme(
-      data: repositoryMd3ThemeFor(Theme.of(context)),
-      child: LayoutBuilder(
-        builder:
-            (final BuildContext context, final BoxConstraints constraints) {
-              final RepositoryWindowClass windowClass =
-                  RepositoryMd3Layout.windowClassFor(constraints.maxWidth);
-              return _RepositoryScaffold(
-                key: ValueKey<String>('repository-md3-${windowClass.name}'),
-                windowClass: windowClass,
-                repositoryLabel: repositoryLabel,
-                header: header,
-                repositoryNavigation: repositoryNavigation,
-                body: body,
-                aside: aside,
-                onBack: onBack,
-                onSearch: onSearch,
-                onRefresh: onRefresh,
-                onOpenLegacy: onOpenLegacy,
-              );
-            },
-      ),
+    final ThemeData repositoryTheme = repositoryMd3ThemeFor(Theme.of(context));
+    return LayoutBuilder(
+      builder: (final BuildContext context, final BoxConstraints constraints) {
+        final RepositoryWindowClass windowClass =
+            RepositoryMd3Layout.windowClassFor(constraints.maxWidth);
+        return _RepositoryScaffold(
+          windowClass: windowClass,
+          repositoryTheme: repositoryTheme,
+          repositoryLabel: repositoryLabel,
+          header: header,
+          repositoryNavigation: repositoryNavigation,
+          body: body,
+          aside: aside,
+          onRefresh: onRefresh,
+          onOpenLegacy: onOpenLegacy,
+          onGlobalSearch: onGlobalSearch,
+          onSearchRepositories: onSearchRepositories,
+          account: account,
+          accountLoading: accountLoading,
+          topRepositories: topRepositories,
+        );
+      },
     );
   }
 }
@@ -61,168 +73,101 @@ class RepositoryMd3Shell extends StatelessWidget {
 class _RepositoryScaffold extends StatelessWidget {
   const _RepositoryScaffold({
     required this.windowClass,
+    required this.repositoryTheme,
     required this.repositoryLabel,
-    required this.header,
     required this.repositoryNavigation,
     required this.body,
-    required this.onBack,
-    required this.onSearch,
     required this.onRefresh,
     required this.onOpenLegacy,
+    required this.onGlobalSearch,
+    required this.onSearchRepositories,
+    required this.account,
+    required this.accountLoading,
+    required this.topRepositories,
+    this.header,
     this.aside,
-    super.key,
   });
 
   final RepositoryWindowClass windowClass;
+  final ThemeData repositoryTheme;
   final String repositoryLabel;
-  final Widget header;
+  final Widget? header;
   final Widget repositoryNavigation;
   final Widget body;
   final Widget? aside;
-  final VoidCallback onBack;
-  final VoidCallback onSearch;
   final VoidCallback onRefresh;
-  final VoidCallback onOpenLegacy;
+  final VoidCallback? onOpenLegacy;
+  final ValueChanged<String?> onGlobalSearch;
+  final VoidCallback onSearchRepositories;
+  final AccountModel? account;
+  final bool accountLoading;
+  final AsyncValue<List<HomeRepositoryItem>> topRepositories;
 
-  bool get _isCompact => windowClass == RepositoryWindowClass.compact;
   bool get _isExpanded => windowClass == RepositoryWindowClass.expanded;
-
-  void _onDestinationSelected(final BuildContext context, final int index) {
-    if (_isCompact) {
-      Navigator.of(context).pop();
-    }
-    switch (index) {
-      case 0:
-        onBack();
-      case 1:
-        break;
-      case 2:
-        onSearch();
-      case 3:
-        onOpenLegacy();
-    }
-  }
+  List<String> get _repositoryParts => repositoryLabel.split('/');
 
   @override
   Widget build(final BuildContext context) {
-    return Scaffold(
-      drawer: _isCompact
-          ? NavigationDrawer(
-              key: const ValueKey<String>('repository-md3-drawer'),
-              selectedIndex: 1,
-              onDestinationSelected: (final int index) =>
-                  _onDestinationSelected(context, index),
-              children: <Widget>[
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(
-                    RepositoryMd3Layout.space24,
-                    RepositoryMd3Layout.space16,
-                    RepositoryMd3Layout.space16,
-                    RepositoryMd3Layout.space8,
-                  ),
-                  child: Text(
-                    'DioHub',
-                    style: Theme.of(context).textTheme.titleLarge,
-                  ),
-                ),
-                ..._destinations.map(
-                  (final NavigationRailDestination destination) =>
-                      NavigationDrawerDestination(
-                        icon: destination.icon,
-                        selectedIcon: destination.selectedIcon,
-                        label: destination.label,
-                      ),
-                ),
-              ],
-            )
-          : null,
-      appBar: AppBar(
-        leading: _isCompact
-            ? Builder(
-                builder: (final BuildContext context) => IconButton(
-                  icon: const Icon(Icons.menu),
-                  tooltip: 'Open navigation',
-                  onPressed: () => Scaffold.of(context).openDrawer(),
-                ),
-              )
-            : IconButton(
-                icon: const Icon(Icons.arrow_back),
-                tooltip: 'Back',
-                onPressed: onBack,
-              ),
-        title: _isCompact
-            ? Text(repositoryLabel, overflow: TextOverflow.ellipsis)
-            : Align(
-                alignment: Alignment.centerLeft,
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(
-                    maxWidth: RepositoryMd3Layout.appSearchWidth,
-                  ),
-                  child: SearchBar(
-                    hintText: 'Search GitHub',
-                    leading: const Icon(Icons.search),
-                    onTap: onSearch,
-                    onSubmitted: (final String _) => onSearch(),
-                  ),
-                ),
-              ),
-        actions: <Widget>[
-          if (_isCompact)
-            IconButton(
-              icon: const Icon(Icons.search),
-              tooltip: 'Search',
-              onPressed: onSearch,
-            ),
+    return AppChrome(
+      account: account,
+      accountLoading: accountLoading,
+      topRepositories: topRepositories,
+      onGlobalSearch: onGlobalSearch,
+      onSearchRepositories: onSearchRepositories,
+      title: GlobalHeaderTitle(
+        owner: _repositoryParts.length > 1 ? _repositoryParts.first : null,
+        title: _repositoryParts.last,
+        compact: !_isExpanded,
+        trailing: const Icon(Icons.arrow_drop_down, size: 20),
+      ),
+      pageActions: <Widget>[
+        if (windowClass != RepositoryWindowClass.compact)
           IconButton(
             icon: const Icon(Icons.refresh),
-            tooltip: 'Refresh repository',
+            tooltip: context.l10n.repoRefreshRepository,
             onPressed: onRefresh,
           ),
-          PopupMenuButton<_RepositoryMenuAction>(
-            tooltip: 'Repository options',
-            onSelected: (final _RepositoryMenuAction value) {
-              if (value == _RepositoryMenuAction.legacy) {
-                onOpenLegacy();
-              }
-            },
-            itemBuilder: (final BuildContext context) =>
-                const <PopupMenuEntry<_RepositoryMenuAction>>[
+        PopupMenuButton<_RepositoryMenuAction>(
+          tooltip: context.l10n.repoOptions,
+          onSelected: (final _RepositoryMenuAction value) {
+            switch (value) {
+              case _RepositoryMenuAction.refresh:
+                onRefresh();
+              case _RepositoryMenuAction.legacy:
+                onOpenLegacy?.call();
+            }
+          },
+          itemBuilder: (final BuildContext context) =>
+              <PopupMenuEntry<_RepositoryMenuAction>>[
+                if (windowClass == RepositoryWindowClass.compact)
+                  PopupMenuItem<_RepositoryMenuAction>(
+                    value: _RepositoryMenuAction.refresh,
+                    child: Text(context.l10n.repoRefreshRepository),
+                  ),
+                if (onOpenLegacy != null)
                   PopupMenuItem<_RepositoryMenuAction>(
                     value: _RepositoryMenuAction.legacy,
-                    child: Text('Open legacy layout'),
+                    child: Text(context.l10n.repoOpenLegacyLayout),
                   ),
-                ],
-          ),
-        ],
+              ],
+        ),
+      ],
+      secondaryNavigation: Theme(
+        data: repositoryTheme,
+        child: repositoryNavigation,
       ),
-      body: Row(
-        children: <Widget>[
-          if (!_isCompact) ...<Widget>[
-            SizedBox(
-              key: const ValueKey<String>('repository-md3-navigation-rail'),
-              width: _isExpanded
-                  ? RepositoryMd3Layout.expandedNavigationRailWidth
-                  : RepositoryMd3Layout.navigationRailWidth,
-              child: NavigationRail(
-                extended: _isExpanded,
-                selectedIndex: 1,
-                labelType: _isExpanded
-                    ? NavigationRailLabelType.none
-                    : NavigationRailLabelType.all,
-                onDestinationSelected: (final int index) =>
-                    _onDestinationSelected(context, index),
-                destinations: _destinations,
-              ),
+      body: Theme(
+        data: repositoryTheme,
+        child: Center(
+          child: ConstrainedBox(
+            key: ValueKey<String>('repository-md3-${windowClass.name}'),
+            constraints: const BoxConstraints(
+              maxWidth: RepositoryMd3Layout.contentMaxWidth,
             ),
-            const VerticalDivider(),
-          ],
-          Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: <Widget>[
-                header,
-                repositoryNavigation,
-                const Divider(),
+                if (header != null) ...<Widget>[header!, const Divider()],
                 Expanded(
                   child: _isExpanded && aside != null
                       ? Row(
@@ -244,34 +189,10 @@ class _RepositoryScaffold extends StatelessWidget {
               ],
             ),
           ),
-        ],
+        ),
       ),
     );
   }
 }
 
-const List<NavigationRailDestination> _destinations =
-    <NavigationRailDestination>[
-      NavigationRailDestination(
-        icon: Icon(Icons.dashboard_outlined),
-        selectedIcon: Icon(Icons.dashboard),
-        label: Text('Dashboard'),
-      ),
-      NavigationRailDestination(
-        icon: Icon(Icons.folder_outlined),
-        selectedIcon: Icon(Icons.folder),
-        label: Text('Repository'),
-      ),
-      NavigationRailDestination(
-        icon: Icon(Icons.search),
-        selectedIcon: Icon(Icons.manage_search),
-        label: Text('Search'),
-      ),
-      NavigationRailDestination(
-        icon: Icon(Icons.history),
-        selectedIcon: Icon(Icons.history_toggle_off),
-        label: Text('Legacy view'),
-      ),
-    ];
-
-enum _RepositoryMenuAction { legacy }
+enum _RepositoryMenuAction { refresh, legacy }

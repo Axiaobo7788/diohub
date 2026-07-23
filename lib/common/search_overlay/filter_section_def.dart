@@ -1,12 +1,21 @@
 import 'package:diohub_models/models/entity_ref.dart';
 import 'package:flutter/material.dart' show IconData;
 
-/// Shared status options for issues/PRs filter section.
-const Map<String, String> kIssuesPullsStatusOptions = <String, String>{
+/// Status options valid for issue searches.
+const Map<String, String> kIssueStatusOptions = <String, String>{
+  'open': 'Open',
+  'closed': 'Closed',
+};
+
+/// Status options valid for pull-request searches.
+const Map<String, String> kPullRequestStatusOptions = <String, String>{
   'open': 'Open',
   'closed': 'Closed',
   'merged': 'Merged',
 };
+
+/// Shared legacy option set retained for scopes that combine issues and PRs.
+const Map<String, String> kIssuesPullsStatusOptions = kPullRequestStatusOptions;
 
 /// One selectable option in a filter chip row or paginated picker.
 class FilterOption {

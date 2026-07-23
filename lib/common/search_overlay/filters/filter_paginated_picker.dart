@@ -3,15 +3,15 @@ import 'package:diohub/common/bottom_sheet/paginated_select_sheet.dart';
 import 'package:diohub_models/models/pagination/page_slice.dart';
 import 'package:diohub/common/pagination/page_source.dart';
 import 'package:diohub/common/search_overlay/filter_section_def.dart';
+import 'package:diohub/common/search_overlay/filter_localizations.dart';
 import 'package:diohub/common/search_overlay/search_filter_helpers.dart';
 import 'package:diohub_graphql/queries/repositories/repo_typedefs.dart';
 import 'package:diohub_graphql/schema_typedefs.dart';
 import 'package:diohub_models/models/entity_ref.dart';
-import 'package:diohub_models/models/search/qualifier.dart';
-import 'package:diohub/models/search/qualifier_parser_registry.dart';
 import 'package:diohub_models/models/search/search_expression.dart';
 import 'package:diohub/models/search/search_scope.dart';
 import 'package:diohub/models/search/search_state.dart';
+import 'package:diohub/l10n/l10n.dart';
 import 'package:diohub/providers/database_providers.dart';
 import 'package:diohub/providers/search/search_state_notifier.dart';
 import 'package:diohub/services/base/service_extensions.dart';
@@ -49,19 +49,27 @@ class FilterPaginatedPicker extends ConsumerWidget {
             spacing: 8,
             runSpacing: 4,
             children: activeValues.map((String v) {
-              final QualifierExpression? qe =
-                  findQualifierExpression(state, key, v);
+              final QualifierExpression? qe = findQualifierExpression(
+                state,
+                key,
+                v,
+              );
               return Chip(
                 label: Text(v),
-                onDeleted:
-                    qe != null ? () => notifier.removeQualifier(qe) : null,
+                onDeleted: qe != null
+                    ? () => notifier.removeQualifier(qe)
+                    : null,
               );
             }).toList(),
           ),
         if (activeValues.isNotEmpty)
           SizedBox(height: context.spacing.tightSpacing),
         ActionChip(
-          label: Text('Select ${section.displayName}'),
+          label: Text(
+            context.l10n.filterSelect(
+              localizedFilterSectionName(context, section),
+            ),
+          ),
           onPressed: () => _openPaginatedPicker(
             context,
             ref,
@@ -88,21 +96,22 @@ class FilterPaginatedPicker extends ConsumerWidget {
 
     await AppSheet.scrollable<void>(
       context,
-      header: AppSheetHeader.text(section.displayName),
-      bodyBuilder: (
-        BuildContext ctx,
-        StateSetter setState,
-        ScrollController scrollController,
-      ) {
-        return _FilterSheetContent(
-          scope: scope,
-          sheetContext: ctx,
-          section: section,
-          initialSelectedIds: initialIds,
-          notifier: notifier,
-          scrollController: scrollController,
-        );
-      },
+      header: AppSheetHeader.text(localizedFilterSectionName(context, section)),
+      bodyBuilder:
+          (
+            BuildContext ctx,
+            StateSetter setState,
+            ScrollController scrollController,
+          ) {
+            return _FilterSheetContent(
+              scope: scope,
+              sheetContext: ctx,
+              section: section,
+              initialSelectedIds: initialIds,
+              notifier: notifier,
+              scrollController: scrollController,
+            );
+          },
     );
   }
 }
@@ -135,7 +144,8 @@ class _FilterSheetContent extends ConsumerWidget {
         return PaginatedSelectSheet<LabelEdge>(
           mode: SelectMode.multi,
           searchable: true,
-          searchHint: 'Search labels…',
+          searchHint: localizedFilterSearchHint(context, section),
+          applyLabel: context.l10n.filterApply,
           initialSelectedIds: initialSelectedIds,
           scrollController: scrollController,
           sourceBuilder: (String? query) => CursorForwardSource<LabelEdge>(
@@ -147,8 +157,9 @@ class _FilterSheetContent extends ConsumerWidget {
                     after: after,
                     query: query,
                   );
-              final List<LabelEdge> items =
-                  r.items.whereType<LabelEdge>().toList();
+              final List<LabelEdge> items = r.items
+                  .whereType<LabelEdge>()
+                  .toList();
               return CursorPage<LabelEdge>(
                 items: items,
                 hasNextPage: r.hasNextPage,
@@ -172,28 +183,30 @@ class _FilterSheetContent extends ConsumerWidget {
         return PaginatedSelectSheet<AssignableUserEdge>(
           mode: SelectMode.multi,
           searchable: true,
-          searchHint: 'Search assignees…',
+          searchHint: localizedFilterSearchHint(context, section),
+          applyLabel: context.l10n.filterApply,
           initialSelectedIds: initialSelectedIds,
           scrollController: scrollController,
           sourceBuilder: (String? query) =>
               CursorForwardSource<AssignableUserEdge>(
-            fetch: ({required int first, String? after}) async {
-              final r = await repoRef
-                  .collaborators(ref.read(apiClientProvider))
-                  .listAssignableUsersGQL(
-                    first: first,
-                    after: after,
-                    query: query,
+                fetch: ({required int first, String? after}) async {
+                  final r = await repoRef
+                      .collaborators(ref.read(apiClientProvider))
+                      .listAssignableUsersGQL(
+                        first: first,
+                        after: after,
+                        query: query,
+                      );
+                  final List<AssignableUserEdge> items = r.items
+                      .whereType<AssignableUserEdge>()
+                      .toList();
+                  return CursorPage<AssignableUserEdge>(
+                    items: items,
+                    hasNextPage: r.hasNextPage,
+                    endCursor: r.endCursor,
                   );
-              final List<AssignableUserEdge> items =
-                  r.items.whereType<AssignableUserEdge>().toList();
-              return CursorPage<AssignableUserEdge>(
-                items: items,
-                hasNextPage: r.hasNextPage,
-                endCursor: r.endCursor,
-              );
-            },
-          ),
+                },
+              ),
           idOf: (e) => e.node?.login ?? '',
           titleOf: (e) {
             final n = e.node;
@@ -216,7 +229,7 @@ class _FilterSheetContent extends ConsumerWidget {
           initialSelectedIds: initialSelectedIds,
           scrollController: scrollController,
           headerWidget: ListTile(
-            title: const Text('No milestone'),
+            title: Text(context.l10n.filterNoMilestone),
             onTap: () {
               removeAllForKey(notifier, state, key);
               if (sheetContext.mounted) Navigator.of(sheetContext).pop();
@@ -254,7 +267,7 @@ class _FilterSheetContent extends ConsumerWidget {
         return PaginatedSelectSheet<BranchEdge>(
           mode: SelectMode.single,
           searchable: true,
-          searchHint: 'Search branches…',
+          searchHint: localizedFilterSearchHint(context, section),
           initialSelectedIds: initialSelectedIds,
           scrollController: scrollController,
           sourceBuilder: (String? query) => CursorForwardSource<BranchEdge>(
@@ -286,7 +299,7 @@ class _FilterSheetContent extends ConsumerWidget {
           },
         );
       default:
-        return const Center(child: Text('Unsupported picker'));
+        return Center(child: Text(context.l10n.filterUnsupportedPicker));
     }
   }
 }

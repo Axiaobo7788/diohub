@@ -10,12 +10,12 @@ class CodeBrowserSettingsSection extends ConsumerWidget {
   const CodeBrowserSettingsSection({super.key});
 
   static String _sortOrderLabel(final CodeSortOrder v) => switch (v) {
-        CodeSortOrder.type => 'Type (folders first)',
-        CodeSortOrder.nameAsc => 'Name (A–Z)',
-        CodeSortOrder.nameDesc => 'Name (Z–A)',
-        CodeSortOrder.size => 'Size',
-        CodeSortOrder.extension => 'Extension',
-      };
+    CodeSortOrder.type => 'Type (folders first)',
+    CodeSortOrder.nameAsc => 'Name (A–Z)',
+    CodeSortOrder.nameDesc => 'Name (Z–A)',
+    CodeSortOrder.size => 'Size',
+    CodeSortOrder.extension => 'Extension',
+  };
 
   @override
   Widget build(final BuildContext context, final WidgetRef ref) {
@@ -32,7 +32,7 @@ class CodeBrowserSettingsSection extends ConsumerWidget {
           value: settings.sortOrder,
           options: CodeSortOrder.values,
           onChanged: (final CodeSortOrder v) =>
-          notifier.update((final s) => s.copyWith(sortOrder: v)),
+              notifier.update((final s) => s.copyWith(sortOrder: v)),
           labelBuilder: _sortOrderLabel,
           icon: Icons.sort,
         ),
@@ -40,7 +40,8 @@ class CodeBrowserSettingsSection extends ConsumerWidget {
           title: 'Show dotfiles',
           description: 'Show files and folders whose names start with a dot',
           value: settings.showDotfiles,
-          onChanged:(bool value) =>  notifier.update((final s) => s.copyWith(showDotfiles: value)),
+          onChanged: (bool value) =>
+              notifier.update((final s) => s.copyWith(showDotfiles: value)),
           icon: Icons.folder_outlined,
         ),
         SwitchSettingWidget(
@@ -48,8 +49,19 @@ class CodeBrowserSettingsSection extends ConsumerWidget {
           description: 'Show language, line count, size under file names',
           value: settings.showMetadata,
           onChanged: (final bool v) =>
-          notifier.update((final s) => s.copyWith(showMetadata: v)),
+              notifier.update((final s) => s.copyWith(showMetadata: v)),
           icon: Icons.info_outline,
+        ),
+        SwitchSettingWidget(
+          title: 'Load last commit per file',
+          description:
+              'Uses one additional GitHub request for each visible file or folder',
+          value: settings.showLastCommitInfo,
+          onChanged: (final bool value) => notifier.update(
+            (final CodeBrowserSettings s) =>
+                s.copyWith(showLastCommitInfo: value),
+          ),
+          icon: Icons.history,
         ),
       ],
     );

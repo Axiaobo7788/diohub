@@ -1,17 +1,22 @@
+import 'dart:async';
+
 import 'package:diohub/app/settings/code_browser_settings.dart';
+import 'package:diohub_graphql/fragments/fragment_typedefs.dart';
 import 'package:diohub_graphql/queries/repositories/repo_typedefs.dart';
 import 'package:diohub_graphql/schema_typedefs.dart' show RepositoryPermission;
 import 'package:diohub_models/models/entity_ref.dart';
 import 'package:diohub_models/models/repositories/code/code_browser_state.dart';
 import 'package:diohub_models/models/repositories/code/code_tree_node.dart';
 import 'package:diohub_models/models/repositories/code/directory_last_commit.dart';
+import 'package:diohub/l10n/l10n.dart';
+import 'package:diohub/l10n/relative_time.dart';
+import 'package:diohub/models/repository_document.dart';
 import 'package:diohub/providers/code_browser/code_browser_state_provider.dart';
 import 'package:diohub/providers/code_browser/directory_last_commit_provider.dart';
 import 'package:diohub/providers/code_browser/directory_provider.dart';
 import 'package:diohub/providers/repository/repository_providers.dart';
 import 'package:diohub/providers/settings/code_browser_settings_provider.dart';
 import 'package:diohub/utils/permission_utils.dart';
-import 'package:diohub/utils/get_date.dart';
 import 'package:diohub/view/repository/code/create_file_screen.dart';
 import 'package:diohub/view/repository/code/file_viewer_screen.dart';
 import 'package:diohub/view/repository/md3/repository_md3_layout.dart';
@@ -21,24 +26,44 @@ import 'package:diohub/view/repository/widgets/branch_select_sheet.dart';
 import 'package:diohub/view/repository/widgets/clone_url_sheet.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class RepositoryCodeMd3 extends ConsumerWidget {
   const RepositoryCodeMd3({
     required this.repoRef,
     required this.repo,
+    required this.details,
+    required this.detailsLoading,
+    required this.detailsError,
+    required this.onRetryDetails,
+    required this.header,
     this.inlineAbout,
+    this.aside,
     super.key,
   });
 
   final RepoRef repoRef;
-  final RepoInfo repo;
+  final RepoCardData? repo;
+  final RepoInfo? details;
+  final bool detailsLoading;
+  final Object? detailsError;
+  final Future<void> Function() onRetryDetails;
+  final Widget header;
   final Widget? inlineAbout;
+  final Widget? aside;
 
   @override
   Widget build(final BuildContext context, final WidgetRef ref) {
     final BranchState branchState = ref.watch(branchProvider(repoRef));
     if (branchState is BranchStateLoading) {
-      return const Center(child: CircularProgressIndicator());
+      return _RepositoryCodeLoadingView(
+        repoRef: repoRef,
+        header: header,
+        inlineAbout: inlineAbout,
+        aside: aside,
+        error: detailsError,
+        onRetry: onRetryDetails,
+      );
     }
     final BranchStateResolved branch = branchState as BranchStateResolved;
     final CodeBrowserState navigation = ref.watch(
@@ -53,98 +78,119 @@ class RepositoryCodeMd3 extends ConsumerWidget {
     final AsyncValue<List<CodeTreeNode>> directory = ref.watch(
       directoryProvider(directoryKey),
     );
-    final AsyncValue<String?>? readme = navigation.currentPath.isEmpty
-        ? ref.watch(readmeProvider(repoRef))
-        : null;
+    final bool showDocuments = navigation.currentPath.isEmpty;
 
     return LayoutBuilder(
       builder: (final BuildContext context, final BoxConstraints constraints) {
         final RepositoryWindowClass windowClass =
             RepositoryMd3Layout.windowClassFor(constraints.maxWidth);
+        final EdgeInsets pagePadding = RepositoryMd3Layout.pagePaddingFor(
+          windowClass,
+        );
+        final double codeContentWidth =
+            windowClass == RepositoryWindowClass.expanded && aside != null
+            ? constraints.maxWidth * 0.75
+            : constraints.maxWidth;
+        final List<Widget> mainSlivers = <Widget>[
+          if (inlineAbout != null &&
+              windowClass != RepositoryWindowClass.expanded) ...<Widget>[
+            SliverToBoxAdapter(child: inlineAbout),
+            const SliverToBoxAdapter(child: Divider()),
+          ],
+          SliverPadding(
+            padding: EdgeInsets.fromLTRB(
+              pagePadding.left,
+              windowClass == RepositoryWindowClass.compact
+                  ? RepositoryMd3Layout.space16
+                  : RepositoryMd3Layout.space24,
+              pagePadding.right,
+              0,
+            ),
+            sliver: SliverToBoxAdapter(
+              child: _CodeToolbar(
+                repoRef: repoRef,
+                repo: repo,
+                details: details,
+                branch: branch,
+                navigation: navigation,
+                compact: windowClass == RepositoryWindowClass.compact,
+                inline:
+                    codeContentWidth >=
+                    RepositoryMd3Layout.inlineCodeToolbarBreakpoint,
+              ),
+            ),
+          ),
+          if (repo?.isFork == true && repo?.parent != null)
+            SliverPadding(
+              padding: EdgeInsets.fromLTRB(
+                RepositoryMd3Layout.pagePaddingFor(windowClass).left,
+                0,
+                RepositoryMd3Layout.pagePaddingFor(windowClass).right,
+                RepositoryMd3Layout.space12,
+              ),
+              sliver: SliverToBoxAdapter(child: _ForkStatusCard(repo: repo!)),
+            ),
+          ..._buildDirectorySlivers(
+            context,
+            ref,
+            directory,
+            branch,
+            navigation,
+            settings,
+            windowClass,
+          ),
+          if (showDocuments)
+            _RepositoryDocumentsSliver(
+              repoRef: repoRef,
+              repo: repo,
+              details: details,
+              branch: branch.refValue,
+              windowClass: windowClass,
+            ),
+          const SliverToBoxAdapter(
+            child: SizedBox(height: RepositoryMd3Layout.space32),
+          ),
+        ];
+        final List<Widget> pageSlivers = <Widget>[
+          SliverToBoxAdapter(child: header),
+          const SliverToBoxAdapter(child: Divider(height: 1)),
+          if (detailsLoading)
+            const SliverToBoxAdapter(
+              child: LinearProgressIndicator(minHeight: 2),
+            )
+          else if (detailsError != null)
+            SliverToBoxAdapter(
+              child: _RepositoryDetailsError(
+                error: detailsError!,
+                onRetry: onRetryDetails,
+              ),
+            ),
+          if (windowClass == RepositoryWindowClass.expanded && aside != null)
+            SliverCrossAxisGroup(
+              slivers: <Widget>[
+                SliverCrossAxisExpanded(
+                  flex: 3,
+                  sliver: SliverMainAxisGroup(slivers: mainSlivers),
+                ),
+                SliverCrossAxisExpanded(
+                  flex: 1,
+                  sliver: SliverMainAxisGroup(
+                    slivers: <Widget>[SliverToBoxAdapter(child: aside)],
+                  ),
+                ),
+              ],
+            )
+          else
+            ...mainSlivers,
+        ];
         return RefreshIndicator(
           onRefresh: () => refreshRepositoryCode(ref, repoRef),
           child: CustomScrollView(
             key: PageStorageKey<String>(
-              'repository-code-${repoRef.fullName}-${branch.refValue}',
+              'repository-code-${repoRef.fullName}-${branch.refValue}-${navigation.currentPath}',
             ),
             physics: const AlwaysScrollableScrollPhysics(),
-            slivers: <Widget>[
-              SliverPadding(
-                padding: RepositoryMd3Layout.pagePaddingFor(windowClass),
-                sliver: SliverToBoxAdapter(
-                  child: _CodeToolbar(
-                    repoRef: repoRef,
-                    repo: repo,
-                    branch: branch,
-                    navigation: navigation,
-                    inline:
-                        constraints.maxWidth >=
-                        RepositoryMd3Layout.inlineCodeToolbarBreakpoint,
-                  ),
-                ),
-              ),
-              SliverPadding(
-                padding: EdgeInsets.symmetric(
-                  horizontal:
-                      RepositoryMd3Layout.pagePaddingFor(
-                        windowClass,
-                      ).horizontal /
-                      2,
-                ),
-                sliver: SliverToBoxAdapter(
-                  child: _LatestCommitCard(
-                    repoRef: repoRef,
-                    branch: branch.refValue,
-                    path: navigation.currentPath,
-                  ),
-                ),
-              ),
-              ..._buildDirectorySlivers(
-                context,
-                ref,
-                directory,
-                branch,
-                navigation,
-                settings,
-                windowClass,
-              ),
-              if (readme != null) ...<Widget>[
-                SliverPadding(
-                  padding: EdgeInsets.only(
-                    left: RepositoryMd3Layout.pagePaddingFor(windowClass).left,
-                    right: RepositoryMd3Layout.pagePaddingFor(
-                      windowClass,
-                    ).right,
-                    top: RepositoryMd3Layout.space24,
-                    bottom: RepositoryMd3Layout.space12,
-                  ),
-                  sliver: SliverToBoxAdapter(
-                    child: Row(
-                      children: <Widget>[
-                        const Icon(Icons.menu_book_outlined),
-                        const SizedBox(width: RepositoryMd3Layout.space8),
-                        Text(
-                          'README',
-                          style: Theme.of(context).textTheme.titleMedium,
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-                RepositoryReadmeSliver(
-                  readmeAsync: readme,
-                  branch: branch.refValue,
-                  repoFullName: repoRef.fullName,
-                ),
-              ],
-              if (inlineAbout != null) ...<Widget>[
-                const SliverToBoxAdapter(child: Divider()),
-                SliverToBoxAdapter(child: inlineAbout),
-              ],
-              const SliverToBoxAdapter(
-                child: SizedBox(height: RepositoryMd3Layout.space32),
-              ),
-            ],
+            slivers: pageSlivers,
           ),
         );
       },
@@ -160,23 +206,19 @@ class RepositoryCodeMd3 extends ConsumerWidget {
     final CodeBrowserSettings settings,
     final RepositoryWindowClass windowClass,
   ) {
-    return directory.when(
-      loading: () => const <Widget>[
-        SliverToBoxAdapter(
-          child: Padding(
-            padding: EdgeInsets.all(RepositoryMd3Layout.space32),
-            child: Center(child: CircularProgressIndicator()),
-          ),
+    final Widget directorySliver = directory.when(
+      loading: () => const SliverToBoxAdapter(
+        child: Padding(
+          padding: EdgeInsets.all(RepositoryMd3Layout.space32),
+          child: Center(child: CircularProgressIndicator()),
         ),
-      ],
-      error: (final Object error, final StackTrace stack) => <Widget>[
-        SliverToBoxAdapter(
-          child: _CodeErrorState(
-            error: error,
-            onRetry: () => refreshRepositoryCode(ref, repoRef),
-          ),
+      ),
+      error: (final Object error, final StackTrace stack) => SliverToBoxAdapter(
+        child: _CodeErrorState(
+          error: error,
+          onRetry: () => refreshRepositoryCode(ref, repoRef),
         ),
-      ],
+      ),
       data: (final List<CodeTreeNode> entries) {
         final List<CodeTreeNode> visible = _sortedEntries(
           _filteredEntries(entries, settings, navigation.searchQuery),
@@ -190,55 +232,69 @@ class RepositoryCodeMd3 extends ConsumerWidget {
             )
             .toList();
         if (visible.isEmpty) {
-          return <Widget>[
-            SliverToBoxAdapter(
-              child: _CodeEmptyState(
-                filtered: navigation.searchQuery.trim().isNotEmpty,
-              ),
+          return SliverToBoxAdapter(
+            child: _CodeEmptyState(
+              filtered: navigation.searchQuery.trim().isNotEmpty,
             ),
-          ];
+          );
         }
-        return <Widget>[
-          if (windowClass != RepositoryWindowClass.compact)
-            SliverPadding(
-              padding: EdgeInsets.only(
-                left: RepositoryMd3Layout.pagePaddingFor(windowClass).left,
-                right: RepositoryMd3Layout.pagePaddingFor(windowClass).right,
-                top: RepositoryMd3Layout.space16,
+        return SliverList.separated(
+          itemCount: visible.length,
+          separatorBuilder: (final BuildContext context, final int index) =>
+              const Divider(height: 1),
+          itemBuilder: (final BuildContext context, final int index) {
+            final CodeTreeNode entry = visible[index];
+            return _DirectoryEntryRow(
+              entry: entry,
+              repoRef: repoRef,
+              branch: branch.refValue,
+              compact: windowClass == RepositoryWindowClass.compact,
+              showLastCommit: settings.showLastCommitInfo,
+              showMetadata: settings.showMetadata,
+              onTap: () => _openEntry(
+                context,
+                ref,
+                entry,
+                branch.refValue,
+                fileSiblings,
               ),
-              sliver: const SliverToBoxAdapter(child: _DirectoryTableHeader()),
-            ),
-          SliverPadding(
-            padding: EdgeInsets.symmetric(
-              horizontal: RepositoryMd3Layout.pagePaddingFor(windowClass).left,
-            ),
-            sliver: SliverList.separated(
-              itemCount: visible.length,
-              separatorBuilder: (final BuildContext context, final int index) =>
-                  const Divider(),
-              itemBuilder: (final BuildContext context, final int index) {
-                final CodeTreeNode entry = visible[index];
-                return _DirectoryEntryRow(
-                  entry: entry,
-                  repoRef: repoRef,
-                  branch: branch.refValue,
-                  compact: windowClass == RepositoryWindowClass.compact,
-                  showLastCommit: settings.showLastCommitInfo,
-                  showMetadata: settings.showMetadata,
-                  onTap: () => _openEntry(
-                    context,
-                    ref,
-                    entry,
-                    branch.refValue,
-                    fileSiblings,
-                  ),
-                );
-              },
-            ),
-          ),
-        ];
+            );
+          },
+        );
       },
     );
+    final EdgeInsets pagePadding = RepositoryMd3Layout.pagePaddingFor(
+      windowClass,
+    );
+    final ColorScheme colors = Theme.of(context).colorScheme;
+    return <Widget>[
+      SliverPadding(
+        key: const ValueKey<String>('repository-file-table'),
+        padding: EdgeInsets.symmetric(horizontal: pagePadding.left),
+        sliver: DecoratedSliver(
+          decoration: BoxDecoration(
+            color: colors.surface,
+            border: Border.all(color: colors.outlineVariant),
+            borderRadius: BorderRadius.circular(
+              RepositoryMd3Layout.sectionRadius,
+            ),
+          ),
+          sliver: SliverMainAxisGroup(
+            slivers: <Widget>[
+              SliverToBoxAdapter(
+                child: _LatestCommitCard(
+                  repoRef: repoRef,
+                  branch: branch.refValue,
+                  path: navigation.currentPath,
+                ),
+              ),
+              const SliverToBoxAdapter(child: Divider(height: 1)),
+              directorySliver,
+            ],
+          ),
+        ),
+      ),
+    ];
   }
 
   void _openEntry(
@@ -271,11 +327,215 @@ class RepositoryCodeMd3 extends ConsumerWidget {
         );
       case CodeEntryKind.submodule:
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Opening submodules is not available in this phase.'),
-          ),
+          SnackBar(content: Text(context.l10n.repoOpenSubmoduleUnavailable)),
         );
     }
+  }
+}
+
+class _RepositoryCodeLoadingView extends StatelessWidget {
+  const _RepositoryCodeLoadingView({
+    required this.repoRef,
+    required this.header,
+    required this.inlineAbout,
+    required this.aside,
+    required this.error,
+    required this.onRetry,
+  });
+
+  final RepoRef repoRef;
+  final Widget header;
+  final Widget? inlineAbout;
+  final Widget? aside;
+  final Object? error;
+  final Future<void> Function() onRetry;
+
+  @override
+  Widget build(final BuildContext context) {
+    return LayoutBuilder(
+      builder: (final BuildContext context, final BoxConstraints constraints) {
+        final RepositoryWindowClass windowClass =
+            RepositoryMd3Layout.windowClassFor(constraints.maxWidth);
+        final EdgeInsets pagePadding = RepositoryMd3Layout.pagePaddingFor(
+          windowClass,
+        );
+        final ColorScheme colors = Theme.of(context).colorScheme;
+        final List<Widget> mainSlivers = <Widget>[
+          if (inlineAbout != null &&
+              windowClass != RepositoryWindowClass.expanded) ...<Widget>[
+            SliverToBoxAdapter(child: inlineAbout),
+            const SliverToBoxAdapter(child: Divider()),
+          ],
+          SliverPadding(
+            padding: EdgeInsets.fromLTRB(
+              pagePadding.left,
+              windowClass == RepositoryWindowClass.compact
+                  ? RepositoryMd3Layout.space16
+                  : RepositoryMd3Layout.space24,
+              pagePadding.right,
+              RepositoryMd3Layout.space16,
+            ),
+            sliver: SliverToBoxAdapter(
+              child: Row(
+                children: <Widget>[
+                  const _CodeLoadingBlock(width: 156, height: 40),
+                  const Spacer(),
+                  if (windowClass != RepositoryWindowClass.compact) ...<Widget>[
+                    const Expanded(child: _CodeLoadingBlock(height: 40)),
+                    const SizedBox(width: RepositoryMd3Layout.space8),
+                  ],
+                  const _CodeLoadingBlock(width: 108, height: 40),
+                ],
+              ),
+            ),
+          ),
+          SliverPadding(
+            padding: EdgeInsets.symmetric(horizontal: pagePadding.left),
+            sliver: DecoratedSliver(
+              decoration: BoxDecoration(
+                color: colors.surface,
+                border: Border.all(color: colors.outlineVariant),
+                borderRadius: BorderRadius.circular(
+                  RepositoryMd3Layout.sectionRadius,
+                ),
+              ),
+              sliver: SliverMainAxisGroup(
+                slivers: <Widget>[
+                  const SliverToBoxAdapter(
+                    child: Padding(
+                      padding: EdgeInsets.all(RepositoryMd3Layout.space16),
+                      child: Row(
+                        children: <Widget>[
+                          _CodeLoadingBlock(width: 28, height: 28),
+                          SizedBox(width: RepositoryMd3Layout.space12),
+                          Expanded(child: _CodeLoadingBlock(height: 16)),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SliverToBoxAdapter(child: Divider(height: 1)),
+                  SliverList.separated(
+                    itemCount: 9,
+                    separatorBuilder:
+                        (final BuildContext context, final int index) =>
+                            const Divider(height: 1),
+                    itemBuilder:
+                        (
+                          final BuildContext context,
+                          final int index,
+                        ) => Padding(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: RepositoryMd3Layout.space12,
+                            vertical: RepositoryMd3Layout.space12,
+                          ),
+                          child: Row(
+                            children: <Widget>[
+                              const Icon(Icons.folder_outlined),
+                              const SizedBox(
+                                width: RepositoryMd3Layout.space12,
+                              ),
+                              _CodeLoadingBlock(
+                                width: 112 + (index % 3) * 28,
+                                height: 16,
+                              ),
+                              if (windowClass !=
+                                  RepositoryWindowClass.compact) ...<Widget>[
+                                const Spacer(),
+                                const _CodeLoadingBlock(width: 160, height: 16),
+                                const SizedBox(
+                                  width: RepositoryMd3Layout.space24,
+                                ),
+                                const _CodeLoadingBlock(width: 72, height: 16),
+                              ],
+                            ],
+                          ),
+                        ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ];
+        final List<Widget> pageSlivers = <Widget>[
+          SliverToBoxAdapter(child: header),
+          const SliverToBoxAdapter(child: Divider(height: 1)),
+          if (error == null)
+            const SliverToBoxAdapter(
+              child: LinearProgressIndicator(minHeight: 2),
+            )
+          else
+            SliverToBoxAdapter(
+              child: _RepositoryDetailsError(error: error!, onRetry: onRetry),
+            ),
+          if (windowClass == RepositoryWindowClass.expanded && aside != null)
+            SliverCrossAxisGroup(
+              slivers: <Widget>[
+                SliverCrossAxisExpanded(
+                  flex: 3,
+                  sliver: SliverMainAxisGroup(slivers: mainSlivers),
+                ),
+                SliverCrossAxisExpanded(
+                  flex: 1,
+                  sliver: SliverToBoxAdapter(child: aside),
+                ),
+              ],
+            )
+          else
+            ...mainSlivers,
+        ];
+        return CustomScrollView(
+          key: PageStorageKey<String>(
+            'repository-code-${repoRef.fullName}-loading',
+          ),
+          physics: const AlwaysScrollableScrollPhysics(),
+          slivers: pageSlivers,
+        );
+      },
+    );
+  }
+}
+
+class _CodeLoadingBlock extends StatelessWidget {
+  const _CodeLoadingBlock({this.width, required this.height});
+
+  final double? width;
+  final double height;
+
+  @override
+  Widget build(final BuildContext context) {
+    return Container(
+      width: width,
+      height: height,
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surfaceContainerHighest,
+        borderRadius: BorderRadius.circular(8),
+      ),
+    );
+  }
+}
+
+class _RepositoryDetailsError extends StatelessWidget {
+  const _RepositoryDetailsError({required this.error, required this.onRetry});
+
+  final Object error;
+  final Future<void> Function() onRetry;
+
+  @override
+  Widget build(final BuildContext context) {
+    return MaterialBanner(
+      leading: const Icon(Icons.warning_amber_outlined),
+      content: Text(
+        context.l10n.repoLoadError('$error'),
+        maxLines: 2,
+        overflow: TextOverflow.ellipsis,
+      ),
+      actions: <Widget>[
+        TextButton(
+          onPressed: () => unawaited(onRetry()),
+          child: Text(context.l10n.commonRetry),
+        ),
+      ],
+    );
   }
 }
 
@@ -305,15 +565,19 @@ class _CodeToolbar extends ConsumerStatefulWidget {
   const _CodeToolbar({
     required this.repoRef,
     required this.repo,
+    required this.details,
     required this.branch,
     required this.navigation,
+    required this.compact,
     required this.inline,
   });
 
   final RepoRef repoRef;
-  final RepoInfo repo;
+  final RepoCardData? repo;
+  final RepoInfo? details;
   final BranchStateResolved branch;
   final CodeBrowserState navigation;
+  final bool compact;
   final bool inline;
 
   @override
@@ -322,6 +586,7 @@ class _CodeToolbar extends ConsumerStatefulWidget {
 
 class _CodeToolbarState extends ConsumerState<_CodeToolbar> {
   late final TextEditingController _searchController;
+  bool _showCompactFilter = false;
 
   @override
   void initState() {
@@ -356,72 +621,134 @@ class _CodeToolbarState extends ConsumerState<_CodeToolbar> {
       repoRef: widget.repoRef,
       repo: widget.repo,
       branch: widget.branch,
+      maxLabelWidth: widget.compact
+          ? 104
+          : RepositoryMd3Layout.refButtonLabelWidth,
     );
     final Widget addFile = _AddFileButton(
       repoRef: widget.repoRef,
-      repo: widget.repo,
+      details: widget.details,
       branch: widget.branch,
       parentPath: widget.navigation.currentPath,
     );
     final Widget clone = FilledButton.icon(
-      onPressed: () => _showCloneSheet(context, widget.repo),
+      onPressed: widget.repo == null
+          ? null
+          : () => _showCloneSheet(context, widget.repo!, widget.details),
       icon: const Icon(Icons.code),
-      label: const Text('Code'),
+      label: Text(context.l10n.repoCode),
     );
-    final Widget goToFile = Tooltip(
-      message: 'Repository-wide file search is not available in this phase.',
-      child: OutlinedButton.icon(
-        onPressed: null,
-        icon: Icon(Icons.manage_search),
-        label: Text('Go to file'),
-      ),
-    );
-    final Widget search = SearchBar(
+    final Widget search = _DirectoryFilterField(
       controller: _searchController,
-      hintText: 'Filter current directory',
-      leading: const Icon(Icons.search),
-      trailing: widget.navigation.searchQuery.isNotEmpty
-          ? <Widget>[
-              IconButton(
-                tooltip: 'Clear file filter',
-                onPressed: () {
-                  _searchController.clear();
-                  ref
-                      .read(codeBrowserStateProvider(widget.repoRef).notifier)
-                      .setSearchQuery('');
-                },
-                icon: const Icon(Icons.close),
-              ),
-            ]
-          : null,
+      hintText: context.l10n.repoFilterCurrentDirectory,
+      onClear: widget.navigation.searchQuery.isEmpty
+          ? null
+          : () {
+              _searchController.clear();
+              ref
+                  .read(codeBrowserStateProvider(widget.repoRef).notifier)
+                  .setSearchQuery('');
+            },
       onChanged: (final String value) => ref
           .read(codeBrowserStateProvider(widget.repoRef).notifier)
           .setSearchQuery(value),
     );
+    final int? branchCount = widget.details?.branchCount?.totalCount;
+    final int? tagCount = widget.details?.tagCount?.totalCount;
+    final List<Widget> refCounts = <Widget>[
+      if (branchCount != null)
+        TextButton.icon(
+          onPressed: () => _showBranchPicker(context),
+          icon: const Icon(Icons.account_tree_outlined, size: 18),
+          label: Text(context.l10n.repoBranchesCount('$branchCount')),
+        ),
+      if (tagCount != null)
+        TextButton.icon(
+          onPressed: () => _showTagPicker(context),
+          icon: const Icon(Icons.sell_outlined, size: 18),
+          label: Text(context.l10n.repoTagsCount('$tagCount')),
+        ),
+    ];
+    final bool canCreate =
+        !widget.branch.isCommit &&
+        widget.details != null &&
+        isAtLeast(widget.details!.viewerPermission, RepositoryPermission.WRITE);
+    final Widget compactMore = MenuAnchor(
+      menuChildren: <Widget>[
+        MenuItemButton(
+          leadingIcon: const Icon(Icons.filter_list),
+          onPressed: () => setState(() => _showCompactFilter = true),
+          child: Text(context.l10n.repoFilterCurrentDirectory),
+        ),
+        MenuItemButton(
+          leadingIcon: const Icon(Icons.manage_search),
+          onPressed: null,
+          child: Text(context.l10n.repoGoToFileUnavailable),
+        ),
+        MenuItemButton(
+          leadingIcon: const Icon(Icons.note_add_outlined),
+          onPressed: canCreate ? () => _createFile(context) : null,
+          child: Text(context.l10n.repoCreateNewFile),
+        ),
+      ],
+      builder:
+          (
+            final BuildContext context,
+            final MenuController controller,
+            final Widget? child,
+          ) => IconButton.outlined(
+            tooltip: context.l10n.repoCodeOptions,
+            onPressed: () =>
+                controller.isOpen ? controller.close() : controller.open(),
+            icon: const Icon(Icons.more_horiz),
+          ),
+    );
+    final bool showBreadcrumbs = widget.navigation.currentPath.isNotEmpty;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: <Widget>[
-        _RepositoryBreadcrumbs(
-          repoRef: widget.repoRef,
-          path: widget.navigation.currentPath,
-        ),
-        const SizedBox(height: RepositoryMd3Layout.space12),
-        if (!widget.inline) ...<Widget>[
-          Wrap(
-            spacing: RepositoryMd3Layout.space8,
-            runSpacing: RepositoryMd3Layout.space8,
-            children: <Widget>[refSelector, goToFile, addFile, clone],
+        if (showBreadcrumbs) ...<Widget>[
+          _RepositoryBreadcrumbs(
+            repoRef: widget.repoRef,
+            path: widget.navigation.currentPath,
           ),
           const SizedBox(height: RepositoryMd3Layout.space12),
-          search,
+        ],
+        if (!widget.inline) ...<Widget>[
+          Row(
+            children: <Widget>[
+              refSelector,
+              const Spacer(),
+              clone,
+              const SizedBox(width: RepositoryMd3Layout.space8),
+              compactMore,
+            ],
+          ),
+          if (!widget.compact && refCounts.isNotEmpty) ...<Widget>[
+            const SizedBox(height: RepositoryMd3Layout.space4),
+            Wrap(
+              spacing: RepositoryMd3Layout.space4,
+              runSpacing: RepositoryMd3Layout.space4,
+              children: refCounts,
+            ),
+          ],
+          if (_showCompactFilter ||
+              widget.navigation.searchQuery.isNotEmpty) ...<Widget>[
+            const SizedBox(height: RepositoryMd3Layout.space12),
+            search,
+          ],
         ] else
           Row(
             children: <Widget>[
               refSelector,
               const SizedBox(width: RepositoryMd3Layout.space8),
+              ...refCounts.expand(
+                (final Widget item) => <Widget>[
+                  item,
+                  const SizedBox(width: RepositoryMd3Layout.space4),
+                ],
+              ),
               Expanded(child: search),
-              const SizedBox(width: RepositoryMd3Layout.space8),
-              goToFile,
               const SizedBox(width: RepositoryMd3Layout.space8),
               addFile,
               const SizedBox(width: RepositoryMd3Layout.space8),
@@ -432,27 +759,128 @@ class _CodeToolbarState extends ConsumerState<_CodeToolbar> {
           const SizedBox(height: RepositoryMd3Layout.space12),
           MaterialBanner(
             content: Text(
-              'Browsing commit ${_abbreviate(widget.branch.refValue)}. '
-              'Editing is disabled.',
+              context.l10n.repoBrowsingCommit(
+                _abbreviate(widget.branch.refValue),
+              ),
             ),
             actions: <Widget>[
               TextButton(
-                onPressed: widget.repo.defaultBranchRef == null
+                onPressed: widget.repo?.defaultBranchRef == null
                     ? null
                     : () => ref
                           .read(branchProvider(widget.repoRef).notifier)
                           .setBranchState(
                             BranchState.branch(
-                              widget.repo.defaultBranchRef!.name,
+                              widget.repo!.defaultBranchRef!.name,
                             ),
                           ),
-                child: const Text('Default branch'),
+                child: Text(context.l10n.repoDefaultBranch),
               ),
             ],
           ),
         ],
         const SizedBox(height: RepositoryMd3Layout.space16),
       ],
+    );
+  }
+
+  void _createFile(final BuildContext context) {
+    Navigator.of(context).push<void>(
+      MaterialPageRoute<void>(
+        builder: (final BuildContext context) => CreateFileScreen(
+          repoRef: widget.repoRef,
+          branchRef: widget.branch.refValue,
+          parentPath: widget.navigation.currentPath,
+        ),
+      ),
+    );
+  }
+
+  Future<void> _showBranchPicker(final BuildContext context) async {
+    await _showRefDialog(
+      context,
+      title: context.l10n.repoSwitchBranch,
+      child: BranchSelectSheet(
+        widget.repoRef,
+        defaultBranch: widget.repo?.defaultBranchRef?.name,
+        currentBranch: widget.branch.refKind == RefKind.branch
+            ? widget.branch.refValue
+            : null,
+        onSelected: (final String name) => _selectRef(BranchState.branch(name)),
+      ),
+    );
+  }
+
+  Future<void> _showTagPicker(final BuildContext context) async {
+    await _showRefDialog(
+      context,
+      title: context.l10n.repoSwitchTag,
+      child: TagSelectSheet(
+        widget.repoRef,
+        currentTag: widget.branch.isTag ? widget.branch.refValue : null,
+        onSelected: (final String name) => _selectRef(BranchState.tag(name)),
+      ),
+    );
+  }
+
+  void _selectRef(final BranchState value) {
+    ref.read(branchProvider(widget.repoRef).notifier).setBranchState(value);
+    ref
+        .read(codeBrowserStateProvider(widget.repoRef).notifier)
+        .jumpToPathIndex(-1);
+  }
+}
+
+class _DirectoryFilterField extends StatelessWidget {
+  const _DirectoryFilterField({
+    required this.controller,
+    required this.hintText,
+    required this.onChanged,
+    this.onClear,
+  });
+
+  final TextEditingController controller;
+  final String hintText;
+  final ValueChanged<String> onChanged;
+  final VoidCallback? onClear;
+
+  @override
+  Widget build(final BuildContext context) {
+    return SizedBox(
+      height: 40,
+      child: TextField(
+        controller: controller,
+        onChanged: onChanged,
+        textAlignVertical: TextAlignVertical.center,
+        decoration: InputDecoration(
+          hintText: hintText,
+          isDense: true,
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: RepositoryMd3Layout.space12,
+          ),
+          prefixIcon: const Icon(Icons.search, size: 20),
+          prefixIconConstraints: const BoxConstraints(
+            minWidth: 40,
+            minHeight: 40,
+          ),
+          suffixIcon: onClear == null
+              ? null
+              : IconButton(
+                  tooltip: context.l10n.repoClearFileFilter,
+                  onPressed: onClear,
+                  icon: const Icon(Icons.close, size: 18),
+                ),
+          suffixIconConstraints: const BoxConstraints(
+            minWidth: 40,
+            minHeight: 40,
+          ),
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(
+              RepositoryMd3Layout.sectionRadius / 2,
+            ),
+          ),
+        ),
+      ),
     );
   }
 }
@@ -501,11 +929,13 @@ class _RefSelectorButton extends ConsumerWidget {
     required this.repoRef,
     required this.repo,
     required this.branch,
+    required this.maxLabelWidth,
   });
 
   final RepoRef repoRef;
-  final RepoInfo repo;
+  final RepoCardData? repo;
   final BranchStateResolved branch;
+  final double maxLabelWidth;
 
   @override
   Widget build(final BuildContext context, final WidgetRef ref) {
@@ -514,12 +944,12 @@ class _RefSelectorButton extends ConsumerWidget {
         MenuItemButton(
           leadingIcon: const Icon(Icons.account_tree_outlined),
           onPressed: () => _showBranchPicker(context, ref),
-          child: const Text('Switch branch…'),
+          child: Text(context.l10n.repoSwitchBranch),
         ),
         MenuItemButton(
           leadingIcon: const Icon(Icons.sell_outlined),
           onPressed: () => _showTagPicker(context, ref),
-          child: const Text('Switch tag…'),
+          child: Text(context.l10n.repoSwitchTag),
         ),
       ],
       builder:
@@ -532,9 +962,7 @@ class _RefSelectorButton extends ConsumerWidget {
                 controller.isOpen ? controller.close() : controller.open(),
             icon: Icon(branch.isTag ? Icons.sell_outlined : Icons.account_tree),
             label: ConstrainedBox(
-              constraints: const BoxConstraints(
-                maxWidth: RepositoryMd3Layout.refButtonLabelWidth,
-              ),
+              constraints: BoxConstraints(maxWidth: maxLabelWidth),
               child: Text(branch.refValue, overflow: TextOverflow.ellipsis),
             ),
           ),
@@ -547,10 +975,10 @@ class _RefSelectorButton extends ConsumerWidget {
   ) async {
     await _showRefDialog(
       context,
-      title: 'Switch branch',
+      title: context.l10n.repoSwitchBranch,
       child: BranchSelectSheet(
         repoRef,
-        defaultBranch: repo.defaultBranchRef?.name,
+        defaultBranch: repo?.defaultBranchRef?.name,
         currentBranch: branch.refKind == RefKind.branch
             ? branch.refValue
             : null,
@@ -566,7 +994,7 @@ class _RefSelectorButton extends ConsumerWidget {
   ) async {
     await _showRefDialog(
       context,
-      title: 'Switch tag',
+      title: context.l10n.repoSwitchTag,
       child: TagSelectSheet(
         repoRef,
         currentTag: branch.isTag ? branch.refValue : null,
@@ -585,13 +1013,13 @@ class _RefSelectorButton extends ConsumerWidget {
 class _AddFileButton extends StatelessWidget {
   const _AddFileButton({
     required this.repoRef,
-    required this.repo,
+    required this.details,
     required this.branch,
     required this.parentPath,
   });
 
   final RepoRef repoRef;
-  final RepoInfo repo;
+  final RepoInfo? details;
   final BranchStateResolved branch;
   final String parentPath;
 
@@ -599,18 +1027,19 @@ class _AddFileButton extends StatelessWidget {
   Widget build(final BuildContext context) {
     final bool canCreate =
         !branch.isCommit &&
-        isAtLeast(repo.viewerPermission, RepositoryPermission.WRITE);
+        details != null &&
+        isAtLeast(details!.viewerPermission, RepositoryPermission.WRITE);
     return MenuAnchor(
       menuChildren: <Widget>[
         MenuItemButton(
           leadingIcon: const Icon(Icons.note_add_outlined),
           onPressed: canCreate ? () => _createFile(context) : null,
-          child: const Text('Create new file'),
+          child: Text(context.l10n.repoCreateNewFile),
         ),
-        const MenuItemButton(
-          leadingIcon: Icon(Icons.upload_file_outlined),
+        MenuItemButton(
+          leadingIcon: const Icon(Icons.upload_file_outlined),
           onPressed: null,
-          child: Text('Upload files (not available)'),
+          child: Text(context.l10n.repoUploadFilesUnavailable),
         ),
       ],
       builder:
@@ -622,7 +1051,7 @@ class _AddFileButton extends StatelessWidget {
             onPressed: () =>
                 controller.isOpen ? controller.close() : controller.open(),
             icon: const Icon(Icons.add),
-            label: const Text('Add file'),
+            label: Text(context.l10n.repoAddFile),
           ),
     );
   }
@@ -634,6 +1063,43 @@ class _AddFileButton extends StatelessWidget {
           repoRef: repoRef,
           branchRef: branch.refValue,
           parentPath: parentPath,
+        ),
+      ),
+    );
+  }
+}
+
+class _ForkStatusCard extends StatelessWidget {
+  const _ForkStatusCard({required this.repo});
+
+  final RepoCardData repo;
+
+  @override
+  Widget build(final BuildContext context) {
+    final parent = repo.parent!;
+    return Card(
+      margin: EdgeInsets.zero,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(
+          horizontal: RepositoryMd3Layout.space16,
+          vertical: RepositoryMd3Layout.space8,
+        ),
+        child: Row(
+          children: <Widget>[
+            const Icon(Icons.call_split, size: 20),
+            const SizedBox(width: RepositoryMd3Layout.space8),
+            Expanded(
+              child: Text(
+                context.l10n.repoForkedFrom(parent.nameWithOwner),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+            TextButton(
+              onPressed: () => unawaited(launchUrl(parent.url)),
+              child: Text(context.l10n.repoViewUpstream),
+            ),
+          ],
         ),
       ),
     );
@@ -657,74 +1123,391 @@ class _LatestCommitCard extends ConsumerWidget {
     final AsyncValue<DirectoryLastCommit?> latest = ref.watch(
       directoryLastCommitProvider(key),
     );
-    return Card(
-      child: latest.when(
-        loading: () => const ListTile(
-          leading: CircularProgressIndicator(),
-          title: Text('Loading latest commit…'),
+    return latest.when(
+      loading: () => ListTile(
+        dense: true,
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: RepositoryMd3Layout.space16,
         ),
-        error: (final Object error, final StackTrace stack) => ListTile(
-          leading: const Icon(Icons.warning_amber_outlined),
-          title: const Text('Latest commit unavailable'),
-          subtitle: Text(
-            '$error',
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-          ),
-          trailing: IconButton(
-            tooltip: 'Retry latest commit',
-            onPressed: () => ref.invalidate(directoryLastCommitProvider(key)),
-            icon: const Icon(Icons.refresh),
+        leading: const SizedBox.square(
+          dimension: 20,
+          child: CircularProgressIndicator(strokeWidth: 2),
+        ),
+        title: Text(context.l10n.repoLoadingLatestCommit),
+      ),
+      error: (final Object error, final StackTrace stack) => ListTile(
+        dense: true,
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: RepositoryMd3Layout.space16,
+        ),
+        leading: const Icon(Icons.warning_amber_outlined),
+        title: Text(context.l10n.repoLatestCommitUnavailable),
+        subtitle: Text('$error', maxLines: 1, overflow: TextOverflow.ellipsis),
+        trailing: IconButton(
+          tooltip: context.l10n.repoRetryLatestCommit,
+          onPressed: () => ref.invalidate(directoryLastCommitProvider(key)),
+          icon: const Icon(Icons.refresh),
+        ),
+      ),
+      data: (final DirectoryLastCommit? commit) {
+        if (commit == null) {
+          return ListTile(
+            dense: true,
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: RepositoryMd3Layout.space16,
+            ),
+            leading: const Icon(Icons.commit, size: 20),
+            title: Text(context.l10n.repoNoCommitInformation),
+          );
+        }
+        return LayoutBuilder(
+          builder:
+              (final BuildContext context, final BoxConstraints constraints) {
+                final bool compact =
+                    constraints.maxWidth <
+                    RepositoryMd3Layout.compactBreakpoint;
+                final String author =
+                    commit.authorName ?? context.l10n.repoUnknownAuthor;
+                final String updated = formatRelativeTime(
+                  context,
+                  commit.committedDate,
+                  compact: true,
+                );
+                return ListTile(
+                  dense: true,
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: RepositoryMd3Layout.space16,
+                  ),
+                  leading: const Icon(Icons.commit, size: 20),
+                  title: compact
+                      ? Text(
+                          commit.message,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        )
+                      : Row(
+                          children: <Widget>[
+                            Text(
+                              author,
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                            const SizedBox(width: RepositoryMd3Layout.space8),
+                            Expanded(
+                              child: Text(
+                                commit.message,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ],
+                        ),
+                  subtitle: compact
+                      ? Text(
+                          '$author · ${commit.abbreviatedOid} · $updated',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        )
+                      : null,
+                  trailing: compact
+                      ? null
+                      : Text('${commit.abbreviatedOid} · $updated'),
+                );
+              },
+        );
+      },
+    );
+  }
+}
+
+class _RepositoryDocumentsSliver extends ConsumerStatefulWidget {
+  const _RepositoryDocumentsSliver({
+    required this.repoRef,
+    required this.repo,
+    required this.details,
+    required this.branch,
+    required this.windowClass,
+  });
+
+  final RepoRef repoRef;
+  final RepoCardData? repo;
+  final RepoInfo? details;
+  final String branch;
+  final RepositoryWindowClass windowClass;
+
+  @override
+  ConsumerState<_RepositoryDocumentsSliver> createState() =>
+      _RepositoryDocumentsSliverState();
+}
+
+class _RepositoryDocumentsSliverState
+    extends ConsumerState<_RepositoryDocumentsSliver> {
+  RepositoryDocumentKind _selected = RepositoryDocumentKind.readme;
+
+  List<RepositoryDocumentKind> get _availableKinds => <RepositoryDocumentKind>[
+    RepositoryDocumentKind.readme,
+    if (widget.details?.contributingGuidelines?.url != null)
+      RepositoryDocumentKind.contributing,
+    if (widget.details?.licenseInfo != null || widget.repo?.licenseInfo != null)
+      RepositoryDocumentKind.license,
+    if (widget.details?.isSecurityPolicyEnabled == true)
+      RepositoryDocumentKind.security,
+  ];
+
+  @override
+  Widget build(final BuildContext context) {
+    final List<RepositoryDocumentKind> availableKinds = _availableKinds;
+    final RepositoryDocumentKind selected = availableKinds.contains(_selected)
+        ? _selected
+        : RepositoryDocumentKind.readme;
+    final RepositoryDocumentKey key = (
+      repoRef: widget.repoRef,
+      branch: widget.branch,
+      kind: selected,
+    );
+    final AsyncValue<RepositoryDocument?> document = ref.watch(
+      repositoryDocumentProvider(key),
+    );
+    final EdgeInsets pagePadding = RepositoryMd3Layout.pagePaddingFor(
+      widget.windowClass,
+    );
+    final ColorScheme colors = Theme.of(context).colorScheme;
+    return SliverPadding(
+      key: const ValueKey<String>('repository-document-card'),
+      padding: EdgeInsets.fromLTRB(
+        pagePadding.left,
+        RepositoryMd3Layout.space24,
+        pagePadding.right,
+        0,
+      ),
+      sliver: DecoratedSliver(
+        decoration: BoxDecoration(
+          color: colors.surface,
+          border: Border.all(color: colors.outlineVariant),
+          borderRadius: BorderRadius.circular(
+            RepositoryMd3Layout.sectionRadius,
           ),
         ),
-        data: (final DirectoryLastCommit? commit) => ListTile(
-          leading: const Icon(Icons.commit),
-          title: Text(
-            commit?.message ?? 'No commit information for this directory',
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-          ),
-          subtitle: commit == null
-              ? null
-              : Text(
-                  '${commit.authorName ?? 'Unknown author'} · '
-                  '${commit.abbreviatedOid}',
-                ),
-          trailing: commit == null
-              ? null
-              : Text(commit.committedDate.toRelativeDate()),
+        sliver: SliverMainAxisGroup(
+          slivers: <Widget>[
+            SliverToBoxAdapter(
+              child: _RepositoryDocumentHeader(
+                repo: widget.repo,
+                details: widget.details,
+                availableKinds: availableKinds,
+                selected: selected,
+                onSelected: (final RepositoryDocumentKind kind) {
+                  if (kind == selected) return;
+                  setState(() => _selected = kind);
+                },
+              ),
+            ),
+            const SliverToBoxAdapter(child: Divider(height: 1)),
+            _buildDocumentSliver(context, document, key, selected),
+          ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildDocumentSliver(
+    final BuildContext context,
+    final AsyncValue<RepositoryDocument?> document,
+    final RepositoryDocumentKey key,
+    final RepositoryDocumentKind selected,
+  ) => document.when(
+    loading: () => const SliverToBoxAdapter(
+      child: Padding(
+        padding: EdgeInsets.symmetric(vertical: RepositoryMd3Layout.space32),
+        child: Center(child: CircularProgressIndicator()),
+      ),
+    ),
+    error: (final Object error, final StackTrace stack) => SliverToBoxAdapter(
+      child: ListTile(
+        leading: const Icon(Icons.warning_amber_outlined),
+        title: Text(context.l10n.repoDocumentLoadError('$error')),
+        trailing: IconButton(
+          tooltip: context.l10n.commonRetry,
+          onPressed: () => ref.invalidate(repositoryDocumentProvider(key)),
+          icon: const Icon(Icons.refresh),
+        ),
+      ),
+    ),
+    data: (final RepositoryDocument? value) {
+      if (value == null) {
+        return SliverToBoxAdapter(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(
+              vertical: RepositoryMd3Layout.space32,
+            ),
+            child: Center(child: Text(context.l10n.repoDocumentNotFound)),
+          ),
+        );
+      }
+      return switch (value.format) {
+        RepositoryDocumentFormat.html => RepositoryReadmeSliver(
+          key: ValueKey<String>(
+            '${widget.repoRef.fullName}-${widget.branch}-${selected.name}',
+          ),
+          readmeAsync: AsyncData<String?>(value.content),
+          branch: widget.branch,
+          repoFullName: widget.repoRef.fullName,
+        ),
+        RepositoryDocumentFormat.markdown => SliverToBoxAdapter(
+          child: Padding(
+            padding: const EdgeInsets.all(RepositoryMd3Layout.space16),
+            child: SelectableText(
+              value.content,
+              style: Theme.of(
+                context,
+              ).textTheme.bodyMedium?.copyWith(fontFamily: 'monospace'),
+            ),
+          ),
+        ),
+      };
+    },
+  );
+}
+
+class _RepositoryDocumentHeader extends StatelessWidget {
+  const _RepositoryDocumentHeader({
+    required this.repo,
+    required this.details,
+    required this.availableKinds,
+    required this.selected,
+    required this.onSelected,
+  });
+
+  final RepoCardData? repo;
+  final RepoInfo? details;
+  final List<RepositoryDocumentKind> availableKinds;
+  final RepositoryDocumentKind selected;
+  final ValueChanged<RepositoryDocumentKind> onSelected;
+
+  @override
+  Widget build(final BuildContext context) {
+    final List<Widget> documents = availableKinds
+        .map(
+          (final RepositoryDocumentKind kind) => _RepositoryDocumentTab(
+            icon: switch (kind) {
+              RepositoryDocumentKind.readme => Icons.menu_book_outlined,
+              RepositoryDocumentKind.contributing => Icons.group_outlined,
+              RepositoryDocumentKind.license => Icons.balance_outlined,
+              RepositoryDocumentKind.security => Icons.security_outlined,
+            },
+            label: switch (kind) {
+              RepositoryDocumentKind.readme => context.l10n.repoReadme,
+              RepositoryDocumentKind.contributing =>
+                context.l10n.repoContributing,
+              RepositoryDocumentKind.license =>
+                details?.licenseInfo?.name ??
+                    repo?.licenseInfo?.name ??
+                    context.l10n.repoLicense,
+              RepositoryDocumentKind.security => context.l10n.repoSecurity,
+            },
+            selected: selected == kind,
+            onPressed: () => onSelected(kind),
+          ),
+        )
+        .toList();
+    final bool canEdit =
+        details != null &&
+        repo != null &&
+        isAtLeast(details!.viewerPermission, RepositoryPermission.WRITE) &&
+        repo!.defaultBranchRef != null;
+    return SizedBox(
+      height: 52,
+      child: Row(
+        children: <Widget>[
+          Expanded(
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.symmetric(
+                horizontal: RepositoryMd3Layout.space8,
+              ),
+              child: Row(children: documents),
+            ),
+          ),
+          if (selected == RepositoryDocumentKind.readme) ...<Widget>[
+            Tooltip(
+              message: canEdit
+                  ? context.l10n.repoEditReadme
+                  : context.l10n.repoEditReadmeRequiresWrite,
+              child: IconButton(
+                onPressed: canEdit
+                    ? () => unawaited(
+                        launchUrl(
+                          repo!.url.replace(
+                            path:
+                                '${repo!.url.path}/edit/${repo!.defaultBranchRef!.name}/README.md',
+                          ),
+                        ),
+                      )
+                    : null,
+                icon: const Icon(Icons.edit_outlined),
+              ),
+            ),
+            Tooltip(
+              message: context.l10n.repoReadmeOutlineUnavailable,
+              child: const IconButton(
+                onPressed: null,
+                icon: Icon(Icons.format_list_bulleted),
+              ),
+            ),
+          ],
+          const SizedBox(width: RepositoryMd3Layout.space4),
+        ],
       ),
     );
   }
 }
 
-class _DirectoryTableHeader extends StatelessWidget {
-  const _DirectoryTableHeader();
+class _RepositoryDocumentTab extends StatelessWidget {
+  const _RepositoryDocumentTab({
+    required this.icon,
+    required this.label,
+    this.selected = false,
+    this.onPressed,
+  });
+
+  final IconData icon;
+  final String label;
+  final bool selected;
+  final VoidCallback? onPressed;
 
   @override
   Widget build(final BuildContext context) {
-    final TextStyle? style = Theme.of(context).textTheme.labelMedium?.copyWith(
-      color: Theme.of(context).colorScheme.onSurfaceVariant,
-    );
+    final ColorScheme colors = Theme.of(context).colorScheme;
     return Padding(
-      padding: const EdgeInsets.symmetric(
-        horizontal: RepositoryMd3Layout.space12,
-        vertical: RepositoryMd3Layout.space8,
-      ),
-      child: Row(
-        children: <Widget>[
-          const SizedBox(width: RepositoryMd3Layout.fileIconWidth),
-          Expanded(child: Text('Name', style: style)),
-          SizedBox(
-            width: RepositoryMd3Layout.fileMessageWidth,
-            child: Text('Last commit', style: style),
+      padding: const EdgeInsets.symmetric(horizontal: 2),
+      child: InkWell(
+        onTap: selected ? null : onPressed,
+        child: Container(
+          height: 52,
+          padding: const EdgeInsets.symmetric(
+            horizontal: RepositoryMd3Layout.space12,
           ),
-          SizedBox(
-            width: RepositoryMd3Layout.fileUpdatedWidth,
-            child: Text('Updated', style: style),
+          decoration: BoxDecoration(
+            border: Border(
+              bottom: BorderSide(
+                color: selected ? colors.primary : Colors.transparent,
+                width: 2,
+              ),
+            ),
           ),
-        ],
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: <Widget>[
+              Icon(icon, size: 18),
+              const SizedBox(width: RepositoryMd3Layout.space8),
+              Text(
+                label,
+                style: TextStyle(fontWeight: selected ? FontWeight.w700 : null),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -763,18 +1546,26 @@ class _DirectoryEntryRow extends ConsumerWidget {
     final String? message = lastCommit?.value?.message;
     final DateTime? updated = lastCommit?.value?.committedDate;
     if (compact) {
+      final String metadata = _entryMetadata(context, entry, showMetadata);
+      final String? supportingText =
+          message ?? (metadata.isEmpty ? null : metadata);
       return ListTile(
+        dense: true,
         contentPadding: const EdgeInsets.symmetric(
-          horizontal: RepositoryMd3Layout.space8,
+          horizontal: RepositoryMd3Layout.space12,
         ),
-        leading: Icon(_iconForEntry(entry.kind)),
+        leading: Icon(
+          _iconForEntry(entry.kind),
+          color: _iconColorForEntry(context, entry.kind),
+        ),
         title: Text(entry.name, maxLines: 1, overflow: TextOverflow.ellipsis),
-        subtitle: Text(
-          message ?? _entryMetadata(entry, showMetadata),
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-        ),
-        trailing: const Icon(Icons.chevron_right),
+        subtitle: supportingText == null
+            ? null
+            : Text(
+                supportingText,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
         onTap: onTap,
       );
     }
@@ -783,13 +1574,16 @@ class _DirectoryEntryRow extends ConsumerWidget {
       child: Padding(
         padding: const EdgeInsets.symmetric(
           horizontal: RepositoryMd3Layout.space12,
-          vertical: RepositoryMd3Layout.space12,
+          vertical: RepositoryMd3Layout.space8,
         ),
         child: Row(
           children: <Widget>[
             SizedBox(
               width: RepositoryMd3Layout.fileIconWidth,
-              child: Icon(_iconForEntry(entry.kind)),
+              child: Icon(
+                _iconForEntry(entry.kind),
+                color: _iconColorForEntry(context, entry.kind),
+              ),
             ),
             Expanded(
               child: Text(
@@ -798,22 +1592,32 @@ class _DirectoryEntryRow extends ConsumerWidget {
                 overflow: TextOverflow.ellipsis,
               ),
             ),
-            SizedBox(
-              width: RepositoryMd3Layout.fileMessageWidth,
-              child: Text(
-                message ?? _entryMetadata(entry, showMetadata),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
+            if (showLastCommit) ...<Widget>[
+              SizedBox(
+                width: RepositoryMd3Layout.fileMessageWidth,
+                child: Text(
+                  message ?? '',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
+                ),
               ),
-            ),
-            SizedBox(
-              width: RepositoryMd3Layout.fileUpdatedWidth,
-              child: Text(
-                updated?.toRelativeDate() ?? '',
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
+              SizedBox(
+                width: RepositoryMd3Layout.fileUpdatedWidth,
+                child: Text(
+                  updated == null
+                      ? ''
+                      : formatRelativeTime(context, updated, compact: true),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
+                ),
               ),
-            ),
+            ],
           ],
         ),
       ),
@@ -840,7 +1644,7 @@ class _CodeErrorState extends StatelessWidget {
           ),
           const SizedBox(height: RepositoryMd3Layout.space16),
           Text(
-            'Could not load repository files',
+            context.l10n.repoCouldNotLoadFiles,
             style: Theme.of(context).textTheme.titleMedium,
           ),
           const SizedBox(height: RepositoryMd3Layout.space8),
@@ -849,7 +1653,7 @@ class _CodeErrorState extends StatelessWidget {
           FilledButton.icon(
             onPressed: onRetry,
             icon: const Icon(Icons.refresh),
-            label: const Text('Retry'),
+            label: Text(context.l10n.commonRetry),
           ),
         ],
       ),
@@ -875,12 +1679,14 @@ class _CodeEmptyState extends StatelessWidget {
           ),
           const SizedBox(height: RepositoryMd3Layout.space16),
           Text(
-            filtered ? 'No matching files' : 'This directory is empty',
+            filtered
+                ? context.l10n.repoNoMatchingFiles
+                : context.l10n.repoDirectoryEmpty,
             style: Theme.of(context).textTheme.titleMedium,
           ),
           if (filtered) ...<Widget>[
             const SizedBox(height: RepositoryMd3Layout.space8),
-            const Text('Clear the file filter to show every entry.'),
+            Text(context.l10n.repoClearFilterHint),
           ],
         ],
       ),
@@ -905,16 +1711,22 @@ Future<void> _showRefDialog(
       actions: <Widget>[
         TextButton(
           onPressed: () => Navigator.of(context).pop(),
-          child: const Text('Cancel'),
+          child: Text(context.l10n.commonCancel),
         ),
       ],
     ),
   );
 }
 
-Future<void> _showCloneSheet(final BuildContext context, final RepoInfo repo) {
+Future<void> _showCloneSheet(
+  final BuildContext context,
+  final RepoCardData repo,
+  final RepoInfo? details,
+) {
   final String baseUrl = repo.url.toString();
   final String httpsUrl = baseUrl.endsWith('.git') ? baseUrl : '$baseUrl.git';
+  final String sshUrl =
+      details?.sshUrl ?? 'git@${repo.url.host}:${repo.nameWithOwner}.git';
   return showModalBottomSheet<void>(
     context: context,
     showDragHandle: true,
@@ -931,11 +1743,11 @@ Future<void> _showCloneSheet(final BuildContext context, final RepoInfo repo) {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: <Widget>[
             Text(
-              'Clone repository',
+              context.l10n.repoCloneRepository,
               style: Theme.of(context).textTheme.titleMedium,
             ),
             const SizedBox(height: RepositoryMd3Layout.space16),
-            CloneUrlSheet(httpsUrl: httpsUrl, sshUrl: repo.sshUrl),
+            CloneUrlSheet(httpsUrl: httpsUrl, sshUrl: sshUrl),
           ],
         ),
       ),
@@ -1018,15 +1830,26 @@ IconData _iconForEntry(final CodeEntryKind kind) {
   };
 }
 
-String _entryMetadata(final CodeTreeNode entry, final bool showMetadata) {
+Color _iconColorForEntry(final BuildContext context, final CodeEntryKind kind) {
+  final ColorScheme colors = Theme.of(context).colorScheme;
+  return kind == CodeEntryKind.directory
+      ? colors.primary
+      : colors.onSurfaceVariant;
+}
+
+String _entryMetadata(
+  final BuildContext context,
+  final CodeTreeNode entry,
+  final bool showMetadata,
+) {
   if (!showMetadata) {
     return '';
   }
   if (entry.kind == CodeEntryKind.directory) {
-    return 'Directory';
+    return '';
   }
   if (entry.kind == CodeEntryKind.submodule) {
-    return 'Submodule';
+    return context.l10n.repoSubmodule;
   }
   return _formatBytes(entry.byteSize ?? entry.size);
 }

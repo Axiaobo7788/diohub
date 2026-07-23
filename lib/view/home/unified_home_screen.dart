@@ -1,9 +1,25 @@
 import 'dart:async';
 
+import 'package:diohub/l10n/l10n.dart';
+import 'package:diohub/models/github_changelog_item.dart';
+import 'package:diohub/models/home_repository_item.dart';
+import 'package:diohub/models/repository_preview.dart';
 import 'package:diohub/models/repositories/public_repository.dart';
+import 'package:diohub/providers/dashboard/github_changelog_provider.dart';
+import 'package:diohub/providers/repository/repository_providers.dart';
+import 'package:diohub/providers/repository/repository_preview_provider.dart';
 import 'package:diohub/providers/repository/public_repository_providers.dart';
+import 'package:diohub/routes/navigable_actions.dart';
+import 'package:diohub/services/dashboard/github_changelog_service.dart';
 import 'package:diohub/services/repositories/public_repository_service.dart';
+import 'package:diohub/view/app_chrome/app_chrome.dart';
+import 'package:diohub/view/app_chrome/global_header.dart';
+import 'package:diohub/view/app_chrome/global_navigation_drawer.dart';
+import 'package:diohub/view/home/github_dashboard_home.dart';
+import 'package:diohub/view/home/home_layout.dart';
+import 'package:diohub/view/home/widgets/switch_account_sheet.dart';
 import 'package:diohub_models/models/authentication/account_model.dart';
+import 'package:diohub_models/models/entity_ref.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -16,6 +32,13 @@ class UnifiedHomeScreen extends ConsumerStatefulWidget {
     this.account,
     this.accountLoading = false,
     this.onRefreshActivity,
+    this.onLoadMoreActivity,
+    this.topRepositories,
+    this.onRefreshTopRepositories,
+    this.changelog,
+    this.onRefreshChangelog,
+    this.statusEmoji,
+    this.statusMessage,
     super.key,
   });
 
@@ -23,6 +46,13 @@ class UnifiedHomeScreen extends ConsumerStatefulWidget {
   final bool accountLoading;
   final Widget? activityFeedSliver;
   final Future<void> Function()? onRefreshActivity;
+  final Future<bool> Function()? onLoadMoreActivity;
+  final AsyncValue<List<HomeRepositoryItem>>? topRepositories;
+  final VoidCallback? onRefreshTopRepositories;
+  final AsyncValue<List<GitHubChangelogItem>>? changelog;
+  final VoidCallback? onRefreshChangelog;
+  final String? statusEmoji;
+  final String? statusMessage;
   final Future<void> Function() onSignIn;
   final Future<void> Function() onSignOut;
 
@@ -31,8 +61,6 @@ class UnifiedHomeScreen extends ConsumerStatefulWidget {
 }
 
 class _UnifiedHomeScreenState extends ConsumerState<UnifiedHomeScreen> {
-  static const double _masterDetailBreakpoint = 900;
-
   final TextEditingController _searchController = TextEditingController();
   String _query = '';
   PublicRepositorySummary? _selectedRepository;
@@ -48,6 +76,9 @@ class _UnifiedHomeScreenState extends ConsumerState<UnifiedHomeScreen> {
     if (query.isEmpty) {
       return;
     }
+    if (_searchController.text != query) {
+      _searchController.text = query;
+    }
     FocusManager.instance.primaryFocus?.unfocus();
     setState(() {
       _query = query;
@@ -55,518 +86,226 @@ class _UnifiedHomeScreenState extends ConsumerState<UnifiedHomeScreen> {
     });
   }
 
+  void _clearSearch() {
+    _searchController.clear();
+    setState(() {
+      _query = '';
+    });
+  }
+
+  Future<void> _showCompactSearch(final BuildContext context) async {
+    final l10n = context.l10n;
+    final TextEditingController dialogController = TextEditingController(
+      text: _query,
+    );
+    final String? query = await showDialog<String>(
+      context: context,
+      builder: (final BuildContext dialogContext) => AlertDialog(
+        title: Text(l10n.homeSearchRepositories),
+        content: TextField(
+          controller: dialogController,
+          autofocus: true,
+          decoration: InputDecoration(
+            hintText: l10n.homeSearchRepositoriesHint,
+            prefixIcon: const Icon(Icons.search),
+          ),
+          onSubmitted: (final String value) =>
+              Navigator.of(dialogContext).pop(value),
+        ),
+        actions: <Widget>[
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(),
+            child: Text(l10n.commonCancel),
+          ),
+          FilledButton(
+            onPressed: () =>
+                Navigator.of(dialogContext).pop(dialogController.text),
+            child: Text(l10n.commonSearch),
+          ),
+        ],
+      ),
+    );
+    dialogController.dispose();
+    if (query != null && mounted) {
+      _search(query);
+    }
+  }
+
+  void _openSearchResult(final PublicRepositorySummary repository) {
+    setState(() {
+      _selectedRepository = repository;
+    });
+  }
+
+  void _openTopRepository(final HomeRepositoryItem repository) {
+    final RepoRef repoRef = RepoRef(
+      owner: repository.owner,
+      name: repository.name,
+      nodeId: repository.nodeId,
+    );
+    ref
+        .read(repositoryPreviewProvider(repoRef).notifier)
+        .seed(
+          RepositoryPreview(
+            fullName: repository.fullName,
+            name: repository.name,
+            owner: repository.owner,
+            ownerAvatarUrl: repository.ownerAvatarUrl,
+            isPrivate: repository.isPrivate,
+            nodeId: repository.nodeId,
+            defaultBranch: repository.defaultBranch,
+          ),
+        );
+    // Start the repository request before the adaptive route transition. The
+    // destination watches the same family key, so the transition animation and
+    // network request can overlap instead of running strictly in sequence.
+    ref.read(repositoryProvider(repoRef));
+    unawaited(repoRef.navigate(context, ref));
+  }
+
+  Future<void> _createRepository() async {
+    final AccountModel? account = widget.account;
+    if (account == null) {
+      await widget.onSignIn();
+      return;
+    }
+    await launchUrl(
+      account.serverConfig.webUrl('/new'),
+      mode: LaunchMode.externalApplication,
+    );
+  }
+
+  void _openProfileTab(final String? tab) {
+    final AccountModel? account = widget.account;
+    if (account == null) {
+      unawaited(widget.onSignIn());
+      return;
+    }
+    unawaited(
+      UserRef(login: account.username, tab: tab).navigate(context, ref),
+    );
+  }
+
+  void _switchAccount() => SwitchAccountSheet.show(context, ref);
+
+  Future<void> _openExternalUri(final Uri uri) async {
+    final bool opened = await launchUrl(
+      uri,
+      mode: LaunchMode.externalApplication,
+    );
+    if (!opened && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(context.l10n.homeCouldNotOpenLink)),
+      );
+    }
+  }
+
+  void _openChangelogItem(final GitHubChangelogItem item) {
+    unawaited(_openExternalUri(item.link));
+  }
+
+  void _openChangelog() {
+    unawaited(
+      _openExternalUri(Uri.parse(GitHubChangelogService.changelogPageUrl)),
+    );
+  }
+
+  void _showStagedAction(final String label) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(context.l10n.homeFeatureNotAvailable(label))),
+    );
+  }
+
   @override
   Widget build(final BuildContext context) {
     return LayoutBuilder(
       builder: (final BuildContext context, final BoxConstraints constraints) {
-        final bool wide = constraints.maxWidth >= _masterDetailBreakpoint;
+        final bool desktop =
+            constraints.maxWidth >= HomeLayout.desktopBreakpoint;
+        final bool showAside =
+            constraints.maxWidth >= HomeLayout.asideBreakpoint;
         final PublicRepositorySummary? selected = _selectedRepository;
-        return Scaffold(
-          appBar: AppBar(
-            leading: !wide && selected != null
-                ? IconButton(
+        final AsyncValue<List<HomeRepositoryItem>> topRepositories =
+            widget.topRepositories ??
+            const AsyncData<List<HomeRepositoryItem>>(<HomeRepositoryItem>[]);
+        final AsyncValue<List<GitHubChangelogItem>> changelog =
+            widget.changelog ??
+            (showAside
+                ? ref.watch(githubChangelogProvider)
+                : const AsyncData<List<GitHubChangelogItem>>(
+                    <GitHubChangelogItem>[],
+                  ));
+        return AppChrome(
+          account: widget.account,
+          accountLoading: widget.accountLoading,
+          topRepositories: topRepositories,
+          selectedNavigation: GlobalNavigationDestination.home,
+          statusEmoji: widget.statusEmoji,
+          statusMessage: widget.statusMessage,
+          onSignIn: widget.onSignIn,
+          onSignOut: widget.onSignOut,
+          onOpenProfileTab: _openProfileTab,
+          onSwitchAccount: _switchAccount,
+          onStagedAction: _showStagedAction,
+          onOpenTopRepository: _openTopRepository,
+          onGlobalSearch: (final String? query) {
+            if (query == null || query.trim().isEmpty) {
+              unawaited(_showCompactSearch(context));
+              return;
+            }
+            _search(query);
+          },
+          onSearchRepositories: () => _showCompactSearch(context),
+          title: GlobalHeaderTitle(
+            owner: selected?.owner,
+            title: selected?.name ?? context.l10n.homeDashboard,
+            compact: !desktop,
+          ),
+          pageActions: selected == null
+              ? const <Widget>[]
+              : <Widget>[
+                  IconButton(
                     onPressed: () {
                       setState(() {
                         _selectedRepository = null;
                       });
                     },
-                    tooltip: 'Back to search',
+                    tooltip: context.l10n.homeBackToSearch,
                     icon: const Icon(Icons.arrow_back),
-                  )
-                : null,
-            title: Text(
-              selected != null && !wide ? selected.fullName : 'DioHub',
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
-            actions: <Widget>[
-              _HomeAccountAction(
-                account: widget.account,
-                loading: widget.accountLoading,
-                onSignIn: widget.onSignIn,
-                onSignOut: widget.onSignOut,
-              ),
-              const SizedBox(width: 12),
-            ],
-          ),
-          body: wide
-              ? Row(
-                  children: <Widget>[
-                    SizedBox(
-                      width: 420,
-                      child: _HomeSearchPane(
-                        controller: _searchController,
-                        query: _query,
-                        account: widget.account,
-                        selectedRepositoryId: selected?.id,
-                        onSearch: _search,
-                        onSelect: (final PublicRepositorySummary repository) {
-                          setState(() {
-                            _selectedRepository = repository;
-                          });
-                        },
-                        onSignIn: widget.onSignIn,
-                      ),
-                    ),
-                    const VerticalDivider(width: 1),
-                    Expanded(
-                      child: selected == null
-                          ? widget.account == null
-                                ? const _HomeDetailPlaceholder()
-                                : _HomeActivityPane(
-                                    feedSliver: widget.activityFeedSliver,
-                                    onRefresh: widget.onRefreshActivity,
-                                  )
-                          : PublicRepositoryBrowser(
-                              key: ValueKey<int>(selected.id),
-                              repository: selected,
-                              onSignIn: widget.account == null
-                                  ? widget.onSignIn
-                                  : null,
-                            ),
-                    ),
-                  ],
-                )
-              : selected == null
-              ? _HomeSearchPane(
-                  controller: _searchController,
-                  query: _query,
-                  account: widget.account,
-                  activityFeedSliver: widget.activityFeedSliver,
-                  onRefreshActivity: widget.onRefreshActivity,
-                  showActivityWhenIdle: true,
-                  onSearch: _search,
-                  onSelect: (final PublicRepositorySummary repository) {
-                    setState(() {
-                      _selectedRepository = repository;
-                    });
-                  },
-                  onSignIn: widget.onSignIn,
-                )
-              : PublicRepositoryBrowser(
+                  ),
+                ],
+          body: selected != null
+              ? PublicRepositoryBrowser(
                   key: ValueKey<int>(selected.id),
                   repository: selected,
                   onSignIn: widget.account == null ? widget.onSignIn : null,
+                )
+              : GitHubDashboardHome(
+                  account: widget.account,
+                  activityFeedSliver: widget.activityFeedSliver,
+                  topRepositories: topRepositories,
+                  changelog: changelog,
+                  query: _query,
+                  desktop: desktop,
+                  showAside: showAside,
+                  onSearch: () => _showCompactSearch(context),
+                  onClearSearch: _clearSearch,
+                  onSelectSearchResult: _openSearchResult,
+                  onOpenTopRepository: _openTopRepository,
+                  onCreateRepository: _createRepository,
+                  onRefreshTopRepositories: widget.onRefreshTopRepositories,
+                  onRefreshChangelog:
+                      widget.onRefreshChangelog ??
+                      () => ref.invalidate(githubChangelogProvider),
+                  onOpenChangelogItem: _openChangelogItem,
+                  onOpenChangelog: _openChangelog,
+                  onRefreshActivity: widget.onRefreshActivity,
+                  onLoadMoreActivity: widget.onLoadMoreActivity,
+                  onSignIn: widget.onSignIn,
+                  onStagedAction: _showStagedAction,
                 ),
         );
       },
-    );
-  }
-}
-
-class _HomeAccountAction extends StatelessWidget {
-  const _HomeAccountAction({
-    required this.loading,
-    required this.onSignIn,
-    required this.onSignOut,
-    this.account,
-  });
-
-  final AccountModel? account;
-  final bool loading;
-  final Future<void> Function() onSignIn;
-  final Future<void> Function() onSignOut;
-
-  @override
-  Widget build(final BuildContext context) {
-    if (loading) {
-      return const Padding(
-        padding: EdgeInsets.symmetric(horizontal: 18),
-        child: SizedBox.square(
-          dimension: 20,
-          child: CircularProgressIndicator(strokeWidth: 2),
-        ),
-      );
-    }
-
-    final AccountModel? activeAccount = account;
-    if (activeAccount == null) {
-      return FilledButton.tonalIcon(
-        onPressed: () => unawaited(onSignIn()),
-        icon: const Icon(Icons.login),
-        label: const Text('Sign in'),
-      );
-    }
-
-    return MenuAnchor(
-      menuChildren: <Widget>[
-        Padding(
-          padding: const EdgeInsets.fromLTRB(12, 10, 12, 6),
-          child: Text(
-            activeAccount.displayName ?? activeAccount.username,
-            style: Theme.of(context).textTheme.labelLarge,
-          ),
-        ),
-        MenuItemButton(
-          onPressed: () => unawaited(onSignIn()),
-          leadingIcon: const Icon(Icons.person_add_alt_1_outlined),
-          child: const Text('Add account'),
-        ),
-        MenuItemButton(
-          onPressed: () => unawaited(onSignOut()),
-          leadingIcon: const Icon(Icons.logout),
-          child: const Text('Sign out'),
-        ),
-      ],
-      builder:
-          (
-            final BuildContext context,
-            final MenuController controller,
-            final Widget? child,
-          ) => OutlinedButton.icon(
-            onPressed: () {
-              controller.isOpen ? controller.close() : controller.open();
-            },
-            icon: CircleAvatar(
-              radius: 11,
-              child: Text(
-                _accountInitial(activeAccount.username),
-                style: Theme.of(context).textTheme.labelSmall,
-              ),
-            ),
-            label: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 112),
-              child: Text(
-                '@${activeAccount.username}',
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
-          ),
-    );
-  }
-}
-
-class _HomeSearchPane extends ConsumerWidget {
-  const _HomeSearchPane({
-    required this.controller,
-    required this.query,
-    required this.onSearch,
-    required this.onSelect,
-    required this.onSignIn,
-    this.activityFeedSliver,
-    this.account,
-    this.onRefreshActivity,
-    this.selectedRepositoryId,
-    this.showActivityWhenIdle = false,
-  });
-
-  final AccountModel? account;
-  final Widget? activityFeedSliver;
-  final TextEditingController controller;
-  final String query;
-  final int? selectedRepositoryId;
-  final ValueChanged<String> onSearch;
-  final ValueChanged<PublicRepositorySummary> onSelect;
-  final Future<void> Function() onSignIn;
-  final Future<void> Function()? onRefreshActivity;
-  final bool showActivityWhenIdle;
-
-  @override
-  Widget build(final BuildContext context, final WidgetRef ref) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: <Widget>[
-        Padding(
-          padding: const EdgeInsets.all(16),
-          child: SearchBar(
-            controller: controller,
-            hintText: 'Search repositories',
-            leading: const Icon(Icons.search),
-            trailing: <Widget>[
-              IconButton(
-                onPressed: () => onSearch(controller.text),
-                tooltip: 'Search GitHub',
-                icon: const Icon(Icons.arrow_forward),
-              ),
-            ],
-            onSubmitted: onSearch,
-          ),
-        ),
-        Expanded(
-          child: query.isEmpty
-              ? account != null && showActivityWhenIdle
-                    ? _HomeActivityPane(
-                        feedSliver: activityFeedSliver,
-                        onRefresh: onRefreshActivity,
-                      )
-                    : _HomeWelcome(account: account, onSignIn: onSignIn)
-              : ref
-                    .watch(publicRepositorySearchProvider(query))
-                    .when(
-                      loading: () =>
-                          const Center(child: CircularProgressIndicator()),
-                      error: (final Object error, final StackTrace stack) =>
-                          _HomeErrorPanel(
-                            message: publicGitHubErrorMessage(error),
-                            onRetry: () => ref.invalidate(
-                              publicRepositorySearchProvider(query),
-                            ),
-                            onSignIn: account == null ? onSignIn : null,
-                          ),
-                      data: (final List<PublicRepositorySummary> repositories) {
-                        if (repositories.isEmpty) {
-                          return const Center(
-                            child: Text('No repositories found.'),
-                          );
-                        }
-                        return ListView.separated(
-                          padding: const EdgeInsets.fromLTRB(12, 0, 12, 24),
-                          itemCount: repositories.length,
-                          separatorBuilder:
-                              (final BuildContext context, final int index) =>
-                                  const SizedBox(height: 8),
-                          itemBuilder:
-                              (final BuildContext context, final int index) {
-                                final PublicRepositorySummary repository =
-                                    repositories[index];
-                                return Card(
-                                  color: repository.id == selectedRepositoryId
-                                      ? Theme.of(
-                                          context,
-                                        ).colorScheme.secondaryContainer
-                                      : null,
-                                  child: ListTile(
-                                    onTap: () => onSelect(repository),
-                                    title: Text(repository.fullName),
-                                    subtitle: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: <Widget>[
-                                        if (repository.description != null)
-                                          Padding(
-                                            padding: const EdgeInsets.only(
-                                              top: 4,
-                                            ),
-                                            child: Text(
-                                              repository.description!,
-                                              maxLines: 2,
-                                              overflow: TextOverflow.ellipsis,
-                                            ),
-                                          ),
-                                        const SizedBox(height: 8),
-                                        Wrap(
-                                          spacing: 12,
-                                          runSpacing: 4,
-                                          children: <Widget>[
-                                            _RepositoryMetric(
-                                              icon: Icons.star_outline,
-                                              label: _compactNumber(
-                                                repository.stargazerCount,
-                                              ),
-                                            ),
-                                            _RepositoryMetric(
-                                              icon: Icons.call_split,
-                                              label: _compactNumber(
-                                                repository.forkCount,
-                                              ),
-                                            ),
-                                            if (repository.language != null)
-                                              _RepositoryMetric(
-                                                icon: Icons.code,
-                                                label: repository.language!,
-                                              ),
-                                          ],
-                                        ),
-                                      ],
-                                    ),
-                                    trailing: const Icon(Icons.chevron_right),
-                                    isThreeLine: true,
-                                  ),
-                                );
-                              },
-                        );
-                      },
-                    ),
-        ),
-      ],
-    );
-  }
-}
-
-class _HomeActivityPane extends StatelessWidget {
-  const _HomeActivityPane({this.feedSliver, this.onRefresh});
-
-  final Widget? feedSliver;
-  final Future<void> Function()? onRefresh;
-
-  @override
-  Widget build(final BuildContext context) {
-    final Widget scrollView = CustomScrollView(
-      key: const ValueKey<String>('home-activity-feed'),
-      physics: const AlwaysScrollableScrollPhysics(),
-      slivers: <Widget>[
-        SliverToBoxAdapter(
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(20, 18, 12, 8),
-            child: Row(
-              children: <Widget>[
-                Expanded(
-                  child: Text(
-                    'Feed',
-                    style: Theme.of(context).textTheme.headlineSmall,
-                  ),
-                ),
-                const Chip(
-                  avatar: Icon(Icons.dynamic_feed_outlined, size: 18),
-                  label: Text('Following & watched'),
-                ),
-                if (onRefresh != null)
-                  IconButton(
-                    onPressed: () => unawaited(onRefresh!()),
-                    tooltip: 'Refresh activity',
-                    icon: const Icon(Icons.refresh),
-                  ),
-              ],
-            ),
-          ),
-        ),
-        feedSliver ??
-            const SliverFillRemaining(
-              hasScrollBody: false,
-              child: Center(child: Text('Activity feed is not connected.')),
-            ),
-      ],
-    );
-    final Future<void> Function()? refresh = onRefresh;
-    return refresh == null
-        ? scrollView
-        : RefreshIndicator(onRefresh: refresh, child: scrollView);
-  }
-}
-
-class _HomeWelcome extends StatelessWidget {
-  const _HomeWelcome({required this.onSignIn, this.account});
-
-  final AccountModel? account;
-  final Future<void> Function() onSignIn;
-
-  @override
-  Widget build(final BuildContext context) {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.fromLTRB(20, 4, 20, 32),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: <Widget>[
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.all(20),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: <Widget>[
-                  Icon(
-                    Icons.explore_outlined,
-                    size: 36,
-                    color: Theme.of(context).colorScheme.primary,
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    'Explore GitHub',
-                    style: Theme.of(context).textTheme.titleLarge,
-                  ),
-                  const SizedBox(height: 8),
-                  const Text(
-                    'Search repositories and browse their directories and text files from the same home page.',
-                  ),
-                ],
-              ),
-            ),
-          ),
-          const SizedBox(height: 16),
-          if (account == null) ...<Widget>[
-            Text(
-              'Browsing without an account',
-              style: Theme.of(context).textTheme.titleMedium,
-            ),
-            const SizedBox(height: 8),
-            const _HomeCapability(
-              icon: Icons.lock_outline,
-              text:
-                  'Private repositories and organization-only data stay hidden.',
-            ),
-            const _HomeCapability(
-              icon: Icons.edit_off_outlined,
-              text:
-                  'Writes such as stars, comments, issues, and pull requests ask you to sign in.',
-            ),
-            const _HomeCapability(
-              icon: Icons.speed_outlined,
-              text: 'Unsigned GitHub requests have a lower API rate limit.',
-            ),
-            const SizedBox(height: 20),
-            OutlinedButton.icon(
-              onPressed: () => unawaited(onSignIn()),
-              icon: const Icon(Icons.login),
-              label: const Text('Sign in for account features'),
-            ),
-          ] else ...<Widget>[
-            Text('Signed in', style: Theme.of(context).textTheme.titleMedium),
-            const SizedBox(height: 8),
-            _HomeCapability(
-              icon: Icons.verified_user_outlined,
-              text:
-                  '${account!.displayName ?? account!.username} (@${account!.username})',
-            ),
-            const _HomeCapability(
-              icon: Icons.lock_open_outlined,
-              text:
-                  'Authenticated requests can access repositories allowed by this account.',
-            ),
-            const _HomeCapability(
-              icon: Icons.dashboard_outlined,
-              text:
-                  'Recent activity from people and repositories you follow appears in the Feed.',
-            ),
-          ],
-        ],
-      ),
-    );
-  }
-}
-
-class _HomeCapability extends StatelessWidget {
-  const _HomeCapability({required this.icon, required this.text});
-
-  final IconData icon;
-  final String text;
-
-  @override
-  Widget build(final BuildContext context) {
-    return ListTile(
-      contentPadding: EdgeInsets.zero,
-      leading: Icon(icon),
-      title: Text(text),
-      dense: true,
-    );
-  }
-}
-
-class _HomeDetailPlaceholder extends StatelessWidget {
-  const _HomeDetailPlaceholder();
-
-  @override
-  Widget build(final BuildContext context) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(32),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: <Widget>[
-            Icon(
-              Icons.folder_open_outlined,
-              size: 64,
-              color: Theme.of(context).colorScheme.onSurfaceVariant,
-            ),
-            const SizedBox(height: 16),
-            Text(
-              'Select a repository',
-              style: Theme.of(context).textTheme.titleLarge,
-            ),
-            const SizedBox(height: 8),
-            const Text('Its Code view will open here.'),
-          ],
-        ),
-      ),
     );
   }
 }
@@ -621,9 +360,9 @@ class _PublicRepositoryBrowserState
       mode: LaunchMode.externalApplication,
     );
     if (!launched && mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('No system browser is available.')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(context.l10n.homeNoSystemBrowser)));
     }
   }
 
@@ -665,7 +404,7 @@ class _PublicRepositoryBrowserState
                 ),
                 IconButton(
                   onPressed: () => _openInBrowser(widget.repository.htmlUrl),
-                  tooltip: 'Open repository on GitHub',
+                  tooltip: context.l10n.homeOpenRepositoryOnGitHub,
                   icon: const Icon(Icons.open_in_new),
                 ),
               ],
@@ -704,7 +443,7 @@ class _PublicRepositoryBrowserState
               ),
           data: (final List<PublicRepositoryEntry> entries) {
             if (entries.isEmpty) {
-              return const Center(child: Text('This directory is empty.'));
+              return Center(child: Text(context.l10n.homeDirectoryEmpty));
             }
             return RefreshIndicator(
               onRefresh: () async {
@@ -726,7 +465,7 @@ class _PublicRepositoryBrowserState
                     return ListTile(
                       leading: const Icon(Icons.drive_folder_upload_outlined),
                       title: const Text('..'),
-                      subtitle: const Text('Parent directory'),
+                      subtitle: Text(context.l10n.homeParentDirectory),
                       onTap: _openParent,
                     );
                   }
@@ -790,7 +529,7 @@ class _PublicRepositoryBrowserState
                     _selectedFile = null;
                   });
                 },
-                tooltip: 'Back to directory',
+                tooltip: context.l10n.homeBackToDirectory,
                 icon: const Icon(Icons.arrow_back),
               ),
               Expanded(
@@ -802,7 +541,7 @@ class _PublicRepositoryBrowserState
               ),
               IconButton(
                 onPressed: () => _openInBrowser(file.htmlUrl),
-                tooltip: 'Open file on GitHub',
+                tooltip: context.l10n.homeOpenFileOnGitHub,
                 icon: const Icon(Icons.open_in_new),
               ),
             ],
@@ -821,7 +560,7 @@ class _PublicRepositoryBrowserState
                           ref.invalidate(publicRepositoryFileProvider(request)),
                       onSignIn: widget.onSignIn,
                       secondaryAction: () => _openInBrowser(file.htmlUrl),
-                      secondaryLabel: 'Open on GitHub',
+                      secondaryLabel: context.l10n.homeOpenOnGitHub,
                     ),
                 data: (final String content) => Scrollbar(
                   child: SingleChildScrollView(
@@ -871,7 +610,7 @@ class _RepositoryBreadcrumb extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 12),
         child: Row(
           children: <Widget>[
-            TextButton(onPressed: onRoot, child: const Text('Code')),
+            TextButton(onPressed: onRoot, child: Text(context.l10n.commonCode)),
             for (int index = 0; index < segments.length; index++) ...<Widget>[
               const Icon(Icons.chevron_right, size: 18),
               TextButton(
@@ -933,7 +672,7 @@ class _HomeErrorPanel extends StatelessWidget {
                 FilledButton.icon(
                   onPressed: onRetry,
                   icon: const Icon(Icons.refresh),
-                  label: const Text('Retry'),
+                  label: Text(context.l10n.commonRetry),
                 ),
                 if (secondaryAction != null && secondaryLabel != null)
                   OutlinedButton(
@@ -943,7 +682,7 @@ class _HomeErrorPanel extends StatelessWidget {
                 if (onSignIn != null)
                   TextButton(
                     onPressed: () => unawaited(onSignIn!()),
-                    child: const Text('Sign in'),
+                    child: Text(context.l10n.commonSignIn),
                   ),
               ],
             ),
@@ -954,35 +693,6 @@ class _HomeErrorPanel extends StatelessWidget {
   }
 }
 
-class _RepositoryMetric extends StatelessWidget {
-  const _RepositoryMetric({required this.icon, required this.label});
-
-  final IconData icon;
-  final String label;
-
-  @override
-  Widget build(final BuildContext context) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: <Widget>[
-        Icon(icon, size: 15),
-        const SizedBox(width: 4),
-        Text(label, style: Theme.of(context).textTheme.bodySmall),
-      ],
-    );
-  }
-}
-
-String _compactNumber(final int value) {
-  if (value >= 1000000) {
-    return '${(value / 1000000).toStringAsFixed(1)}m';
-  }
-  if (value >= 1000) {
-    return '${(value / 1000).toStringAsFixed(1)}k';
-  }
-  return value.toString();
-}
-
 String _formatBytes(final int bytes) {
   if (bytes >= 1024 * 1024) {
     return '${(bytes / (1024 * 1024)).toStringAsFixed(1)} MB';
@@ -991,9 +701,4 @@ String _formatBytes(final int bytes) {
     return '${(bytes / 1024).toStringAsFixed(1)} KB';
   }
   return '$bytes B';
-}
-
-String _accountInitial(final String username) {
-  final String normalized = username.trim();
-  return normalized.isEmpty ? '?' : normalized.characters.first.toUpperCase();
 }

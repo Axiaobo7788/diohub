@@ -7,6 +7,7 @@ import 'package:diohub/common/pagination/page_size.dart';
 import 'package:diohub/common/pagination/page_source.dart';
 import 'package:diohub/common/pagination/paginated_sliver_list.dart';
 import 'package:diohub/common/pagination/pagination_controller.dart';
+import 'package:diohub/l10n/l10n.dart';
 import 'package:diohub/style/app_spacing.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -100,8 +101,10 @@ class PaginatedSelectSheet<T> extends ConsumerStatefulWidget {
   /// Header that receives current [selectedIds] and [onToggle] so it can share
   /// selection state (e.g. suggested reviewers). Takes precedence over [headerWidget].
   final Widget Function(
-          Set<String> selectedIds, void Function(String id) onToggle)?
-      headerBuilder;
+    Set<String> selectedIds,
+    void Function(String id) onToggle,
+  )?
+  headerBuilder;
 
   final int pageSize;
   final bool Function(T item)? filter;
@@ -141,8 +144,8 @@ class _PaginatedSelectSheetState<T>
     final String? query = _searchQuery.isEmpty
         ? null
         : _searchQuery.trim().isEmpty
-            ? null
-            : _searchQuery.trim();
+        ? null
+        : _searchQuery.trim();
     return PaginationController<T, T>(
       source: widget.sourceBuilder(query),
       idOf: widget.idOf,
@@ -211,7 +214,7 @@ class _PaginatedSelectSheetState<T>
               controller: _searchController,
               onChanged: _onSearchChanged,
               decoration: InputDecoration(
-                hintText: widget.searchHint ?? 'Search…',
+                hintText: widget.searchHint ?? context.l10n.commonSearch,
                 prefixIcon: const Icon(Icons.search),
                 suffixIcon: _searchQuery.isNotEmpty
                     ? IconButton(
@@ -241,25 +244,26 @@ class _PaginatedSelectSheetState<T>
                     final String id = widget.idOf(item);
                     return switch (widget.mode) {
                       SelectMode.single => ListTile(
-                          title: Text(widget.titleOf(item)),
-                          subtitle: widget.subtitleOf != null
-                              ? Text(widget.subtitleOf!(item) ?? '')
-                              : null,
-                          leading: widget.leadingOf?.call(context, item),
-                          onTap: () => widget.onSelectSingle?.call(item),
-                        ),
+                        title: Text(widget.titleOf(item)),
+                        subtitle: widget.subtitleOf != null
+                            ? Text(widget.subtitleOf!(item) ?? '')
+                            : null,
+                        leading: widget.leadingOf?.call(context, item),
+                        onTap: () => widget.onSelectSingle?.call(item),
+                      ),
                       SelectMode.multi => CheckboxListTile(
-                          value: _selectedIds.contains(id),
-                          onChanged: (_) => _toggle(id),
-                          title: Text(widget.titleOf(item)),
-                          subtitle: widget.subtitleOf != null
-                              ? Text(widget.subtitleOf!(item) ?? '')
-                              : null,
-                          secondary: widget.leadingOf?.call(context, item),
-                        ),
+                        value: _selectedIds.contains(id),
+                        onChanged: (_) => _toggle(id),
+                        title: Text(widget.titleOf(item)),
+                        subtitle: widget.subtitleOf != null
+                            ? Text(widget.subtitleOf!(item) ?? '')
+                            : null,
+                        secondary: widget.leadingOf?.call(context, item),
+                      ),
                     };
                   },
-                  emptyBuilder: (_) => const EmptyState(message: 'No items found'),
+                  emptyBuilder: (_) =>
+                      EmptyState(message: context.l10n.filterNoItemsFound),
                 ),
               ),
             ],
@@ -268,10 +272,7 @@ class _PaginatedSelectSheetState<T>
         if (widget.mode == SelectMode.multi)
           Padding(
             padding: spacing.sheetPadding,
-            child: Button(
-              onTap: _apply,
-              child: Text(widget.applyLabel),
-            ),
+            child: Button(onTap: _apply, child: Text(widget.applyLabel)),
           ),
       ],
     );

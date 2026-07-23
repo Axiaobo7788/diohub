@@ -1,4 +1,5 @@
 import 'package:diohub/common/search_overlay/filter_section_def.dart';
+import 'package:diohub/common/search_overlay/filter_localizations.dart';
 import 'package:diohub/common/search_overlay/search_filter_helpers.dart';
 import 'package:diohub_models/models/search/qualifier.dart';
 import 'package:diohub/models/search/qualifier_parser_registry.dart';
@@ -27,8 +28,9 @@ class StaticChipRow extends ConsumerWidget {
 
   static bool _isQualifierActive(SearchState state, String key, String value) {
     final String token = '$key:$value';
-    return state.activeQualifiers
-        .any((QualifierExpression q) => q.toQueryFragment() == token);
+    return state.activeQualifiers.any(
+      (QualifierExpression q) => q.toQueryFragment() == token,
+    );
   }
 
   @override
@@ -44,7 +46,12 @@ class StaticChipRow extends ConsumerWidget {
       runSpacing: context.spacing.tightSpacing,
       children: options.entries.map((MapEntry<String, String> e) {
         final String value = e.key;
-        final String label = e.value.isEmpty ? value : e.value;
+        final String label = localizedFilterOptionLabel(
+          context,
+          section,
+          value,
+          e.value,
+        );
         final bool selected = isSort
             ? (state.sort?.key == value)
             : _isQualifierActive(state, qualifierKey, value);
@@ -66,8 +73,9 @@ class StaticChipRow extends ConsumerWidget {
                 if (option != null) notifier.updateSort(option);
               }
             } else {
-              final QualifierValueParser? parser =
-                  notifier.parserForPartial('$qualifierKey:');
+              final QualifierValueParser? parser = notifier.parserForPartial(
+                '$qualifierKey:',
+              );
               if (parser == null) return;
               final Qualifier? q = parser.tryParse(qualifierKey, value);
               if (q == null) return;

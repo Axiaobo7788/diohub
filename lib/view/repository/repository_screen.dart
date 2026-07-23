@@ -1,20 +1,19 @@
 import 'package:auto_route/auto_route.dart';
-import 'package:diohub/common/misc/loading_indicator.dart';
 import 'package:diohub/common/misc/scoped_image_theme.dart';
 import 'package:diohub/common/misc/scaffold_body.dart';
 import 'package:diohub/common/nav_center/models/nav_center_models.dart';
 import 'package:diohub/common/nav_center/shell/nav_center_shell_widgets.dart';
+import 'package:diohub/l10n/l10n.dart';
 import 'package:diohub_graphql/queries/repositories/repo_typedefs.dart';
 import 'package:diohub_models/models/entity_ref.dart';
 import 'package:diohub_models/models/entity_snapshot.dart';
 import 'package:diohub/providers/entity_store_notifier.dart';
+import 'package:diohub/providers/account/account_provider.dart';
 import 'package:diohub/providers/repository/repository_providers.dart';
 import 'package:diohub/providers/settings/repository_provider.dart'
     as repo_settings;
 import 'package:diohub/view/repository/readme/repository_readme.dart';
 import 'package:diohub/view/repository/md3/repository_md3_screen.dart';
-import 'package:diohub/view/repository/md3/repository_md3_layout.dart';
-import 'package:diohub/view/repository/md3/repository_md3_theme.dart';
 import 'package:diohub/view/repository/widgets/repo_screen_config.dart';
 import 'package:diohub/models/repositories/repository_initial_state.dart';
 import 'package:flutter/material.dart';
@@ -44,109 +43,55 @@ class RepositoryScreenState extends ConsumerState<RepositoryScreen> {
 
   @override
   Widget build(final BuildContext context) {
-    final repoAsync = ref.watch(repositoryProvider(widget.repo));
-
-    return repoAsync.when(
-      loading: () => _RepositoryMd3StatusView(
-        repositoryLabel: '${widget.owner}/${widget.name}',
-        child: const CenteredSpinner(),
-      ),
-      error: (final Object error, final StackTrace stack) =>
-          _RepositoryMd3StatusView(
-            repositoryLabel: '${widget.owner}/${widget.name}',
-            child: Center(
-              child: Padding(
-                padding: const EdgeInsets.all(RepositoryMd3Layout.space24),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: <Widget>[
-                    const Icon(
-                      Icons.error_outline,
-                      size: RepositoryMd3Layout.statusIconSize,
-                    ),
-                    const SizedBox(height: RepositoryMd3Layout.space16),
-                    Text(
-                      'Error loading repository: $error',
-                      textAlign: TextAlign.center,
-                    ),
-                    const SizedBox(height: RepositoryMd3Layout.space16),
-                    FilledButton.icon(
-                      onPressed: () =>
-                          ref.invalidate(repositoryProvider(widget.repo)),
-                      icon: const Icon(Icons.refresh),
-                      label: const Text('Retry'),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-      data: (final RepoInfoData data) {
-        final repo = data.repository!;
-        RepositoryInitialState initialState = resolveRepoLocation(
-          widget.repo.location,
-        );
-        if (initialState.tabKind == null) {
-          initialState = RepositoryInitialState(
-            tabKind: RepositoryInitialState.tabKindFromRepositoryDefaultTab(
-              ref.read(repo_settings.repositoryProvider).defaultTab,
-            ),
-            branch: initialState.branch,
-            codePath: initialState.codePath,
-          );
-        }
-        if (!_useLegacyLayout) {
-          return RepositoryMd3Screen(
-            repoRef: widget.repo,
-            repo: repo,
-            initialState: initialState,
-            onOpenLegacy: () => setState(() => _useLegacyLayout = true),
-          );
-        }
-        final ownerAvatarUrl = repo.owner.maybeWhen(
-          user: (final user) => user.avatarUrl.toString(),
-          organization: (final organization) =>
-              organization.avatarUrl.toString(),
-          orElse: () => null,
-        );
-        return Scaffold(
-          body: ScaffoldBody(
-            child: ScopedImageTheme(
-              imageUrl: ownerAvatarUrl,
-              child: _RepositoryTabsContent(
-                repoRef: widget.repo,
-                hasReadme: repo.readmeFile != null,
-                hasLicense: repo.licenseInfo != null,
-                owner: widget.owner,
-                name: widget.name,
-                initialState: initialState,
-                onReturnToMd3: () => setState(() => _useLegacyLayout = false),
-              ),
-            ),
-          ),
-        );
-      },
+    final accountState = ref.watch(accountProvider);
+    final bool signedIn =
+        accountState.hasValue &&
+        !accountState.hasError &&
+        accountState.value?.activeAccountModel != null;
+    RepositoryInitialState initialState = resolveRepoLocation(
+      widget.repo.location,
     );
-  }
-}
-
-class _RepositoryMd3StatusView extends StatelessWidget {
-  const _RepositoryMd3StatusView({
-    required this.repositoryLabel,
-    required this.child,
-  });
-
-  final String repositoryLabel;
-  final Widget child;
-
-  @override
-  Widget build(final BuildContext context) {
-    return Theme(
-      data: repositoryMd3ThemeFor(Theme.of(context)),
-      child: Scaffold(
-        appBar: AppBar(title: Text(repositoryLabel)),
-        body: child,
-      ),
+    if (initialState.tabKind == null) {
+      initialState = RepositoryInitialState(
+        tabKind: RepositoryInitialState.tabKindFromRepositoryDefaultTab(
+          ref.read(repo_settings.repositoryProvider).defaultTab,
+        ),
+        branch: initialState.branch,
+        codePath: initialState.codePath,
+      );
+    }
+    final RepoInfo? repo = _useLegacyLayout && signedIn
+        ? ref.watch(repositoryProvider(widget.repo)).value?.repository
+        : null;
+    if (_useLegacyLayout && signedIn && repo != null) {
+      final ownerAvatarUrl = repo.owner.maybeWhen(
+        user: (final user) => user.avatarUrl.toString(),
+        organization: (final organization) => organization.avatarUrl.toString(),
+        orElse: () => null,
+      );
+      return Scaffold(
+        body: ScaffoldBody(
+          child: ScopedImageTheme(
+            imageUrl: ownerAvatarUrl,
+            child: _RepositoryTabsContent(
+              repoRef: widget.repo,
+              hasReadme: repo.readmeFile != null,
+              hasLicense: repo.licenseInfo != null,
+              owner: widget.owner,
+              name: widget.name,
+              initialState: initialState,
+              onReturnToMd3: () => setState(() => _useLegacyLayout = false),
+            ),
+          ),
+        ),
+      );
+    }
+    return RepositoryMd3Screen(
+      repoRef: widget.repo,
+      initialState: initialState,
+      onOpenLegacy: signedIn
+          ? () => setState(() => _useLegacyLayout = true)
+          : null,
     );
   }
 }
@@ -227,7 +172,7 @@ class _RepositoryTabsContentState
             child: FilledButton.tonalIcon(
               onPressed: widget.onReturnToMd3,
               icon: const Icon(Icons.view_quilt_outlined),
-              label: const Text('New layout'),
+              label: Text(context.l10n.repoOpenNewLayout),
             ),
           ),
         ),
