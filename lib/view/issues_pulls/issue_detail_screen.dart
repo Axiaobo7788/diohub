@@ -1,8 +1,9 @@
 import 'package:auto_route/auto_route.dart';
-import 'package:diohub_premium_api/diohub_premium_api.dart';
 import 'package:diohub_models/models/entity_ref.dart';
-import 'package:diohub/providers/account/account_provider.dart';
+import 'package:diohub/providers/issue_pulls/issue_providers.dart';
 import 'package:diohub/view/issues_pulls/issue_screen.dart';
+import 'package:diohub/view/repository/md3/repository_context_chrome.dart';
+import 'package:diohub/view/repository/md3/repository_navigation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -21,11 +22,15 @@ class IssueDetailScreen extends ConsumerWidget {
 
   @override
   Widget build(final BuildContext context, final WidgetRef ref) {
-    return Material(
-      child: IssueScreen(
+    return RepositoryContextChrome(
+      repoRef: issueRef.repo,
+      selectedDestination: RepositoryNavigationDestination.issues,
+      onRefresh: () => ref.invalidate(issueDetailProvider(issueRef)),
+      body: IssueScreen(
         issueRef: issueRef,
         commentsSince: commentsSince,
         initialIndex: initialIndex,
+        embedded: true,
       ),
     );
   }

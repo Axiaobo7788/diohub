@@ -24,6 +24,7 @@ class RepositoryMd3Shell extends StatelessWidget {
     required this.account,
     required this.accountLoading,
     required this.topRepositories,
+    this.pageActions = const <Widget>[],
     this.header,
     this.aside,
     super.key,
@@ -41,6 +42,7 @@ class RepositoryMd3Shell extends StatelessWidget {
   final AccountModel? account;
   final bool accountLoading;
   final AsyncValue<List<HomeRepositoryItem>> topRepositories;
+  final List<Widget> pageActions;
 
   @override
   Widget build(final BuildContext context) {
@@ -64,6 +66,7 @@ class RepositoryMd3Shell extends StatelessWidget {
           account: account,
           accountLoading: accountLoading,
           topRepositories: topRepositories,
+          pageActions: pageActions,
         );
       },
     );
@@ -84,6 +87,7 @@ class _RepositoryScaffold extends StatelessWidget {
     required this.account,
     required this.accountLoading,
     required this.topRepositories,
+    required this.pageActions,
     this.header,
     this.aside,
   });
@@ -102,6 +106,7 @@ class _RepositoryScaffold extends StatelessWidget {
   final AccountModel? account;
   final bool accountLoading;
   final AsyncValue<List<HomeRepositoryItem>> topRepositories;
+  final List<Widget> pageActions;
 
   bool get _isExpanded => windowClass == RepositoryWindowClass.expanded;
   List<String> get _repositoryParts => repositoryLabel.split('/');
@@ -121,6 +126,7 @@ class _RepositoryScaffold extends StatelessWidget {
         trailing: const Icon(Icons.arrow_drop_down, size: 20),
       ),
       pageActions: <Widget>[
+        ...pageActions,
         if (windowClass != RepositoryWindowClass.compact)
           IconButton(
             icon: const Icon(Icons.refresh),

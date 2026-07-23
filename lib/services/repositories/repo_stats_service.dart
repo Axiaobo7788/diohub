@@ -43,12 +43,12 @@ class RepoStatsService extends EntityService<RepoRef> {
     @Desc('Time period: day or week')
     final TrafficPeriod per = TrafficPeriod.day,
   }) async {
-    final Response<Map<String, dynamic>> res =
-        await rest.get<Map<String, dynamic>>(
-      '${ref.apiPath}/traffic/views',
-      queryParameters: <String, dynamic>{'per': per.apiValue},
-      refreshCache: refresh,
-    );
+    final Response<Map<String, dynamic>> res = await rest
+        .get<Map<String, dynamic>>(
+          '${ref.apiPath}/traffic/views',
+          queryParameters: <String, dynamic>{'per': per.apiValue},
+          refreshCache: refresh,
+        );
     return TrafficViewsResponse.fromJson(res.data ?? <String, dynamic>{});
   }
 
@@ -65,12 +65,12 @@ class RepoStatsService extends EntityService<RepoRef> {
     @Desc('Time period: day or week')
     final TrafficPeriod per = TrafficPeriod.day,
   }) async {
-    final Response<Map<String, dynamic>> res =
-        await rest.get<Map<String, dynamic>>(
-      '${ref.apiPath}/traffic/clones',
-      queryParameters: <String, dynamic>{'per': per.apiValue},
-      refreshCache: refresh,
-    );
+    final Response<Map<String, dynamic>> res = await rest
+        .get<Map<String, dynamic>>(
+          '${ref.apiPath}/traffic/clones',
+          queryParameters: <String, dynamic>{'per': per.apiValue},
+          refreshCache: refresh,
+        );
     return TrafficClonesResponse.fromJson(res.data ?? <String, dynamic>{});
   }
 
@@ -170,36 +170,41 @@ class RepoStatsService extends EntityService<RepoRef> {
       );
     }
     final connection = data.repository?.vulnerabilityAlerts;
-    final rawEdges = connection?.edges?.toList() ??
-        const <Query$getVulnerabilityAlerts$repository$vulnerabilityAlerts$edges?>[];
-    final List<VulnerabilityAlertEdge> edges =
-        rawEdges.where((final e) => e?.node != null).map((final e) {
-      final n = e!.node!;
-      final sv = n.securityVulnerability;
-      final dismisserInfo = n.dismisser != null
-        ? (n.dismisser!.login, n.dismisser!.avatarUrl.toString())
-        : null;
-      return VulnerabilityAlertEdge(
-        cursor: e.cursor,
-        node: VulnerabilityAlertItem(
-          id: n.id,
-          packageName: sv?.package.name ?? '',
-          ecosystem: sv?.package.ecosystem.name ?? '',
-          severity: sv?.severity.name ?? 'unknown',
-          summary: sv?.advisory?.summary,
-          vulnerableVersionRange: sv?.vulnerableVersionRange,
-          firstPatchedVersion: sv?.firstPatchedVersion?.identifier,
-          permalink: sv?.advisory?.permalink?.toString(),
-          advisoryId: sv?.advisory?.ghsaId,
-          cvssScore: sv?.advisory?.cvss?.score,
-          state: n.state.name,
-          dismissedAt: n.dismissedAt,
-          dismissReason: n.dismissReason,
-          dismisserLogin: dismisserInfo?.$1,
-          dismisserAvatarUrl: dismisserInfo?.$2,
-        ),
-      );
-    }).toList();
+    final rawEdges =
+        connection?.edges?.toList() ??
+        const <
+          Query$getVulnerabilityAlerts$repository$vulnerabilityAlerts$edges?
+        >[];
+    final List<VulnerabilityAlertEdge> edges = rawEdges
+        .where((final e) => e?.node != null)
+        .map((final e) {
+          final n = e!.node!;
+          final sv = n.securityVulnerability;
+          final dismisserInfo = n.dismisser != null
+              ? (n.dismisser!.login, n.dismisser!.avatarUrl.toString())
+              : null;
+          return VulnerabilityAlertEdge(
+            cursor: e.cursor,
+            node: VulnerabilityAlertItem(
+              id: n.id,
+              packageName: sv?.package.name ?? '',
+              ecosystem: sv?.package.ecosystem.name ?? '',
+              severity: sv?.severity.name ?? 'unknown',
+              summary: sv?.advisory.summary,
+              vulnerableVersionRange: sv?.vulnerableVersionRange,
+              firstPatchedVersion: sv?.firstPatchedVersion?.identifier,
+              permalink: sv?.advisory.permalink?.toString(),
+              advisoryId: sv?.advisory.ghsaId,
+              cvssScore: sv?.advisory.cvss.score,
+              state: n.state.name,
+              dismissedAt: n.dismissedAt,
+              dismissReason: n.dismissReason,
+              dismisserLogin: dismisserInfo?.$1,
+              dismisserAvatarUrl: dismisserInfo?.$2,
+            ),
+          );
+        })
+        .toList();
     return VulnerabilityAlertsResult(
       items: edges,
       hasNextPage: connection?.pageInfo.hasNextPage ?? false,
@@ -234,10 +239,9 @@ class RepoStatsService extends EntityService<RepoRef> {
         reason: reasonEnum,
       ).toJson(),
     );
-    final data =
-        Mutation$dismissVulnerabilityAlert.fromJson(res.data!);
+    final data = Mutation$dismissVulnerabilityAlert.fromJson(res.data!);
     final alert =
-        data?.dismissRepositoryVulnerabilityAlert?.repositoryVulnerabilityAlert;
+        data.dismissRepositoryVulnerabilityAlert?.repositoryVulnerabilityAlert;
     if (alert == null) return null;
     final dismisser = alert.dismisser;
     final dismisserLogin = dismisser?.login;
@@ -273,14 +277,45 @@ class RepoStatsService extends EntityService<RepoRef> {
       if (severity != null) 'severity': severity,
       if (refName != null) 'ref': refName,
     };
-    final response = await rest.get<dynamic>(
+    final Response<dynamic> response = await rest.get<dynamic>(
       '${ref.apiPath}/code-scanning/alerts',
       queryParameters: queryParams,
+      options: Options(
+        // GitHub uses 404 for the ordinary "no analysis configured" state.
+        // Accept it here so the global HTTP interceptor does not surface that
+        // expected state as an application error notification.
+        validateStatus: (final int? status) =>
+            status != null &&
+            (status >= 200 && status < 300 || status == 304 || status == 404),
+      ),
     );
+    if (response.statusCode == 404) {
+      final Object? data = response.data;
+      final String? message = data is Map<dynamic, dynamic>
+          ? data['message']?.toString()
+          : null;
+      // GitHub reports an unconfigured code-scanning repository as 404 rather
+      // than an empty collection. Preserve other 404 responses because GitHub
+      // also uses them to conceal resources the current token cannot access.
+      if (message?.toLowerCase() == 'no analysis found') {
+        return const PaginatedResult<CodeScanningAlertItem>(
+          items: <CodeScanningAlertItem>[],
+          hasNextPage: false,
+        );
+      }
+      throw DioException.badResponse(
+        statusCode: response.statusCode!,
+        requestOptions: response.requestOptions,
+        response: response,
+      );
+    }
     final List<Object?> list = extractListFromResponse<Object?>(response);
     final items = list
-        .map((e) => CodeScanningAlertItem.fromJson(
-            Map<String, dynamic>.from(e as Map<dynamic, dynamic>)))
+        .map(
+          (e) => CodeScanningAlertItem.fromJson(
+            Map<String, dynamic>.from(e as Map<dynamic, dynamic>),
+          ),
+        )
         .toList();
     return parsePaginatedRestResponse<CodeScanningAlertItem>(
       response: response,
@@ -393,11 +428,11 @@ class RepoStatsService extends EntityService<RepoRef> {
   Future<ParticipationResponse> getParticipation({
     @Skip() final bool refresh = false,
   }) async {
-    final Response<Map<String, dynamic>> res =
-        await rest.get<Map<String, dynamic>>(
-      '${ref.apiPath}/stats/participation',
-      refreshCache: refresh,
-    );
+    final Response<Map<String, dynamic>> res = await rest
+        .get<Map<String, dynamic>>(
+          '${ref.apiPath}/stats/participation',
+          refreshCache: refresh,
+        );
     final Map<String, dynamic>? data = res.data;
     if (data == null) return const ParticipationResponse();
     return ParticipationResponse.fromJson(data);

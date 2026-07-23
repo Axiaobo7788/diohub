@@ -27,6 +27,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get commonCancel => '取消';
 
   @override
+  String get commonBack => '返回';
+
+  @override
   String get commonSearch => '搜索';
 
   @override
@@ -361,6 +364,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get repoProjects => '项目';
 
   @override
+  String get repoWiki => 'Wiki';
+
+  @override
   String get repoSecurity => '安全';
 
   @override
@@ -391,6 +397,38 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get repoSecurityPolicy => '安全策略';
+
+  @override
+  String get wikiPages => 'Wiki 页面';
+
+  @override
+  String wikiCurrentPage(String page) {
+    return '当前页面：$page';
+  }
+
+  @override
+  String get wikiNoPages => '暂无 Wiki 页面';
+
+  @override
+  String get wikiNoPagesDescription => '此仓库尚未创建 Wiki。';
+
+  @override
+  String get wikiCreateOnGitHub => '在 GitHub 上创建 Wiki';
+
+  @override
+  String get wikiOpenOnGitHub => '在 GitHub 上打开 Wiki';
+
+  @override
+  String get wikiLoadError => '无法加载此仓库的 Wiki。';
+
+  @override
+  String get wikiPageLoadError => '无法打开 Wiki 页面。';
+
+  @override
+  String get issueDetailLoadError => '无法加载此议题。';
+
+  @override
+  String get pullRequestDetailLoadError => '无法加载此拉取请求。';
 
   @override
   String repoStarsCount(String count) {
@@ -870,6 +908,10 @@ class AppLocalizationsZh extends AppLocalizations {
   String get repoIssuePullLoadError => '无法加载此列表。';
 
   @override
+  String get publicGitHubRateLimitReached =>
+      '已达到 GitHub 未登录 API 的请求限额。请登录以提高限额，或稍后重试。';
+
+  @override
   String get repoSignInRequired => '登录后继续';
 
   @override
@@ -907,6 +949,193 @@ class AppLocalizationsZh extends AppLocalizations {
   String repoCommentsCount(int count) {
     return '$count 条评论';
   }
+
+  @override
+  String get repoSecondaryTabSignInBody => '仓库操作、项目、安全和洞察使用需要登录的 GitHub 接口。';
+
+  @override
+  String get repoAllWorkflows => '所有工作流';
+
+  @override
+  String get repoWorkflow => '工作流';
+
+  @override
+  String get repoWorkflowRun => '工作流运行';
+
+  @override
+  String repoWorkflowRunsCount(int count) {
+    return '$count 次工作流运行';
+  }
+
+  @override
+  String get repoFilterBranch => '按分支筛选';
+
+  @override
+  String get repoNoWorkflowRuns => '没有工作流运行';
+
+  @override
+  String get repoNoWorkflowRunsBody => '当前工作流没有符合分支筛选条件的运行记录。';
+
+  @override
+  String get repoActionsLoadError => '无法加载工作流运行';
+
+  @override
+  String get repoWorkflowsLoadError => '无法加载工作流';
+
+  @override
+  String get repoProjectsDescription => '仓库项目用于跨议题和拉取请求跟踪工作。';
+
+  @override
+  String get repoProjectsLoadError => '无法加载项目';
+
+  @override
+  String get repoNoProjects => '没有项目';
+
+  @override
+  String get repoNoProjectsBody => '此仓库在当前排序条件下没有项目。';
+
+  @override
+  String get repoSortTitle => '标题';
+
+  @override
+  String repoProjectItemsCount(int count) {
+    return '$count 个条目';
+  }
+
+  @override
+  String repoUpdatedTime(String time) {
+    return '更新于 $time';
+  }
+
+  @override
+  String get repoSecurityOverview => '安全概览';
+
+  @override
+  String get repoSecurityPolicyChecking => '正在检查默认分支中的安全策略。';
+
+  @override
+  String get repoSecurityPolicyMissing => '默认分支中未找到 SECURITY.md 安全策略。';
+
+  @override
+  String get repoSecurityPolicyUnavailable => '无法检查安全策略。';
+
+  @override
+  String repoSecurityPolicyFound(String path) {
+    return '已检测到安全策略：$path';
+  }
+
+  @override
+  String get repoDependabot => 'Dependabot';
+
+  @override
+  String get repoCodeScanning => '代码扫描';
+
+  @override
+  String get repoSecretScanning => '机密扫描';
+
+  @override
+  String get repoNoDependabotAlerts => '没有 Dependabot 警报';
+
+  @override
+  String get repoNoCodeScanningAlerts => '没有代码扫描警报';
+
+  @override
+  String get repoNoSecretScanningAlerts => '没有机密扫描警报';
+
+  @override
+  String get repoSecurityNoAlertsBody => '此仓库和当前账户目前没有可见警报。';
+
+  @override
+  String get repoSecurityDataUnavailable => '安全数据不可用';
+
+  @override
+  String repoSecurityPermissionBody(String error) {
+    return 'GitHub 可能要求仓库管理权限，或者此功能尚未启用。$error';
+  }
+
+  @override
+  String repoSecurityAlertsLoaded(int count) {
+    return '已加载 $count 条可见警报';
+  }
+
+  @override
+  String get repoUnknownLocation => '未知位置';
+
+  @override
+  String get repoSecret => '机密';
+
+  @override
+  String get repoPulse => '脉搏';
+
+  @override
+  String get repoTraffic => '流量';
+
+  @override
+  String get repoCommunityStandards => '社区标准';
+
+  @override
+  String get repoCommitActivity => '提交活动';
+
+  @override
+  String repoCommitsLastYear(int count) {
+    return '过去一年有 $count 次提交';
+  }
+
+  @override
+  String get repoNoContributors => '没有可用的贡献者统计。';
+
+  @override
+  String get repoUnknownContributor => '未知贡献者';
+
+  @override
+  String repoContributionsCount(int count) {
+    return '$count 次贡献';
+  }
+
+  @override
+  String get repoClones => '克隆';
+
+  @override
+  String get repoTopReferrers => '主要引荐来源';
+
+  @override
+  String get repoPopularContent => '热门内容';
+
+  @override
+  String get repoTotal => '总计';
+
+  @override
+  String get repoUnique => '独立用户';
+
+  @override
+  String repoUniqueVisitors(int count) {
+    return '$count 位独立访客';
+  }
+
+  @override
+  String get repoNoInsightData => '此区块暂无可用数据。';
+
+  @override
+  String get repoInsightsDataUnavailable => '洞察数据不可用';
+
+  @override
+  String repoInsightsPermissionBody(String error) {
+    return '部分仓库统计存在延迟或需要推送权限。$error';
+  }
+
+  @override
+  String repoCommunityHealth(int percent) {
+    return '社区资料完整度：$percent%';
+  }
+
+  @override
+  String get repoCodeOfConduct => '行为准则';
+
+  @override
+  String get repoIssueTemplate => '议题模板';
+
+  @override
+  String get repoPullRequestTemplate => '拉取请求模板';
 
   @override
   String get activityNoRecent => '暂无近期动态';

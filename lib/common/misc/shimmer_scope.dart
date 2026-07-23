@@ -1,5 +1,7 @@
+import 'dart:async';
+
+import 'package:diohub/common/animations/motion.dart';
 import 'package:diohub/common/misc/shimmer_bone.dart' show ShimmerBone;
-import 'package:diohub/style/app_spacing.dart';
 import 'package:diohub/providers/settings/appearance_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -30,10 +32,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 /// )
 /// ```
 class ShimmerScope extends ConsumerStatefulWidget {
-  const ShimmerScope({
-    required this.child,
-    super.key,
-  });
+  const ShimmerScope({required this.child, super.key});
 
   final Widget child;
 
@@ -51,12 +50,13 @@ class _ShimmerScopeState extends ConsumerState<ShimmerScope>
     super.initState();
     _controller = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 900),
-    )..repeat(reverse: true);
-
-    _opacity = Tween<double>(begin: 0.35, end: 1).animate(
-      CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
+      duration: kSkeletonPulseDuration,
     );
+
+    _opacity = Tween<double>(
+      begin: 0.35,
+      end: 1,
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeInOut));
   }
 
   @override
@@ -68,14 +68,21 @@ class _ShimmerScopeState extends ConsumerState<ShimmerScope>
   @override
   Widget build(final BuildContext context) {
     final bool disableShimmerAnimation =
-        ref.watch(appearanceProvider).disableShimmerAnimation;
+        ref.watch(appearanceProvider).disableShimmerAnimation ||
+        (MediaQuery.maybeOf(context)?.disableAnimations ?? false);
     if (disableShimmerAnimation) {
+      _controller.stop();
       return Opacity(
+        key: const ValueKey<String>('shimmer-scope-static'),
         opacity: 0.6,
         child: widget.child,
       );
     }
+    if (!_controller.isAnimating) {
+      unawaited(_controller.repeat(reverse: true));
+    }
     return FadeTransition(
+      key: const ValueKey<String>('shimmer-scope-animation'),
       opacity: _opacity,
       child: widget.child,
     );

@@ -29,6 +29,7 @@ void main() {
     final String? statusEmoji,
     final String? statusMessage,
     final Locale locale = const Locale('en'),
+    final TextScaler textScaler = TextScaler.noScaling,
   }) async {
     tester.view
       ..devicePixelRatio = 1
@@ -51,6 +52,11 @@ void main() {
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           theme: ThemeData(useMaterial3: true),
+          builder: (final BuildContext context, final Widget? child) =>
+              MediaQuery(
+                data: MediaQuery.of(context).copyWith(textScaler: textScaler),
+                child: child!,
+              ),
           home: UnifiedHomeScreen(
             account: account,
             activityFeedSliver:
@@ -180,6 +186,36 @@ void main() {
     expect(find.text('Home'), findsOneWidget);
     expect(find.text('Top repositories'), findsOneWidget);
     expect(find.byType(VerticalDivider), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('keeps the 800px Home usable at 1.3x text scale', (
+    final WidgetTester tester,
+  ) async {
+    await pumpHome(
+      tester,
+      size: const Size(800, 900),
+      textScaler: const TextScaler.linear(1.3),
+    );
+
+    expect(find.text('Dashboard'), findsOneWidget);
+    expect(find.text('Home'), findsOneWidget);
+    expect(find.text('Top repositories'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('keeps the 360px Home usable at 2x text scale', (
+    final WidgetTester tester,
+  ) async {
+    await pumpHome(
+      tester,
+      size: const Size(360, 800),
+      textScaler: const TextScaler.linear(2),
+    );
+
+    expect(find.text('Dashboard'), findsOneWidget);
+    expect(find.text('Home'), findsOneWidget);
+    expect(find.text('Top repositories'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 

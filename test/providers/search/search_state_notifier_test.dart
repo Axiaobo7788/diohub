@@ -40,22 +40,50 @@ void main() {
     );
   });
 
-  test('does not overwrite a query entered before initialization', () {
-    final ProviderContainer container = createContainer();
-    addTearDown(container.dispose);
-    const SearchScope scope = SearchScope.repoPulls(repo: repo);
-    final notifier = container.read(
-      searchStateNotifierProvider(scope).notifier,
-    );
+  test(
+    'repository scopes own their default Open state before widgets mount',
+    () {
+      final ProviderContainer container = createContainer();
+      addTearDown(container.dispose);
+      const SearchScope scope = SearchScope.repoPulls(repo: repo);
+      final notifier = container.read(
+        searchStateNotifierProvider(scope).notifier,
+      );
 
-    notifier.setRawFreeText('fix startup');
-    notifier.initializeDefaultPreset(NavigationPresets.pulls);
+      notifier.setRawFreeText('fix startup');
+      notifier.initializeDefaultPreset(NavigationPresets.pulls);
 
-    expect(
-      container.read(searchStateNotifierProvider(scope)).displayQuery,
-      'fix startup',
-    );
-  });
+      expect(
+        container.read(searchStateNotifierProvider(scope)).displayQuery,
+        'is:open fix startup',
+      );
+    },
+  );
+
+  test(
+    'every Issue and Pull search scope starts Open at provider creation',
+    () {
+      final ProviderContainer container = createContainer();
+      addTearDown(container.dispose);
+      const UserRef user = UserRef(login: 'octocat');
+      const List<SearchScope> scopes = <SearchScope>[
+        SearchScope.homeIssues(),
+        SearchScope.homePulls(),
+        SearchScope.repoIssues(repo: repo),
+        SearchScope.repoPulls(repo: repo),
+        SearchScope.profileIssues(user: user),
+        SearchScope.profilePulls(user: user),
+      ];
+
+      for (final SearchScope scope in scopes) {
+        expect(
+          container.read(searchStateNotifierProvider(scope)).displayQuery,
+          'is:open',
+          reason: '$scope must not need a widget lifecycle write',
+        );
+      }
+    },
+  );
 
   test('parses every qualifier in a multi-token preset', () {
     final ProviderContainer container = createContainer();

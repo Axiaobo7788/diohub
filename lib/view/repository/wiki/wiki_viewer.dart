@@ -1,67 +1,34 @@
 import 'package:auto_route/annotations.dart';
+import 'package:diohub/l10n/l10n.dart';
 import 'package:diohub/providers/repository/wiki_providers.dart';
+import 'package:diohub/view/repository/md3/repository_context_chrome.dart';
+import 'package:diohub/view/repository/md3/repository_navigation.dart';
 import 'package:diohub/view/repository/wiki/wiki_browser.dart';
 import 'package:diohub_models/models/entity_ref.dart';
-import 'package:diohub_premium_api/diohub_premium_api.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 /// Standalone route for wiki deep links (e.g. from [WikiRef], activity feed).
-/// Uses [buildWikiBrowserSlivers] with a page-level [CustomScrollView]; optional
-/// [slug] is pushed after first frame so the wiki opens that page.
+/// It shares the repository chrome used by Code, Issues, and pull requests;
+/// [slug] opens the requested wiki page after the page index is available.
 @RoutePage()
-class WikiViewer extends ConsumerStatefulWidget {
+class WikiViewer extends ConsumerWidget {
   const WikiViewer({super.key, this.repo, this.slug});
 
   final RepoRef? repo;
   final String? slug;
 
   @override
-  ConsumerState<WikiViewer> createState() => _WikiViewerState();
-}
-
-class _WikiViewerState extends ConsumerState<WikiViewer> {
-  bool _initialSlugPushed = false;
-
-  @override
-  void initState() {
-    super.initState();
-    if (widget.slug != null) {
-      WidgetsBinding.instance.addPostFrameCallback((_) => _pushInitialSlug());
+  Widget build(final BuildContext context, final WidgetRef ref) {
+    if (repo == null) {
+      return Scaffold(body: Center(child: Text(context.l10n.repoUnavailable)));
     }
-  }
-
-  void _pushInitialSlug() {
-    if (_initialSlugPushed || !mounted || widget.repo == null) return;
-    final AsyncValue<WikiBrowseState> async =
-        ref.read(wikiProvider(widget.repo!));
-    async.whenData((WikiBrowseState state) {
-      if (state.currentPage != null && state.currentPage!.slug != widget.slug) {
-        ref.read(wikiProvider(widget.repo!).notifier).pushPage(widget.slug!);
-        _initialSlugPushed = true;
-      }
-    });
-  }
-
-  @override
-  Widget build(final BuildContext context) {
-    if (widget.repo == null) {
-      return Scaffold(
-        body: Center(child: Text('Repository not specified')),
-      );
-    }
-    final RepoRef repo = widget.repo!;
-    return Scaffold(
-      appBar: AppBar(
-        leading: IconButton(
-          icon: Icon(Icons.adaptive.arrow_back),
-          onPressed: () => Navigator.of(context).pop(),
-        ),
-        title: const Text('Wiki'),
-      ),
-      body: CustomScrollView(
-        slivers: buildWikiBrowserSlivers(context, ref, repo),
-      ),
+    final RepoRef repository = repo!;
+    return RepositoryContextChrome(
+      repoRef: repository,
+      selectedDestination: RepositoryNavigationDestination.wiki,
+      onRefresh: () => ref.invalidate(wikiProvider(repository)),
+      body: WikiBrowser(repoRef: repository, initialSlug: slug),
     );
   }
 }

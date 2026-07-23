@@ -15,8 +15,10 @@ abstract class GitHubLinkParser {
   /// Parses a GitHub URL into a [Navigable] destination.
   /// [serverConfig] when set allows enterprise hosts; pass active server for deep links.
   static Navigable? parse(final Uri uri, {final ServerConfig? serverConfig}) {
-    final GitHubUrl ghUrl =
-        GitHubUrl.tryParse(uri.toString(), serverConfig: serverConfig);
+    final GitHubUrl ghUrl = GitHubUrl.tryParse(
+      uri.toString(),
+      serverConfig: serverConfig,
+    );
 
     // Not a valid GitHub URL
     if (ghUrl.owner == null && ghUrl.segments.isEmpty) {
@@ -33,8 +35,9 @@ abstract class GitHubLinkParser {
     int? lineEnd;
     final String? fragment = uri.fragment.isNotEmpty ? uri.fragment : null;
     if (fragment != null && fragment.startsWith('L')) {
-      final RegExpMatch? lineMatch =
-          RegExp(r'L(\d+)(?:-L(\d+))?').firstMatch(fragment);
+      final RegExpMatch? lineMatch = RegExp(
+        r'L(\d+)(?:-L(\d+))?',
+      ).firstMatch(fragment);
       if (lineMatch != null) {
         lineStart = int.tryParse(lineMatch.group(1)!);
         lineEnd = lineMatch.group(2) != null
@@ -75,10 +78,7 @@ abstract class GitHubLinkParser {
       final HomeFilter? filter = HomeFilter.fromString(second);
 
       if (_isHomePositionPath(first) && filter != null) {
-        return HomeDestination(
-          initialTabPath: first,
-          filter: filter,
-        );
+        return HomeDestination(initialTabPath: first, filter: filter);
       }
     }
 
@@ -116,8 +116,9 @@ abstract class GitHubLinkParser {
       final int? number = int.tryParse(numberStr);
       if (number != null) {
         if (commentId != null && commentId.startsWith('issuecomment-')) {
-          final int? id =
-              int.tryParse(commentId.substring('issuecomment-'.length));
+          final int? id = int.tryParse(
+            commentId.substring('issuecomment-'.length),
+          );
           if (id != null) {
             return IssueCommentRef(
               repo: repo,
@@ -142,11 +143,7 @@ abstract class GitHubLinkParser {
             segments.length > 5) {
           diffPath = segments.skip(5).join('/');
         }
-        return PullRequestRef(
-          repo: repo,
-          number: number,
-          diffPath: diffPath,
-        );
+        return PullRequestRef(repo: repo, number: number, diffPath: diffPath);
       }
     }
 
@@ -159,8 +156,9 @@ abstract class GitHubLinkParser {
     // Code tree: /owner/repo/tree/branch[/path]
     if (entityType == 'tree' && segments.length >= 4) {
       final String branch = segments[3];
-      final String? path =
-          segments.length > 4 ? segments.skip(4).join('/') : null;
+      final String? path = segments.length > 4
+          ? segments.skip(4).join('/')
+          : null;
       return RepoRef(
         owner: owner,
         name: repoName,
@@ -214,8 +212,9 @@ abstract class GitHubLinkParser {
 
     // Wiki: /owner/repo/wiki or /owner/repo/wiki/PageSlug
     if (entityType == 'wiki') {
-      final String? slug =
-          segments.length >= 4 ? segments.skip(3).join('/') : null;
+      final String? slug = segments.length >= 4
+          ? segments.skip(3).join('/')
+          : null;
       return WikiRef(repo: repo, path: slug ?? '');
     }
 
@@ -231,20 +230,13 @@ abstract class GitHubLinkParser {
       return RepoRef(
         owner: owner,
         name: repoName,
-        location: RepoLocation.compare(
-          baseRef: baseRef,
-          headRef: headRef,
-        ),
+        location: RepoLocation.compare(baseRef: baseRef, headRef: headRef),
       );
     }
 
     // Repo page with tab (e.g., /owner/repo/actions, /owner/repo/security)
     final RepoLocation? location = _tabToLocation(entityType);
-    return RepoRef(
-      owner: owner,
-      name: repoName,
-      location: location,
-    );
+    return RepoRef(owner: owner, name: repoName, location: location);
   }
 
   /// Check if this is an exception URL that should be opened in browser.
@@ -290,6 +282,9 @@ abstract class GitHubLinkParser {
       'releases' => const RepoLocation.releases(),
       'discussions' => const RepoLocation.discussions(),
       'projects' => const RepoLocation.projects(),
+      'actions' => const RepoLocation.actions(),
+      'security' => const RepoLocation.security(),
+      'pulse' || 'graphs' => const RepoLocation.insights(),
       'license' => const RepoLocation.license(),
       _ => null,
     };

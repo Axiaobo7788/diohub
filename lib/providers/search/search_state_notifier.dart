@@ -1,14 +1,14 @@
 import 'package:diohub/common/nav_center/models/preset.dart';
 import 'package:diohub/common/search_overlay/filters.dart' show SearchType;
-import 'package:diohub/models/search/qualifier_parser_registry.dart';
-import 'package:diohub_models/models/search/search_expression.dart';
 import 'package:diohub/models/filters/custom_filter.dart';
+import 'package:diohub/models/search/qualifier_parser_registry.dart';
 import 'package:diohub/models/search/quick_filter.dart';
 import 'package:diohub/models/search/search_scope.dart';
 import 'package:diohub/models/search/search_state.dart' show SearchState;
-import 'package:diohub_models/models/search/sort_config.dart';
 import 'package:diohub/providers/search/search_session_provider.dart';
 import 'package:diohub/providers/users/user_providers.dart';
+import 'package:diohub_models/models/search/search_expression.dart';
+import 'package:diohub_models/models/search/sort_config.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 /// Selected search type per scope (e.g. Issues vs Pulls). Defaults to
@@ -67,7 +67,25 @@ class SearchStateNotifier extends Notifier<SearchState> {
       state = state.copyWith(scope: nextScope);
     });
 
-    return SearchState(scope: resolvedScope);
+    final SearchState initialState = SearchState(scope: resolvedScope);
+    final bool startsOpen = switch (resolvedScope) {
+      HomeIssuesScope() ||
+      HomePullsScope() ||
+      RepoIssuesScope() ||
+      RepoPullsScope() ||
+      ProfileIssuesScope() ||
+      ProfilePullsScope() => true,
+      _ => false,
+    };
+    if (startsOpen) {
+      _didInitializeDefaultPreset = true;
+      final parsed = _registry.extractFromText('is:open');
+      return initialState.withParsedInput(
+        freeText: parsed.freeText,
+        qualifiers: parsed.qualifiers,
+      );
+    }
+    return initialState;
   }
 
   SearchScope _resolveScope(SearchScope scope, String? viewerLogin) {

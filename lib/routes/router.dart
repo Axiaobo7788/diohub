@@ -1,6 +1,8 @@
 import 'package:auto_route/auto_route.dart';
 import 'package:diohub/adapters/deep_linking_handler.dart';
 import 'package:diohub/app/app_logger.dart';
+import 'package:diohub/common/animations/app_page_transition.dart';
+import 'package:diohub/common/animations/motion.dart';
 import 'package:diohub/providers/router_provider.dart';
 import 'package:diohub/providers/startup/app_startup_provider.dart';
 import 'package:diohub/routes/router.gr.dart';
@@ -23,39 +25,36 @@ class AppRouter extends RootStackRouter {
     AutoRoute(page: LandingLoadingRoute.page, initial: true),
     CustomRoute<dynamic>(
       page: HomeRoute.page,
-      duration: const Duration(milliseconds: 400),
-      transitionsBuilder:
-          (
-            final BuildContext context,
-            final Animation<double> animation,
-            final Animation<double> secondaryAnimation,
-            final Widget child,
-          ) => FadeTransition(
-            opacity: CurvedAnimation(
-              parent: animation,
-              curve: const Interval(0.0, 0.6, curve: Curves.easeOut),
-            ),
-            child: SlideTransition(
-              position:
-                  Tween<Offset>(
-                    begin: const Offset(0, 0.05),
-                    end: Offset.zero,
-                  ).animate(
-                    CurvedAnimation(
-                      parent: animation,
-                      curve: Curves.easeOutCubic,
-                    ),
-                  ),
-              child: child,
-            ),
-          ),
+      duration: kPageTransitionDuration,
+      reverseDuration: kPageTransitionReverseDuration,
+      transitionsBuilder: buildAppPageTransition,
     ),
-    AutoRoute(page: IssueDetailRoute.page),
-    AutoRoute(page: PullRequestDetailRoute.page),
-    AutoRoute(page: RepositoryRoute.page),
+    CustomRoute<dynamic>(
+      page: IssueDetailRoute.page,
+      duration: kPageTransitionDuration,
+      reverseDuration: kPageTransitionReverseDuration,
+      transitionsBuilder: buildAppPageTransition,
+    ),
+    CustomRoute<dynamic>(
+      page: PullRequestDetailRoute.page,
+      duration: kPageTransitionDuration,
+      reverseDuration: kPageTransitionReverseDuration,
+      transitionsBuilder: buildAppPageTransition,
+    ),
+    CustomRoute<dynamic>(
+      page: RepositoryRoute.page,
+      duration: kPageTransitionDuration,
+      reverseDuration: kPageTransitionReverseDuration,
+      transitionsBuilder: buildAppPageTransition,
+    ),
+    CustomRoute<dynamic>(
+      page: WikiViewer.page,
+      duration: kPageTransitionDuration,
+      reverseDuration: kPageTransitionReverseDuration,
+      transitionsBuilder: buildAppPageTransition,
+    ),
     AutoRoute(page: FileViewerRoute.page),
     AutoRoute(page: CommitInfoRoute.page),
-    AutoRoute(page: WikiViewer.page),
     AutoRoute(page: ChangesViewer.page),
     AutoRoute(page: FileDiffRoute.page),
     AutoRoute(page: UserProfileRoute.page),

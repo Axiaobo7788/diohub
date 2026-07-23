@@ -430,7 +430,7 @@ class _EventsState extends ConsumerState<Events> {
                               context.spacing.itemGap,
                               TextButton(
                                 onPressed: () =>
-                                    _paginationController.fetchForward(),
+                                    _paginationController.retryForward(),
                                 child: Text(context.l10n.commonRetry),
                               ),
                             ],

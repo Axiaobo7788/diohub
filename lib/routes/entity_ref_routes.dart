@@ -60,6 +60,9 @@ extension _RepoRefRouting on RepoRef {
             RepoLocationReleases() ||
             RepoLocationDiscussions() ||
             RepoLocationProjects() ||
+            RepoLocationActions() ||
+            RepoLocationSecurity() ||
+            RepoLocationInsights() ||
             RepoLocationLicense() => RepositoryRoute(repo: this),
             RepoLocationTree() => RepositoryRoute(repo: this),
             RepoLocationBlob(

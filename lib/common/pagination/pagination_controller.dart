@@ -77,6 +77,8 @@ class PaginationController<T, R> {
   Completer<void>? _backwardDone;
   int _refreshSerial = 0;
   Completer<void>? _refreshCompleter;
+  bool _lastForwardFailureWasRefresh = false;
+  bool _lastRefreshRetainedItems = true;
 
   List<R> _process(List<T> raw) {
     final transformed = transform != null ? transform!(raw) : raw as List<R>;
@@ -105,20 +107,27 @@ class PaginationController<T, R> {
       return;
     }
     final current = _state.value;
-    if (!current.hasMoreForward) return;
+    if (!fromRefresh && !current.hasMoreForward) return;
 
     final myEpoch = _epoch;
     final done = Completer<void>();
     _forwardDone = done;
     _fetchingForward = true;
-    _publishState(phase: const LoadingForward());
+    _publishState(
+      phase: fromRefresh ? const Refreshing() : const LoadingForward(),
+    );
 
     try {
       final slice = await source.fetchForward(pageSize);
       if (_disposed || _epoch != myEpoch) return;
 
       final processed = _process(slice.items);
-      _appendForward(processed, slice.hasNextPage, slice.totalCount);
+      if (fromRefresh) {
+        _replaceFromRefresh(processed, slice.hasNextPage, slice.totalCount);
+      } else {
+        _appendForward(processed, slice.hasNextPage, slice.totalCount);
+      }
+      _lastForwardFailureWasRefresh = false;
       _publishState(phase: const Idle());
     } catch (e, st) {
       AppLogger.error(
@@ -128,6 +137,7 @@ class PaginationController<T, R> {
         tag: 'Pagination',
       );
       if (!_disposed && _epoch == myEpoch) {
+        _lastForwardFailureWasRefresh = fromRefresh;
         _publishState(phase: Failed(e, FetchDirection.forward));
       }
     } finally {
@@ -194,7 +204,12 @@ class PaginationController<T, R> {
     }
   }
 
-  /// Clear and re-fetch from the beginning.
+  /// Re-fetch from the beginning.
+  ///
+  /// By default, committed content remains visible until a successful first
+  /// page atomically replaces it. Pass [retainItems] as false when the query or
+  /// result type changes, because results for the previous scope must not be
+  /// shown under the new controls.
   ///
   /// A refresh invalidates any in-flight page immediately, but waits for that
   /// request to settle before resetting the source. This matters for cursor
@@ -205,22 +220,25 @@ class PaginationController<T, R> {
   /// Repeated refresh calls share one operation. If another refresh arrives
   /// while the replacement first page is loading, that response is discarded
   /// and the loop performs one final reset/fetch for the newest request.
-  Future<void> refresh() {
+  Future<void> refresh({final bool retainItems = true}) {
     if (_disposed) {
       return Future<void>.value();
     }
 
     _epoch++;
     _refreshSerial++;
-    _items.clear();
-    _syntheticTailCount = 0;
-    _clearLocalPatches();
-
+    _lastRefreshRetainedItems = retainItems;
+    if (!retainItems) {
+      _items.clear();
+      _syntheticTailCount = 0;
+      _clearLocalPatches();
+    }
     _publishState(
       phase: const Refreshing(),
       hasMoreForward: true,
-      hasMoreBackward: false,
-      clearTotalCount: true,
+      hasMoreBackward: retainItems ? null : false,
+      clearTotalCount: !retainItems,
+      syntheticTailCount: retainItems ? null : 0,
     );
 
     final existing = _refreshCompleter;
@@ -232,6 +250,14 @@ class PaginationController<T, R> {
     _refreshCompleter = completer;
     unawaited(_runRefreshLoop(completer));
     return completer.future;
+  }
+
+  /// Retry the last forward operation without confusing a failed refresh with
+  /// an ordinary next-page request.
+  Future<void> retryForward() {
+    return _lastForwardFailureWasRefresh
+        ? refresh(retainItems: _lastRefreshRetainedItems)
+        : fetchForward();
   }
 
   /// Find item index by id, or resolve via anchor if source is bidirectional.
@@ -487,6 +513,25 @@ class PaginationController<T, R> {
     );
   }
 
+  void _replaceFromRefresh(
+    final List<R> newItems,
+    final bool hasMore,
+    final int? totalCount,
+  ) {
+    _items
+      ..clear()
+      ..addAll(newItems);
+    _syntheticTailCount = 0;
+    _clearLocalPatches();
+    _publishState(
+      hasMoreForward: hasMore,
+      hasMoreBackward: false,
+      totalCount: totalCount,
+      clearTotalCount: true,
+      syntheticTailCount: 0,
+    );
+  }
+
   void _prependBackward(List<R> newItems, bool hasMore, int? totalCount) {
     if (newItems.isEmpty) {
       _publishState(hasMoreBackward: hasMore, totalCount: totalCount);
@@ -557,7 +602,7 @@ class PaginationController<T, R> {
       hasMoreForward: hasMoreForward ?? prev.hasMoreForward,
       hasMoreBackward: hasMoreBackward ?? prev.hasMoreBackward,
       anchorId: anchorId ?? prev.anchorId,
-      totalCount: clearTotalCount ? null : totalCount ?? prev.totalCount,
+      totalCount: clearTotalCount ? totalCount : totalCount ?? prev.totalCount,
       phase: phase ?? prev.phase,
       syntheticTailCount: syntheticTailCount ?? _syntheticTailCount,
     );

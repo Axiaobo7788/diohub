@@ -36,8 +36,8 @@ void main() {
 
       final Future<void> refresh = controller.refresh();
       expect(controller.state.value.phase, isA<Refreshing>());
-      expect(controller.state.value.items, isEmpty);
-      expect(controller.state.value.totalCount, isNull);
+      expect(controller.state.value.items, const <int>[1]);
+      expect(controller.state.value.totalCount, 10);
       expect(harness.requests, hasLength(2));
 
       harness.complete(
@@ -55,7 +55,8 @@ void main() {
         isNull,
         reason: 'the replacement request must start from the first page',
       );
-      expect(controller.state.value.items, isEmpty);
+      expect(controller.state.value.items, const <int>[1]);
+      expect(controller.state.value.totalCount, 10);
 
       harness.complete(
         2,
@@ -120,7 +121,8 @@ void main() {
       expect(identical(firstRefresh, secondRefresh), isTrue);
       expect(identical(secondRefresh, thirdRefresh), isTrue);
       expect(harness.requests, hasLength(2));
-      expect(controller.state.value.totalCount, isNull);
+      expect(controller.state.value.items, const <int>[1]);
+      expect(controller.state.value.totalCount, 5);
 
       harness.complete(
         1,
@@ -132,7 +134,8 @@ void main() {
 
       expect(harness.requests, hasLength(3));
       expect(harness.requests[2].after, isNull);
-      expect(controller.state.value.items, isEmpty);
+      expect(controller.state.value.items, const <int>[1]);
+      expect(controller.state.value.totalCount, 5);
 
       harness.complete(
         2,
@@ -153,6 +156,106 @@ void main() {
       expect(harness.maxActiveRequests, 1);
     },
   );
+
+  test(
+    'failed refresh retains committed content and retries as refresh',
+    () async {
+      final _CursorHarness harness = _CursorHarness();
+      final PaginationController<int, int> controller =
+          PaginationController<int, int>(
+            source: CursorForwardSource<int>(fetch: harness.fetch),
+            idOf: (final int item) => '$item',
+            autoFetch: false,
+          );
+      addTearDown(controller.dispose);
+
+      final Future<void> initialLoad = controller.fetchForward();
+      harness.complete(
+        0,
+        items: const <int>[1],
+        endCursor: 'cursor-1',
+        hasNextPage: false,
+        totalCount: 1,
+      );
+      await initialLoad;
+
+      final Future<void> refresh = controller.refresh();
+      await _drainMicrotasks();
+      expect(harness.requests[1].after, isNull);
+      expect(controller.state.value.items, const <int>[1]);
+      expect(controller.state.value.totalCount, 1);
+
+      harness.fail(1, StateError('refresh failed'));
+      await refresh;
+
+      expect(controller.state.value.phase, isA<Failed>());
+      expect(controller.state.value.items, const <int>[1]);
+      expect(controller.state.value.totalCount, 1);
+
+      final Future<void> retry = controller.retryForward();
+      await _drainMicrotasks();
+      expect(harness.requests, hasLength(3));
+      expect(
+        harness.requests[2].after,
+        isNull,
+        reason: 'retrying a failed refresh must not append to the old cursor',
+      );
+
+      harness.complete(
+        2,
+        items: const <int>[2],
+        endCursor: 'fresh-cursor',
+        hasNextPage: false,
+        totalCount: 1,
+      );
+      await retry;
+
+      expect(controller.state.value.phase, isA<Idle>());
+      expect(controller.state.value.items, const <int>[2]);
+      expect(controller.state.value.totalCount, 1);
+    },
+  );
+
+  test('query-scoped refresh clears stale items before loading', () async {
+    final _CursorHarness harness = _CursorHarness();
+    final PaginationController<int, int> controller =
+        PaginationController<int, int>(
+          source: CursorForwardSource<int>(fetch: harness.fetch),
+          idOf: (final int item) => '$item',
+          autoFetch: false,
+        );
+    addTearDown(controller.dispose);
+
+    final Future<void> initialLoad = controller.fetchForward();
+    harness.complete(
+      0,
+      items: const <int>[1],
+      endCursor: 'old-query-cursor',
+      hasNextPage: false,
+      totalCount: 1,
+    );
+    await initialLoad;
+
+    final Future<void> refresh = controller.refresh(retainItems: false);
+    expect(controller.state.value.phase, isA<Refreshing>());
+    expect(controller.state.value.items, isEmpty);
+    expect(controller.state.value.totalCount, isNull);
+
+    await _drainMicrotasks();
+    expect(harness.requests[1].after, isNull);
+    harness.complete(
+      1,
+      items: const <int>[2],
+      endCursor: 'new-query-cursor',
+      hasNextPage: false,
+      totalCount: 1,
+    );
+    await refresh;
+
+    expect(controller.state.value.phase, isA<Idle>());
+    expect(controller.state.value.items, const <int>[2]);
+    expect(controller.state.value.totalCount, 1);
+  });
 }
 
 Future<void> _drainMicrotasks() async {
@@ -197,6 +300,10 @@ class _CursorHarness {
         totalCount: totalCount,
       ),
     );
+  }
+
+  void fail(final int index, final Object error) {
+    requests[index].completer.completeError(error, StackTrace.current);
   }
 }
 

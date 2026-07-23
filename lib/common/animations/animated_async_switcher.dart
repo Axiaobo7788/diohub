@@ -20,19 +20,21 @@ class _AppearanceAwareContentSwitcher extends StatelessWidget {
 
   @override
   Widget build(final BuildContext context) => Consumer(
-        builder: (final BuildContext context, final WidgetRef ref, final _) {
-          final AppearanceSettings appearance = ref.watch(appearanceProvider);
-          final Duration effectiveDuration = duration ??
-              (appearance.disableAnimations
-                  ? Duration.zero
-                  : Duration(milliseconds: appearance.animationDurationMs));
-          return AnimatedContentSwitcher(
-            transition: transition,
-            duration: effectiveDuration,
-            child: child,
-          );
-        },
+    builder: (final BuildContext context, final WidgetRef ref, final _) {
+      final AppearanceSettings appearance = ref.watch(appearanceProvider);
+      final bool disableAnimations =
+          appearance.disableAnimations ||
+          (MediaQuery.maybeOf(context)?.disableAnimations ?? false);
+      final Duration effectiveDuration = disableAnimations
+          ? Duration.zero
+          : duration ?? Duration(milliseconds: appearance.animationDurationMs);
+      return AnimatedContentSwitcher(
+        transition: transition,
+        duration: effectiveDuration,
+        child: child,
       );
+    },
+  );
 }
 
 /// Extension on [AsyncValue] that provides animated transitions between
@@ -68,10 +70,8 @@ extension AnimatedAsyncValue<T> on AsyncValue<T> {
     final Duration? duration,
   }) {
     final KeyedSubtree childWidget = when(
-      data: (final d) => KeyedSubtree(
-        key: ValueKey('data-${d.hashCode}'),
-        child: data(d),
-      ),
+      data: (final d) =>
+          KeyedSubtree(key: ValueKey('data-${d.hashCode}'), child: data(d)),
       loading: () => KeyedSubtree(
         key: const ValueKey('loading'),
         child: loading?.call() ?? const SizedBox.shrink(),
@@ -96,10 +96,8 @@ extension AnimatedAsyncValue<T> on AsyncValue<T> {
     final Duration? duration,
   }) {
     final KeyedSubtree childWidget = when(
-      data: (final d) => KeyedSubtree(
-        key: ValueKey('data-${d.hashCode}'),
-        child: data(d),
-      ),
+      data: (final d) =>
+          KeyedSubtree(key: ValueKey('data-${d.hashCode}'), child: data(d)),
       loading: () => KeyedSubtree(
         key: const ValueKey('loading'),
         child: loading?.call() ?? const SizedBox.shrink(),

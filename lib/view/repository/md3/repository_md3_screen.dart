@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:auto_route/auto_route.dart';
+import 'package:diohub/common/animations/motion.dart';
 import 'package:diohub/common/misc/user_avatar.dart';
 import 'package:diohub/common/widgets/metadata_language_bar.dart';
 import 'package:diohub_graphql/fragments/fragment_typedefs.dart';
@@ -24,10 +25,17 @@ import 'package:diohub/providers/repository/repository_preview_provider.dart';
 import 'package:diohub/providers/repository/repository_preview_providers.dart';
 import 'package:diohub/routes/navigable_actions.dart';
 import 'package:diohub/routes/router.gr.dart';
+import 'package:diohub/view/repository/md3/repository_actions_md3.dart';
 import 'package:diohub/view/repository/md3/repository_code_md3.dart';
+import 'package:diohub/view/repository/md3/repository_insights_md3.dart';
 import 'package:diohub/view/repository/md3/repository_issue_pull_md3.dart';
 import 'package:diohub/view/repository/md3/repository_md3_layout.dart';
 import 'package:diohub/view/repository/md3/repository_md3_shell.dart';
+import 'package:diohub/view/repository/md3/repository_navigation.dart';
+import 'package:diohub/view/repository/md3/repository_projects_md3.dart';
+import 'package:diohub/view/repository/md3/repository_security_md3.dart';
+import 'package:diohub/view/repository/md3/repository_tab_transition.dart';
+import 'package:diohub/view/repository/wiki/wiki_browser.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -50,22 +58,36 @@ class RepositoryMd3Screen extends ConsumerStatefulWidget {
 }
 
 class _RepositoryMd3ScreenState extends ConsumerState<RepositoryMd3Screen>
-    with SingleTickerProviderStateMixin {
+    with TickerProviderStateMixin {
   late final TabController _tabController;
+  late final AnimationController _contentAnimation;
   late int _selectedTabIndex;
+  int _tabMotionDirection = 1;
+  late final Set<int> _visitedTabIndexes;
   bool _visitRecorded = false;
   Future<void> Function()? _issuesRefresh;
   Future<void> Function()? _pullRequestsRefresh;
+  Future<void> Function()? _actionsRefresh;
+  Future<void> Function()? _projectsRefresh;
+  Future<void> Function()? _wikiRefresh;
+  Future<void> Function()? _securityRefresh;
+  Future<void> Function()? _insightsRefresh;
 
   @override
   void initState() {
     super.initState();
     _selectedTabIndex = _initialTabIndex(widget.initialState.tabKind);
+    _visitedTabIndexes = <int>{_selectedTabIndex};
     _tabController = TabController(
-      length: _repositoryTabs.length,
+      length: RepositoryNavigationDestination.values.length,
       initialIndex: _selectedTabIndex,
       vsync: this,
     )..addListener(_handleTabChanged);
+    _contentAnimation = AnimationController(
+      vsync: this,
+      duration: kTabTransitionDuration,
+      value: 1,
+    );
   }
 
   @override
@@ -73,13 +95,24 @@ class _RepositoryMd3ScreenState extends ConsumerState<RepositoryMd3Screen>
     _tabController
       ..removeListener(_handleTabChanged)
       ..dispose();
+    _contentAnimation.dispose();
     super.dispose();
   }
 
   void _handleTabChanged() {
     final int nextIndex = _tabController.index;
     if (mounted && nextIndex != _selectedTabIndex) {
-      setState(() => _selectedTabIndex = nextIndex);
+      final int previousIndex = _selectedTabIndex;
+      setState(() {
+        _tabMotionDirection = nextIndex > previousIndex ? 1 : -1;
+        _selectedTabIndex = nextIndex;
+        _visitedTabIndexes.add(nextIndex);
+      });
+      if (MediaQuery.maybeOf(context)?.disableAnimations ?? false) {
+        _contentAnimation.value = 1;
+      } else {
+        _contentAnimation.forward(from: 0);
+      }
     }
   }
 
@@ -96,15 +129,25 @@ class _RepositoryMd3ScreenState extends ConsumerState<RepositoryMd3Screen>
     if (!mounted) {
       return;
     }
-    switch (_selectedTabIndex) {
-      case 0:
+    switch (RepositoryNavigationDestination.values[_selectedTabIndex]) {
+      case RepositoryNavigationDestination.code:
         if (signedIn) {
           await refreshRepositoryCode(ref, widget.repoRef);
         }
-      case 1:
+      case RepositoryNavigationDestination.issues:
         await _issuesRefresh?.call();
-      case 2:
+      case RepositoryNavigationDestination.pullRequests:
         await _pullRequestsRefresh?.call();
+      case RepositoryNavigationDestination.actions:
+        await _actionsRefresh?.call();
+      case RepositoryNavigationDestination.projects:
+        await _projectsRefresh?.call();
+      case RepositoryNavigationDestination.wiki:
+        await _wikiRefresh?.call();
+      case RepositoryNavigationDestination.security:
+        await _securityRefresh?.call();
+      case RepositoryNavigationDestination.insights:
+        await _insightsRefresh?.call();
     }
   }
 
@@ -223,9 +266,10 @@ class _RepositoryMd3ScreenState extends ConsumerState<RepositoryMd3Screen>
           account: account,
           accountLoading: !accountResolved,
           topRepositories: topRepositories,
-          repositoryNavigation: _RepositoryNavigation(
+          repositoryNavigation: RepositoryNavigationBar(
             controller: _tabController,
-            repo: repo,
+            issueCount: repo?.issues.totalCount,
+            pullRequestCount: repo?.pullRequests.totalCount,
           ),
           body: _buildSelectedBody(
             repo,
@@ -270,7 +314,53 @@ class _RepositoryMd3ScreenState extends ConsumerState<RepositoryMd3Screen>
         onRetry: () => ref.invalidate(accountProvider),
       );
     }
-    if (_selectedTabIndex == 0) {
+    final Widget retainedTabs = IndexedStack(
+      key: ValueKey<String>(
+        'repository-primary-tabs-${widget.repoRef.fullName}',
+      ),
+      index: _selectedTabIndex,
+      sizing: StackFit.expand,
+      children: List<Widget>.generate(
+        RepositoryNavigationDestination.values.length,
+        (final int index) {
+          if (!_visitedTabIndexes.contains(index)) {
+            return SizedBox.shrink(
+              key: ValueKey<String>('repository-unvisited-tab-$index'),
+            );
+          }
+          return _buildVisitedTabBody(
+            index,
+            repo,
+            details: details,
+            signedIn: signedIn,
+            loading: loading,
+            error: error,
+            header: header,
+            inlineAbout: inlineAbout,
+            aside: aside,
+          );
+        },
+      ),
+    );
+    return RepositoryRetainedTabTransition(
+      animation: _contentAnimation,
+      direction: _tabMotionDirection,
+      child: retainedTabs,
+    );
+  }
+
+  Widget _buildVisitedTabBody(
+    final int index,
+    final RepoCardData? repo, {
+    required final RepoInfo? details,
+    required final bool signedIn,
+    required final bool loading,
+    required final Object? error,
+    required final Widget header,
+    required final Widget? inlineAbout,
+    required final Widget? aside,
+  }) {
+    if (index == 0) {
       if (!signedIn) {
         return _RepositoryGuestCodeBody(
           header: header,
@@ -291,8 +381,11 @@ class _RepositoryMd3ScreenState extends ConsumerState<RepositoryMd3Screen>
         aside: aside,
       );
     }
-    if (_selectedTabIndex == 1) {
+    if (index == 1) {
       return RepositoryIssuesMd3Page(
+        key: ValueKey<String>(
+          'repository-issues-${widget.repoRef.fullName}-$signedIn',
+        ),
         repoRef: widget.repoRef,
         repo: repo,
         details: details,
@@ -300,11 +393,16 @@ class _RepositoryMd3ScreenState extends ConsumerState<RepositoryMd3Screen>
         onRefreshReady: (final Future<void> Function()? callback) {
           _issuesRefresh = callback;
         },
-        onOpenProjects: () => _tabController.animateTo(4),
+        onOpenProjects: () => _tabController.animateTo(
+          RepositoryNavigationDestination.projects.index,
+        ),
       );
     }
-    if (_selectedTabIndex == 2) {
+    if (index == 2) {
       return RepositoryPullRequestsMd3Page(
+        key: ValueKey<String>(
+          'repository-pulls-${widget.repoRef.fullName}-$signedIn',
+        ),
         repoRef: widget.repoRef,
         repo: repo,
         details: details,
@@ -314,9 +412,49 @@ class _RepositoryMd3ScreenState extends ConsumerState<RepositoryMd3Screen>
         },
       );
     }
-    return _RepositoryPhasePlaceholder(
-      tabLabel: _repositoryTabLabel(context, _selectedTabIndex),
-      onOpenLegacy: widget.onOpenLegacy,
+    if (index == RepositoryNavigationDestination.actions.index) {
+      return RepositoryActionsMd3Page(
+        repoRef: widget.repoRef,
+        signedIn: signedIn,
+        onRefreshReady: (final Future<void> Function()? callback) {
+          _actionsRefresh = callback;
+        },
+      );
+    }
+    if (index == RepositoryNavigationDestination.projects.index) {
+      return RepositoryProjectsMd3Page(
+        repoRef: widget.repoRef,
+        signedIn: signedIn,
+        onRefreshReady: (final Future<void> Function()? callback) {
+          _projectsRefresh = callback;
+        },
+      );
+    }
+    if (index == RepositoryNavigationDestination.wiki.index) {
+      return WikiBrowser(
+        repoRef: widget.repoRef,
+        initialSlug: widget.initialState.wikiSlug,
+        onRefreshReady: (final Future<void> Function()? callback) {
+          _wikiRefresh = callback;
+        },
+      );
+    }
+    if (index == RepositoryNavigationDestination.security.index) {
+      return RepositorySecurityMd3Page(
+        repoRef: widget.repoRef,
+        signedIn: signedIn,
+        defaultBranch: repo?.defaultBranchRef?.name,
+        onRefreshReady: (final Future<void> Function()? callback) {
+          _securityRefresh = callback;
+        },
+      );
+    }
+    return RepositoryInsightsMd3Page(
+      repoRef: widget.repoRef,
+      signedIn: signedIn,
+      onRefreshReady: (final Future<void> Function()? callback) {
+        _insightsRefresh = callback;
+      },
     );
   }
 }
@@ -459,9 +597,17 @@ class _RepositoryGuestCodeBody extends StatelessWidget {
 
 int _initialTabIndex(final RepositoryTabKind? kind) {
   return switch (kind) {
-    RepositoryTabKind.issues => 1,
-    RepositoryTabKind.pulls => 2,
-    RepositoryTabKind.projects => 4,
+    RepositoryTabKind.issues => RepositoryNavigationDestination.issues.index,
+    RepositoryTabKind.pulls =>
+      RepositoryNavigationDestination.pullRequests.index,
+    RepositoryTabKind.projects =>
+      RepositoryNavigationDestination.projects.index,
+    RepositoryTabKind.wiki => RepositoryNavigationDestination.wiki.index,
+    RepositoryTabKind.actions => RepositoryNavigationDestination.actions.index,
+    RepositoryTabKind.security =>
+      RepositoryNavigationDestination.security.index,
+    RepositoryTabKind.insights =>
+      RepositoryNavigationDestination.insights.index,
     _ => 0,
   };
 }
@@ -681,79 +827,6 @@ class _RepositoryActions extends ConsumerWidget {
                 ),
               ),
       ],
-    );
-  }
-}
-
-class _RepositoryNavigation extends StatelessWidget {
-  const _RepositoryNavigation({required this.controller, required this.repo});
-
-  final TabController controller;
-  final RepoCardData? repo;
-
-  @override
-  Widget build(final BuildContext context) {
-    return TabBar(
-      controller: controller,
-      isScrollable: true,
-      tabAlignment: TabAlignment.start,
-      tabs: <Widget>[
-        _RepositoryTabLabel(
-          tab: _repositoryTabs[0],
-          label: _repositoryTabLabel(context, 0),
-        ),
-        _RepositoryTabLabel(
-          tab: _repositoryTabs[1],
-          label: _repositoryTabLabel(context, 1),
-          count: repo?.issues.totalCount,
-        ),
-        _RepositoryTabLabel(
-          tab: _repositoryTabs[2],
-          label: _repositoryTabLabel(context, 2),
-          count: repo?.pullRequests.totalCount,
-        ),
-        for (int index = 3; index < _repositoryTabs.length; index++)
-          _RepositoryTabLabel(
-            tab: _repositoryTabs[index],
-            label: _repositoryTabLabel(context, index),
-          ),
-      ],
-    );
-  }
-}
-
-class _RepositoryTabLabel extends StatelessWidget {
-  const _RepositoryTabLabel({
-    required this.tab,
-    required this.label,
-    this.count,
-  });
-
-  final _RepositoryTabData tab;
-  final String label;
-  final int? count;
-
-  @override
-  Widget build(final BuildContext context) {
-    return Tab(
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: <Widget>[
-          Icon(tab.icon),
-          const SizedBox(width: RepositoryMd3Layout.space8),
-          Text(label),
-          if (count != null) ...<Widget>[
-            const SizedBox(width: RepositoryMd3Layout.space8),
-            Badge(
-              label: Text(_formatCount(count!)),
-              backgroundColor: Theme.of(
-                context,
-              ).colorScheme.surfaceContainerHighest,
-              textColor: Theme.of(context).colorScheme.onSurfaceVariant,
-            ),
-          ],
-        ],
-      ),
     );
   }
 }
@@ -1246,79 +1319,6 @@ class _AboutMetric extends StatelessWidget {
       ],
     );
   }
-}
-
-class _RepositoryPhasePlaceholder extends StatelessWidget {
-  const _RepositoryPhasePlaceholder({
-    required this.tabLabel,
-    required this.onOpenLegacy,
-  });
-
-  final String tabLabel;
-  final VoidCallback? onOpenLegacy;
-
-  @override
-  Widget build(final BuildContext context) {
-    return Center(
-      child: SingleChildScrollView(
-        padding: const EdgeInsets.all(RepositoryMd3Layout.space32),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: <Widget>[
-            const Icon(
-              Icons.construction,
-              size: RepositoryMd3Layout.statusIconSize,
-            ),
-            const SizedBox(height: RepositoryMd3Layout.space16),
-            Text(
-              context.l10n.repoNotMigrated(tabLabel),
-              style: Theme.of(context).textTheme.titleLarge,
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: RepositoryMd3Layout.space8),
-            Text(context.l10n.repoPhaseCodeOnly, textAlign: TextAlign.center),
-            if (onOpenLegacy != null) ...<Widget>[
-              const SizedBox(height: RepositoryMd3Layout.space24),
-              FilledButton.icon(
-                onPressed: onOpenLegacy,
-                icon: const Icon(Icons.history),
-                label: Text(context.l10n.repoOpenLegacyLayout),
-              ),
-            ],
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _RepositoryTabData {
-  const _RepositoryTabData(this.icon);
-
-  final IconData icon;
-}
-
-const List<_RepositoryTabData> _repositoryTabs = <_RepositoryTabData>[
-  _RepositoryTabData(Icons.code),
-  _RepositoryTabData(Icons.adjust),
-  _RepositoryTabData(Icons.call_merge),
-  _RepositoryTabData(Icons.play_circle_outline),
-  _RepositoryTabData(Icons.table_chart_outlined),
-  _RepositoryTabData(Icons.shield_outlined),
-  _RepositoryTabData(Icons.insights_outlined),
-];
-
-String _repositoryTabLabel(final BuildContext context, final int index) {
-  return switch (index) {
-    0 => context.l10n.repoCode,
-    1 => context.l10n.repoIssues,
-    2 => context.l10n.repoPullRequests,
-    3 => context.l10n.repoActions,
-    4 => context.l10n.repoProjects,
-    5 => context.l10n.repoSecurity,
-    6 => context.l10n.repoInsights,
-    _ => '',
-  };
 }
 
 String _formatCount(final int value) {

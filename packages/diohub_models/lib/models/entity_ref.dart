@@ -70,105 +70,108 @@ sealed class EntityRef implements Navigable {
     final type = json['type'] as String? ?? '';
     return switch (type) {
       'repo' => RepoRef(
-          owner: json['owner'] as String,
-          name: json['name'] as String,
-          location:
-              _locationFromJson(json['location'] as Map<String, dynamic>?),
-          nodeId: json['nodeId'] as String?,
-        ),
+        owner: json['owner'] as String,
+        name: json['name'] as String,
+        location: _locationFromJson(json['location'] as Map<String, dynamic>?),
+        nodeId: json['nodeId'] as String?,
+      ),
       'issue' => IssueRef(
-          repo: RepoRef(
-            owner: json['repoOwner'] as String,
-            name: json['repoName'] as String,
-          ),
-          number: json['number'] as int,
-          nodeId: json['nodeId'] as String?,
+        repo: RepoRef(
+          owner: json['repoOwner'] as String,
+          name: json['repoName'] as String,
         ),
+        number: json['number'] as int,
+        nodeId: json['nodeId'] as String?,
+      ),
       'pr' => PullRequestRef(
-          repo: RepoRef(
-            owner: json['repoOwner'] as String,
-            name: json['repoName'] as String,
-          ),
-          number: json['number'] as int,
-          nodeId: json['nodeId'] as String?,
+        repo: RepoRef(
+          owner: json['repoOwner'] as String,
+          name: json['repoName'] as String,
         ),
+        number: json['number'] as int,
+        nodeId: json['nodeId'] as String?,
+      ),
       'commit' => CommitRef(
-          repo: RepoRef(
-            owner: json['repoOwner'] as String,
-            name: json['repoName'] as String,
-          ),
-          oid: json['oid'] as String,
-          nodeId: json['nodeId'] as String?,
+        repo: RepoRef(
+          owner: json['repoOwner'] as String,
+          name: json['repoName'] as String,
         ),
+        oid: json['oid'] as String,
+        nodeId: json['nodeId'] as String?,
+      ),
       'workflowRun' => WorkflowRunRef(
-          repo: RepoRef(
-            owner: json['repoOwner'] as String,
-            name: json['repoName'] as String,
-          ),
-          runId: json['runId'] as int,
-          nodeId: json['nodeId'] as String?,
+        repo: RepoRef(
+          owner: json['repoOwner'] as String,
+          name: json['repoName'] as String,
         ),
+        runId: json['runId'] as int,
+        nodeId: json['nodeId'] as String?,
+      ),
       'user' => UserRef(
-          login: json['login'] as String,
-          tab: json['tab'] as String?,
-          nodeId: json['nodeId'] as String?),
+        login: json['login'] as String,
+        tab: json['tab'] as String?,
+        nodeId: json['nodeId'] as String?,
+      ),
       'discussion' => DiscussionRef(
-          repo: RepoRef(
-            owner: json['repoOwner'] as String,
-            name: json['repoName'] as String,
-          ),
-          number: json['number'] as int,
-          nodeId: json['nodeId'] as String?,
+        repo: RepoRef(
+          owner: json['repoOwner'] as String,
+          name: json['repoName'] as String,
         ),
+        number: json['number'] as int,
+        nodeId: json['nodeId'] as String?,
+      ),
       'topic' => TopicRef(
-          name: json['name'] as String, nodeId: json['nodeId'] as String?),
+        name: json['name'] as String,
+        nodeId: json['nodeId'] as String?,
+      ),
       'wiki' => WikiRef(
-          repo: RepoRef(
-            owner: json['repoOwner'] as String,
-            name: json['repoName'] as String,
-          ),
-          path: json['path'] as String,
-          nodeId: json['nodeId'] as String?,
+        repo: RepoRef(
+          owner: json['repoOwner'] as String,
+          name: json['repoName'] as String,
         ),
+        path: json['path'] as String,
+        nodeId: json['nodeId'] as String?,
+      ),
       'package' => PackageRef(
-          htmlUrl: json['htmlUrl'] as String,
-          nodeId: json['nodeId'] as String?),
+        htmlUrl: json['htmlUrl'] as String,
+        nodeId: json['nodeId'] as String?,
+      ),
       'codeFile' => CodeFileRef(
-          repo: RepoRef(
-            owner: json['repoOwner'] as String,
-            name: json['repoName'] as String,
-          ),
-          path: json['path'] as String,
-          sha: json['sha'] as String,
-          nodeId: json['nodeId'] as String?,
+        repo: RepoRef(
+          owner: json['repoOwner'] as String,
+          name: json['repoName'] as String,
         ),
+        path: json['path'] as String,
+        sha: json['sha'] as String,
+        nodeId: json['nodeId'] as String?,
+      ),
       'release' => ReleaseRef(
-          repo: RepoRef(
-            owner: json['repoOwner'] as String,
-            name: json['repoName'] as String,
-          ),
-          tagName: json['tagName'] as String,
-          releaseId: json['releaseId'] as int?,
-          nodeId: json['nodeId'] as String?,
+        repo: RepoRef(
+          owner: json['repoOwner'] as String,
+          name: json['repoName'] as String,
         ),
+        tagName: json['tagName'] as String,
+        releaseId: json['releaseId'] as int?,
+        nodeId: json['nodeId'] as String?,
+      ),
       'issueComment' => IssueCommentRef(
-          repo: RepoRef(
-            owner: json['repoOwner'] as String,
-            name: json['repoName'] as String,
-          ),
-          issueNumber: json['issueNumber'] as int,
-          commentId: json['commentId'] as int,
-          nodeId: json['nodeId'] as String?,
+        repo: RepoRef(
+          owner: json['repoOwner'] as String,
+          name: json['repoName'] as String,
         ),
+        issueNumber: json['issueNumber'] as int,
+        commentId: json['commentId'] as int,
+        nodeId: json['nodeId'] as String?,
+      ),
       'prReviewComment' => PRReviewCommentRef(
-          repo: RepoRef(
-            owner: json['repoOwner'] as String,
-            name: json['repoName'] as String,
-          ),
-          prNumber: json['prNumber'] as int,
-          commentId: json['commentId'] as int,
-          nodeId: json['nodeId'] as String?,
+        repo: RepoRef(
+          owner: json['repoOwner'] as String,
+          name: json['repoName'] as String,
         ),
+        prNumber: json['prNumber'] as int,
+        commentId: json['commentId'] as int,
+        nodeId: json['nodeId'] as String?,
+      ),
       _ => throw ArgumentError('Unknown EntityRef type: $type'),
     };
   }
@@ -196,6 +199,9 @@ sealed class RepoLocation with _$RepoLocation {
   const factory RepoLocation.releases() = RepoLocationReleases;
   const factory RepoLocation.discussions() = RepoLocationDiscussions;
   const factory RepoLocation.projects() = RepoLocationProjects;
+  const factory RepoLocation.actions() = RepoLocationActions;
+  const factory RepoLocation.security() = RepoLocationSecurity;
+  const factory RepoLocation.insights() = RepoLocationInsights;
   const factory RepoLocation.license() = RepoLocationLicense;
   const factory RepoLocation.newIssue({String? templateId}) =
       RepoLocationNewIssue;
@@ -220,65 +226,68 @@ sealed class RepoScopedRef extends EntityRef {
 }
 
 Map<String, dynamic>? _locationToJson(RepoLocation? loc) => switch (loc) {
-      null => null,
-      RepoLocationRoot() => {'locType': 'root'},
-      RepoLocationTree(:final branch, :final path) => {
-          'locType': 'tree',
-          'branch': branch,
-          if (path != null) 'path': path,
-        },
-      RepoLocationBlob(
-        :final branch,
-        :final filePath,
-        :final lineStart,
-        :final lineEnd
-      ) =>
-        {
-          'locType': 'blob',
-          'branch': branch,
-          'filePath': filePath,
-          if (lineStart != null) 'lineStart': lineStart,
-          if (lineEnd != null) 'lineEnd': lineEnd,
-        },
-      RepoLocationIssues() => {'locType': 'issues'},
-      RepoLocationPulls() => {'locType': 'pulls'},
-      RepoLocationCommits(:final branch) => {
-          'locType': 'commits',
-          if (branch != null) 'branch': branch,
-        },
-      RepoLocationWiki(:final page) => {
-          'locType': 'wiki',
-          if (page != null) 'page': page,
-        },
-      RepoLocationReleases() => {'locType': 'releases'},
-      RepoLocationDiscussions() => {'locType': 'discussions'},
-      RepoLocationProjects() => {'locType': 'projects'},
-      RepoLocationLicense() => {'locType': 'license'},
-      RepoLocationNewIssue(:final templateId) => {
-          'locType': 'newIssue',
-          if (templateId != null) 'templateId': templateId,
-        },
-      RepoLocationCompare(:final baseRef, :final headRef) => {
-          'locType': 'compare',
-          if (baseRef != null) 'baseRef': baseRef,
-          if (headRef != null) 'headRef': headRef,
-        },
-    };
+  null => null,
+  RepoLocationRoot() => {'locType': 'root'},
+  RepoLocationTree(:final branch, :final path) => {
+    'locType': 'tree',
+    'branch': branch,
+    if (path != null) 'path': path,
+  },
+  RepoLocationBlob(
+    :final branch,
+    :final filePath,
+    :final lineStart,
+    :final lineEnd,
+  ) =>
+    {
+      'locType': 'blob',
+      'branch': branch,
+      'filePath': filePath,
+      if (lineStart != null) 'lineStart': lineStart,
+      if (lineEnd != null) 'lineEnd': lineEnd,
+    },
+  RepoLocationIssues() => {'locType': 'issues'},
+  RepoLocationPulls() => {'locType': 'pulls'},
+  RepoLocationCommits(:final branch) => {
+    'locType': 'commits',
+    if (branch != null) 'branch': branch,
+  },
+  RepoLocationWiki(:final page) => {
+    'locType': 'wiki',
+    if (page != null) 'page': page,
+  },
+  RepoLocationReleases() => {'locType': 'releases'},
+  RepoLocationDiscussions() => {'locType': 'discussions'},
+  RepoLocationProjects() => {'locType': 'projects'},
+  RepoLocationActions() => {'locType': 'actions'},
+  RepoLocationSecurity() => {'locType': 'security'},
+  RepoLocationInsights() => {'locType': 'insights'},
+  RepoLocationLicense() => {'locType': 'license'},
+  RepoLocationNewIssue(:final templateId) => {
+    'locType': 'newIssue',
+    if (templateId != null) 'templateId': templateId,
+  },
+  RepoLocationCompare(:final baseRef, :final headRef) => {
+    'locType': 'compare',
+    if (baseRef != null) 'baseRef': baseRef,
+    if (headRef != null) 'headRef': headRef,
+  },
+};
 
 RepoLocation? _locationFromJson(Map<String, dynamic>? json) {
   if (json == null) return null;
   return switch (json['locType'] as String?) {
     'root' => const RepoLocation.root(),
     'tree' => RepoLocation.tree(
-        branch: json['branch'] as String,
-        path: json['path'] as String?,
-      ),
+      branch: json['branch'] as String,
+      path: json['path'] as String?,
+    ),
     'blob' => RepoLocation.blob(
-        branch: json['branch'] as String,
-        filePath: json['filePath'] as String,
-        lineStart: json['lineStart'] as int?,
-        lineEnd: json['lineEnd'] as int?,
-      ),
+      branch: json['branch'] as String,
+      filePath: json['filePath'] as String,
+      lineStart: json['lineStart'] as int?,
+      lineEnd: json['lineEnd'] as int?,
+    ),
     'issues' => const RepoLocation.issues(),
     'pulls' => const RepoLocation.pulls(),
     'commits' => RepoLocation.commits(branch: json['branch'] as String?),
@@ -286,13 +295,17 @@ RepoLocation? _locationFromJson(Map<String, dynamic>? json) {
     'releases' => const RepoLocation.releases(),
     'discussions' => const RepoLocation.discussions(),
     'projects' => const RepoLocation.projects(),
+    'actions' => const RepoLocation.actions(),
+    'security' => const RepoLocation.security(),
+    'insights' => const RepoLocation.insights(),
     'license' => const RepoLocation.license(),
-    'newIssue' =>
-      RepoLocation.newIssue(templateId: json['templateId'] as String?),
+    'newIssue' => RepoLocation.newIssue(
+      templateId: json['templateId'] as String?,
+    ),
     'compare' => RepoLocation.compare(
-        baseRef: json['baseRef'] as String?,
-        headRef: json['headRef'] as String?,
-      ),
+      baseRef: json['baseRef'] as String?,
+      headRef: json['headRef'] as String?,
+    ),
     _ => null,
   };
 }
@@ -370,7 +383,9 @@ abstract class RepoRef extends EntityRef with _$RepoRef {
       }
       throw ArgumentError('Invalid repo HTML URL format: $htmlUrl');
     } catch (e) {
-      throw ArgumentError('Failed to parse repo HTML URL: $htmlUrl (${e.toString()})');
+      throw ArgumentError(
+        'Failed to parse repo HTML URL: $htmlUrl (${e.toString()})',
+      );
     }
   }
 
@@ -393,12 +408,12 @@ abstract class RepoRef extends EntityRef with _$RepoRef {
 
   @override
   Map<String, dynamic> toJson() => {
-        'type': 'repo',
-        'owner': owner,
-        'name': name,
-        if (location != null) 'location': _locationToJson(location),
-        if (nodeId != null) 'nodeId': nodeId,
-      };
+    'type': 'repo',
+    'owner': owner,
+    'name': name,
+    if (location != null) 'location': _locationToJson(location),
+    if (nodeId != null) 'nodeId': nodeId,
+  };
 }
 
 @freezed
@@ -412,29 +427,29 @@ abstract class IssueRef extends RepoScopedRef with _$IssueRef {
   }) = _IssueRef;
 
   factory IssueRef.fromIssue(final Issue issue) => IssueRef(
-        repo: RepoRef.fromRepository(issue.repository!),
-        number: issue.number,
-      );
+    repo: RepoRef.fromRepository(issue.repository!),
+    number: issue.number,
+  );
 
   /// Build from GQL issue card fragment (e.g. from search, timeline, list).
   factory IssueRef.fromIssueCardFields(final IssueCardData data) => IssueRef(
-        repo: RepoRef(
-          owner: data.repository.owner.login,
-          name: data.repository.name,
-        ),
-        number: data.number,
-        nodeId: data.id.asGitHubNodeId,
-      );
+    repo: RepoRef(
+      owner: data.repository.owner.login,
+      name: data.repository.name,
+    ),
+    number: data.number,
+    nodeId: data.id.asGitHubNodeId,
+  );
 
   /// Build from issue detail query (issueInfoOnly / issuePullInfo).
   factory IssueRef.fromRepositoryIssue(final IssueInfo data) => IssueRef(
-        repo: RepoRef(
-          owner: data.repository.owner.login,
-          name: data.repository.name,
-        ),
-        number: data.number,
-        nodeId: data.id.asGitHubNodeId,
-      );
+    repo: RepoRef(
+      owner: data.repository.owner.login,
+      name: data.repository.name,
+    ),
+    number: data.number,
+    nodeId: data.id.asGitHubNodeId,
+  );
 
   factory IssueRef.fromApiUrl(final String apiUrl) {
     final Uri uri = Uri.parse(apiUrl);
@@ -465,9 +480,11 @@ abstract class IssueRef extends RepoScopedRef with _$IssueRef {
       }
       throw ArgumentError('Invalid issue HTML URL format: $htmlUrl');
     } catch (e) {
-      throw ArgumentError('Failed to parse issue HTML URL: $htmlUrl (${e.toString()})');
+      throw ArgumentError(
+        'Failed to parse issue HTML URL: $htmlUrl (${e.toString()})',
+      );
     }
-  }  
+  }
 
   @override
   String get dbType => 'issue';
@@ -483,12 +500,12 @@ abstract class IssueRef extends RepoScopedRef with _$IssueRef {
 
   @override
   Map<String, dynamic> toJson() => {
-        'type': 'issue',
-        'repoOwner': repo.owner,
-        'repoName': repo.name,
-        'number': number,
-        if (nodeId != null) 'nodeId': nodeId,
-      };
+    'type': 'issue',
+    'repoOwner': repo.owner,
+    'repoName': repo.name,
+    'number': number,
+    if (nodeId != null) 'nodeId': nodeId,
+  };
 }
 
 @freezed
@@ -561,7 +578,9 @@ abstract class PullRequestRef extends RepoScopedRef with _$PullRequestRef {
       }
       throw ArgumentError('Invalid PR HTML URL format: $htmlUrl');
     } catch (e) {
-      throw ArgumentError('Failed to parse PR HTML URL: $htmlUrl (${e.toString()})');
+      throw ArgumentError(
+        'Failed to parse PR HTML URL: $htmlUrl (${e.toString()})',
+      );
     }
   }
 
@@ -579,12 +598,12 @@ abstract class PullRequestRef extends RepoScopedRef with _$PullRequestRef {
 
   @override
   Map<String, dynamic> toJson() => {
-        'type': 'pr',
-        'repoOwner': repo.owner,
-        'repoName': repo.name,
-        'number': number,
-        if (nodeId != null) 'nodeId': nodeId,
-      };
+    'type': 'pr',
+    'repoOwner': repo.owner,
+    'repoName': repo.name,
+    'number': number,
+    if (nodeId != null) 'nodeId': nodeId,
+  };
 }
 
 /// Ref for PR review flows (view review / submit review). Carries pull ref and review node id.
@@ -617,8 +636,9 @@ abstract class CommitRef extends RepoScopedRef with _$CommitRef {
       CommitRef(repo: repo, oid: commit.sha);
 
   factory CommitRef.fromGcommitListItem(
-          final CommitNode commit, final RepoRef repo) =>
-      CommitRef(repo: repo, oid: commit.oid);
+    final CommitNode commit,
+    final RepoRef repo,
+  ) => CommitRef(repo: repo, oid: commit.oid);
 
   factory CommitRef.fromApiUrl(final String apiUrl) {
     final Uri uri = Uri.parse(apiUrl);
@@ -646,7 +666,9 @@ abstract class CommitRef extends RepoScopedRef with _$CommitRef {
       }
       throw ArgumentError('Invalid commit HTML URL format: $htmlUrl');
     } catch (e) {
-      throw ArgumentError('Failed to parse commit HTML URL: $htmlUrl (${e.toString()})');
+      throw ArgumentError(
+        'Failed to parse commit HTML URL: $htmlUrl (${e.toString()})',
+      );
     }
   }
 
@@ -664,12 +686,12 @@ abstract class CommitRef extends RepoScopedRef with _$CommitRef {
 
   @override
   Map<String, dynamic> toJson() => {
-        'type': 'commit',
-        'repoOwner': repo.owner,
-        'repoName': repo.name,
-        'oid': oid,
-        if (nodeId != null) 'nodeId': nodeId,
-      };
+    'type': 'commit',
+    'repoOwner': repo.owner,
+    'repoName': repo.name,
+    'oid': oid,
+    if (nodeId != null) 'nodeId': nodeId,
+  };
 }
 
 /// Workflow run (Actions) in a repo.
@@ -697,23 +719,20 @@ abstract class WorkflowRunRef extends RepoScopedRef with _$WorkflowRunRef {
 
   @override
   Map<String, dynamic> toJson() => {
-        'type': 'workflowRun',
-        'repoOwner': repo.owner,
-        'repoName': repo.name,
-        'runId': runId,
-        if (nodeId != null) 'nodeId': nodeId,
-      };
+    'type': 'workflowRun',
+    'repoOwner': repo.owner,
+    'repoName': repo.name,
+    'runId': runId,
+    if (nodeId != null) 'nodeId': nodeId,
+  };
 }
 
 @freezed
 abstract class UserRef extends EntityRef with _$UserRef {
   const UserRef._();
 
-  const factory UserRef({
-    required String login,
-    String? tab,
-    String? nodeId,
-  }) = _UserRef;
+  const factory UserRef({required String login, String? tab, String? nodeId}) =
+      _UserRef;
 
   factory UserRef.fromUser(final SimpleUser user) => UserRef(login: user.login);
 
@@ -741,11 +760,11 @@ abstract class UserRef extends EntityRef with _$UserRef {
 
   @override
   Map<String, dynamic> toJson() => {
-        'type': 'user',
-        'login': login,
-        if (tab != null) 'tab': tab,
-        if (nodeId != null) 'nodeId': nodeId,
-      };
+    'type': 'user',
+    'login': login,
+    if (tab != null) 'tab': tab,
+    if (nodeId != null) 'nodeId': nodeId,
+  };
 }
 
 /// Discussion in a repo (browser-only for now).
@@ -787,12 +806,12 @@ abstract class DiscussionRef extends RepoScopedRef with _$DiscussionRef {
 
   @override
   Map<String, dynamic> toJson() => {
-        'type': 'discussion',
-        'repoOwner': repo.owner,
-        'repoName': repo.name,
-        'number': number,
-        if (nodeId != null) 'nodeId': nodeId,
-      };
+    'type': 'discussion',
+    'repoOwner': repo.owner,
+    'repoName': repo.name,
+    'number': number,
+    if (nodeId != null) 'nodeId': nodeId,
+  };
 }
 
 /// Topic (in-app search with topic:name filter).
@@ -800,10 +819,7 @@ abstract class DiscussionRef extends RepoScopedRef with _$DiscussionRef {
 abstract class TopicRef extends EntityRef with _$TopicRef {
   const TopicRef._();
 
-  const factory TopicRef({
-    required String name,
-    String? nodeId,
-  }) = _TopicRef;
+  const factory TopicRef({required String name, String? nodeId}) = _TopicRef;
 
   @override
   String get dbType => 'topic';
@@ -821,10 +837,10 @@ abstract class TopicRef extends EntityRef with _$TopicRef {
 
   @override
   Map<String, dynamic> toJson() => {
-        'type': 'topic',
-        'name': name,
-        if (nodeId != null) 'nodeId': nodeId,
-      };
+    'type': 'topic',
+    'name': name,
+    if (nodeId != null) 'nodeId': nodeId,
+  };
 }
 
 /// Wiki page (browser-only).
@@ -852,12 +868,12 @@ abstract class WikiRef extends RepoScopedRef with _$WikiRef {
 
   @override
   Map<String, dynamic> toJson() => {
-        'type': 'wiki',
-        'repoOwner': repo.owner,
-        'repoName': repo.name,
-        'path': path,
-        if (nodeId != null) 'nodeId': nodeId,
-      };
+    'type': 'wiki',
+    'repoOwner': repo.owner,
+    'repoName': repo.name,
+    'path': path,
+    if (nodeId != null) 'nodeId': nodeId,
+  };
 }
 
 /// Package (browser-only).
@@ -865,10 +881,8 @@ abstract class WikiRef extends RepoScopedRef with _$WikiRef {
 abstract class PackageRef extends EntityRef with _$PackageRef {
   const PackageRef._();
 
-  const factory PackageRef({
-    required String htmlUrl,
-    String? nodeId,
-  }) = _PackageRef;
+  const factory PackageRef({required String htmlUrl, String? nodeId}) =
+      _PackageRef;
 
   @override
   String get dbType => 'package';
@@ -886,10 +900,10 @@ abstract class PackageRef extends EntityRef with _$PackageRef {
 
   @override
   Map<String, dynamic> toJson() => {
-        'type': 'package',
-        'htmlUrl': htmlUrl,
-        if (nodeId != null) 'nodeId': nodeId,
-      };
+    'type': 'package',
+    'htmlUrl': htmlUrl,
+    if (nodeId != null) 'nodeId': nodeId,
+  };
 }
 
 /// Code file in a repo (browser or code viewer).
@@ -918,13 +932,13 @@ abstract class CodeFileRef extends RepoScopedRef with _$CodeFileRef {
 
   @override
   Map<String, dynamic> toJson() => {
-        'type': 'codeFile',
-        'repoOwner': repo.owner,
-        'repoName': repo.name,
-        'path': path,
-        'sha': sha,
-        if (nodeId != null) 'nodeId': nodeId,
-      };
+    'type': 'codeFile',
+    'repoOwner': repo.owner,
+    'repoName': repo.name,
+    'path': path,
+    'sha': sha,
+    if (nodeId != null) 'nodeId': nodeId,
+  };
 }
 
 /// Release in a repo (tag + optional release id).
@@ -950,13 +964,13 @@ abstract class ReleaseRef extends RepoScopedRef with _$ReleaseRef {
 
   @override
   Map<String, dynamic> toJson() => {
-        'type': 'release',
-        'repoOwner': repo.owner,
-        'repoName': repo.name,
-        'tagName': tagName,
-        if (releaseId != null) 'releaseId': releaseId,
-        if (nodeId != null) 'nodeId': nodeId,
-      };
+    'type': 'release',
+    'repoOwner': repo.owner,
+    'repoName': repo.name,
+    'tagName': tagName,
+    if (releaseId != null) 'releaseId': releaseId,
+    if (nodeId != null) 'nodeId': nodeId,
+  };
 }
 
 /// Issue comment (independently bookmarkable).
@@ -979,18 +993,19 @@ abstract class IssueCommentRef extends RepoScopedRef with _$IssueCommentRef {
   String get apiPath => '${repo.apiPath}/issues/comments/$commentId';
 
   @override
-  Uri webUrlFor(ServerConfig server) => server
-      .webUrl('/${repo.fullName}/issues/$issueNumber#issuecomment-$commentId');
+  Uri webUrlFor(ServerConfig server) => server.webUrl(
+    '/${repo.fullName}/issues/$issueNumber#issuecomment-$commentId',
+  );
 
   @override
   Map<String, dynamic> toJson() => {
-        'type': 'issueComment',
-        'repoOwner': repo.owner,
-        'repoName': repo.name,
-        'issueNumber': issueNumber,
-        'commentId': commentId,
-        if (nodeId != null) 'nodeId': nodeId,
-      };
+    'type': 'issueComment',
+    'repoOwner': repo.owner,
+    'repoName': repo.name,
+    'issueNumber': issueNumber,
+    'commentId': commentId,
+    if (nodeId != null) 'nodeId': nodeId,
+  };
 }
 
 /// PR review comment (independently bookmarkable).
@@ -1020,11 +1035,11 @@ abstract class PRReviewCommentRef extends RepoScopedRef
 
   @override
   Map<String, dynamic> toJson() => {
-        'type': 'prReviewComment',
-        'repoOwner': repo.owner,
-        'repoName': repo.name,
-        'prNumber': prNumber,
-        'commentId': commentId,
-        if (nodeId != null) 'nodeId': nodeId,
-      };
+    'type': 'prReviewComment',
+    'repoOwner': repo.owner,
+    'repoName': repo.name,
+    'prNumber': prNumber,
+    'commentId': commentId,
+    if (nodeId != null) 'nodeId': nodeId,
+  };
 }

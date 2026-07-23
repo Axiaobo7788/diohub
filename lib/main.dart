@@ -26,6 +26,7 @@ import 'package:diohub/app/settings/spacing.dart';
 import 'package:diohub/app/settings/theme_mode.dart';
 import 'package:diohub/app/theme_config/models/flex_theme_settings_model.dart';
 import 'package:diohub/app/theme_config/utils/flex_color_scheme_builder.dart';
+import 'package:diohub/common/animations/app_motion_media_query.dart';
 import 'package:diohub/l10n/app_localizations.dart';
 import 'package:diohub/l10n/l10n.dart';
 import 'package:diohub/providers/logging/log_providers.dart';
@@ -413,10 +414,8 @@ class _RootAppState extends ConsumerState<RootApp> with WidgetsBindingObserver {
               return premiumLifecycle.cloudSyncObserverWrapper(
                 Stack(
                   children: <Widget>[
-                    MediaQuery(
-                      data: MediaQuery.of(
-                        context,
-                      ).copyWith(disableAnimations: disableAnimations),
+                    AppMotionMediaQuery(
+                      appAnimationsDisabled: disableAnimations,
                       child: ToastificationWrapper(child: child!),
                     ),
                   ],

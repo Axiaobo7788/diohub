@@ -13,6 +13,9 @@ enum RepositoryTabKind {
   discussions,
   projects,
   wiki,
+  actions,
+  security,
+  insights,
 }
 
 /// Initial state for the repository screen (tab + branch + code path).
@@ -22,11 +25,13 @@ class RepositoryInitialState {
     this.tabKind,
     this.branch,
     this.codePath,
+    this.wikiSlug,
   });
 
   final RepositoryTabKind? tabKind;
   final String? branch;
   final String? codePath;
+  final String? wikiSlug;
 
   /// Build from legacy route args (string tab label, branch, path).
   /// Used when migrating from separate route params to location-only.
@@ -40,6 +45,7 @@ class RepositoryInitialState {
       tabKind: kind,
       branch: branch,
       codePath: codePath,
+      wikiSlug: null,
     );
   }
 
@@ -70,6 +76,9 @@ class RepositoryInitialState {
       'Discussions' => RepositoryTabKind.discussions,
       'Projects' => RepositoryTabKind.projects,
       'Wiki' => RepositoryTabKind.wiki,
+      'Actions' => RepositoryTabKind.actions,
+      'Security' => RepositoryTabKind.security,
+      'Insights' => RepositoryTabKind.insights,
       _ => null,
     };
   }
@@ -82,33 +91,50 @@ RepositoryInitialState resolveRepoLocation(final RepoLocation? location) {
   return switch (location) {
     RepoLocationRoot() => const RepositoryInitialState(),
     RepoLocationTree(:final branch, :final path) => RepositoryInitialState(
-        tabKind: RepositoryTabKind.code,
-        branch: branch,
-        codePath: path,
-      ),
+      tabKind: RepositoryTabKind.code,
+      branch: branch,
+      codePath: path,
+    ),
     RepoLocationBlob(:final branch, :final filePath) => RepositoryInitialState(
-        tabKind: RepositoryTabKind.code,
-        branch: branch,
-        codePath: filePath,
-      ),
-    RepoLocationIssues() =>
-      const RepositoryInitialState(tabKind: RepositoryTabKind.issues),
-    RepoLocationPulls() =>
-      const RepositoryInitialState(tabKind: RepositoryTabKind.pulls),
+      tabKind: RepositoryTabKind.code,
+      branch: branch,
+      codePath: filePath,
+    ),
+    RepoLocationIssues() => const RepositoryInitialState(
+      tabKind: RepositoryTabKind.issues,
+    ),
+    RepoLocationPulls() => const RepositoryInitialState(
+      tabKind: RepositoryTabKind.pulls,
+    ),
     RepoLocationCommits(:final branch) => RepositoryInitialState(
-        tabKind: RepositoryTabKind.commits,
-        branch: branch,
-      ),
-    RepoLocationWiki() =>
-      const RepositoryInitialState(tabKind: RepositoryTabKind.wiki),
-    RepoLocationReleases() =>
-      const RepositoryInitialState(tabKind: RepositoryTabKind.releases),
-    RepoLocationDiscussions() =>
-      const RepositoryInitialState(tabKind: RepositoryTabKind.discussions),
-    RepoLocationProjects() =>
-      const RepositoryInitialState(tabKind: RepositoryTabKind.projects),
-    RepoLocationLicense() =>
-      const RepositoryInitialState(tabKind: RepositoryTabKind.license),
+      tabKind: RepositoryTabKind.commits,
+      branch: branch,
+    ),
+    RepoLocationWiki(:final page) => RepositoryInitialState(
+      tabKind: RepositoryTabKind.wiki,
+      wikiSlug: page,
+    ),
+    RepoLocationReleases() => const RepositoryInitialState(
+      tabKind: RepositoryTabKind.releases,
+    ),
+    RepoLocationDiscussions() => const RepositoryInitialState(
+      tabKind: RepositoryTabKind.discussions,
+    ),
+    RepoLocationProjects() => const RepositoryInitialState(
+      tabKind: RepositoryTabKind.projects,
+    ),
+    RepoLocationActions() => const RepositoryInitialState(
+      tabKind: RepositoryTabKind.actions,
+    ),
+    RepoLocationSecurity() => const RepositoryInitialState(
+      tabKind: RepositoryTabKind.security,
+    ),
+    RepoLocationInsights() => const RepositoryInitialState(
+      tabKind: RepositoryTabKind.insights,
+    ),
+    RepoLocationLicense() => const RepositoryInitialState(
+      tabKind: RepositoryTabKind.license,
+    ),
     RepoLocationNewIssue() => const RepositoryInitialState(),
     RepoLocationCompare() => const RepositoryInitialState(),
   };

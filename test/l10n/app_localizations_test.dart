@@ -12,6 +12,13 @@ void main() {
     await _pumpLocalizedText(tester, const Locale('en'));
     expect(find.text('System default'), findsOneWidget);
     expect(find.text('This directory is empty'), findsOneWidget);
+    expect(
+      find.text(
+        "GitHub's unsigned API limit has been reached. "
+        'Sign in for a higher limit or try again later.',
+      ),
+      findsOneWidget,
+    );
 
     await _pumpLocalizedText(
       tester,
@@ -19,6 +26,10 @@ void main() {
     );
     expect(find.text('跟随系统'), findsOneWidget);
     expect(find.text('当前目录为空'), findsOneWidget);
+    expect(
+      find.text('已达到 GitHub 未登录 API 的请求限额。请登录以提高限额，或稍后重试。'),
+      findsOneWidget,
+    );
   });
 
   test('application locales expose only English and Simplified Chinese', () {
@@ -83,6 +94,7 @@ Future<void> _pumpLocalizedText(
             children: <Widget>[
               Text(context.l10n.languageSystem),
               Text(context.l10n.repoDirectoryEmpty),
+              Text(context.l10n.publicGitHubRateLimitReached),
             ],
           ),
         ),

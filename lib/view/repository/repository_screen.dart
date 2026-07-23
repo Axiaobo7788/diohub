@@ -58,6 +58,7 @@ class RepositoryScreenState extends ConsumerState<RepositoryScreen> {
         ),
         branch: initialState.branch,
         codePath: initialState.codePath,
+        wikiSlug: initialState.wikiSlug,
       );
     }
     final RepoInfo? repo = _useLegacyLayout && signedIn
@@ -138,6 +139,9 @@ class _RepositoryTabsContentState
       RepositoryTabKind.discussions => 'discussions',
       RepositoryTabKind.projects => 'projects',
       RepositoryTabKind.wiki => 'wiki',
+      RepositoryTabKind.actions => 'actions',
+      RepositoryTabKind.security => 'security',
+      RepositoryTabKind.insights => 'pulse',
     };
   }
 

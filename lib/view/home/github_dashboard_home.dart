@@ -379,7 +379,7 @@ class _DashboardActionButton extends StatelessWidget {
         children: <Widget>[
           Icon(icon, size: 19),
           const SizedBox(width: 8),
-          Text(label),
+          Flexible(child: Text(label, textAlign: TextAlign.center)),
           if (trailing) ...<Widget>[
             const SizedBox(width: 6),
             const Icon(Icons.arrow_drop_down, size: 18),
@@ -671,7 +671,10 @@ class _RepositorySearchResultsSliver extends ConsumerWidget {
               SliverFillRemaining(
                 hasScrollBody: false,
                 child: _DashboardSearchError(
-                  message: publicGitHubErrorMessage(error),
+                  message: publicGitHubErrorMessage(
+                    error,
+                    rateLimitMessage: context.l10n.publicGitHubRateLimitReached,
+                  ),
                   onRetry: () =>
                       ref.invalidate(publicRepositorySearchProvider(query)),
                   onSignIn: account == null ? onSignIn : null,

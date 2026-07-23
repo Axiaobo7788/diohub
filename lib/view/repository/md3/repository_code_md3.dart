@@ -1353,6 +1353,9 @@ class _RepositoryDocumentsSliverState
           readmeAsync: AsyncData<String?>(value.content),
           branch: widget.branch,
           repoFullName: widget.repoRef.fullName,
+          contentPadding: RepositoryMd3Layout.documentContentPaddingFor(
+            widget.windowClass,
+          ),
         ),
         RepositoryDocumentFormat.markdown => SliverToBoxAdapter(
           child: Padding(

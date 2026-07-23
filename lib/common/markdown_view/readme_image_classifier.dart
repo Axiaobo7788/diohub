@@ -4,29 +4,22 @@ import 'dart:typed_data';
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 
-enum ReadmeImageKind { svg, raster }
+enum ReadmeImageKind { svg, raster, unavailable }
 
 class ReadmeImageResult {
-  const ReadmeImageResult._({
-    required this.kind,
-    required this.bytes,
-    this.svgString,
-  });
+  const ReadmeImageResult._({required this.kind, this.bytes, this.svgString});
 
-  factory ReadmeImageResult.svg(final String svg, final Uint8List bytes) =>
-      ReadmeImageResult._(
-        kind: ReadmeImageKind.svg,
-        bytes: bytes,
-        svgString: svg,
-      );
+  factory ReadmeImageResult.svg(final String svg) =>
+      ReadmeImageResult._(kind: ReadmeImageKind.svg, svgString: svg);
 
   factory ReadmeImageResult.raster(final Uint8List bytes) =>
-      ReadmeImageResult._(
-        kind: ReadmeImageKind.raster,
-        bytes: bytes,
-      );
+      ReadmeImageResult._(kind: ReadmeImageKind.raster, bytes: bytes);
+
+  factory ReadmeImageResult.unavailable() =>
+      const ReadmeImageResult._(kind: ReadmeImageKind.unavailable);
+
   final ReadmeImageKind kind;
-  final Uint8List bytes;
+  final Uint8List? bytes;
   final String? svgString;
 }
 
@@ -41,14 +34,14 @@ class ReadmeImageClassifier {
       options: Options(responseType: ResponseType.bytes),
     );
 
-    final Uint8List bytes = Uint8List.fromList(response.data!);
+    final Uint8List bytes = Uint8List.fromList(response.data ?? const <int>[]);
     final Map<String, List<String>> headers = response.headers.map;
 
     final bool isSvg = _isSvg(headers, bytes);
 
     if (isSvg) {
       final String svg = _decodeUtf8(bytes);
-      return ReadmeImageResult.svg(svg, bytes);
+      return ReadmeImageResult.svg(svg);
     }
 
     // Fallback B: unknown → raster
@@ -57,10 +50,7 @@ class ReadmeImageClassifier {
 
   /// Detection ---------------------------------------------------------------
 
-  bool _isSvg(
-    final Map<String, List<String>> headers,
-    final Uint8List bytes,
-  ) {
+  bool _isSvg(final Map<String, List<String>> headers, final Uint8List bytes) {
     // 1. Content-Type header (strong signal)
     final String? ct = headers['content-type']?.first.toLowerCase();
     if (ct != null) {
@@ -85,7 +75,9 @@ class ReadmeImageClassifier {
   bool _looksLikeSvg(final Uint8List bytes) {
     final String prefix = _decodeUtf8(bytes, maxChars: 512).trimLeft();
 
-    if (prefix.startsWith('<svg')) return true;
+    if (prefix.startsWith('<svg')) {
+      return true;
+    }
     if (prefix.startsWith('<?xml') && prefix.contains('<svg')) {
       return true;
     }

@@ -1,3 +1,4 @@
+import 'package:diohub/common/animations/motion.dart';
 import 'package:diohub/common/nav_center/models/nav_center_models.dart';
 import 'package:extended_nested_scroll_view/extended_nested_scroll_view.dart';
 import 'package:flutter/material.dart';
@@ -7,11 +8,7 @@ import 'package:flutter/material.dart';
 /// Each page corresponds to a [TabConfig] in the [tabs] list.
 /// Pages with [TabConfig.keepAlive] = true are kept alive across swipes.
 class TabPageView extends StatefulWidget {
-  const TabPageView({
-    required this.tabs,
-    required this.tabIndex,
-    super.key,
-  });
+  const TabPageView({required this.tabs, required this.tabIndex, super.key});
 
   final List<TabConfig> tabs;
   final ValueNotifier<int> tabIndex;
@@ -28,8 +25,7 @@ class _TabPageViewState extends State<TabPageView> {
     super.initState();
     final length = widget.tabs.length;
     _pageController = PageController(
-      initialPage:
-          length > 0 ? widget.tabIndex.value.clamp(0, length - 1) : 0,
+      initialPage: length > 0 ? widget.tabIndex.value.clamp(0, length - 1) : 0,
     );
     widget.tabIndex.addListener(_onTabIndexChanged);
   }
@@ -54,13 +50,17 @@ class _TabPageViewState extends State<TabPageView> {
     final currentPage = _pageController.page?.round() ?? 0;
     if (currentPage == targetPage) return;
 
+    if (MediaQuery.maybeOf(context)?.disableAnimations ?? false) {
+      _pageController.jumpToPage(targetPage);
+      return;
+    }
+
     final distance = (targetPage - currentPage).abs();
     if (distance <= 1) {
-      // Adjacent tab – smooth slide as before.
       _pageController.animateToPage(
         targetPage,
-        duration: const Duration(milliseconds: 300),
-        curve: Curves.easeInOut,
+        duration: kTabTransitionDuration,
+        curve: kContentTransitionCurve,
       );
     } else {
       // Non-adjacent tab – jump to the page right next to the destination,
@@ -81,8 +81,8 @@ class _TabPageViewState extends State<TabPageView> {
 
     await _pageController.animateToPage(
       target,
-      duration: const Duration(milliseconds: 300),
-      curve: Curves.easeInOut,
+      duration: kTabTransitionDuration,
+      curve: kContentTransitionCurve,
     );
 
     _warpInProgress = false;
@@ -139,10 +139,7 @@ class _TabPageViewState extends State<TabPageView> {
 }
 
 class _KeepAlivePage extends StatefulWidget {
-  const _KeepAlivePage({
-    required this.keepAlive,
-    required this.child,
-  });
+  const _KeepAlivePage({required this.keepAlive, required this.child});
 
   final bool keepAlive;
   final Widget child;
@@ -173,11 +170,8 @@ class _BodyPlaceholder extends StatelessWidget {
       child: Text(
         label,
         style: Theme.of(context).textTheme.bodySmall?.copyWith(
-              color: Theme.of(context)
-                  .colorScheme
-                  .onSurface
-                  .withValues(alpha: 0.3),
-            ),
+          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.3),
+        ),
       ),
     );
   }

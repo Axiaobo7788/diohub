@@ -134,6 +134,12 @@ abstract class AppLocalizations {
   /// **'Cancel'**
   String get commonCancel;
 
+  /// No description provided for @commonBack.
+  ///
+  /// In en, this message translates to:
+  /// **'Back'**
+  String get commonBack;
+
   /// No description provided for @commonSearch.
   ///
   /// In en, this message translates to:
@@ -770,6 +776,12 @@ abstract class AppLocalizations {
   /// **'Projects'**
   String get repoProjects;
 
+  /// No description provided for @repoWiki.
+  ///
+  /// In en, this message translates to:
+  /// **'Wiki'**
+  String get repoWiki;
+
   /// No description provided for @repoSecurity.
   ///
   /// In en, this message translates to:
@@ -829,6 +841,66 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Security policy'**
   String get repoSecurityPolicy;
+
+  /// No description provided for @wikiPages.
+  ///
+  /// In en, this message translates to:
+  /// **'Wiki pages'**
+  String get wikiPages;
+
+  /// No description provided for @wikiCurrentPage.
+  ///
+  /// In en, this message translates to:
+  /// **'Current page: {page}'**
+  String wikiCurrentPage(String page);
+
+  /// No description provided for @wikiNoPages.
+  ///
+  /// In en, this message translates to:
+  /// **'No wiki pages'**
+  String get wikiNoPages;
+
+  /// No description provided for @wikiNoPagesDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'This repository does not have a wiki yet.'**
+  String get wikiNoPagesDescription;
+
+  /// No description provided for @wikiCreateOnGitHub.
+  ///
+  /// In en, this message translates to:
+  /// **'Create wiki on GitHub'**
+  String get wikiCreateOnGitHub;
+
+  /// No description provided for @wikiOpenOnGitHub.
+  ///
+  /// In en, this message translates to:
+  /// **'Open wiki on GitHub'**
+  String get wikiOpenOnGitHub;
+
+  /// No description provided for @wikiLoadError.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not load this repository wiki.'**
+  String get wikiLoadError;
+
+  /// No description provided for @wikiPageLoadError.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not open the wiki page.'**
+  String get wikiPageLoadError;
+
+  /// No description provided for @issueDetailLoadError.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not load this issue.'**
+  String get issueDetailLoadError;
+
+  /// No description provided for @pullRequestDetailLoadError.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not load this pull request.'**
+  String get pullRequestDetailLoadError;
 
   /// No description provided for @repoStarsCount.
   ///
@@ -1724,6 +1796,12 @@ abstract class AppLocalizations {
   /// **'Could not load this list.'**
   String get repoIssuePullLoadError;
 
+  /// No description provided for @publicGitHubRateLimitReached.
+  ///
+  /// In en, this message translates to:
+  /// **'GitHub\'s unsigned API limit has been reached. Sign in for a higher limit or try again later.'**
+  String get publicGitHubRateLimitReached;
+
   /// No description provided for @repoSignInRequired.
   ///
   /// In en, this message translates to:
@@ -1788,6 +1866,336 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'{count, plural, =1{1 comment} other{{count} comments}}'**
   String repoCommentsCount(int count);
+
+  /// No description provided for @repoSecondaryTabSignInBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Repository Actions, Projects, Security, and Insights use authenticated GitHub endpoints.'**
+  String get repoSecondaryTabSignInBody;
+
+  /// No description provided for @repoAllWorkflows.
+  ///
+  /// In en, this message translates to:
+  /// **'All workflows'**
+  String get repoAllWorkflows;
+
+  /// No description provided for @repoWorkflow.
+  ///
+  /// In en, this message translates to:
+  /// **'Workflow'**
+  String get repoWorkflow;
+
+  /// No description provided for @repoWorkflowRun.
+  ///
+  /// In en, this message translates to:
+  /// **'Workflow run'**
+  String get repoWorkflowRun;
+
+  /// No description provided for @repoWorkflowRunsCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 workflow run} other{{count} workflow runs}}'**
+  String repoWorkflowRunsCount(int count);
+
+  /// No description provided for @repoFilterBranch.
+  ///
+  /// In en, this message translates to:
+  /// **'Filter by branch'**
+  String get repoFilterBranch;
+
+  /// No description provided for @repoNoWorkflowRuns.
+  ///
+  /// In en, this message translates to:
+  /// **'No workflow runs found'**
+  String get repoNoWorkflowRuns;
+
+  /// No description provided for @repoNoWorkflowRunsBody.
+  ///
+  /// In en, this message translates to:
+  /// **'This workflow has no runs matching the current branch filter.'**
+  String get repoNoWorkflowRunsBody;
+
+  /// No description provided for @repoActionsLoadError.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not load workflow runs'**
+  String get repoActionsLoadError;
+
+  /// No description provided for @repoWorkflowsLoadError.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not load workflows'**
+  String get repoWorkflowsLoadError;
+
+  /// No description provided for @repoProjectsDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Repository projects track work across issues and pull requests.'**
+  String get repoProjectsDescription;
+
+  /// No description provided for @repoProjectsLoadError.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not load projects'**
+  String get repoProjectsLoadError;
+
+  /// No description provided for @repoNoProjects.
+  ///
+  /// In en, this message translates to:
+  /// **'No projects found'**
+  String get repoNoProjects;
+
+  /// No description provided for @repoNoProjectsBody.
+  ///
+  /// In en, this message translates to:
+  /// **'This repository has no projects matching the selected order.'**
+  String get repoNoProjectsBody;
+
+  /// No description provided for @repoSortTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Title'**
+  String get repoSortTitle;
+
+  /// No description provided for @repoProjectItemsCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 item} other{{count} items}}'**
+  String repoProjectItemsCount(int count);
+
+  /// No description provided for @repoUpdatedTime.
+  ///
+  /// In en, this message translates to:
+  /// **'Updated {time}'**
+  String repoUpdatedTime(String time);
+
+  /// No description provided for @repoSecurityOverview.
+  ///
+  /// In en, this message translates to:
+  /// **'Security overview'**
+  String get repoSecurityOverview;
+
+  /// No description provided for @repoSecurityPolicyChecking.
+  ///
+  /// In en, this message translates to:
+  /// **'Checking the default branch for a security policy.'**
+  String get repoSecurityPolicyChecking;
+
+  /// No description provided for @repoSecurityPolicyMissing.
+  ///
+  /// In en, this message translates to:
+  /// **'No SECURITY.md policy was found on the default branch.'**
+  String get repoSecurityPolicyMissing;
+
+  /// No description provided for @repoSecurityPolicyUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'The security policy could not be checked.'**
+  String get repoSecurityPolicyUnavailable;
+
+  /// No description provided for @repoSecurityPolicyFound.
+  ///
+  /// In en, this message translates to:
+  /// **'Security policy detected at {path}'**
+  String repoSecurityPolicyFound(String path);
+
+  /// No description provided for @repoDependabot.
+  ///
+  /// In en, this message translates to:
+  /// **'Dependabot'**
+  String get repoDependabot;
+
+  /// No description provided for @repoCodeScanning.
+  ///
+  /// In en, this message translates to:
+  /// **'Code scanning'**
+  String get repoCodeScanning;
+
+  /// No description provided for @repoSecretScanning.
+  ///
+  /// In en, this message translates to:
+  /// **'Secret scanning'**
+  String get repoSecretScanning;
+
+  /// No description provided for @repoNoDependabotAlerts.
+  ///
+  /// In en, this message translates to:
+  /// **'No Dependabot alerts'**
+  String get repoNoDependabotAlerts;
+
+  /// No description provided for @repoNoCodeScanningAlerts.
+  ///
+  /// In en, this message translates to:
+  /// **'No code scanning alerts'**
+  String get repoNoCodeScanningAlerts;
+
+  /// No description provided for @repoNoSecretScanningAlerts.
+  ///
+  /// In en, this message translates to:
+  /// **'No secret scanning alerts'**
+  String get repoNoSecretScanningAlerts;
+
+  /// No description provided for @repoSecurityNoAlertsBody.
+  ///
+  /// In en, this message translates to:
+  /// **'No alerts are currently visible for this repository and account.'**
+  String get repoSecurityNoAlertsBody;
+
+  /// No description provided for @repoSecurityDataUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Security data unavailable'**
+  String get repoSecurityDataUnavailable;
+
+  /// No description provided for @repoSecurityPermissionBody.
+  ///
+  /// In en, this message translates to:
+  /// **'GitHub may require repository administration permission or the feature may be disabled. {error}'**
+  String repoSecurityPermissionBody(String error);
+
+  /// No description provided for @repoSecurityAlertsLoaded.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 visible alert} other{{count} visible alerts}}'**
+  String repoSecurityAlertsLoaded(int count);
+
+  /// No description provided for @repoUnknownLocation.
+  ///
+  /// In en, this message translates to:
+  /// **'Unknown location'**
+  String get repoUnknownLocation;
+
+  /// No description provided for @repoSecret.
+  ///
+  /// In en, this message translates to:
+  /// **'Secret'**
+  String get repoSecret;
+
+  /// No description provided for @repoPulse.
+  ///
+  /// In en, this message translates to:
+  /// **'Pulse'**
+  String get repoPulse;
+
+  /// No description provided for @repoTraffic.
+  ///
+  /// In en, this message translates to:
+  /// **'Traffic'**
+  String get repoTraffic;
+
+  /// No description provided for @repoCommunityStandards.
+  ///
+  /// In en, this message translates to:
+  /// **'Community standards'**
+  String get repoCommunityStandards;
+
+  /// No description provided for @repoCommitActivity.
+  ///
+  /// In en, this message translates to:
+  /// **'Commit activity'**
+  String get repoCommitActivity;
+
+  /// No description provided for @repoCommitsLastYear.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 commit in the last year} other{{count} commits in the last year}}'**
+  String repoCommitsLastYear(int count);
+
+  /// No description provided for @repoNoContributors.
+  ///
+  /// In en, this message translates to:
+  /// **'No contributor statistics are available.'**
+  String get repoNoContributors;
+
+  /// No description provided for @repoUnknownContributor.
+  ///
+  /// In en, this message translates to:
+  /// **'Unknown contributor'**
+  String get repoUnknownContributor;
+
+  /// No description provided for @repoContributionsCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 contribution} other{{count} contributions}}'**
+  String repoContributionsCount(int count);
+
+  /// No description provided for @repoClones.
+  ///
+  /// In en, this message translates to:
+  /// **'Clones'**
+  String get repoClones;
+
+  /// No description provided for @repoTopReferrers.
+  ///
+  /// In en, this message translates to:
+  /// **'Top referrers'**
+  String get repoTopReferrers;
+
+  /// No description provided for @repoPopularContent.
+  ///
+  /// In en, this message translates to:
+  /// **'Popular content'**
+  String get repoPopularContent;
+
+  /// No description provided for @repoTotal.
+  ///
+  /// In en, this message translates to:
+  /// **'Total'**
+  String get repoTotal;
+
+  /// No description provided for @repoUnique.
+  ///
+  /// In en, this message translates to:
+  /// **'Unique'**
+  String get repoUnique;
+
+  /// No description provided for @repoUniqueVisitors.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 unique visitor} other{{count} unique visitors}}'**
+  String repoUniqueVisitors(int count);
+
+  /// No description provided for @repoNoInsightData.
+  ///
+  /// In en, this message translates to:
+  /// **'No data is available for this section.'**
+  String get repoNoInsightData;
+
+  /// No description provided for @repoInsightsDataUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Insights data unavailable'**
+  String get repoInsightsDataUnavailable;
+
+  /// No description provided for @repoInsightsPermissionBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Some repository statistics are delayed or require push access. {error}'**
+  String repoInsightsPermissionBody(String error);
+
+  /// No description provided for @repoCommunityHealth.
+  ///
+  /// In en, this message translates to:
+  /// **'Community profile health: {percent}%'**
+  String repoCommunityHealth(int percent);
+
+  /// No description provided for @repoCodeOfConduct.
+  ///
+  /// In en, this message translates to:
+  /// **'Code of conduct'**
+  String get repoCodeOfConduct;
+
+  /// No description provided for @repoIssueTemplate.
+  ///
+  /// In en, this message translates to:
+  /// **'Issue template'**
+  String get repoIssueTemplate;
+
+  /// No description provided for @repoPullRequestTemplate.
+  ///
+  /// In en, this message translates to:
+  /// **'Pull request template'**
+  String get repoPullRequestTemplate;
 
   /// No description provided for @activityNoRecent.
   ///

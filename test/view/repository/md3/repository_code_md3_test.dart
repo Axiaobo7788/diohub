@@ -1,12 +1,13 @@
 import 'dart:async';
 
 import 'package:diohub/app/settings/settings_cache.dart';
+import 'package:diohub/common/markdown_view/markdown_body.dart';
 import 'package:diohub/l10n/app_localizations.dart';
+import 'package:diohub/models/repository_document.dart';
 import 'package:diohub/models/repository_preview.dart';
 import 'package:diohub/providers/code_browser/directory_last_commit_provider.dart';
 import 'package:diohub/providers/code_browser/directory_provider.dart';
 import 'package:diohub/providers/database_providers.dart';
-import 'package:diohub/providers/repository/repository_document_provider.dart';
 import 'package:diohub/providers/repository/repository_preview_provider.dart';
 import 'package:diohub/providers/repository/repository_providers.dart';
 import 'package:diohub/view/repository/md3/repository_code_md3.dart';
@@ -115,7 +116,13 @@ void main() {
                   ),
             ),
             repositoryDocumentProvider.overrideWith(
-              (final Ref ref, final RepositoryDocumentKey key) async => null,
+              (final Ref ref, final RepositoryDocumentKey key) async =>
+                  RepositoryDocument(
+                    kind: key.kind,
+                    branch: key.branch,
+                    content: '<h1>README spacing</h1><p>Repository body</p>',
+                    format: RepositoryDocumentFormat.html,
+                  ),
             ),
           ],
         );
@@ -184,6 +191,10 @@ void main() {
           findsNothing,
           reason: 'A directory type is not a last-commit message.',
         );
+        final SliverMarkdownBody markdown = tester.widget<SliverMarkdownBody>(
+          find.byType(SliverMarkdownBody),
+        );
+        expect(markdown.contentPadding, EdgeInsets.all(width < 600 ? 16 : 24));
         expect(tester.takeException(), isNull);
       },
     );

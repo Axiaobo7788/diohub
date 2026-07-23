@@ -27,6 +27,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get commonCancel => 'Cancel';
 
   @override
+  String get commonBack => 'Back';
+
+  @override
   String get commonSearch => 'Search';
 
   @override
@@ -395,6 +398,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get repoProjects => 'Projects';
 
   @override
+  String get repoWiki => 'Wiki';
+
+  @override
   String get repoSecurity => 'Security';
 
   @override
@@ -425,6 +431,39 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get repoSecurityPolicy => 'Security policy';
+
+  @override
+  String get wikiPages => 'Wiki pages';
+
+  @override
+  String wikiCurrentPage(String page) {
+    return 'Current page: $page';
+  }
+
+  @override
+  String get wikiNoPages => 'No wiki pages';
+
+  @override
+  String get wikiNoPagesDescription =>
+      'This repository does not have a wiki yet.';
+
+  @override
+  String get wikiCreateOnGitHub => 'Create wiki on GitHub';
+
+  @override
+  String get wikiOpenOnGitHub => 'Open wiki on GitHub';
+
+  @override
+  String get wikiLoadError => 'Could not load this repository wiki.';
+
+  @override
+  String get wikiPageLoadError => 'Could not open the wiki page.';
+
+  @override
+  String get issueDetailLoadError => 'Could not load this issue.';
+
+  @override
+  String get pullRequestDetailLoadError => 'Could not load this pull request.';
 
   @override
   String repoStarsCount(String count) {
@@ -913,6 +952,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get repoIssuePullLoadError => 'Could not load this list.';
 
   @override
+  String get publicGitHubRateLimitReached =>
+      'GitHub\'s unsigned API limit has been reached. Sign in for a higher limit or try again later.';
+
+  @override
   String get repoSignInRequired => 'Sign in to continue';
 
   @override
@@ -959,6 +1002,237 @@ class AppLocalizationsEn extends AppLocalizations {
     );
     return '$_temp0';
   }
+
+  @override
+  String get repoSecondaryTabSignInBody =>
+      'Repository Actions, Projects, Security, and Insights use authenticated GitHub endpoints.';
+
+  @override
+  String get repoAllWorkflows => 'All workflows';
+
+  @override
+  String get repoWorkflow => 'Workflow';
+
+  @override
+  String get repoWorkflowRun => 'Workflow run';
+
+  @override
+  String repoWorkflowRunsCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count workflow runs',
+      one: '1 workflow run',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get repoFilterBranch => 'Filter by branch';
+
+  @override
+  String get repoNoWorkflowRuns => 'No workflow runs found';
+
+  @override
+  String get repoNoWorkflowRunsBody =>
+      'This workflow has no runs matching the current branch filter.';
+
+  @override
+  String get repoActionsLoadError => 'Could not load workflow runs';
+
+  @override
+  String get repoWorkflowsLoadError => 'Could not load workflows';
+
+  @override
+  String get repoProjectsDescription =>
+      'Repository projects track work across issues and pull requests.';
+
+  @override
+  String get repoProjectsLoadError => 'Could not load projects';
+
+  @override
+  String get repoNoProjects => 'No projects found';
+
+  @override
+  String get repoNoProjectsBody =>
+      'This repository has no projects matching the selected order.';
+
+  @override
+  String get repoSortTitle => 'Title';
+
+  @override
+  String repoProjectItemsCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count items',
+      one: '1 item',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String repoUpdatedTime(String time) {
+    return 'Updated $time';
+  }
+
+  @override
+  String get repoSecurityOverview => 'Security overview';
+
+  @override
+  String get repoSecurityPolicyChecking =>
+      'Checking the default branch for a security policy.';
+
+  @override
+  String get repoSecurityPolicyMissing =>
+      'No SECURITY.md policy was found on the default branch.';
+
+  @override
+  String get repoSecurityPolicyUnavailable =>
+      'The security policy could not be checked.';
+
+  @override
+  String repoSecurityPolicyFound(String path) {
+    return 'Security policy detected at $path';
+  }
+
+  @override
+  String get repoDependabot => 'Dependabot';
+
+  @override
+  String get repoCodeScanning => 'Code scanning';
+
+  @override
+  String get repoSecretScanning => 'Secret scanning';
+
+  @override
+  String get repoNoDependabotAlerts => 'No Dependabot alerts';
+
+  @override
+  String get repoNoCodeScanningAlerts => 'No code scanning alerts';
+
+  @override
+  String get repoNoSecretScanningAlerts => 'No secret scanning alerts';
+
+  @override
+  String get repoSecurityNoAlertsBody =>
+      'No alerts are currently visible for this repository and account.';
+
+  @override
+  String get repoSecurityDataUnavailable => 'Security data unavailable';
+
+  @override
+  String repoSecurityPermissionBody(String error) {
+    return 'GitHub may require repository administration permission or the feature may be disabled. $error';
+  }
+
+  @override
+  String repoSecurityAlertsLoaded(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count visible alerts',
+      one: '1 visible alert',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get repoUnknownLocation => 'Unknown location';
+
+  @override
+  String get repoSecret => 'Secret';
+
+  @override
+  String get repoPulse => 'Pulse';
+
+  @override
+  String get repoTraffic => 'Traffic';
+
+  @override
+  String get repoCommunityStandards => 'Community standards';
+
+  @override
+  String get repoCommitActivity => 'Commit activity';
+
+  @override
+  String repoCommitsLastYear(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count commits in the last year',
+      one: '1 commit in the last year',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get repoNoContributors => 'No contributor statistics are available.';
+
+  @override
+  String get repoUnknownContributor => 'Unknown contributor';
+
+  @override
+  String repoContributionsCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count contributions',
+      one: '1 contribution',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get repoClones => 'Clones';
+
+  @override
+  String get repoTopReferrers => 'Top referrers';
+
+  @override
+  String get repoPopularContent => 'Popular content';
+
+  @override
+  String get repoTotal => 'Total';
+
+  @override
+  String get repoUnique => 'Unique';
+
+  @override
+  String repoUniqueVisitors(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count unique visitors',
+      one: '1 unique visitor',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get repoNoInsightData => 'No data is available for this section.';
+
+  @override
+  String get repoInsightsDataUnavailable => 'Insights data unavailable';
+
+  @override
+  String repoInsightsPermissionBody(String error) {
+    return 'Some repository statistics are delayed or require push access. $error';
+  }
+
+  @override
+  String repoCommunityHealth(int percent) {
+    return 'Community profile health: $percent%';
+  }
+
+  @override
+  String get repoCodeOfConduct => 'Code of conduct';
+
+  @override
+  String get repoIssueTemplate => 'Issue template';
+
+  @override
+  String get repoPullRequestTemplate => 'Pull request template';
 
   @override
   String get activityNoRecent => 'No recent activity';

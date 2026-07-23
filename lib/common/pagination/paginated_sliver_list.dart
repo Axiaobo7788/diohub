@@ -171,8 +171,8 @@ class PaginatedSliverList<R> extends StatelessWidget {
       ),
       Failed(:final error, :final direction)
           when direction == FetchDirection.forward =>
-        errorBuilder?.call(context, error, () => controller.fetchForward()) ??
-            _buildErrorTile(context, error, () => controller.fetchForward()),
+        errorBuilder?.call(context, error, () => controller.retryForward()) ??
+            _buildErrorTile(context, error, () => controller.retryForward()),
       _ => _ForwardPageTrigger(
         controller: controller,
         child: Padding(

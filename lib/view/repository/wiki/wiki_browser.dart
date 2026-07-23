@@ -1,218 +1,55 @@
+import 'dart:async';
+
 import 'package:diohub/app/app_logger.dart';
-import 'package:diohub/common/markdown_view/markdown_body.dart';
-import 'package:diohub/common/misc/async_error_widgets.dart';
-import 'package:diohub/common/misc/loading_indicator.dart';
-import 'package:diohub/common/misc/markdown_skeleton.dart';
-import 'package:diohub/common/misc/shimmer_scope.dart';
-import 'package:diohub/common/wrappers/sticky_glass_header.dart';
+import 'package:diohub/l10n/l10n.dart';
 import 'package:diohub_models/models/entity_ref.dart';
 import 'package:diohub_models/models/repositories/wiki_page.dart';
 import 'package:diohub_models/models/server_config.dart';
 import 'package:diohub/providers/repository/wiki_providers.dart';
 import 'package:diohub/providers/server_config_provider.dart';
-import 'package:diohub/style/app_spacing.dart';
+import 'package:diohub/view/repository/wiki/wiki_browser_view.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_vector_icons/flutter_vector_icons.dart';
-import 'package:sliver_tools/sliver_tools.dart';
 import 'package:url_launcher/url_launcher.dart';
 
-bool _isWikiLink(final String href, final RepoRef repoRef) {
-  try {
-    final Uri uri = Uri.parse(href);
-    final List<String> segments = uri.pathSegments;
-    if (segments.length >= 3 &&
-        segments.contains('wiki') &&
-        segments.indexOf('wiki') < segments.length - 1) {
-      final int wikiIdx = segments.indexOf('wiki');
-      return segments[0] == repoRef.owner &&
-          segments[1] == repoRef.name &&
-          wikiIdx == 2;
-    }
-  } catch (e, st) {
-    AppLogger.warning(
-      'Parsing wiki link href failed',
-      error: e,
-      stackTrace: st,
-      tag: 'WikiBrowser',
-    );
-  }
-  return false;
-}
-
-String? _slugFromWikiLink(final String href) {
-  try {
-    final Uri uri = Uri.parse(href);
-    final List<String> segments = uri.pathSegments;
-    final int wikiIdx = segments.indexOf('wiki');
-    if (wikiIdx >= 0 && wikiIdx < segments.length - 1) {
-      return segments.sublist(wikiIdx + 1).join('/');
-    }
-  } catch (e, st) {
-    AppLogger.warning(
-      'Extracting slug from wiki link failed',
-      error: e,
-      stackTrace: st,
-      tag: 'WikiBrowser',
-    );
-  }
-  return null;
-}
-
-/// Slivers for the Wiki tab for use inside the shell's scroll view.
+/// Slivers for the legacy repository shell.
+///
+/// The state and actions are the same as [WikiBrowser], so the legacy fallback
+/// does not become a second wiki implementation while migration is ongoing.
 List<Widget> buildWikiBrowserSlivers(
   final BuildContext context,
   final WidgetRef ref,
   final RepoRef repoRef,
 ) {
-  final AsyncValue<WikiBrowseState> wikiAsync =
-      ref.watch(wikiProvider(repoRef));
-
-  return wikiAsync.when(
-    loading: () => <Widget>[
-      SliverToBoxAdapter(
-        child: Padding(
-          padding: context.spacing.pagePadding,
-          child: const ShimmerScope(
-            child: MarkdownSkeleton(lineCount: 12),
-          ),
-        ),
-      ),
-    ],
-    error: (Object error, StackTrace stack) => <Widget>[
-      SliverFillRemaining(
-        child: CenteredError('Error loading wiki: $error'),
-      ),
-    ],
-    data: (WikiBrowseState state) {
-      if (state.pageStack.isEmpty) {
-        return <Widget>[
-          SliverFillRemaining(
-            child: _NoWikiWidget(
-              repoRef: repoRef,
-              serverConfig: ref.read(activeServerConfigProvider),
-              onRetry: () => ref.invalidate(wikiProvider(repoRef)),
-            ),
-          ),
-        ];
-      }
-
-      final WikiPage? current = state.currentPage;
-      final List<Widget> slivers = <Widget>[];
-
-      if (state.breadcrumbs.length > 1) {
-        slivers.add(
-          StickyGlassHeader(
-            child: SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              padding: EdgeInsets.symmetric(
-                horizontal: context.spacing.screenPadding.horizontal / 2,
-                vertical: 8,
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: List<Widget>.generate(
-                  state.breadcrumbs.length,
-                  (int i) {
-                    final String title = state.breadcrumbs[i];
-                    final bool isLast = i == state.breadcrumbs.length - 1;
-                    return Padding(
-                      padding: const EdgeInsets.only(right: 4),
-                      child: GestureDetector(
-                        onTap: isLast
-                            ? null
-                            : () => ref
-                                .read(wikiProvider(repoRef).notifier)
-                                .popToPage(i),
-                        child: Text(
-                          title,
-                          style:
-                              Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                    color: isLast
-                                        ? Theme.of(context).colorScheme.primary
-                                        : Theme.of(context)
-                                            .colorScheme
-                                            .onSurfaceVariant,
-                                    fontWeight: isLast
-                                        ? FontWeight.w600
-                                        : FontWeight.normal,
-                                  ),
-                        ),
-                      ),
-                    );
-                  },
-                ),
-              ),
-            ),
-          ),
-        );
-      }
-
-      if (state.isLoadingPage && current != null) {
-        slivers.add(
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: context.spacing.pagePadding,
-              child: const Center(
-                child: SizedBox(
-                child: const ButtonSpinner(size: 24),
-                ),
-              ),
-            ),
-          ),
-        );
-      }
-
-      if (current != null && !state.isLoadingPage) {
-        slivers.add(
-          SliverMarkdownBody(
-            current.renderedHtml,
-            imgSrcModifiers:
-                repoRef.wikiImgModifiers(ref.read(activeServerConfigProvider)),
-            contentPadding: context.spacing.listInset,
-            onTapLink: (String href) {
-              if (_isWikiLink(href, repoRef)) {
-                final String? slug = _slugFromWikiLink(href);
-                if (slug != null) {
-                  ref.read(wikiProvider(repoRef).notifier).pushPage(slug);
-                  return true;
-                }
-              }
-              return false;
-            },
-          ),
-        );
-      }
-
-      if (slivers.isEmpty) {
-        slivers.add(
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: context.spacing.pagePadding,
-              child: const ShimmerScope(
-                child: MarkdownSkeleton(lineCount: 8),
-              ),
-            ),
-          ),
-        );
-      }
-
-      return slivers;
-    },
+  final AsyncValue<WikiBrowseState> value = ref.watch(wikiProvider(repoRef));
+  return buildWikiViewSlivers(
+    context,
+    value: value,
+    repoRef: repoRef,
+    serverConfig: ref.read(activeServerConfigProvider),
+    onRetry: () => ref.invalidate(wikiProvider(repoRef)),
+    onOpenPage: (final String slug) =>
+        _openWikiPage(context, ref, repoRef, slug),
+    onPopPage: () => ref.read(wikiProvider(repoRef).notifier).popPage(),
+    onPopToPage: (final int index) =>
+        ref.read(wikiProvider(repoRef).notifier).popToPage(index),
+    onOpenGitHub: (final String? slug) =>
+        _openWikiOnGitHub(ref.read(activeServerConfigProvider), repoRef, slug),
   );
 }
 
-/// Native wiki browser for the repository Wiki tab.
-/// Loads the Home page by default; supports stack-based navigation with breadcrumbs.
+/// Native wiki browser for the Repository Wiki tab and standalone deep links.
 class WikiBrowser extends ConsumerStatefulWidget {
   const WikiBrowser({
     required this.repoRef,
     this.initialSlug,
+    this.onRefreshReady,
     super.key,
   });
 
   final RepoRef repoRef;
   final String? initialSlug;
+  final ValueChanged<Future<void> Function()?>? onRefreshReady;
 
   @override
   ConsumerState<WikiBrowser> createState() => _WikiBrowserState();
@@ -220,101 +57,120 @@ class WikiBrowser extends ConsumerStatefulWidget {
 
 class _WikiBrowserState extends ConsumerState<WikiBrowser>
     with AutomaticKeepAliveClientMixin {
+  bool _initialSlugPushed = false;
+
   @override
   bool get wantKeepAlive => true;
-
-  bool _initialSlugPushed = false;
 
   @override
   void initState() {
     super.initState();
-    if (widget.initialSlug != null) {
-      WidgetsBinding.instance.addPostFrameCallback((_) => _pushInitialSlug());
+    WidgetsBinding.instance.addPostFrameCallback((final _) {
+      widget.onRefreshReady?.call(_refresh);
+    });
+  }
+
+  @override
+  void didUpdateWidget(final WikiBrowser oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.repoRef != widget.repoRef ||
+        oldWidget.initialSlug != widget.initialSlug) {
+      _initialSlugPushed = false;
     }
   }
 
-  void _pushInitialSlug() {
-    if (_initialSlugPushed || !mounted) return;
-    final AsyncValue<WikiBrowseState> async =
-        ref.read(wikiProvider(widget.repoRef));
-    async.whenData((WikiBrowseState state) {
-      if (state.currentPage != null &&
-          state.currentPage!.slug != widget.initialSlug) {
-        ref
-            .read(wikiProvider(widget.repoRef).notifier)
-            .pushPage(widget.initialSlug!);
-        _initialSlugPushed = true;
+  @override
+  void dispose() {
+    widget.onRefreshReady?.call(null);
+    super.dispose();
+  }
+
+  Future<void> _refresh() async {
+    ref.invalidate(wikiProvider(widget.repoRef));
+    await ref.read(wikiProvider(widget.repoRef).future);
+  }
+
+  void _pushInitialSlugWhenReady(final AsyncValue<WikiBrowseState> value) {
+    final String? slug = widget.initialSlug;
+    if (_initialSlugPushed || slug == null || !value.hasValue) {
+      return;
+    }
+    final WikiPage? current = value.requireValue.currentPage;
+    _initialSlugPushed = true;
+    if (current?.slug == slug) {
+      return;
+    }
+    WidgetsBinding.instance.addPostFrameCallback((final _) {
+      if (mounted) {
+        _openPage(slug);
       }
     });
+  }
+
+  void _openPage(final String slug) {
+    unawaited(_openWikiPage(context, ref, widget.repoRef, slug));
   }
 
   @override
   Widget build(final BuildContext context) {
     super.build(context);
-    return MultiSliver(
-      children: buildWikiBrowserSlivers(context, ref, widget.repoRef),
+    final AsyncValue<WikiBrowseState> value = ref.watch(
+      wikiProvider(widget.repoRef),
+    );
+    _pushInitialSlugWhenReady(value);
+    final ServerConfig serverConfig = ref.watch(activeServerConfigProvider);
+    return CustomScrollView(
+      key: const PageStorageKey<String>('repository-wiki-scroll'),
+      physics: const AlwaysScrollableScrollPhysics(),
+      slivers: buildWikiViewSlivers(
+        context,
+        value: value,
+        repoRef: widget.repoRef,
+        serverConfig: serverConfig,
+        onRetry: () => ref.invalidate(wikiProvider(widget.repoRef)),
+        onOpenPage: _openPage,
+        onPopPage: () =>
+            ref.read(wikiProvider(widget.repoRef).notifier).popPage(),
+        onPopToPage: (final int index) =>
+            ref.read(wikiProvider(widget.repoRef).notifier).popToPage(index),
+        onOpenGitHub: (final String? slug) =>
+            _openWikiOnGitHub(serverConfig, widget.repoRef, slug),
+      ),
     );
   }
 }
 
-class _NoWikiWidget extends StatelessWidget {
-  const _NoWikiWidget({
-    required this.repoRef,
-    required this.serverConfig,
-    required this.onRetry,
-  });
+Future<void> _openWikiPage(
+  final BuildContext context,
+  final WidgetRef ref,
+  final RepoRef repoRef,
+  final String slug,
+) async {
+  try {
+    await ref.read(wikiProvider(repoRef).notifier).pushPage(slug);
+  } catch (error, stackTrace) {
+    AppLogger.warning(
+      'Opening wiki page failed',
+      error: error,
+      stackTrace: stackTrace,
+      tag: 'WikiBrowser',
+    );
+    if (context.mounted) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(context.l10n.wikiPageLoadError)));
+    }
+  }
+}
 
-  final RepoRef repoRef;
-  final ServerConfig serverConfig;
-  final VoidCallback onRetry;
-
-  @override
-  Widget build(final BuildContext context) => Center(
-        child: Padding(
-          padding: context.spacing.emptyStatePadding,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: <Widget>[
-              Icon(
-                Octicons.book,
-                size: 48,
-                color: Theme.of(context)
-                    .colorScheme
-                    .onSurfaceVariant
-                    .withOpacity(0.4),
-              ),
-              context.spacing.sectionGap,
-              Text(
-                'No wiki pages',
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      color: Theme.of(context).colorScheme.onSurfaceVariant,
-                    ),
-              ),
-              context.spacing.tightGap,
-              Text(
-                "This repository doesn't have a wiki yet.",
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: Theme.of(context)
-                          .colorScheme
-                          .onSurfaceVariant
-                          .withOpacity(0.7),
-                    ),
-                textAlign: TextAlign.center,
-              ),
-              context.spacing.sectionGap,
-              TextButton(
-                onPressed: () {
-                  final uri = repoRef.webUrlFor(serverConfig);
-                  launchUrl(Uri.parse('${uri.origin}${uri.path}/wiki'));
-                },
-                child: const Text('Create wiki on GitHub'),
-              ),
-              TextButton(
-                onPressed: onRetry,
-                child: const Text('Retry'),
-              ),
-            ],
-          ),
-        ),
-      );
+void _openWikiOnGitHub(
+  final ServerConfig serverConfig,
+  final RepoRef repoRef,
+  final String? slug,
+) {
+  final Uri repositoryUrl = repoRef.webUrlFor(serverConfig);
+  final String suffix = slug == null || slug.isEmpty ? '' : '/$slug';
+  unawaited(
+    launchUrl(repositoryUrl.replace(path: '${repositoryUrl.path}/wiki$suffix')),
+  );
 }

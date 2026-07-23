@@ -3,15 +3,21 @@ import 'dart:async';
 import 'package:auto_route/auto_route.dart';
 import 'package:diohub/common/bottom_sheet/bottom_sheets.dart';
 import 'package:diohub/common/nav_center/models/preset.dart';
+import 'package:diohub/common/misc/shimmer_bone.dart';
+import 'package:diohub/common/misc/shimmer_scope.dart';
 import 'package:diohub/common/search_overlay/search_filter_sheet.dart';
 import 'package:diohub/common/wrappers/search_scroll_wrapper.dart';
 import 'package:diohub/l10n/l10n.dart';
+import 'package:diohub/models/repositories/public_repository.dart';
 import 'package:diohub/models/search/quick_filter.dart';
 import 'package:diohub/models/search/search_scope.dart';
 import 'package:diohub/models/search/search_state.dart';
+import 'package:diohub/models/search/search_type_config.dart';
 import 'package:diohub/providers/search/search_state_notifier.dart';
 import 'package:diohub/routes/navigable_actions.dart';
 import 'package:diohub/routes/router.gr.dart';
+import 'package:diohub/services/repositories/public_repository_service.dart';
+import 'package:diohub/view/repository/md3/public_repository_issue_pull_search_adapter.dart';
 import 'package:diohub/view/repository/md3/repository_issue_pull_row.dart';
 import 'package:diohub_graphql/fragments/fragment_typedefs.dart';
 import 'package:diohub_graphql/queries/repositories/repo_typedefs.dart';
@@ -23,6 +29,7 @@ import 'package:diohub_models/models/search/sort_config.dart';
 import 'package:diohub_models/models/search/sort_configs.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 enum RepositoryIssuePullKind { issues, pullRequests }
 
@@ -126,6 +133,9 @@ class _RepositoryIssuePullMd3PageState
   static const double _issuesSidebarBreakpoint = 768;
   static const double _issuesSidebarWidth = 244;
   static const double _compactToolbarBreakpoint = 520;
+  static const double _compactToolbarTextScaleAllowance = 160;
+  static const double _detailedFiltersBreakpoint = 960;
+  static const double _detailedFiltersTextScaleAllowance = 480;
 
   late SearchScope _scope;
   late final TextEditingController _searchController;
@@ -134,8 +144,6 @@ class _RepositoryIssuePullMd3PageState
   String? _countQuery;
   int? _currentQueryCount;
   String? _pendingSearchText;
-  bool _searchReady = false;
-  int _searchInitializationGeneration = 0;
 
   bool get _isIssues => widget.kind == RepositoryIssuePullKind.issues;
 
@@ -147,7 +155,6 @@ class _RepositoryIssuePullMd3PageState
     super.initState();
     _scope = _createScope();
     _searchController = TextEditingController();
-    _scheduleDefaultPresetInitialization();
   }
 
   @override
@@ -158,7 +165,6 @@ class _RepositoryIssuePullMd3PageState
       _searchController.clear();
       _countQuery = null;
       _currentQueryCount = null;
-      _scheduleDefaultPresetInitialization();
     }
     if (oldWidget.onRefreshReady != widget.onRefreshReady) {
       widget.onRefreshReady?.call(_refreshList);
@@ -177,26 +183,6 @@ class _RepositoryIssuePullMd3PageState
     return _isIssues
         ? SearchScope.repoIssues(repo: widget.repoRef)
         : SearchScope.repoPulls(repo: widget.repoRef);
-  }
-
-  void _initializeDefaultPreset() {
-    ref
-        .read(searchStateNotifierProvider(_scope).notifier)
-        .initializeDefaultPreset(_presets);
-  }
-
-  void _scheduleDefaultPresetInitialization() {
-    _searchReady = false;
-    final int generation = ++_searchInitializationGeneration;
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted || generation != _searchInitializationGeneration) {
-        return;
-      }
-      _initializeDefaultPreset();
-      if (mounted) {
-        setState(() => _searchReady = true);
-      }
-    });
   }
 
   void _onSearchChanged(final String value) {
@@ -304,6 +290,35 @@ class _RepositoryIssuePullMd3PageState
     }
   }
 
+  SearchTypeConfig _publicSearchConfig(
+    final WidgetRef ref,
+    final SearchScope scope,
+  ) {
+    return SearchTypeConfig(
+      PublicRepositoryIssuePullSearchAdapter(ref, repo: widget.repoRef),
+    );
+  }
+
+  Future<void> _openListItem(final RepositoryIssuePullRowData row) async {
+    if (widget.signedIn) {
+      await row.ref.navigate(context, ref);
+      return;
+    }
+    final Uri? externalUrl = row.externalUrl;
+    if (externalUrl == null) {
+      return;
+    }
+    final bool launched = await launchUrl(
+      externalUrl,
+      mode: LaunchMode.externalApplication,
+    );
+    if (!launched && mounted) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(context.l10n.homeNoSystemBrowser)));
+    }
+  }
+
   bool get _creationEnabled {
     final RepoInfo? details = widget.details;
     if (!widget.signedIn) {
@@ -363,17 +378,22 @@ class _RepositoryIssuePullMd3PageState
       builder: (final BuildContext context, final BoxConstraints constraints) {
         final bool showIssuesSidebar =
             _isIssues && constraints.maxWidth >= _issuesSidebarBreakpoint;
+        final double availableContentWidth =
+            constraints.maxWidth -
+            (showIssuesSidebar ? _issuesSidebarWidth : 0);
+        final double textScale = MediaQuery.textScalerOf(context).scale(1) - 1;
+        final double additionalTextScale = textScale.clamp(0.0, 1.0);
         final Widget content = _buildListContent(
           context,
           searchState: searchState,
           compactToolbar:
-              constraints.maxWidth -
-                  (showIssuesSidebar ? _issuesSidebarWidth : 0) <
-              _compactToolbarBreakpoint,
+              availableContentWidth <
+              _compactToolbarBreakpoint +
+                  (_compactToolbarTextScaleAllowance * additionalTextScale),
           detailedFilters:
-              constraints.maxWidth -
-                  (showIssuesSidebar ? _issuesSidebarWidth : 0) >=
-              960,
+              availableContentWidth >=
+              _detailedFiltersBreakpoint +
+                  (_detailedFiltersTextScaleAllowance * additionalTextScale),
           closed: closed,
           openCount: closed
               ? repositoryOpenCount
@@ -453,83 +473,68 @@ class _RepositoryIssuePullMd3PageState
               ),
             ),
           ),
-          if (!widget.signedIn)
-            SliverPadding(
-              padding: EdgeInsets.fromLTRB(
-                horizontalPadding,
-                0,
-                horizontalPadding,
-                24,
-              ),
-              sliver: SliverFillRemaining(
-                hasScrollBody: false,
-                child: _RepositoryIssuePullSignIn(
-                  isIssues: _isIssues,
-                  onSignIn: _openCreate,
-                ),
-              ),
-            )
-          else if (!_searchReady)
-            SliverPadding(
-              padding: EdgeInsets.fromLTRB(
-                horizontalPadding,
-                0,
-                horizontalPadding,
-                24,
-              ),
-              sliver: const SliverToBoxAdapter(
-                child: _RepositoryIssuePullLoading(),
-              ),
-            )
-          else
-            SearchScrollSlivers(
-              _scope,
-              key: ValueKey<String>(
-                'repository-${widget.kind.name}-${widget.repoRef.fullName}',
-              ),
-              showRepoNameOnIssues: false,
-              showRepoOwner: false,
-              configFactory: widget.searchConfigFactory,
-              listPadding: EdgeInsets.fromLTRB(
-                horizontalPadding,
-                0,
-                horizontalPadding,
-                24,
-              ),
-              onRefreshReady: (final Future<void> Function()? callback) {
-                _refreshList = callback;
-                widget.onRefreshReady?.call(callback == null ? null : _refresh);
-              },
-              onTotalCountChanged: _onTotalCountChanged,
-              itemBuilder:
-                  (
-                    final BuildContext context,
-                    final Object item,
-                    final int index,
-                  ) {
-                    final RepositoryIssuePullRowData row =
-                        RepositoryIssuePullRowData.fromSearchResult(
-                          item as IssueOrPull,
-                        );
-                    return RepositoryIssuePullRow(
-                      data: row,
-                      onTap: () => unawaited(row.ref.navigate(context, ref)),
-                    );
-                  },
-              firstPageLoadingBuilder: (final BuildContext context) =>
-                  const _RepositoryIssuePullLoading(),
-              emptyBuilder: (final BuildContext context) =>
-                  _RepositoryIssuePullEmpty(
-                    isIssues: _isIssues,
-                    closed: closed,
-                  ),
-              errorBuilder:
-                  (
-                    final BuildContext context,
-                    final Object error,
-                    final VoidCallback retry,
-                  ) => _RepositoryIssuePullError(error: error, onRetry: retry),
+          SearchScrollSlivers(
+            _scope,
+            key: ValueKey<String>(
+              'repository-${widget.kind.name}-${widget.repoRef.fullName}-'
+              '${widget.signedIn ? 'authenticated' : 'public'}',
             ),
+            showRepoNameOnIssues: false,
+            showRepoOwner: false,
+            configFactory:
+                widget.searchConfigFactory ??
+                (widget.signedIn ? null : _publicSearchConfig),
+            querySessionCapacity: 4,
+            animateQueryChanges: true,
+            listPadding: EdgeInsets.fromLTRB(
+              horizontalPadding,
+              0,
+              horizontalPadding,
+              24,
+            ),
+            onRefreshReady: (final Future<void> Function()? callback) {
+              _refreshList = callback;
+              widget.onRefreshReady?.call(callback == null ? null : _refresh);
+            },
+            onTotalCountChanged: _onTotalCountChanged,
+            itemBuilder:
+                (
+                  final BuildContext context,
+                  final Object item,
+                  final int index,
+                ) {
+                  final RepositoryIssuePullRowData row = switch (item) {
+                    final IssueOrPull result =>
+                      RepositoryIssuePullRowData.fromSearchResult(result),
+                    final PublicRepositoryIssuePullSummary result =>
+                      RepositoryIssuePullRowData.fromPublicResult(result),
+                    _ => throw StateError(
+                      'Unsupported Repository issue/PR result: '
+                      '${item.runtimeType}',
+                    ),
+                  };
+                  return RepositoryIssuePullRow(
+                    data: row,
+                    onTap: () => unawaited(_openListItem(row)),
+                  );
+                },
+            firstPageLoadingBuilder: (final BuildContext context) =>
+                const _RepositoryIssuePullLoading(),
+            emptyBuilder: (final BuildContext context) =>
+                _RepositoryIssuePullEmpty(isIssues: _isIssues, closed: closed),
+            errorBuilder:
+                (
+                  final BuildContext context,
+                  final Object error,
+                  final VoidCallback retry,
+                ) => _RepositoryIssuePullError(
+                  message: publicGitHubErrorMessage(
+                    error,
+                    rateLimitMessage: context.l10n.publicGitHubRateLimitReached,
+                  ),
+                  onRetry: retry,
+                ),
+          ),
         ],
       ),
     );
@@ -1007,29 +1012,61 @@ class _RepositoryIssuePullLoading extends StatelessWidget {
 
   @override
   Widget build(final BuildContext context) {
-    final Color color = Theme.of(context).colorScheme.surfaceContainerHighest;
-    return Column(
+    final Color outline = Theme.of(context).colorScheme.outlineVariant;
+    return ShimmerScope(
       key: const ValueKey<String>('repository-issue-pull-loading'),
-      children: <Widget>[
-        for (int index = 0; index < 4; index++)
-          Container(
-            height: 76,
-            decoration: BoxDecoration(
-              color: color.withValues(alpha: index.isEven ? 0.45 : 0.28),
-              border: Border(
-                left: BorderSide(
-                  color: Theme.of(context).colorScheme.outlineVariant,
-                ),
-                right: BorderSide(
-                  color: Theme.of(context).colorScheme.outlineVariant,
-                ),
-                bottom: BorderSide(
-                  color: Theme.of(context).colorScheme.outlineVariant,
+      child: Column(
+        children: <Widget>[
+          for (int index = 0; index < 5; index++)
+            Container(
+              key: ValueKey<String>('repository-issue-pull-loading-row-$index'),
+              constraints: const BoxConstraints(minHeight: 76),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              decoration: BoxDecoration(
+                border: Border(
+                  left: BorderSide(color: outline),
+                  right: BorderSide(color: outline),
+                  bottom: BorderSide(color: outline),
                 ),
               ),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  const Padding(
+                    padding: EdgeInsets.only(top: 2),
+                    child: ShimmerBone.icon(size: 18),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: <Widget>[
+                        FractionallySizedBox(
+                          widthFactor: index.isEven ? 0.82 : 0.68,
+                          alignment: AlignmentDirectional.centerStart,
+                          child: const ShimmerBone.title(),
+                        ),
+                        const SizedBox(height: 8),
+                        Row(
+                          children: <Widget>[
+                            const Expanded(child: ShimmerBone.label()),
+                            const SizedBox(width: 8),
+                            const ShimmerBone.chip(width: 58, height: 18),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  const Padding(
+                    padding: EdgeInsets.only(top: 24),
+                    child: ShimmerBone.label(width: 28),
+                  ),
+                ],
+              ),
             ),
-          ),
-      ],
+        ],
+      ),
     );
   }
 }
@@ -1059,9 +1096,12 @@ class _RepositoryIssuePullEmpty extends StatelessWidget {
 }
 
 class _RepositoryIssuePullError extends StatelessWidget {
-  const _RepositoryIssuePullError({required this.error, required this.onRetry});
+  const _RepositoryIssuePullError({
+    required this.message,
+    required this.onRetry,
+  });
 
-  final Object error;
+  final String message;
   final VoidCallback onRetry;
 
   @override
@@ -1069,36 +1109,11 @@ class _RepositoryIssuePullError extends StatelessWidget {
     key: const ValueKey<String>('repository-issue-pull-error'),
     icon: Icons.error_outline,
     title: context.l10n.repoIssuePullLoadError,
-    body: error.toString(),
+    body: message,
     action: OutlinedButton.icon(
       onPressed: onRetry,
       icon: const Icon(Icons.refresh),
       label: Text(context.l10n.commonRetry),
-    ),
-  );
-}
-
-class _RepositoryIssuePullSignIn extends StatelessWidget {
-  const _RepositoryIssuePullSignIn({
-    required this.isIssues,
-    required this.onSignIn,
-  });
-
-  final bool isIssues;
-  final VoidCallback onSignIn;
-
-  @override
-  Widget build(final BuildContext context) => _RepositoryIssuePullStatePanel(
-    key: const ValueKey<String>('repository-issue-pull-sign-in'),
-    icon: Icons.lock_outline,
-    title: context.l10n.repoSignInRequired,
-    body: isIssues
-        ? context.l10n.repoSignInToBrowseIssues
-        : context.l10n.repoSignInToBrowsePullRequests,
-    action: FilledButton.icon(
-      onPressed: onSignIn,
-      icon: const Icon(Icons.login),
-      label: Text(context.l10n.commonSignIn),
     ),
   );
 }

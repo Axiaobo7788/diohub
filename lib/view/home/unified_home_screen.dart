@@ -435,7 +435,10 @@ class _PublicRepositoryBrowserState
           loading: () => const Center(child: CircularProgressIndicator()),
           error: (final Object error, final StackTrace stack) =>
               _HomeErrorPanel(
-                message: publicGitHubErrorMessage(error),
+                message: publicGitHubErrorMessage(
+                  error,
+                  rateLimitMessage: context.l10n.publicGitHubRateLimitReached,
+                ),
                 onRetry: () => ref.invalidate(
                   publicRepositoryContentsProvider(_contentsRequest),
                 ),
@@ -555,7 +558,11 @@ class _PublicRepositoryBrowserState
                 loading: () => const Center(child: CircularProgressIndicator()),
                 error: (final Object error, final StackTrace stack) =>
                     _HomeErrorPanel(
-                      message: publicGitHubErrorMessage(error),
+                      message: publicGitHubErrorMessage(
+                        error,
+                        rateLimitMessage:
+                            context.l10n.publicGitHubRateLimitReached,
+                      ),
                       onRetry: () =>
                           ref.invalidate(publicRepositoryFileProvider(request)),
                       onSignIn: widget.onSignIn,

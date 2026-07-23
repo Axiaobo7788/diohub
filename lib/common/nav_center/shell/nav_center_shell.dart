@@ -15,7 +15,6 @@ import 'package:diohub/common/nav_center/shell/nav_center_refresh_scope.dart';
 import 'package:diohub/common/nav_center/shell/tab_page_view.dart';
 import 'package:diohub/common/widgets/status_flag_row.dart';
 import 'package:diohub/common/wrappers/inner_box_scrolled_provider.dart';
-import 'package:diohub/providers/search/search_state_notifier.dart';
 import 'package:diohub/style/app_spacing.dart';
 import 'package:diohub/style/surface_style.dart';
 import 'package:diohub_premium_api/diohub_premium_api.dart';
@@ -46,6 +45,7 @@ class NavCenterShell extends ConsumerStatefulWidget {
   const NavCenterShell({
     required this.config,
     this.initialTabIndex = 0,
+    this.embedded = false,
     super.key,
   });
 
@@ -57,6 +57,12 @@ class NavCenterShell extends ConsumerStatefulWidget {
   /// tab. Default 0 (first visible tab). May be resolved from
   /// a deeplink path by the screen-level config builder.
   final int initialTabIndex;
+
+  /// Omits the legacy page scaffold when hosted inside the shared app chrome.
+  ///
+  /// The navigation center still owns its real tabs, overlays, and scroll
+  /// state; only the duplicate page surface and safe area are removed.
+  final bool embedded;
 
   /// Retrieve the nearest ancestor [NavCenterShellState].
   ///
@@ -108,13 +114,10 @@ class NavCenterShellState extends ConsumerState<NavCenterShell> {
       if (found >= 0) index = found;
     }
     _tabIndex = ValueNotifier<int>(index);
-    _tabIndex.addListener(_initializeActiveTabDefaultPreset);
-    _initializeActiveTabDefaultPreset();
   }
 
   @override
   void dispose() {
-    _tabIndex.removeListener(_initializeActiveTabDefaultPreset);
     _tabIndex.dispose();
     _isRefreshing.dispose();
     super.dispose();
@@ -131,20 +134,7 @@ class NavCenterShellState extends ConsumerState<NavCenterShell> {
         final current = _tabIndex.value;
         _tabIndex.value = current.clamp(0, length - 1);
       }
-      _initializeActiveTabDefaultPreset();
     }
-  }
-
-  void _initializeActiveTabDefaultPreset() {
-    if (visibleTabs.isEmpty) return;
-    final int index = _tabIndex.value.clamp(0, visibleTabs.length - 1);
-    final TabConfig tab = visibleTabs[index];
-    final scope = tab.searchScope;
-    final presets = tab.presets;
-    if (scope == null || presets == null || presets.isEmpty) return;
-    ref
-        .read(searchStateNotifierProvider(scope).notifier)
-        .initializeDefaultPreset(presets);
   }
 
   // ── Build ───────────────────────────────────────────────────────────
@@ -238,13 +228,15 @@ class NavCenterShellState extends ConsumerState<NavCenterShell> {
         child: content,
       );
     }
+    final Widget shell = widget.embedded
+        ? KeyedSubtree(
+            key: const ValueKey<String>('embedded-nav-center'),
+            child: content,
+          )
+        : Scaffold(body: SafeArea(bottom: false, child: content));
     return ref
         .read(premiumLifecycleProvider)
-        .buildAppOverlay(
-          context,
-          ref,
-          child: Scaffold(body: SafeArea(bottom: false, child: content)),
-        );
+        .buildAppOverlay(context, ref, child: shell);
   }
 
   Widget _buildMainContent(BuildContext context) {

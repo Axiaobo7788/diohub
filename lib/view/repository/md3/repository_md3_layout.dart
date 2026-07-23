@@ -48,4 +48,14 @@ abstract final class RepositoryMd3Layout {
       RepositoryWindowClass.expanded => const EdgeInsets.all(expandedPageInset),
     };
   }
+
+  static EdgeInsets documentContentPaddingFor(
+    final RepositoryWindowClass windowClass,
+  ) {
+    return switch (windowClass) {
+      RepositoryWindowClass.compact => const EdgeInsets.all(space16),
+      RepositoryWindowClass.medium ||
+      RepositoryWindowClass.expanded => const EdgeInsets.all(space24),
+    };
+  }
 }

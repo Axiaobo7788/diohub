@@ -1,10 +1,15 @@
 import 'dart:async';
 
+import 'package:diohub/app/settings/settings_cache.dart';
+import 'package:diohub/common/animations/motion.dart';
+import 'package:diohub/common/misc/shimmer_scope.dart';
 import 'package:diohub/common/search_overlay/search_type_adapter.dart';
 import 'package:diohub/common/wrappers/search_scroll_wrapper.dart';
 import 'package:diohub/l10n/app_localizations.dart';
+import 'package:diohub/models/repositories/public_repository.dart';
 import 'package:diohub/models/search/search_scope.dart';
 import 'package:diohub/models/search/search_type_config.dart';
+import 'package:diohub/providers/database_providers.dart';
 import 'package:diohub/providers/users/user_providers.dart';
 import 'package:diohub/view/repository/md3/repository_issue_pull_md3.dart';
 import 'package:diohub/view/repository/md3/repository_issue_pull_row.dart';
@@ -15,6 +20,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
+import 'package:sliver_tools/sliver_tools.dart' as sliver_tools;
 
 const RepoRef _repoRef = RepoRef(owner: 'octocat', name: 'hello-world');
 const PageSlice<Object> _emptyPage = PageSlice<Object>(
@@ -114,6 +120,11 @@ void main() {
       findsOneWidget,
     );
     expect(
+      find.byKey(const ValueKey<String>('repository-issue-pull-loading-row-0')),
+      findsOneWidget,
+    );
+    expect(find.byType(ShimmerScope), findsOneWidget);
+    expect(
       find.byKey(const ValueKey<String>('repository-issue-pull-empty')),
       findsNothing,
     );
@@ -147,6 +158,127 @@ void main() {
       findsOneWidget,
     );
     expect(find.text('There aren’t any open pull requests.'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  for (final RepositoryIssuePullKind kind in RepositoryIssuePullKind.values) {
+    testWidgets('${kind.name} Open and Closed retain query sessions', (
+      final WidgetTester tester,
+    ) async {
+      final _FakeSearchBackend backend = _FakeSearchBackend(<_SearchResponse>[
+        () async => _emptyPage,
+        () async => _emptyPage,
+      ]);
+
+      await _pumpPage(tester, width: 800, kind: kind, backend: backend);
+      await tester.pumpAndSettle();
+
+      expect(backend.fetchCalls, 1);
+      expect(backend.queries.single.split(' '), contains('is:open'));
+      expect(
+        tester
+            .widget<sliver_tools.SliverAnimatedSwitcher>(
+              find.byKey(
+                const ValueKey<String>('search-query-session-transition'),
+              ),
+            )
+            .duration,
+        kContentTransitionDuration,
+      );
+
+      await tester.tap(find.text('Closed'));
+      await tester.pumpAndSettle();
+
+      expect(backend.fetchCalls, 2);
+      expect(backend.queries.last.split(' '), contains('is:closed'));
+      expect(
+        find.byKey(const ValueKey<String>('repository-issue-pull-loading')),
+        findsNothing,
+      );
+
+      await tester.tap(find.text('Open'));
+      await tester.pumpAndSettle();
+
+      expect(
+        backend.fetchCalls,
+        2,
+        reason: 'returning to the retained Open session must not refetch',
+      );
+      expect(
+        find.byKey(const ValueKey<String>('repository-issue-pull-loading')),
+        findsNothing,
+      );
+      expect(tester.takeException(), isNull);
+    });
+  }
+
+  testWidgets('query session transition respects Reduced Motion', (
+    final WidgetTester tester,
+  ) async {
+    final _FakeSearchBackend backend = _FakeSearchBackend(<_SearchResponse>[
+      () async => _emptyPage,
+    ]);
+
+    await _pumpPage(
+      tester,
+      width: 800,
+      kind: RepositoryIssuePullKind.issues,
+      backend: backend,
+      disableAnimations: true,
+    );
+    await tester.pumpAndSettle();
+
+    expect(
+      tester
+          .widget<sliver_tools.SliverAnimatedSwitcher>(
+            find.byKey(
+              const ValueKey<String>('search-query-session-transition'),
+            ),
+          )
+          .duration,
+      Duration.zero,
+    );
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('query session retention is bounded to the four latest queries', (
+    final WidgetTester tester,
+  ) async {
+    final _FakeSearchBackend backend = _FakeSearchBackend(
+      List<_SearchResponse>.generate(
+        6,
+        (_) =>
+            () async => _emptyPage,
+      ),
+    );
+
+    await _pumpPage(
+      tester,
+      width: 800,
+      kind: RepositoryIssuePullKind.issues,
+      backend: backend,
+    );
+    await tester.pumpAndSettle();
+    final Finder searchField = find.byKey(
+      const ValueKey<String>('repository-issues-search'),
+    );
+
+    for (final String query in <String>['one', 'two', 'three', 'four']) {
+      await tester.enterText(searchField, query);
+      await tester.pump(const Duration(milliseconds: 300));
+      await tester.pumpAndSettle();
+    }
+    expect(backend.fetchCalls, 5);
+
+    await tester.enterText(searchField, '');
+    await tester.pump(const Duration(milliseconds: 300));
+    await tester.pumpAndSettle();
+
+    expect(
+      backend.fetchCalls,
+      6,
+      reason: 'the evicted original Open query must create a fresh session',
+    );
     expect(tester.takeException(), isNull);
   });
 
@@ -295,7 +427,7 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('signed-out page shows its limitation without fetching', (
+  testWidgets('signed-out page keeps the same list and uses public data', (
     final WidgetTester tester,
   ) async {
     final _FakeSearchBackend backend = _FakeSearchBackend(<_SearchResponse>[
@@ -313,15 +445,67 @@ void main() {
 
     expect(
       find.byKey(const ValueKey<String>('repository-issue-pull-sign-in')),
-      findsOneWidget,
+      findsNothing,
     );
-    expect(find.text('Sign in to continue'), findsOneWidget);
     expect(
       find.byKey(const ValueKey<String>('repository-issues-scroll')),
       findsOneWidget,
     );
-    expect(backend.fetchCalls, 0);
-    expect(backend.queries, isEmpty);
+    expect(backend.fetchCalls, 1);
+    _expectFirstQuery(backend, typeQualifier: 'type:issue');
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('signed-out page renders a real public REST row', (
+    final WidgetTester tester,
+  ) async {
+    final _FakeSearchBackend backend = _FakeSearchBackend(<_SearchResponse>[
+      () async => PageSlice<Object>(
+        items: <Object>[
+          PublicRepositoryIssuePullSummary(
+            nodeId: 'public-42',
+            repo: _repoRef,
+            number: 42,
+            title: 'Keep public issue titles unchanged',
+            author: 'octocat',
+            createdAt: DateTime.utc(2026, 7, 23, 8),
+            commentsCount: 3,
+            state: 'open',
+            labels: const <PublicRepositoryIssuePullLabel>[
+              PublicRepositoryIssuePullLabel(
+                name: 'public-api',
+                color: '0969da',
+              ),
+            ],
+            htmlUrl: Uri.parse(
+              'https://github.com/octocat/hello-world/issues/42',
+            ),
+            isPullRequest: false,
+            isDraft: false,
+            isMerged: false,
+          ),
+        ],
+        hasNextPage: false,
+        totalCount: 1,
+      ),
+    ]);
+
+    await _pumpPage(
+      tester,
+      width: 800,
+      kind: RepositoryIssuePullKind.issues,
+      backend: backend,
+      signedIn: false,
+    );
+    await tester.pumpAndSettle();
+
+    expect(
+      find.byKey(const ValueKey<String>('repository-list-row-issue-42')),
+      findsOneWidget,
+    );
+    expect(find.text('Keep public issue titles unchanged'), findsOneWidget);
+    expect(find.text('public-api'), findsOneWidget);
+    expect(backend.fetchCalls, 1);
     expect(tester.takeException(), isNull);
   });
 
@@ -462,6 +646,7 @@ Future<void> _pumpPage(
   required final RepositoryIssuePullKind kind,
   required final _FakeSearchBackend backend,
   final bool signedIn = true,
+  final bool disableAnimations = false,
   final Locale locale = const Locale('en'),
   final ValueChanged<Future<void> Function()?>? onRefreshReady,
 }) async {
@@ -500,12 +685,22 @@ Future<void> _pumpPage(
     ProviderScope(
       overrides: <Override>[
         currentUserProvider.overrideWithBuild((_, __) async => null),
+        settingsCacheProvider.overrideWithValue(
+          SettingsCache(<String, String>{}),
+        ),
       ],
       child: MaterialApp(
         locale: locale,
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         theme: ThemeData(useMaterial3: true),
+        builder: (final BuildContext context, final Widget? child) =>
+            MediaQuery(
+              data: MediaQuery.of(
+                context,
+              ).copyWith(disableAnimations: disableAnimations),
+              child: child!,
+            ),
         home: Scaffold(body: page),
       ),
     ),

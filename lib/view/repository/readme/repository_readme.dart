@@ -17,11 +17,13 @@ class RepositoryReadmeSliver extends ConsumerStatefulWidget {
     super.key,
     this.branch,
     this.repoFullName,
+    this.contentPadding,
   });
 
   final AsyncValue<String?> readmeAsync;
   final String? branch;
   final String? repoFullName;
+  final EdgeInsets? contentPadding;
 
   @override
   ConsumerState<RepositoryReadmeSliver> createState() =>
@@ -64,7 +66,7 @@ class RepositoryReadmeState extends ConsumerState<RepositoryReadmeSliver> {
           widget.branch,
           ref.read(activeServerConfigProvider),
         ),
-        contentPadding: context.spacing.listInset,
+        contentPadding: widget.contentPadding ?? context.spacing.listInset,
       );
     },
   );

@@ -3,6 +3,8 @@ import 'dart:convert';
 import 'package:dio/dio.dart';
 import 'package:diohub/app/api_handler/dio.dart';
 import 'package:diohub/models/repositories/public_repository.dart';
+import 'package:diohub_models/models/entity_ref.dart';
+import 'package:diohub_models/models/pagination/page_slice.dart';
 
 typedef PublicRepositoryGet =
     Future<Object?> Function(
@@ -10,7 +12,7 @@ typedef PublicRepositoryGet =
       Map<String, dynamic>? queryParameters,
     );
 
-/// Read-only GitHub REST access used by the shared public home.
+/// Read-only GitHub REST access used by public Home and Repository browsing.
 ///
 /// The production constructor reuses DioHub's existing REST handler, cache and
 /// error handling. Requests automatically use the active account when available
@@ -78,6 +80,43 @@ class PublicRepositoryService {
     return entries;
   }
 
+  Future<PageSlice<PublicRepositoryIssuePullSummary>> searchIssuesPulls({
+    required final RepoRef repo,
+    required final String query,
+    final int page = 1,
+    final int perPage = 20,
+  }) async {
+    final int normalizedPage = page < 1 ? 1 : page;
+    final int normalizedPerPage = perPage.clamp(1, 50);
+    final Object? data = await _get('/search/issues', <String, dynamic>{
+      'q': query.trim(),
+      'page': normalizedPage,
+      'per_page': normalizedPerPage,
+    });
+    final Map<String, dynamic> json = _expectMap(
+      data,
+      'issue and pull request search',
+    );
+    final Object? rawItems = json['items'];
+    if (rawItems is! List<dynamic>) {
+      throw const FormatException(
+        'GitHub returned invalid public issue or pull request results.',
+      );
+    }
+    final int totalCount = _intValue(json['total_count']);
+    final List<PublicRepositoryIssuePullSummary> items =
+        <PublicRepositoryIssuePullSummary>[
+          for (final Map<String, dynamic> item
+              in rawItems.whereType<Map<String, dynamic>>())
+            PublicRepositoryIssuePullSummary.fromJson(item, repo: repo),
+        ];
+    return PageSlice<PublicRepositoryIssuePullSummary>(
+      items: items,
+      hasNextPage: normalizedPage * normalizedPerPage < totalCount,
+      totalCount: totalCount,
+    );
+  }
+
   Future<String> readTextFile({
     required final String fullName,
     required final String ref,
@@ -139,13 +178,20 @@ class PublicRepositoryService {
   }
 }
 
-String publicGitHubErrorMessage(final Object error) {
+int _intValue(final Object? value) => value is int ? value : 0;
+
+String publicGitHubErrorMessage(
+  final Object error, {
+  final String? rateLimitMessage,
+}) {
   if (error is DioException) {
     final int? status = error.response?.statusCode;
     final Headers? headers = error.response?.headers;
     if ((status == 403 || status == 429) &&
         headers?.value('x-ratelimit-remaining') == '0') {
-      return 'GitHub\'s unsigned API limit has been reached. Sign in for a higher limit or try again later.';
+      return rateLimitMessage ??
+          "GitHub's unsigned API limit has been reached. "
+              'Sign in for a higher limit or try again later.';
     }
     final Object? data = error.response?.data;
     if (data is Map<String, dynamic> && data['message'] is String) {

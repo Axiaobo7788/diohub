@@ -6,6 +6,24 @@ library;
 
 import 'package:flutter/animation.dart';
 
+// Migrated MD3 page transitions: forward/back navigation.
+const Duration kPageTransitionDuration = Duration(milliseconds: 240);
+const Duration kPageTransitionReverseDuration = Duration(milliseconds: 220);
+const Curve kPageTransitionCurve = Curves.easeOutCubic;
+const Curve kPageTransitionReverseCurve = Curves.easeInCubic;
+const double kPageTransitionOffset = 16;
+
+// Migrated MD3 content transitions: async states and retained tab content.
+const Duration kContentTransitionDuration = Duration(milliseconds: 180);
+const Duration kTabTransitionDuration = Duration(milliseconds: 180);
+const Curve kContentTransitionCurve = Curves.easeOutCubic;
+const double kTabTransitionOffset = 8;
+const double kTabTransitionStartOpacity = 0.94;
+
+// Static skeletons use this only when neither the app nor the platform asks
+// for Reduced Motion.
+const Duration kSkeletonPulseDuration = Duration(milliseconds: 900);
+
 // State transitions: bool flips (show/hide, float/unfloat, glass on/off)
 // Examples: tab bar visibility, glass header padding, elevation tint
 const Duration kStateDuration = Duration(milliseconds: 300);
