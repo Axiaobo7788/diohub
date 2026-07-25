@@ -1,6 +1,7 @@
 import 'package:diohub/app/app_logger.dart';
 import 'package:diohub/common/markdown_view/builders/markdown_image_builder.dart';
 import 'package:diohub/common/markdown_view/extensions/markdown_extensions.dart';
+import 'package:diohub/common/markdown_view/markdown_render_artifact.dart';
 import 'package:diohub/common/misc/floating_glass_pill.dart';
 import 'package:diohub/common/misc/markdown_skeleton.dart';
 import 'package:diohub/common/misc/shimmer_scope.dart';
@@ -14,10 +15,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_sticky_header/flutter_sticky_header.dart';
 import 'package:flutter_widget_from_html/flutter_widget_from_html.dart';
 import 'package:html/dom.dart' as dom;
-import 'package:html/parser.dart';
 import 'package:sliver_tools/sliver_tools.dart';
-
-final RegExp _reIdSafe = RegExp(r'[^0-9a-zA-Z-]+');
 
 /// Typedef for image source modifiers
 typedef MarkdownImgSrcModifiers = String Function(MarkdownImgSrcData srcData);
@@ -111,44 +109,17 @@ mixin MarkdownParserMixin {
   /// Parse HTML document, inject heading IDs, and extract heading list
   ({dom.Document doc, List<({String text, String id, int level})> headings})
   parseMarkdownDoc(final String htmlContent) {
-    final dom.Document document = parse(htmlContent);
-    final List<String> tags = <String>['h1', 'h2', 'h3', 'h4', 'h5', 'h6'];
-
-    // Add IDs to all headings
-    for (final String element in tags) {
-      final List<dom.Element> elements = document.getElementsByTagName(element);
-      addHeadingIds(elements);
-    }
-
-    // Extract all headings
-    final List<({String id, int level, String text})> headings =
-        <({String text, String id, int level})>[];
-    final List<dom.Element> allHeadingElements = document.querySelectorAll(
-      'h1, h2, h3, h4, h5, h6',
+    final ParsedMarkdownDocument result = const MarkdownArtifactParser()
+        .parseDocument(htmlContent);
+    return (
+      doc: result.document,
+      headings: result.headings
+          .map(
+            (final MarkdownHeading heading) =>
+                (text: heading.text, id: heading.id, level: heading.level),
+          )
+          .toList(growable: false),
     );
-
-    for (final dom.Element headingElement in allHeadingElements) {
-      final String text = headingElement.text.trim();
-      if (text.isNotEmpty) {
-        final String id = headingElement.attributes['id'] ?? '';
-        final int level = int.parse(headingElement.localName!.substring(1));
-        headings.add((text: text, id: id, level: level));
-      }
-    }
-
-    return (doc: document, headings: headings);
-  }
-
-  /// Inject IDs into heading elements
-  void addHeadingIds(final List<dom.Element> elements) {
-    for (final dom.Element node in elements) {
-      node.attributes.addAll(<Object, String>{
-        'id': node.text
-            .toLowerCase()
-            .replaceAll(' ', '-')
-            .replaceAll(_reIdSafe, ''),
-      });
-    }
   }
 
   /// Shared custom styles builder for HtmlWidget
@@ -310,6 +281,7 @@ class SliverMarkdownBody extends StatefulWidget {
     this.contentPadding,
     this.onTapLink,
     this.stickyHeadings = true,
+    this.artifact,
   });
 
   final String content;
@@ -320,6 +292,7 @@ class SliverMarkdownBody extends StatefulWidget {
   onHeadingsExtracted;
   final void Function(String anchorId)? onScrollToAnchor;
   final EdgeInsets? contentPadding;
+  final MarkdownRenderArtifact? artifact;
 
   /// Whether headings use the legacy nested sticky-header renderer.
   ///
@@ -364,25 +337,34 @@ class SliverMarkdownBodyState extends State<SliverMarkdownBody>
   @override
   void didUpdateWidget(covariant final SliverMarkdownBody oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.content != widget.content) {
+    if (oldWidget.content != widget.content ||
+        !identical(oldWidget.artifact, widget.artifact)) {
       _updateData(widget.content);
     }
   }
 
   void _updateData(final String data, {final bool defer = false}) {
     _anchorKeys.clear();
-
-    final ({
-      dom.Document doc,
-      List<({String id, int level, String text})> headings,
-    })
-    result = parseMarkdownDoc(data);
-    doc = result.doc;
-    _headings = result.headings;
+    final MarkdownRenderArtifact? artifact = widget.artifact;
+    if (artifact == null) {
+      final ({
+        dom.Document doc,
+        List<({String id, int level, String text})> headings,
+      })
+      result = parseMarkdownDoc(data);
+      doc = result.doc;
+      _headings = result.headings;
+    } else {
+      _headings = artifact.headings
+          .map(
+            (final MarkdownHeading heading) =>
+                (text: heading.text, id: heading.id, level: heading.level),
+          )
+          .toList(growable: false);
+    }
 
     // Create GlobalKeys for all headings
-    for (final ({String id, int level, String text}) heading
-        in result.headings) {
+    for (final ({String id, int level, String text}) heading in _headings) {
       if (heading.id.isNotEmpty && !_anchorKeys.containsKey(heading.id)) {
         _anchorKeys[heading.id] = GlobalKey();
       }
@@ -392,19 +374,20 @@ class SliverMarkdownBodyState extends State<SliverMarkdownBody>
     // creates one HtmlWidget per leaf section (base case at level > 6), plus
     // one per heading group that has no sub-headings. We over-estimate slightly
     // (headings + 1 for preamble) — extra keys are harmless.
-    final int sectionCount = (result.headings.length + 1).clamp(1, 256);
+    final int sectionCount =
+        artifact?.sections.length ?? (_headings.length + 1).clamp(1, 256);
     _resizeSectionKeys(sectionCount);
 
-    if (widget.onHeadingsExtracted != null && result.headings.isNotEmpty) {
+    if (widget.onHeadingsExtracted != null && _headings.isNotEmpty) {
       if (defer) {
         // Defer to avoid setState-during-build when called from initState.
         WidgetsBinding.instance.addPostFrameCallback((final _) {
           if (mounted) {
-            widget.onHeadingsExtracted!(result.headings);
+            widget.onHeadingsExtracted!(_headings);
           }
         });
       } else {
-        widget.onHeadingsExtracted!(result.headings);
+        widget.onHeadingsExtracted!(_headings);
       }
     }
   }
@@ -605,6 +588,11 @@ class SliverMarkdownBodyState extends State<SliverMarkdownBody>
     final int? sectionIndex,
   }) {
     if (nodes.isEmpty) return const SizedBox.shrink();
+    return _buildHtmlString(_nodesToHtml(nodes), sectionIndex: sectionIndex);
+  }
+
+  Widget _buildHtmlString(final String html, {final int? sectionIndex}) {
+    if (html.isEmpty) return const SizedBox.shrink();
 
     // Use pre-allocated key by index — stable across parent rebuilds.
     // If we exceed pre-allocated count (edge case), create on the fly.
@@ -616,8 +604,6 @@ class SliverMarkdownBodyState extends State<SliverMarkdownBody>
       sectionHtmlKey = GlobalKey<HtmlWidgetState>();
       _sectionHtmlKeys.add(sectionHtmlKey);
     }
-
-    final String html = _nodesToHtml(nodes);
 
     final HtmlWidget htmlWidget = HtmlWidget(
       '<div>$html</div>',
@@ -755,6 +741,18 @@ class SliverMarkdownBodyState extends State<SliverMarkdownBody>
     // Reset section index counter — _buildHtmlContent will increment it.
     _nextSectionIndex = 0;
     _nextHeadingIsFirst = true;
+
+    final MarkdownRenderArtifact? artifact = widget.artifact;
+    if (artifact != null) {
+      if (artifact.sections.isEmpty) {
+        return const SliverToBoxAdapter(child: SizedBox.shrink());
+      }
+      return SliverList.builder(
+        itemCount: artifact.sections.length,
+        itemBuilder: (final BuildContext context, final int index) =>
+            _buildHtmlString(artifact.sections[index], sectionIndex: index),
+      );
+    }
 
     final List<dom.Node> bodyNodes = doc.body?.nodes.toList() ?? <dom.Node>[];
 

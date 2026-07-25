@@ -4,12 +4,14 @@ import 'package:diohub/app/app_logger.dart';
 import 'package:diohub_graphql/fragments/fragment_typedefs.dart';
 import 'package:diohub_graphql/queries/search/search_discussions.graphql.dart';
 import 'package:diohub_graphql/queries/search/search_issues_pulls.graphql.dart';
+import 'package:diohub_graphql/queries/search/search_repository_issue_pulls.graphql.dart';
 import 'package:diohub_graphql/queries/search/search_repositories.graphql.dart';
 import 'package:diohub_graphql/queries/search/search_users.graphql.dart';
 import 'package:diohub_graphql/queries/users/user_search_mention.graphql.dart';
 import 'package:diohub/common/search_overlay/filters.dart';
 import 'package:diohub/models/filters/custom_filter.dart';
 import 'package:diohub/models/commits/commit_list_item_model.dart';
+import 'package:diohub/models/repositories/repository_issue_pull_summary.dart';
 import 'package:diohub_models/models/search/code_search_result.dart';
 import 'package:diohub/models/search/search_scope.dart';
 import 'package:diohub_models/models/search/issue_or_pull.dart';
@@ -25,6 +27,7 @@ import 'package:diohub_models/models/users/profile_card_input.dart'
         ProfileCardInputUser;
 import 'package:diohub_models/models/pagination/paginated_result.dart'
     show PaginatedResult;
+import 'package:diohub_models/models/entity_ref.dart';
 import 'package:diohub/services/base/base_service.dart';
 import 'package:diohub/services/base/rest_search_helpers.dart';
 import 'package:lens_annotations/lens_annotations.dart';
@@ -180,6 +183,142 @@ final class SearchService extends BaseService {
     );
 
     return PaginatedResult<IssueOrPull>(
+      items: items,
+      hasNextPage: search.pageInfo.hasNextPage,
+      endCursor: search.pageInfo.endCursor,
+      totalCount: search.issueCount,
+    );
+  }
+
+  /// Fetch the compact projection used only by Repository Issues/PR lists.
+  ///
+  /// Global search deliberately keeps [searchIssuesPulls], whose richer cards
+  /// need detail fields. This method shares the same service and transport but
+  /// avoids downloading bodies, review state, project items and other fields
+  /// that Repository list rows never render.
+  Future<PaginatedResult<RepositoryIssuePullSummary>>
+  searchRepositoryIssuePulls(
+    final RepoRef repo,
+    final String query, {
+    final int first = 20,
+    final String? after,
+  }) async {
+    final GQLResponse res = await gql.query(
+      documentNodeQuerysearchRepositoryIssuePulls,
+      Variables$Query$searchRepositoryIssuePulls(
+        query: query,
+        first: first,
+        after: after,
+      ).toJson(),
+    );
+
+    if (res.errors != null && res.errors!.isNotEmpty) {
+      AppLogger.warning(
+        'SearchService.searchRepositoryIssuePulls: '
+        'GraphQL errors: ${res.errors}',
+        tag: 'SearchService',
+      );
+    }
+    final Map<String, dynamic>? rawData = res.data;
+    if (rawData == null) {
+      throw StateError(
+        'Repository issue/PR search returned no data: ${res.errors}',
+      );
+    }
+
+    final Query$searchRepositoryIssuePulls data =
+        Query$searchRepositoryIssuePulls.fromJson(rawData);
+    final Query$searchRepositoryIssuePulls$search search = data.search;
+    final List<RepositoryIssuePullSummary> items =
+        <RepositoryIssuePullSummary>[];
+
+    for (final Query$searchRepositoryIssuePulls$search$nodes? node
+        in search.nodes ??
+            const <Query$searchRepositoryIssuePulls$search$nodes?>[]) {
+      switch (node) {
+        case final Query$searchRepositoryIssuePulls$search$nodes$$Issue issue:
+          items.add(
+            RepositoryIssuePullSummary(
+              nodeId: issue.id,
+              repo: repo,
+              number: issue.number,
+              title: issue.title,
+              author: issue.author?.login,
+              createdAt: issue.createdAt,
+              closedAt: issue.closedAt,
+              commentsCount: issue.comments.totalCount,
+              state: issue.issueState.name,
+              stateReason: issue.stateReason?.name,
+              labels:
+                  issue.labels?.nodes
+                      ?.whereType<
+                        Query$searchRepositoryIssuePulls$search$nodes$$Issue$labels$nodes
+                      >()
+                      .map(
+                        (
+                          final Query$searchRepositoryIssuePulls$search$nodes$$Issue$labels$nodes
+                          label,
+                        ) => RepositoryIssuePullLabelSummary(
+                          name: label.name,
+                          color: label.color,
+                        ),
+                      )
+                      .toList(growable: false) ??
+                  const <RepositoryIssuePullLabelSummary>[],
+              url: issue.url,
+              isPullRequest: false,
+              isDraft: false,
+              isMerged: false,
+            ),
+          );
+        case final Query$searchRepositoryIssuePulls$search$nodes$$PullRequest
+        pull:
+          items.add(
+            RepositoryIssuePullSummary(
+              nodeId: pull.id,
+              repo: repo,
+              number: pull.number,
+              title: pull.title,
+              author: pull.author?.login,
+              createdAt: pull.createdAt,
+              closedAt: pull.closedAt,
+              mergedAt: pull.mergedAt,
+              commentsCount: pull.comments.totalCount,
+              state: pull.pullRequestState.name,
+              labels:
+                  pull.labels?.nodes
+                      ?.whereType<
+                        Query$searchRepositoryIssuePulls$search$nodes$$PullRequest$labels$nodes
+                      >()
+                      .map(
+                        (
+                          final Query$searchRepositoryIssuePulls$search$nodes$$PullRequest$labels$nodes
+                          label,
+                        ) => RepositoryIssuePullLabelSummary(
+                          name: label.name,
+                          color: label.color,
+                        ),
+                      )
+                      .toList(growable: false) ??
+                  const <RepositoryIssuePullLabelSummary>[],
+              url: pull.url,
+              isPullRequest: true,
+              isDraft: pull.isDraft,
+              isMerged: pull.merged,
+            ),
+          );
+        case null:
+          break;
+        default:
+          AppLogger.warning(
+            'SearchService.searchRepositoryIssuePulls: '
+            'ignored ${node.runtimeType}',
+            tag: 'SearchService',
+          );
+      }
+    }
+
+    return PaginatedResult<RepositoryIssuePullSummary>(
       items: items,
       hasNextPage: search.pageInfo.hasNextPage,
       endCursor: search.pageInfo.endCursor,

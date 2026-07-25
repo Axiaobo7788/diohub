@@ -1,13 +1,13 @@
 # DioHub 技术债登记表
 
-最后更新：2026-07-23
+最后更新：2026-07-24
 
 ## 1. 用途与边界
 
 本文件登记已经有代码、测试、Profile 或稳定复现证据的问题。登记不等于授权立即重构；处理范围仍受
 [`development-constraints.md`](development-constraints.md) 和当轮用户任务约束。
 
-本轮审查基于 `develop` 分支、提交 `903e80ea` 的工作区代码。审查是只读静态审查，没有建立 Android
+本轮审查基于 `develop` 分支、提交 `324de833` 的工作区代码。审查是只读静态审查，没有建立 Android
 或 Linux Profile 性能基线，因此涉及耗时和掉帧的影响均标记为“待 Profile 验证”，不把代码形态直接
 写成已测量的性能结论。
 
@@ -64,7 +64,7 @@
 | 建议方案 | 已采用根级单一合并策略；后续组件只读取合并后的 `MediaQuery.disableAnimations`，不得自行反转。 |
 | 清理风险 | 根 `MediaQuery` 改动会影响全应用动画与现有测试时序。 |
 | 前置条件 | 根级组合矩阵已完成；路由、Tab、Drawer 的组件级行为仍由 TD-003 继续约束。 |
-| 回归验证 | `flutter test --concurrency=1 test/common/animations/app_motion_media_query_test.dart` 3/3 通过；全仓 227/227 通过。 |
+| 回归验证 | `flutter test --concurrency=1 test/common/animations/app_motion_media_query_test.dart` 3/3 通过；全仓 237/237 通过。 |
 | 触发条件 | 用户确认当前工作区并建立 Git 检查点后补写解决提交，转为 `Resolved`。 |
 
 ### TD-003 Motion Token 与路由/组件时序尚未收敛
@@ -76,13 +76,13 @@
 | 优先级 | P2 |
 | 位置 | `lib/common/animations/motion.dart`；`lib/common/animations/app_page_transition.dart`；`lib/routes/router.dart`；`lib/common/nav_center/shell/tab_page_view.dart`；Wiki/Repository 切换与异步状态 |
 | 症状 | 原 Home 路由内联 400ms 转场，旧详情 Tab、Wiki、异步状态和 Shimmer 分别维护时序；仓库其他旧页面仍存在未分类的视觉 Duration。 |
-| 证据 | 当前工作区已把 Home/Repository/Wiki/Issue/PR 路由统一为 240ms 前进、220ms 返回，把 Repository/旧详情 Tab/Wiki/异步状态集中为 180ms，并让 Shimmer 使用集中 Token；路由、Tab、异步状态及 Shimmer 的 Reduced Motion 测试通过。静态搜索仍会命中未迁移旧页面以及防抖/轮询等非视觉时序，因此不能标记全仓完成。 |
+| 证据 | 当前工作区已把 Home/Repository/Wiki/Issue/PR/Profile 路由统一为 240ms 前进、220ms 返回，把 Repository/Profile/旧详情 Tab/Wiki/异步状态集中为 180ms，并让 Shimmer 使用集中 Token；路由、Tab、异步状态及 Shimmer 的 Reduced Motion 测试通过。静态搜索仍会命中未迁移旧页面以及防抖/轮询等非视觉时序，因此不能标记全仓完成。 |
 | 用户影响 | 新页面与共享详情外壳已有一致转场和平台 Reduced Motion 行为；旧内容页仍可能表现出不同节奏。尚未测量帧影响。 |
 | 冲突来源 | 上游动画工具、自定义旧视觉与新 MD3 页面并存。 |
 | 建议方案 | 继续按页面迁移视觉时序；组件只读取集中 Token 与合并后的 `MediaQuery.disableAnimations`，防抖/轮询等业务时序保持独立。 |
 | 清理风险 | 直接缩短所有 Duration 会误改防抖、轮询、Toast 等业务时序。 |
 | 前置条件 | 新页面入口与核心切换测试已建立；旧页迁移仍需逐页行为测试。 |
-| 回归验证 | 页面转场 2/2、Reduced Motion 组件 2/2、旧详情 Tab 2/2、目标回归 54/54、全仓 227/227；Profile 转场记录仍未执行。 |
+| 回归验证 | 页面转场 2/2、Reduced Motion 组件 2/2、旧详情 Tab 2/2、既有目标回归 54/54、全仓 237/237；Profile 目标 10/10 与共享外壳回归 28/28 通过，但 Profile/Release 帧记录仍未执行。 |
 | 触发条件 | 下一张旧内容页迁移时同步收敛其视觉时序；建立解决提交且剩余视觉 Duration 完成分类后再转 `Resolved`。 |
 
 ### TD-004 Repository Tab 切换会销毁列表控制器
@@ -100,7 +100,7 @@
 | 建议方案 | 已采用每个 Repository 路由最多保活八个主 Tab 子树、每张 Issue/PR 列表最多四个查询会话的双重有界策略；跨仓库仍由路由实例隔离，不提升为全局缓存。后续增加主 Tab 或会话容量前必须重新评估生命周期边界。 |
 | 清理风险 | 用户访问全部主 Tab 后会同时保留其已加载页面状态，Issue/PR 各保留最多四个分页控制器；LRU 淘汰会在第五个不同查询后重新请求最旧查询，这是明确的内存/网络折中。低内存 Profile 尚未建立，不能据此声称内存影响已解决。 |
 | 前置条件 | 当前身份键、惰性构建和状态恢复 Widget Test 已建立；内存影响待 Profile。 |
-| 回归验证 | `repository_issue_pull_md3_test.dart` 20/20：Issues 与 Pull requests 都验证 Open→Closed→Open 只有两次请求、返回无首屏骨架，四会话 LRU、五行响应式 Shimmer、Reduced Motion、360/800/1440px、错误重试和刷新均通过；`search_state_notifier_test.dart` 8/8 验证六类 Issue/PR scope 在 Provider 创建时即有 Open；相关 Home/Repository/Tab 回归另有 26/26、全仓 227/227 通过。 |
+| 回归验证 | `repository_issue_pull_md3_test.dart` 20/20：Issues 与 Pull requests 都验证 Open→Closed→Open 只有两次请求、返回无首屏骨架，四会话 LRU、五行响应式 Shimmer、Reduced Motion、360/800/1440px、错误重试和刷新均通过；`search_state_notifier_test.dart` 8/8 验证六类 Issue/PR scope 在 Provider 创建时即有 Open；相关 Home/Repository/Tab 回归另有 26/26、全仓 237/237 通过。 |
 | 触发条件 | 用户确认当前工作区并建立 Git 检查点后补写解决提交，转为 `Resolved`；若后续扩展保活 Tab，先做内存验证。 |
 
 ### TD-005 分页刷新会在新结果成功前清空旧内容
@@ -118,7 +118,7 @@
 | 建议方案 | 已在公共 `PaginationController` 实现 SWR 与 refresh-aware retry；搜索范围变化使用明确的非保留刷新，不建立第二套分页状态机。 |
 | 清理风险 | controller 被多个页面复用，状态机变化可能影响筛选、乐观更新和 refresh 去重。 |
 | 前置条件 | 有数据刷新、失败重试、连续 refresh、旧请求 epoch 与查询变化测试均已建立。 |
-| 回归验证 | Pagination controller 4/4、Sliver 刷新 2/2、目标测试 54/54、全仓 227/227 通过。 |
+| 回归验证 | Pagination controller 4/4、Sliver 刷新 2/2、目标测试 54/54、全仓 237/237 通过。 |
 | 触发条件 | 用户确认当前工作区并建立 Git 检查点后补写解决提交，转为 `Resolved`。 |
 
 ### TD-006 Repository 首个正式查询携带多组非 Code 必需计数
@@ -144,17 +144,17 @@
 | 字段 | 内容 |
 | --- | --- |
 | ID | TD-007 |
-| 状态 | Proposed |
+| 状态 | In Progress（Repository 根 README、CONTRIBUTING、SECURITY 顶层解析及 README 图片下载/分类已接入 Runtime；其他路径待处理） |
 | 优先级 | P1 |
-| 位置 | `lib/common/markdown_view/markdown_body.dart:109-139,358-380,566-599`；`lib/view/repository/commits/widgets/changes_viewer.dart:28-70` |
-| 症状 | Markdown 在状态初始化/更新时同步解析完整 HTML；Diff 在 `build()` 中同步解析完整 patch，并把完整 Diff 放入单个 `SingleChildScrollView`。 |
-| 证据 | `parse(htmlContent)` 和 heading 遍历位于同步 `_updateData`；`parseUnifiedDiff(widget.patch)` 位于 `build`。Markdown 后续 Section 已使用 `SliverList.builder`，说明构建已部分惰性化，但解析仍是完整同步路径。 |
+| 位置 | `lib/common/markdown_view/markdown_render_artifact.dart`；`lib/common/markdown_view/markdown_body.dart`；`lib/common/markdown_view/readme_image_resource.dart`；`lib/providers/repository/repository_readme_resource.dart`；`lib/providers/repository/repository_document_resource.dart`；`lib/view/repository/commits/widgets/changes_viewer.dart` |
+| 症状 | Repository 根 README 原本会在 Widget 状态初始化/更新时重复同步解析完整 HTML；其他 Markdown 入口仍走同步完整解析。Diff 仍在 `build()` 中同步解析完整 patch，并把完整 Diff 放入单个 `SingleChildScrollView`。README 栅格最终像素解码仍由 Flutter `ImageCache` 完成，不属于 Runtime worker。 |
+| 证据 | 当前根 README、CONTRIBUTING 与 SECURITY 的顶层解析、标题提取和 section 切分由 compute lane 中的真实 worker isolate 完成并缓存 artifact；Code/Security 双消费者、auto-dispose 返回、显式刷新和缺失负缓存回归证明相同身份的源请求和顶层解析不重复。README 图片下载/原始字节/分类已进入 Runtime：分类跨真实 worker，但栅格只返回元数据，artifact 与 source 复用同一份 bytes；合法 8 MiB 栅格链落入默认预算，且持有最外层 artifact Lease 时递归依赖链不会被普通 LRU 或内存 trim 单独逐出。失败继续局部重试；每个 `HtmlWidget` section 仍有内部构建/解析，License/Wiki/Profile/旧 Markdown 入口未迁移，`parseUnifiedDiff(widget.patch)` 仍在 build。 |
 | 用户影响 | 大 README 或大 Diff 可能占用 UI isolate 并产生长帧；实际阈值和影响待 Profile。 |
 | 冲突来源 | 上游 Markdown/Diff 组件按完整文档模型实现，新页面只完成了部分 Sliver 化。 |
-| 建议方案 | 先构造可重复的大文档/大 Diff 基准，再缓存解析结果、避免 build 重算，并评估 isolate/分块解析和虚拟化。 |
+| 建议方案 | 保留当前 source → artifact 与图片 source → classification 边界；先 Profile 短生命周期 worker、长 README 和图片内存峰值，再决定常驻 worker pool 或其他正式 Markdown 入口迁移。另行构造大 Diff 基准，再评估 isolate/分块解析和虚拟化。 |
 | 清理风险 | HTML Widget、anchor、语法高亮和 Diff 行号依赖完整结构，分块可能破坏链接与布局。 |
-| 前置条件 | 代表性 fixture、内存与帧 trace、anchor/Diff 行为测试。 |
-| 回归验证 | 大/小 README 与 Diff 的 Profile 对比；anchor、图片、代码块、换行、复制和滚动测试。 |
+| 前置条件 | 根 README 与社区文档已有纯 Dart artifact、图片原始资源合同、请求/解析/下载次数、长文档 sliver 和三档正式入口回归；完整解决仍需代表性 fixture、内存与帧 trace、anchor/Diff 行为测试。 |
+| 回归验证 | 当前 Runtime/Markdown/Provider/Code 目标 69/69、全仓 294/294、Linux Debug build 通过；包含双消费者 Single Flight、社区文档失败重试/缺失负缓存/精确失效、递归依赖租约保护、预取准入/取消/预算、栅格 bytes 对象身份与 8 MiB 容量不变量回归。仍需大/小 README、图片与 Diff 的 Profile 对比，以及 anchor、图片、代码块、换行、复制和滚动测试。 |
 | 触发条件 | Profile 出现可复现长帧，或 Markdown/Diff 成为下一页面迁移的阻塞项时。 |
 
 ### TD-008 新 UI 大文件已混合多个独立职责
@@ -228,6 +228,42 @@
 | 前置条件 | Linux 插件能力矩阵；通知初始化测试；含真实账号键与 orphan state 的数据库回归。 |
 | 回归验证 | Linux Debug 日志无对应异常；通知/Watcher 启停、账号切换与数据库完整性测试；Android 行为不回归。 |
 | 触发条件 | Issue 详情 UI 人工验收后安排 Linux 平台专项，或错误开始阻塞仓库页真实验收时提前处理。 |
+
+### TD-012 主要只读信息流尚未进入统一调度与内存预算
+
+| 字段 | 内容 |
+| --- | --- |
+| ID | TD-012 |
+| 状态 | In Progress（首个 Repository Issues/PR forward page 生产试点已接入） |
+| 优先级 | P1 |
+| 位置 | `lib/providers`；`lib/view`；`lib/services`；`docs/resource-runtime-information-flow-inventory.md`；`docs/resource-runtime-integration-template.md` |
+| 症状 | Runtime 已覆盖 Repository Code/文档/图片及 Issues/PR 不可变列表页，但 Controller 仍展开持有全部已加载项目；Home、Repository 主信息、详情时间线、Actions、Profile、Notifications 等仍由页面级分页 Controller、Riverpod 定时保活或 Service 聚合分别管理。 |
+| 证据 | Issues/PR 正式入口现在按 scope + repository + transport + query + cursor/page + size 建立页身份，GraphQL/REST 仍复用原 Service；登录列表已从全局重卡片 fragment 分离为只含行字段的 GraphQL 投影，不再取正文、review/check/project/reaction 等详情数据，labels 从 100 收敛为 5。Runtime stale 首页立即回显并后台原位替换，隐藏 Tab sentinel 保持 0 请求。静态搜索仍有 67 处 `PaginationController<...>` 类型引用和 25 处 `keepAliveFor(ref)`。`allReviewThreadsMapProvider` 会分页到耗尽；单文件 patch 查找可能从第一页循环；workflow overview 对工作流列表执行多请求 `Future.wait`；Profile activity 会跨连接和年份聚合；Repository 完整首查询仍携带 6 组 Issues/PR 快捷计数。尚无 Profile 耗时结论。 |
+| 用户影响 | 高频页面可能重复请求、在辅助数据到齐前等待、产生网络扇出，或让 Controller 长期持有大列表；具体卡顿和内存影响仍待 Profile/Release 测量。 |
+| 冲突来源 | 上游按页面建立 Provider/Controller，ResourceRuntime 后加入且只做了窄试点；分页会话与页资源所有权此前被错误理解为二选一。 |
+| 建议方案 | 使用混合边界：`PaginationController` 保留 query/cursor/order/refresh/scroll，会话中的不可变 page result 以 query + cursor/page + size + scope 接入 Runtime；大列表 Controller 改为有界页窗口或轻量索引。优先试点 Repository Issues/PR，再拆 Repository baseline、PR 时间线/files/reviews、Home feed、Notifications 和 Actions 扇出。 |
+| 清理风险 | 直接替换全部 Controller 会破坏双向分页、滚动恢复、mutation overlay、公开 REST 回退和既有查询 LRU；只加 Runtime 缓存但继续无界保留实体则不会降低内存。 |
+| 前置条件 | 逐信息流填写接入模板；明确身份、页窗口、SWR、失效、Lease、预算和禁止事件；先建立请求次数与 Controller 身份失败回归。 |
+| 回归验证 | 本轮定向 43/43：通用 source 5/5、分页 sliver 3/3、轻量查询合同 1/1、正式 Runtime 入口 4/4、Repository Issues/PR 20/20、Tab transition + guest shell 10/10。已证明 Single Flight、fresh/stale 复用与后台替换、显式下一页、隐藏页 0 请求、刷新失败保留旧项、Open→Closed→Open、REST transport、账号 scope 与独立 Material 边界。尚待真实大仓库、LRU 后实体/Lease、360/800/1440px 人工复核及 Profile/Release 冷暖与内存对比。 |
+| 触发条件 | 先人工复核首个试点，再设计有界 Controller 页窗口、距离式预取和 mutation 失效；完成前不机械扩散到全仓分页。 |
+
+### TD-013 Repository 隐藏 Tab 的异步图片会污染活动 Tab 布局
+
+| 字段 | 内容 |
+| --- | --- |
+| ID | TD-013 |
+| 状态 | In Progress（失败回归与边界修复已更新，待当前工作区 Linux Debug 重新复核） |
+| 优先级 | P1 |
+| 位置 | `lib/common/markdown_view/widgets/readme_image_view.dart`；`lib/view/repository/md3/repository_md3_screen.dart`；`lib/view/repository/md3/repository_tab_transition.dart` |
+| 症状 | Code 的 README 图片尚在下载/分类时切换到 Actions，后台保留的 Code Sliver 会在图片完成后插入新的 `Image`，随后连续出现 `referenceBox.attached`、InheritedElement 和 Sliver 布局断言；表面看似 Actions 页面报错。 |
+| 证据 | 用户再次复现后，旧“Linux Debug 已无异常”结论按入口约束自动降级。当前 VM 的一次 PR→Issues 切换记录到 60 个框架异常，其中 31 个为 `InkFeature._paint/referenceBox.attached`，另有隐藏 `RawImage.updateRenderObject`；原转场把整个 `IndexedStack` 放入同一个透明 Material，导致隐藏 Tab 的 Ink feature 与已脱离的 reference box 共用绘制边界。Flutter 上游 issue #161718 仍说明隐藏保留分支异步增加子节点存在同类布局风险。 |
+| 用户影响 | 打开 Actions 时可能连续红屏、卡顿并污染整个 Repository 路由；Actions 自身即使已成功加载也无法可靠呈现。 |
+| 冲突来源 | Repository 为保留滚动/查询使用 `IndexedStack`，README 图片又可在隐藏期间异步完成；Flutter 3.44.7 的隐藏保留子树布局边界仍存在上游风险。 |
+| 建议方案 | 已让访问过的 Repository Tab 显式声明前台 `TickerMode`；图片仍持有 Runtime lease 并继续加载，但隐藏时冻结最后一次前台渲染结果，返回 Code 后再呈现最新结果；移除栅格内部 `LayoutBuilder`。本轮进一步把透明 Material 下沉为每个 Tab 独立边界，转场只移动保留栈，不再让隐藏和活动 Tab 共用 Ink feature 容器；隐藏分页 sentinel 同时停止请求。 |
+| 清理风险 | 不能直接卸载隐藏 Tab，否则会重新引入筛选、分页和滚动丢失；不能停止资源 lease，否则返回 Code 会重复下载。隐藏期间图片从 loading 到 data 的视觉变化被有意延迟到再次可见。 |
+| 前置条件 | 回归必须在同一保留栈中完成“Code 图片 loading → 切 Actions → 图片完成 → 返回 Code”，并断言隐藏阶段没有 `Image` 实体化、返回后真实图片存在、全程无 Flutter 异常。 |
+| 回归验证 | 本轮分页 sentinel 3/3、Tab motion 3/3、Repository guest shell 7/7 通过，并断言隐藏 sentinel 0 请求、两个已访问 Tab 各自存在 Material 边界。此前 README late raster/图片回归仍是历史证据；由于用户复现推翻旧运行结论，当前代码尚须重新执行同一 Linux Debug Code/Actions/Issues/PR 快速切换与 VM 错误流检查。 |
+| 触发条件 | 当前工作区 Linux Debug 复现序列无框架异常后才可转为 `Resolved`；若其他隐藏 Tab 仍触发同类布局更新，继续以具体异步叶节点补失败回归，不把整个保活栈退回销毁重建。 |
 
 ## 3. 本轮未确认成技术债的检查项
 

@@ -4,7 +4,6 @@ import 'package:diohub/common/notifications/notification_service.dart';
 import 'package:diohub_graphql/queries/repositories/repo_typedefs.dart';
 import 'package:diohub_models/models/entity_ref.dart';
 import 'package:diohub_models/models/git/file_change.dart';
-import 'package:diohub/providers/code_browser/directory_provider.dart';
 import 'package:diohub/providers/repository/commit_file_mutation_provider.dart';
 import 'package:diohub/providers/repository/repository_providers.dart';
 import 'package:diohub/style/app_spacing.dart';
@@ -34,8 +33,9 @@ class CreateFileScreen extends ConsumerStatefulWidget {
 class _CreateFileScreenState extends ConsumerState<CreateFileScreen> {
   final TextEditingController _fileNameController = TextEditingController();
   late final CodeLineEditingController _codeController;
-  final TextEditingController _commitMessageController =
-      TextEditingController(text: 'Add ');
+  final TextEditingController _commitMessageController = TextEditingController(
+    text: 'Add ',
+  );
 
   @override
   void initState() {
@@ -70,8 +70,9 @@ class _CreateFileScreenState extends ConsumerState<CreateFileScreen> {
       ref.read(notificationServiceProvider).error('Enter a file name');
       return;
     }
-    final String fullPath =
-        widget.parentPath.isEmpty ? name : '${widget.parentPath}/$name';
+    final String fullPath = widget.parentPath.isEmpty
+        ? name
+        : '${widget.parentPath}/$name';
     final String message = _commitMessageController.text.trim();
     if (message.isEmpty) {
       ref.read(notificationServiceProvider).error('Enter a commit message');
@@ -79,25 +80,27 @@ class _CreateFileScreenState extends ConsumerState<CreateFileScreen> {
     }
     final String? expectedHeadOid = _expectedHeadOid();
     if (expectedHeadOid == null) {
-      ref.read(notificationServiceProvider).error(
-            'Open this branch from the repository to create files',
-          );
+      ref
+          .read(notificationServiceProvider)
+          .error('Open this branch from the repository to create files');
       return;
     }
     if (widget.branchRef.length == 40) {
-      ref.read(notificationServiceProvider).error(
-            'Cannot create file when viewing a specific commit',
-          );
+      ref
+          .read(notificationServiceProvider)
+          .error('Cannot create file when viewing a specific commit');
       return;
     }
-    await ref.read(commitFileMutationProvider(widget.repoRef).notifier).commit(
+    await ref
+        .read(commitFileMutationProvider(widget.repoRef).notifier)
+        .commit(
           CommitFileParams(
             branchRef: widget.branchRef,
             expectedHeadOid: expectedHeadOid,
             message: message,
             additions: <FileChange>[
-            FileChange(path: fullPath, content: _codeController.text),
-            ],  
+              FileChange(path: fullPath, content: _codeController.text),
+            ],
           ),
         );
   }
@@ -113,13 +116,6 @@ class _CreateFileScreenState extends ConsumerState<CreateFileScreen> {
             onSubmit: _create,
             onSuccess: () {
               ref.read(notificationServiceProvider).success('File created');
-              ref.invalidate(directoryProvider(
-                (
-                  repo: widget.repoRef,
-                  branch: widget.branchRef,
-                  path: widget.parentPath
-                ),
-              ));
               if (context.mounted) Navigator.of(context).pop();
             },
             onError: (e) => ref

@@ -1,4 +1,5 @@
 import 'package:diohub/common/markdown_view/markdown_body.dart';
+import 'package:diohub/common/markdown_view/markdown_render_artifact.dart';
 import 'package:diohub/common/misc/markdown_skeleton.dart';
 import 'package:diohub/l10n/l10n.dart';
 import 'package:diohub/providers/server_config_provider.dart';
@@ -18,12 +19,14 @@ class RepositoryReadmeSliver extends ConsumerStatefulWidget {
     this.branch,
     this.repoFullName,
     this.contentPadding,
+    this.renderArtifact,
   });
 
   final AsyncValue<String?> readmeAsync;
   final String? branch;
   final String? repoFullName;
   final EdgeInsets? contentPadding;
+  final MarkdownRenderArtifact? renderArtifact;
 
   @override
   ConsumerState<RepositoryReadmeSliver> createState() =>
@@ -67,6 +70,7 @@ class RepositoryReadmeState extends ConsumerState<RepositoryReadmeSliver> {
           ref.read(activeServerConfigProvider),
         ),
         contentPadding: widget.contentPadding ?? context.spacing.listInset,
+        artifact: widget.renderArtifact,
       );
     },
   );

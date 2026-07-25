@@ -17,6 +17,12 @@ void main() {
           .dx,
       closeTo(kTabTransitionOffset, 0.01),
     );
+    expect(
+      find.byKey(const ValueKey<String>('repository-tab-material')),
+      findsNothing,
+      reason:
+          'the transition must not merge retained tabs into one ink boundary',
+    );
   });
 
   testWidgets('earlier Repository tab enters from the leading side', (

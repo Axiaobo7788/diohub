@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:auto_route/auto_route.dart';
 import 'package:diohub/common/animations/motion.dart';
 import 'package:diohub/common/misc/user_avatar.dart';
+import 'package:diohub/common/resource_runtime/resource_runtime.dart';
 import 'package:diohub/common/widgets/metadata_language_bar.dart';
 import 'package:diohub_graphql/fragments/fragment_typedefs.dart';
 import 'package:diohub_graphql/fragments/repo_card_fields.graphql.dart';
@@ -19,10 +20,12 @@ import 'package:diohub/models/repository_preview.dart';
 import 'package:diohub/l10n/relative_time.dart';
 import 'package:diohub/providers/account/account_provider.dart';
 import 'package:diohub/providers/dashboard/home_top_repositories_provider.dart';
+import 'package:diohub/providers/code_browser/repository_code_resource_presence_provider.dart';
 import 'package:diohub/providers/entity_store_notifier.dart';
 import 'package:diohub/providers/repository/repository_providers.dart';
 import 'package:diohub/providers/repository/repository_preview_provider.dart';
 import 'package:diohub/providers/repository/repository_preview_providers.dart';
+import 'package:diohub/providers/repository/repository_security_resource_presence_provider.dart';
 import 'package:diohub/routes/navigable_actions.dart';
 import 'package:diohub/routes/router.gr.dart';
 import 'package:diohub/view/repository/md3/repository_actions_md3.dart';
@@ -108,11 +111,37 @@ class _RepositoryMd3ScreenState extends ConsumerState<RepositoryMd3Screen>
         _selectedTabIndex = nextIndex;
         _visitedTabIndexes.add(nextIndex);
       });
+      _updateRepositoryResourcePresence(nextIndex);
       if (MediaQuery.maybeOf(context)?.disableAnimations ?? false) {
         _contentAnimation.value = 1;
       } else {
-        _contentAnimation.forward(from: 0);
+        unawaited(_contentAnimation.forward(from: 0));
       }
+    }
+  }
+
+  void _updateRepositoryResourcePresence(final int selectedIndex) {
+    final int codeIndex = RepositoryNavigationDestination.code.index;
+    if (_visitedTabIndexes.contains(codeIndex)) {
+      ref
+          .read(repositoryCodeResourcePresenceProvider(widget.repoRef).notifier)
+          .setPresence(
+            selectedIndex == codeIndex
+                ? ResourcePresence.visible
+                : ResourcePresence.retained,
+          );
+    }
+    final int securityIndex = RepositoryNavigationDestination.security.index;
+    if (_visitedTabIndexes.contains(securityIndex)) {
+      ref
+          .read(
+            repositorySecurityResourcePresenceProvider(widget.repoRef).notifier,
+          )
+          .setPresence(
+            selectedIndex == securityIndex
+                ? ResourcePresence.visible
+                : ResourcePresence.retained,
+          );
     }
   }
 
@@ -328,16 +357,24 @@ class _RepositoryMd3ScreenState extends ConsumerState<RepositoryMd3Screen>
               key: ValueKey<String>('repository-unvisited-tab-$index'),
             );
           }
-          return _buildVisitedTabBody(
-            index,
-            repo,
-            details: details,
-            signedIn: signedIn,
-            loading: loading,
-            error: error,
-            header: header,
-            inlineAbout: inlineAbout,
-            aside: aside,
+          return TickerMode(
+            key: ValueKey<String>('repository-retained-tab-$index'),
+            enabled: index == _selectedTabIndex,
+            child: Material(
+              key: ValueKey<String>('repository-tab-material-$index'),
+              type: MaterialType.transparency,
+              child: _buildVisitedTabBody(
+                index,
+                repo,
+                details: details,
+                signedIn: signedIn,
+                loading: loading,
+                error: error,
+                header: header,
+                inlineAbout: inlineAbout,
+                aside: aside,
+              ),
+            ),
           );
         },
       ),

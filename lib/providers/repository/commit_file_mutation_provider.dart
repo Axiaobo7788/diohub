@@ -4,6 +4,10 @@ library;
 
 import 'package:diohub/app/app_logger.dart';
 import 'package:diohub/common/riverpod/mutation_state.dart';
+import 'package:diohub/providers/code_browser/directory_resource.dart';
+import 'package:diohub/providers/repository/repository_document_resource.dart';
+import 'package:diohub/providers/repository/repository_readme_resource.dart';
+import 'package:diohub/providers/resource_runtime/resource_runtime_provider.dart';
 import 'package:diohub_models/models/entity_ref.dart';
 import 'package:diohub_models/models/git/file_change.dart';
 import 'package:diohub/providers/database_providers.dart';
@@ -43,13 +47,44 @@ class CommitFileMutationNotifier extends Notifier<MutationState<void>>
     if (state is MutationLoading<void>) return;
     state = MutationState.loading();
     try {
-      await _repoRef.gitDb(ref.read(apiClientProvider)).commitFileChanges(
-        branchRef: params.branchRef,
-        expectedHeadOid: params.expectedHeadOid,
-        message: params.message,
-        additions: params.additions,
-        deletions: params.deletions,
-      );
+      await _repoRef
+          .gitDb(ref.read(apiClientProvider))
+          .commitFileChanges(
+            branchRef: params.branchRef,
+            expectedHeadOid: params.expectedHeadOid,
+            message: params.message,
+            additions: params.additions,
+            deletions: params.deletions,
+          );
+      final scope = ref.read(activeResourceScopeProvider);
+      if (scope != null) {
+        final List<String> changedPaths = <String>[
+          ...params.additions.map((final FileChange change) => change.path),
+          ...params.deletions,
+        ];
+        final runtime = ref.read(resourceRuntimeProvider);
+        invalidateRepositoryDirectoriesForFiles(
+          runtime: runtime,
+          scope: scope,
+          repo: _repoRef,
+          branch: params.branchRef,
+          filePaths: changedPaths,
+        );
+        invalidateRepositoryReadmeForFiles(
+          runtime: runtime,
+          scope: scope,
+          repo: _repoRef,
+          branch: params.branchRef,
+          filePaths: changedPaths,
+        );
+        invalidateRepositoryDocumentsForFiles(
+          runtime: runtime,
+          scope: scope,
+          repo: _repoRef,
+          branch: params.branchRef,
+          filePaths: changedPaths,
+        );
+      }
       state = const MutationState.success(null);
       scheduleReset();
     } catch (e, st) {
@@ -68,5 +103,5 @@ class CommitFileMutationNotifier extends Notifier<MutationState<void>>
 
 final commitFileMutationProvider = NotifierProvider.autoDispose
     .family<CommitFileMutationNotifier, MutationState<void>, RepoRef>(
-  CommitFileMutationNotifier.new,
-);
+      CommitFileMutationNotifier.new,
+    );

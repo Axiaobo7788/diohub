@@ -263,6 +263,66 @@ class AppLocalizationsZh extends AppLocalizations {
   String get accountSignOutAllBody => '这会从此设备移除所有已保存的 DioHub 账号及其本地访问令牌。';
 
   @override
+  String get profileOverview => '概览';
+
+  @override
+  String get profileRepositories => '仓库';
+
+  @override
+  String get profileProjects => '项目';
+
+  @override
+  String get profilePackages => '软件包';
+
+  @override
+  String get profileStars => '星标';
+
+  @override
+  String get profileRefresh => '刷新个人资料';
+
+  @override
+  String get profileOptions => '个人资料选项';
+
+  @override
+  String get profileOpenLegacyLayout => '打开旧版个人资料';
+
+  @override
+  String get profileEdit => '编辑个人资料';
+
+  @override
+  String get profileFollow => '关注';
+
+  @override
+  String get profileUnfollow => '取消关注';
+
+  @override
+  String profileFollowersCount(int count) {
+    return '$count 位关注者';
+  }
+
+  @override
+  String profileFollowingCount(int count) {
+    return '正在关注 $count 人';
+  }
+
+  @override
+  String get profilePinned => '置顶';
+
+  @override
+  String get profileContributions => '贡献';
+
+  @override
+  String get profileContributionActivity => '贡献活动';
+
+  @override
+  String get profileContributionsLoadError => '无法加载贡献记录。';
+
+  @override
+  String profileLoadError(String login) {
+    return '无法加载 $login 的个人资料。';
+  }
+
+  @override
   String get changelogLatest => '最新产品动态';
 
   @override

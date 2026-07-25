@@ -57,7 +57,12 @@ class AppRouter extends RootStackRouter {
     AutoRoute(page: CommitInfoRoute.page),
     AutoRoute(page: ChangesViewer.page),
     AutoRoute(page: FileDiffRoute.page),
-    AutoRoute(page: UserProfileRoute.page),
+    CustomRoute<dynamic>(
+      page: UserProfileRoute.page,
+      duration: kPageTransitionDuration,
+      reverseDuration: kPageTransitionReverseDuration,
+      transitionsBuilder: buildAppPageTransition,
+    ),
     AutoRoute(page: NewIssueRoute.page),
     AutoRoute(page: CommentRoute.page),
     AutoRoute(page: NewPullRequestRoute.page),

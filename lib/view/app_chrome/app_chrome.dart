@@ -7,6 +7,7 @@ import 'package:diohub/l10n/language_picker.dart';
 import 'package:diohub/models/home_repository_item.dart';
 import 'package:diohub/models/repository_preview.dart';
 import 'package:diohub/providers/account/account_provider.dart';
+import 'package:diohub/providers/code_browser/directory_resource.dart';
 import 'package:diohub/providers/repository/repository_preview_provider.dart';
 import 'package:diohub/providers/repository/repository_providers.dart';
 import 'package:diohub/providers/settings/locale_provider.dart';
@@ -212,6 +213,14 @@ class _AppChromeState extends ConsumerState<AppChrome> {
             defaultBranch: repository.defaultBranch,
           ),
         );
+    final String? defaultBranch = repository.defaultBranch;
+    if (defaultBranch != null && defaultBranch.isNotEmpty) {
+      prefetchRepositoryRootDirectory(
+        ref,
+        repo: repoRef,
+        branch: defaultBranch,
+      );
+    }
     ref.read(repositoryProvider(repoRef));
     unawaited(repoRef.navigate(context, ref));
   }

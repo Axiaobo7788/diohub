@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:diohub/app/settings/settings_cache.dart';
 import 'package:diohub/common/markdown_view/markdown_body.dart';
+import 'package:diohub/common/markdown_view/markdown_render_artifact.dart';
 import 'package:diohub/l10n/app_localizations.dart';
 import 'package:diohub/models/repository_document.dart';
 import 'package:diohub/models/repository_preview.dart';
@@ -115,14 +116,9 @@ void main() {
                     authorName: 'octocat',
                   ),
             ),
-            repositoryDocumentProvider.overrideWith(
-              (final Ref ref, final RepositoryDocumentKey key) async =>
-                  RepositoryDocument(
-                    kind: key.kind,
-                    branch: key.branch,
-                    content: '<h1>README spacing</h1><p>Repository body</p>',
-                    format: RepositoryDocumentFormat.html,
-                  ),
+            repositoryReadmeArtifactProvider.overrideWith2(
+              (final RepositoryReadmeKey key) =>
+                  _TestRepositoryReadmeArtifactNotifier(key),
             ),
           ],
         );
@@ -195,8 +191,33 @@ void main() {
           find.byType(SliverMarkdownBody),
         );
         expect(markdown.contentPadding, EdgeInsets.all(width < 600 ? 16 : 24));
+        expect(
+          markdown.artifact,
+          isNotNull,
+          reason:
+              'The production Code README must consume the Runtime artifact.',
+        );
         expect(tester.takeException(), isNull);
       },
+    );
+  }
+}
+
+class _TestRepositoryReadmeArtifactNotifier
+    extends RepositoryReadmeArtifactNotifier {
+  _TestRepositoryReadmeArtifactNotifier(super.key);
+
+  @override
+  Future<RepositoryReadmeArtifact?> build() async {
+    const String content = '<h1>README spacing</h1><p>Repository body</p>';
+    return RepositoryReadmeArtifact(
+      document: RepositoryDocument(
+        kind: RepositoryDocumentKind.readme,
+        branch: 'main',
+        content: content,
+        format: RepositoryDocumentFormat.html,
+      ),
+      renderArtifact: const MarkdownArtifactParser().parse(content),
     );
   }
 }

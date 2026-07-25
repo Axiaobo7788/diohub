@@ -106,6 +106,45 @@
   "accountSignOut": "Sign out",
   "accountSignOutAllTitle": "Sign out of all accounts?",
   "accountSignOutAllBody": "This removes every saved DioHub account and its local access token from this device.",
+  "profileOverview": "Overview",
+  "profileRepositories": "Repositories",
+  "profileProjects": "Projects",
+  "profilePackages": "Packages",
+  "profileStars": "Stars",
+  "profileRefresh": "Refresh profile",
+  "profileOptions": "Profile options",
+  "profileOpenLegacyLayout": "Open legacy profile",
+  "profileEdit": "Edit profile",
+  "profileFollow": "Follow",
+  "profileUnfollow": "Unfollow",
+  "profileFollowersCount": "{count, plural, =1{1 follower} other{{count} followers}}",
+  "@profileFollowersCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "profileFollowingCount": "{count} following",
+  "@profileFollowingCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "profilePinned": "Pinned",
+  "profileContributions": "Contributions",
+  "profileContributionActivity": "Contribution activity",
+  "profileContributionsLoadError": "Could not load contributions.",
+  "profileLoadError": "Could not load {login}'s profile.",
+  "@profileLoadError": {
+    "placeholders": {
+      "login": {
+        "type": "String"
+      }
+    }
+  },
   "changelogLatest": "Latest from our changelog",
   "changelogEmpty": "No changelog entries are available.",
   "changelogViewAll": "View changelog →",

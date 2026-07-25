@@ -5,6 +5,7 @@ import 'package:diohub/models/github_changelog_item.dart';
 import 'package:diohub/models/home_repository_item.dart';
 import 'package:diohub/models/repository_preview.dart';
 import 'package:diohub/models/repositories/public_repository.dart';
+import 'package:diohub/providers/code_browser/directory_resource.dart';
 import 'package:diohub/providers/dashboard/github_changelog_provider.dart';
 import 'package:diohub/providers/repository/repository_providers.dart';
 import 'package:diohub/providers/repository/repository_preview_provider.dart';
@@ -156,6 +157,14 @@ class _UnifiedHomeScreenState extends ConsumerState<UnifiedHomeScreen> {
             defaultBranch: repository.defaultBranch,
           ),
         );
+    final String? defaultBranch = repository.defaultBranch;
+    if (defaultBranch != null && defaultBranch.isNotEmpty) {
+      prefetchRepositoryRootDirectory(
+        ref,
+        repo: repoRef,
+        branch: defaultBranch,
+      );
+    }
     // Start the repository request before the adaptive route transition. The
     // destination watches the same family key, so the transition animation and
     // network request can overlap instead of running strictly in sequence.

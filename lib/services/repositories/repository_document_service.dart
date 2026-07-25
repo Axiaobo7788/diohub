@@ -27,6 +27,26 @@ class RepositoryDocumentService {
   final RepositoryDocumentGet? _getOverride;
   final RepoRef repoRef;
 
+  static List<String> candidatePathsFor(final RepositoryDocumentKind kind) =>
+      switch (kind) {
+        RepositoryDocumentKind.contributing => const <String>[
+          '.github/CONTRIBUTING.md',
+          'CONTRIBUTING.md',
+          'docs/CONTRIBUTING.md',
+        ],
+        RepositoryDocumentKind.security => const <String>[
+          '.github/SECURITY.md',
+          'SECURITY.md',
+          'docs/SECURITY.md',
+        ],
+        RepositoryDocumentKind.readme ||
+        RepositoryDocumentKind.license => throw ArgumentError.value(
+          kind,
+          'kind',
+          'README and license content use their existing providers.',
+        ),
+      };
+
   /// Returns the first recognized document for [kind] on [branch].
   ///
   /// Missing candidate files are skipped. If all candidates return 404 the
@@ -36,24 +56,7 @@ class RepositoryDocumentService {
     required final RepositoryDocumentKind kind,
     required final String branch,
   }) async {
-    final List<String> paths = switch (kind) {
-      RepositoryDocumentKind.contributing => const <String>[
-        '.github/CONTRIBUTING.md',
-        'CONTRIBUTING.md',
-        'docs/CONTRIBUTING.md',
-      ],
-      RepositoryDocumentKind.security => const <String>[
-        '.github/SECURITY.md',
-        'SECURITY.md',
-        'docs/SECURITY.md',
-      ],
-      RepositoryDocumentKind.readme ||
-      RepositoryDocumentKind.license => throw ArgumentError.value(
-        kind,
-        'kind',
-        'README and license content use their existing providers.',
-      ),
-    };
+    final List<String> paths = candidatePathsFor(kind);
 
     for (final String path in paths) {
       try {

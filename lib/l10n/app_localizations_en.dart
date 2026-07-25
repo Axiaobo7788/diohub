@@ -267,6 +267,72 @@ class AppLocalizationsEn extends AppLocalizations {
       'This removes every saved DioHub account and its local access token from this device.';
 
   @override
+  String get profileOverview => 'Overview';
+
+  @override
+  String get profileRepositories => 'Repositories';
+
+  @override
+  String get profileProjects => 'Projects';
+
+  @override
+  String get profilePackages => 'Packages';
+
+  @override
+  String get profileStars => 'Stars';
+
+  @override
+  String get profileRefresh => 'Refresh profile';
+
+  @override
+  String get profileOptions => 'Profile options';
+
+  @override
+  String get profileOpenLegacyLayout => 'Open legacy profile';
+
+  @override
+  String get profileEdit => 'Edit profile';
+
+  @override
+  String get profileFollow => 'Follow';
+
+  @override
+  String get profileUnfollow => 'Unfollow';
+
+  @override
+  String profileFollowersCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count followers',
+      one: '1 follower',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String profileFollowingCount(int count) {
+    return '$count following';
+  }
+
+  @override
+  String get profilePinned => 'Pinned';
+
+  @override
+  String get profileContributions => 'Contributions';
+
+  @override
+  String get profileContributionActivity => 'Contribution activity';
+
+  @override
+  String get profileContributionsLoadError => 'Could not load contributions.';
+
+  @override
+  String profileLoadError(String login) {
+    return 'Could not load $login\'s profile.';
+  }
+
+  @override
   String get changelogLatest => 'Latest from our changelog';
 
   @override

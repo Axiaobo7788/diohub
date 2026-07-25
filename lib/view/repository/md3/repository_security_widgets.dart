@@ -6,7 +6,7 @@ class _SecurityPolicyCard extends StatelessWidget {
     required this.waitingForRepository,
   });
 
-  final AsyncValue<RepositoryDocument?>? value;
+  final AsyncValue<RepositoryDocumentArtifact?>? value;
   final bool waitingForRepository;
 
   @override
@@ -26,7 +26,7 @@ class _SecurityPolicyCard extends StatelessWidget {
         color: Theme.of(context).colorScheme.error,
       );
     } else {
-      final RepositoryDocument? document = value?.value;
+      final RepositoryDocument? document = value?.value?.document;
       subtitle = Text(
         document == null
             ? context.l10n.repoSecurityPolicyMissing

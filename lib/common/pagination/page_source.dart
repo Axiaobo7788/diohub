@@ -5,9 +5,35 @@ sealed class PageSource<T> {
 
   Future<PageSlice<T>> fetchForward(int count);
   void reset();
+
+  /// Releases source-owned listeners or leases.
+  ///
+  /// Most stateless sources have nothing to release. Runtime-backed sources
+  /// override this so a disposed query session cannot publish late updates.
+  void dispose() {}
 }
 
-sealed class ForwardSource<T> extends PageSource<T> {
+/// A page replacement emitted after stale data was returned immediately.
+final class ForwardPageReplacement<T> {
+  const ForwardPageReplacement({
+    required this.previous,
+    required this.replacement,
+  });
+
+  final PageSlice<T> previous;
+  final PageSlice<T> replacement;
+}
+
+/// Optional push seam for forward sources that implement stale-while-revalidate.
+abstract interface class ForwardPageReplacementSource<T> {
+  Stream<ForwardPageReplacement<T>> get pageReplacements;
+}
+
+/// Extensible forward-only source contract.
+///
+/// Implementations may live in focused bridge files while [PageSource]
+/// remains sealed to the pagination library hierarchy.
+abstract base class ForwardSource<T> extends PageSource<T> {
   const ForwardSource() : super();
 }
 
@@ -15,7 +41,7 @@ final class CursorForwardSource<T> extends ForwardSource<T> {
   CursorForwardSource({required this.fetch});
 
   final Future<CursorPage<T>> Function({required int first, String? after})
-      fetch;
+  fetch;
   String? _afterCursor;
 
   @override
@@ -36,13 +62,11 @@ final class CursorForwardSource<T> extends ForwardSource<T> {
 }
 
 final class PageNumberForwardSource<T> extends ForwardSource<T> {
-  PageNumberForwardSource({
-    required this.fetch,
-    this.startPage = 1,
-  }) : _page = startPage;
+  PageNumberForwardSource({required this.fetch, this.startPage = 1})
+    : _page = startPage;
 
   final Future<List<T>> Function({required int page, required int perPage})
-      fetch;
+  fetch;
   final int startPage;
   int _page;
 
@@ -50,10 +74,7 @@ final class PageNumberForwardSource<T> extends ForwardSource<T> {
   Future<PageSlice<T>> fetchForward(int count) async {
     final items = await fetch(page: _page, perPage: count);
     _page++;
-    return PageSlice<T>(
-      items: items,
-      hasNextPage: items.length >= count,
-    );
+    return PageSlice<T>(items: items, hasNextPage: items.length >= count);
   }
 
   @override
@@ -64,10 +85,7 @@ final class PageNumberForwardSource<T> extends ForwardSource<T> {
 
 /// Forward source that uses a single callback (e.g. mixed cursor/page logic).
 final class SliceForwardSource<T> extends ForwardSource<T> {
-  SliceForwardSource({
-    required this.fetch,
-    required this.resetState,
-  });
+  SliceForwardSource({required this.fetch, required this.resetState});
 
   final Future<PageSlice<T>> Function(int count) fetch;
   final void Function() resetState;
@@ -94,14 +112,10 @@ final class CursorBidirectionalSource<T> extends BidirectionalSource<T> {
     required this.anchor,
   });
 
-  final Future<CursorPage<T>> Function({
-    required int first,
-    String? after,
-  }) forward;
-  final Future<CursorPage<T>> Function({
-    required int last,
-    String? before,
-  }) backward;
+  final Future<CursorPage<T>> Function({required int first, String? after})
+  forward;
+  final Future<CursorPage<T>> Function({required int last, String? before})
+  backward;
   final Future<AnchorResult<T>> Function(String itemId) anchor;
 
   String? _afterCursor;

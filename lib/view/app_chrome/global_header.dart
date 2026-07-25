@@ -102,31 +102,56 @@ class GlobalHeaderTitle extends StatelessWidget {
   final Widget? trailing;
 
   @override
-  Widget build(final BuildContext context) => Row(
-    mainAxisSize: MainAxisSize.min,
-    children: <Widget>[
-      const AppLogoWidget(size: 28),
-      const SizedBox(width: 12),
-      if (!compact && owner != null) ...<Widget>[
-        Flexible(
-          child: Text(owner!, maxLines: 1, overflow: TextOverflow.ellipsis),
-        ),
-        const Padding(
-          padding: EdgeInsets.symmetric(horizontal: 8),
-          child: Text('/'),
-        ),
-      ],
-      Flexible(
-        child: Text(
-          title,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          style: Theme.of(
-            context,
-          ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
-        ),
-      ),
-      if (trailing != null) ...<Widget>[const SizedBox(width: 4), trailing!],
-    ],
+  Widget build(final BuildContext context) => LayoutBuilder(
+    builder: (final BuildContext context, final BoxConstraints constraints) {
+      final String semanticTitle = owner == null ? title : '$owner / $title';
+
+      // A compact AppBar can leave only the logo width after allocating its
+      // actions. Keeping the text row in that space overflows before ellipsis
+      // can apply, because the logo and gap already consume the full width.
+      if (constraints.maxWidth < 96) {
+        return Tooltip(
+          message: semanticTitle,
+          child: Semantics(
+            label: semanticTitle,
+            image: true,
+            child: const AppLogoWidget(size: 28),
+          ),
+        );
+      }
+
+      final bool showOwner =
+          !compact && owner != null && constraints.maxWidth >= 240;
+      return Row(
+        mainAxisSize: MainAxisSize.min,
+        children: <Widget>[
+          const AppLogoWidget(size: 28),
+          const SizedBox(width: 12),
+          if (showOwner) ...<Widget>[
+            Flexible(
+              child: Text(owner!, maxLines: 1, overflow: TextOverflow.ellipsis),
+            ),
+            const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 8),
+              child: Text('/'),
+            ),
+          ],
+          Flexible(
+            child: Text(
+              title,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: Theme.of(
+                context,
+              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+            ),
+          ),
+          if (trailing != null) ...<Widget>[
+            const SizedBox(width: 4),
+            trailing!,
+          ],
+        ],
+      );
+    },
   );
 }

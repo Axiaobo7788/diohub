@@ -602,6 +602,114 @@ abstract class AppLocalizations {
   /// **'This removes every saved DioHub account and its local access token from this device.'**
   String get accountSignOutAllBody;
 
+  /// No description provided for @profileOverview.
+  ///
+  /// In en, this message translates to:
+  /// **'Overview'**
+  String get profileOverview;
+
+  /// No description provided for @profileRepositories.
+  ///
+  /// In en, this message translates to:
+  /// **'Repositories'**
+  String get profileRepositories;
+
+  /// No description provided for @profileProjects.
+  ///
+  /// In en, this message translates to:
+  /// **'Projects'**
+  String get profileProjects;
+
+  /// No description provided for @profilePackages.
+  ///
+  /// In en, this message translates to:
+  /// **'Packages'**
+  String get profilePackages;
+
+  /// No description provided for @profileStars.
+  ///
+  /// In en, this message translates to:
+  /// **'Stars'**
+  String get profileStars;
+
+  /// No description provided for @profileRefresh.
+  ///
+  /// In en, this message translates to:
+  /// **'Refresh profile'**
+  String get profileRefresh;
+
+  /// No description provided for @profileOptions.
+  ///
+  /// In en, this message translates to:
+  /// **'Profile options'**
+  String get profileOptions;
+
+  /// No description provided for @profileOpenLegacyLayout.
+  ///
+  /// In en, this message translates to:
+  /// **'Open legacy profile'**
+  String get profileOpenLegacyLayout;
+
+  /// No description provided for @profileEdit.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit profile'**
+  String get profileEdit;
+
+  /// No description provided for @profileFollow.
+  ///
+  /// In en, this message translates to:
+  /// **'Follow'**
+  String get profileFollow;
+
+  /// No description provided for @profileUnfollow.
+  ///
+  /// In en, this message translates to:
+  /// **'Unfollow'**
+  String get profileUnfollow;
+
+  /// No description provided for @profileFollowersCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 follower} other{{count} followers}}'**
+  String profileFollowersCount(int count);
+
+  /// No description provided for @profileFollowingCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} following'**
+  String profileFollowingCount(int count);
+
+  /// No description provided for @profilePinned.
+  ///
+  /// In en, this message translates to:
+  /// **'Pinned'**
+  String get profilePinned;
+
+  /// No description provided for @profileContributions.
+  ///
+  /// In en, this message translates to:
+  /// **'Contributions'**
+  String get profileContributions;
+
+  /// No description provided for @profileContributionActivity.
+  ///
+  /// In en, this message translates to:
+  /// **'Contribution activity'**
+  String get profileContributionActivity;
+
+  /// No description provided for @profileContributionsLoadError.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not load contributions.'**
+  String get profileContributionsLoadError;
+
+  /// No description provided for @profileLoadError.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not load {login}\'s profile.'**
+  String profileLoadError(String login);
+
   /// No description provided for @changelogLatest.
   ///
   /// In en, this message translates to:

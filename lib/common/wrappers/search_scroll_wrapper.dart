@@ -26,11 +26,22 @@ typedef FilterFn = List<Object> Function(List<Object> items);
 /// and query state but render a page-specific row.
 typedef SearchResultItemBuilder =
     Widget Function(BuildContext context, Object item, int index);
+typedef SearchResultItemId = String Function(Object item);
 
 /// Test and integration seam for supplying a search adapter without replacing
 /// the global API client.
 typedef SearchTypeConfigFactory =
     SearchTypeConfig Function(WidgetRef ref, SearchScope scope);
+
+/// Optional source seam for search pages whose immutable pages are coordinated
+/// by ResourceRuntime while [SearchScrollSlivers] keeps the query session.
+typedef SearchPageSourceFactory =
+    PageSource<Object> Function(
+      WidgetRef ref,
+      SearchScope scope,
+      String query,
+      SearchTypeConfig config,
+    );
 
 /// Sliver-building search list for use inside a [CustomScrollView].
 ///
@@ -50,6 +61,9 @@ class SearchScrollSlivers extends ConsumerStatefulWidget {
     this.errorBuilder,
     this.listPadding,
     this.configFactory,
+    this.pageSourceFactory,
+    this.itemId,
+    this.sourceScopeKey,
     this.onRefreshReady,
     this.onTotalCountChanged,
     this.querySessionCapacity = 1,
@@ -75,6 +89,14 @@ class SearchScrollSlivers extends ConsumerStatefulWidget {
   errorBuilder;
   final EdgeInsetsGeometry? listPadding;
   final SearchTypeConfigFactory? configFactory;
+  final SearchPageSourceFactory? pageSourceFactory;
+  final SearchResultItemId? itemId;
+
+  /// Stable identity of the account/server scope captured by page sources.
+  ///
+  /// A scope transition disposes existing query controllers before they can
+  /// issue another request with the previous account's loader.
+  final Object? sourceScopeKey;
 
   /// When set, called with a callback that performs refresh once the internal
   /// pagination controller is ready. Used by [SearchListBody] for pull-to-refresh.
@@ -115,7 +137,8 @@ class _SearchScrollSliversState extends ConsumerState<SearchScrollSlivers> {
   @override
   void didUpdateWidget(covariant SearchScrollSlivers oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.scope != widget.scope) {
+    if (oldWidget.scope != widget.scope ||
+        oldWidget.sourceScopeKey != widget.sourceScopeKey) {
       _disposeSessions();
     }
     if (oldWidget.onRefreshReady != widget.onRefreshReady) {
@@ -173,47 +196,53 @@ class _SearchScrollSliversState extends ConsumerState<SearchScrollSlivers> {
           showRepoOwner: widget.showRepoOwner,
           showRepoNameOnIssues: widget.showRepoNameOnIssues,
         );
-    final PaginationController<Object, Object> controller =
-        PaginationController<Object, Object>(
-          source: SliceForwardSource<Object>(
-            fetch: (final int count) async {
-              final void Function(Map<String, dynamic>? rawData)? onCounts =
-                  widget.scope is TypedGlobalSearchScope
-                  ? (final Map<String, dynamic>? rawData) {
-                      ref
-                          .read(searchTypeCountsNotifierProvider.notifier)
-                          .mergeFromResponse(
-                            (widget.scope as TypedGlobalSearchScope).searchType,
-                            rawData,
-                          );
-                    }
-                  : null;
-              AppLogger.info(
-                'SearchScroll: fetching type=${key.searchType.name} '
-                'query="${key.query}"',
+    final PageSource<Object> source =
+        widget.pageSourceFactory?.call(ref, widget.scope, key.query, config) ??
+        SliceForwardSource<Object>(
+          fetch: (final int count) async {
+            final void Function(Map<String, dynamic>? rawData)? onCounts =
+                widget.scope is TypedGlobalSearchScope
+                ? (final Map<String, dynamic>? rawData) {
+                    ref
+                        .read(searchTypeCountsNotifierProvider.notifier)
+                        .mergeFromResponse(
+                          (widget.scope as TypedGlobalSearchScope).searchType,
+                          rawData,
+                        );
+                  }
+                : null;
+            AppLogger.info(
+              'SearchScroll: fetching type=${key.searchType.name} '
+              'query="${key.query}"',
+              tag: 'SearchScroll',
+            );
+            try {
+              return config.fetchSlice(
+                query: key.query,
+                count: count,
+                onRawResponse: onCounts,
+              );
+            } catch (e, st) {
+              AppLogger.error(
+                'SearchScroll: fetch failed for query="${key.query}"',
+                error: e,
+                stackTrace: st,
                 tag: 'SearchScroll',
               );
-              try {
-                return config.fetchSlice(
-                  query: key.query,
-                  count: count,
-                  onRawResponse: onCounts,
-                );
-              } catch (e, st) {
-                AppLogger.error(
-                  'SearchScroll: fetch failed for query="${key.query}"',
-                  error: e,
-                  stackTrace: st,
-                  tag: 'SearchScroll',
-                );
-                rethrow;
-              }
-            },
-            resetState: config.resetState,
-          ),
-          idOf: config.itemId,
+              rethrow;
+            }
+          },
+          resetState: config.resetState,
+        );
+    final PaginationController<Object, Object> controller =
+        PaginationController<Object, Object>(
+          source: source,
+          idOf: widget.itemId ?? config.itemId,
           filter: widget.filterFn,
           pageSize: 20,
+          // Retained Repository tabs still build inside IndexedStack. They
+          // must not initiate a new query until their TickerMode is visible.
+          autoFetch: TickerMode.valuesOf(context).enabled,
         );
     void notifyTotalCount() {
       if (mounted && _activeSessionKey == key) {
@@ -456,6 +485,9 @@ class SearchScrollWrapper extends ConsumerWidget {
     this.errorBuilder,
     this.listPadding,
     this.configFactory,
+    this.pageSourceFactory,
+    this.itemId,
+    this.sourceScopeKey,
     this.onTotalCountChanged,
     super.key,
   });
@@ -471,6 +503,9 @@ class SearchScrollWrapper extends ConsumerWidget {
   errorBuilder;
   final EdgeInsetsGeometry? listPadding;
   final SearchTypeConfigFactory? configFactory;
+  final SearchPageSourceFactory? pageSourceFactory;
+  final SearchResultItemId? itemId;
+  final Object? sourceScopeKey;
   final ValueChanged<int?>? onTotalCountChanged;
 
   @override
@@ -488,6 +523,9 @@ class SearchScrollWrapper extends ConsumerWidget {
           errorBuilder: errorBuilder,
           listPadding: listPadding,
           configFactory: configFactory,
+          pageSourceFactory: pageSourceFactory,
+          itemId: itemId,
+          sourceScopeKey: sourceScopeKey,
           onTotalCountChanged: onTotalCountChanged,
         ),
       ],

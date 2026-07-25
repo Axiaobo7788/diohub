@@ -1,10 +1,10 @@
 # DioHub Workbench 项目进度
 
-最后更新：2026-07-23
+最后更新：2026-07-24
 
-当前阶段：Phase 1 进行中（Workbench 边界已建立，GitHub 式 Repository Code、Issues/Pull requests 列表、Actions、Projects、Wiki、Security、Insights、共享 App Chrome、Device Flow、登录前后统一主页与新 UI i18n/Motion 基线已落地）
+当前阶段：Phase 1 进行中（Workbench 边界已建立，纯 Dart ResourceRuntime 第三阶段、Repository Code 文档/图片及 Issues/PR forward page 首个生产试点已落地；主要信息流全局接入清单与复用模板已建立；GitHub 式 Home、Repository 主标签、Profile Overview、共享 App Chrome、Device Flow 与新 UI i18n/Motion 基线已落地）
 
-UI 状态：应用无账号时也直接进入 MD3 主页，登录前后共用 GitHub Dashboard 式响应式信息架构；Home 与 Repository 已真正共用同一套 `AppChrome` 顶栏、导航抽屉和账户菜单，Repository 只追加自己的二级 Tab；登录后已接入真实 Top repositories、Events Feed 和官方 GitHub Changelog；Repository 的 Code、Issues、Pull requests、Actions、Projects、Wiki、Security、Insights 均已接入同一稳定外壳及正式数据源，公开访客也可通过无 Token REST 搜索浏览 Issues/PR 列表；Issue/PR 详情路由已接入同一全局与仓库上下文外壳，但标题、正文、评论时间线、Review/Checks 仍复用旧内容层，不能称为详情页迁移完成；新页面支持跟随系统 / English / 简体中文与集中 Reduced Motion；Home 打开 Repository 时已使用轻量预览预热，Notifications/Bookmarks、公开访客 Code、Issue/PR 详情内容层迁移和可解释推荐尚待完成
+UI 状态：应用无账号时也直接进入 MD3 主页，登录前后共用 GitHub Dashboard 式响应式信息架构；Home、Repository 与 Profile 主入口真正共用同一套 `AppChrome` 顶栏、导航抽屉和账户菜单，页面只追加自己的二级 Tab；Profile Overview 已接入真实身份字段、Profile README、Pinned repositories、贡献日历与活动时间线，Repositories/Projects/Packages/Stars 继续复用已有正式分页列表并在同一路由内保活，但这些列表的 GitHub 网页式视觉尚未逐页迁移；Repository 的 Code、Issues、Pull requests、Actions、Projects、Wiki、Security、Insights 均已接入同一稳定外壳及正式数据源；Issue/PR 详情内容层仍未完成；新页面支持跟随系统 / English / 简体中文与集中 Reduced Motion；Notifications/Bookmarks、公开访客 Code、Profile 次级列表视觉迁移、Issue/PR 详情内容层和可解释推荐尚待完成
 
 实施约束：所有后续改动遵循 [`docs/development-constraints.md`](development-constraints.md)。基础设施可用、占位页可打开或局部测试通过均不等于用户可见事项完成。
 
@@ -33,28 +33,32 @@ MVP 只验证一条纵向链路：
 | Flutter | 3.44.7 | Dart 3.12.2 |
 | Android SDK | Passed | SDK 36.1、Build Tools 36.1、NDK 28.2、JDK 21，licenses 已接受 |
 | Linux 系统依赖 | Simplified | 认证已移除 `flutter_inappwebview`/WPE 依赖；剩余 `webview_flutter` 为 HTML 渲染的 Android/macOS 间接依赖 |
-| Android Debug | Passed, needs latest rerun | 早先已生成 `app-dev-debug.apk`；统一主页变更后待低并发复验 |
-| Linux Debug | Passed | 2026-07-23 使用 `CMAKE_BUILD_PARALLEL_LEVEL=2 NINJAFLAGS=-j2 flutter build linux --debug --no-pub` 低并发复验成功，生成 `build/linux/x64/debug/bundle/diohub` |
+| Android Debug | Previous artifact only; current rerun stopped for memory safety | 2026-07-24 以单 worker、2 GiB Gradle 堆重跑；Kotlin 仍启动独立约 2 GiB daemon，338 秒后 Swap 耗尽且可用内存降至约 1.6 GiB，按低内存停止条件主动中止并停止 daemon。`app-dev-debug.apk` 仍是 2026-07-21 旧产物，不能作为当前工作区验证 |
+| Linux Debug | Passed | 2026-07-24 ResourceRuntime 3.3 社区文档迁移后再次使用 `flutter build linux --debug --no-pub` 串行复验成功，生成 `build/linux/x64/debug/bundle/diohub` |
 | Linux runtime smoke | Repository tabs rendered, existing platform errors remain | 2026-07-23 实际 `flutter run -d linux --debug`，从 Home 进入真实仓库并人工点击 Code、Actions、Projects、Security、Insights；工作流、ProjectsV2、SECURITY 检测、扫描告警、提交参与度和语言数据均返回真实状态。日志仍复现既有 Linux `flutter_display_mode` 缺插件、通知初始化缺 Linux settings、Watcher state 外键失败；本轮未把这些非 UI 问题静默算作通过 |
 | Windows Debug | Not locally verified | 共用 Dart/Flutter UI 和 Device Flow；需 Windows runner 实机构建 |
 | macOS Debug | Not locally verified | 共用 Dart/Flutter UI 和 Device Flow；Pod 锁已清理，需 macOS + CocoaPods 实机构建 |
-| Root tests | Passed | 2026-07-23 使用 `flutter test --no-pub --concurrency=1 --reporter compact` 单并发全套 227/227 通过；包含 Pagination SWR、Repository Tab/Wiki、Actions/Projects/Security/Insights、类型化深链、共享详情外壳、页面/Tab/查询 Reduced Motion、Issue/PR 四会话 LRU、文字缩放及公开访客 Issues/PR REST 回归 |
+| Root tests | Passed | 2026-07-24 使用 `flutter test --no-pub --concurrency=1` 单并发全套 294/294 通过；包含 ResourceRuntime 调度/真实 worker/依赖 revision/递归依赖租约保护/预取准入取消与即时预算、Code 全目录/README/CONTRIBUTING/SECURITY artifact、README 图片 8 MiB 容量与 bytes 身份/账号切换隔离、Profile MD3、Pagination SWR、Repository Tab/Wiki、Actions/Projects/Security/Insights、类型化深链、共享详情外壳、Reduced Motion、Issue/PR 四会话 LRU、文字缩放及公开访客 Issues/PR REST 回归 |
 | Unified home tests | Passed | 360px 未登录/已登录、800px、1440px、1.3×/2× 文字缩放、中文、未登录语言入口、左右展开态、Changelog 失败重试及滚动预加载 Widget Test 共 17/17 通过 |
 | Events 空仓库回归 | Passed | 真实 `repo: {}` ForkEvent 的解析、fork 目标降级展示数据、三级分组键与仓库专用消费者保护共 4/4 通过 |
 | Dashboard data tests | Passed | Top repositories 主源/兼容回退/账户隔离与 Changelog 请求/解析/官方链接限制共 11/11 通过 |
 | Repository shell tests | Passed | 开启 semantics 后的 360px、800px、1440px 响应式与简中外壳 Widget Test 4/4 通过 |
 | i18n + Home + Repository target tests | Passed | 2026-07-23 使用 `--concurrency=1` 串行验证 39/39；覆盖持久化、未登录语言入口、中英主页、Repository preview/文档数据层与稳定 loading 外壳 |
 | Home + Repository current target tests | Passed | 2026-07-23 使用 `--no-pub --concurrency=1` 串行复验 54/54；覆盖共享顶栏/抽屉、360/800/1440px Code/Issues/PR/Wiki、1.3×/2× 文字缩放、加载/空/错误、SWR 刷新失败重试、查询变化清除旧结果、生产 Repository 外壳认证三态、已访问 Tab 状态/滚动保持、共享详情外壳和 Reduced Motion |
-| Repository README regression | Passed | 36 个标题 + 28 个长代码块，semantics/滚动/无界 sliver 回归通过；Repository 路径不再构建 `MultiSliver` 或完整 `AppCodeEditor` |
+| Repository README regression | Passed | 36 个标题 + 28 个长代码块的 semantics/滚动/无界 sliver 回归通过；根 README 正式入口消费 Runtime artifact，fresh/retained 返回不重复请求或顶层解析，三档 Code 布局仍通过 |
 | Flutter error pipeline | Simplified | 删除 `FlutterError -> Talker -> Zone -> PlatformDispatcher` 重复上报与全局 sliver `ErrorWidget` 替换，恢复 Flutter/Sentry 单一框架错误路径 |
 | Public REST tests | Passed | 仓库搜索、目录排序/路径编码、文本/二进制判定、Issues/PR 搜索分页与本地化限流提示共 5/5 通过 |
 | Public Repository target tests | Passed | l10n、Public REST、Repository Issues/PR 与生产 guest shell 共 31/31 通过；覆盖真实 REST 行、无 GraphQL、刷新/错误/搜索、360px/800px/1440px 及 1.3×/2× 文字缩放 |
 | Repository secondary tabs target tests | Passed | Actions/Projects/Security/Insights 局部导航、360px/800px/1440px 登录边界、2× 文字、Reduced Motion、真实 Insights 比例图、SECURITY 文档候选路径及四类类型化深链共 18/18 通过 |
-| Changed-code analyze | No new error/warning | Motion、Repository/Wiki、Issue/PR 外壳此前定向分析为 0 error / 0 warning；本轮新增的 Actions/Projects/Security/Insights、深链及测试共 17 个文件再次定向分析为 0 error / 0 warning。全仓仍有大量旧 warning/info；Flutter 3.44.7 的 `flutter analyze --no-pub` 仍在扫描前将 LSP 初始化 JSON 截断于第 352 字符并以 255 退出 |
-| Repository loading/motion follow-up | Passed | 2026-07-23 已在当前环境串行运行：Repository Issues/PR 20/20、Search 默认状态 8/8、相关 Home/Repository/Tab 26/26，并在修复 README 测试容器依赖后完成全仓 227/227。覆盖路由/Tab/查询 Reduced Motion、README 留白、图片软失败、Open→Closed→Open 会话复用、四会话 LRU、五行响应式 Shimmer 和“返回列表无骨架/无新请求” |
-| Format check | Existing baseline fails | `dart format --output=none --set-exit-if-changed .` 只读检查发现上游、依赖快照与生成文件共 1166 个既有格式差异并返回 1；命令没有改写工作区，本轮触及 Dart 文件此前已定向 format |
+| Profile MD3 target tests | Passed | 生产 Profile 主入口、360px/800px/1440px、360px 2× 文字、简中、真实 Pinned fixture、稳定 loading/error、共享抽屉及主/旧路径边界共 10/10 通过 |
+| Changed-code analyze | No error/warning in targeted paths | Profile MD3、ResourceRuntime、Markdown artifact/图片、目录/README/社区文档 adapter、共享顶栏、路由、通用 TabBody 和测试定向分析未报告 error/warning；ResourceRuntime 3.3 的 12 个生产/测试路径定向分析为 0 error、0 warning、157 条严格 lint info，未把全仓 lint 清理混入资源任务。Flutter 3.44.7 的 `flutter analyze --no-pub` 仍在扫描前将 LSP 初始化 JSON 截断于第 353 字符并以 255 退出；可完成的全仓 `dart analyze --format=machine` 为 0 error、704 warning、17735 info |
+| Repository loading/motion follow-up | Passed | 2026-07-23 已在当前环境串行运行：Repository Issues/PR 20/20、Search 默认状态 8/8、相关 Home/Repository/Tab 26/26，并在修复 README 测试容器依赖后完成全仓 237/237。覆盖路由/Tab/查询 Reduced Motion、README 留白、图片软失败、Open→Closed→Open 会话复用、四会话 LRU、五行响应式 Shimmer 和“返回列表无骨架/无新请求” |
+| Format check | Existing baseline fails | 2026-07-24 的 `dart format --output=none --set-exit-if-changed .` 只读检查扫描 2196 个文件，其中 1155 个存在既有格式差异并返回 1；命令没有改写工作区，本轮触及 Dart 文件已定向 format |
 | Workbench tests | Passed | 17/17 纯 Dart 契约/边界测试通过 |
 | Workbench analyze | Passed | `lib/workbench` 和 `test/workbench` 均为 0 issues |
+| ResourceRuntime target tests | Passed | 2026-07-24 原第三阶段 69/69；分页通用 source 当前 5/5、Repository 正式入口 4/4。覆盖页 Single Flight、fresh/stale 复用与后台替换、显式下一页、刷新失败保留旧项、Open→Closed→Open、REST transport 与账号 scope；尚无 Profile/Release 结论 |
+| ResourceRuntime changed-code analyze | No error/warning in targeted paths | 3.3 的生产 Provider、resource spec、Service、Code/Security 正式消费者、mutation 失效及回归测试共 12 个路径定向 `dart analyze` 为 0 error、0 warning、157 info；全仓 `dart analyze --format=machine` 为 0 error、704 个既有 warning 和 17735 info |
+| Issues/PR Runtime performance follow-up | Target tests passed; live Profile pending | 2026-07-24 定向 43/43：登录列表改用轻量 GraphQL 投影，Runtime stale 首页立即回显并后台替换，隐藏 Tab sentinel 为 0 请求，Repository Tab 使用独立 Material 边界；定向 `dart analyze` 为 0 error、0 warning（179 个严格 lint info）。`flutter analyze` 仍因 analysis server LSP JSON 截断以 255 退出；未运行全仓测试、build 或 Profile，不能声称真实耗时已经达标 |
 
 ## 3. 主页统一决策与状态
 
@@ -137,7 +141,14 @@ Events API 不是实时流，官方明确提示可存在延迟，且时间线仅
 - Code 页身份区、工具栏、文件表、README 与右栏共用纵向滚动；仓库身份/About 只在 Code Tab 显示，不泄漏到 Issues/PR 页。
 - README 区已建立 README / Contributing / License / Security 四类文档页签：只请求当前选中的真实文档，README 复用现有 provider，License 复用现有内容源，Contributing/Security 通过 Contents API 候选路径按需取得；缺失、加载和错误状态均显式显示，仓库文档正文保持原文。
 - Repository 文档卡正文使用集中响应式内边距：360px 紧凑窗口为 16px，800px/1440px 为 24px，避免 README 文字、图片和标题贴近描边边缘。
-- README 图片分类只发起一次网络请求并直接复用返回的 SVG/栅格 bytes；同 URL 由 Riverpod 合并并在离屏后有界保留 1 分钟，连接/接收超时分别为 6/12 秒。网络失败降级为局部可重试图标，不再把可选图片超时上抛为 Provider 失败，也不让图片错误替换整个 README。
+- README 图片分类只发起一次网络请求；SVG 保留解码字符串，栅格 artifact 直接复用 source bytes，
+  不从 worker 复制第二份字节。同 URL 由 Runtime Single Flight 合并并在 fresh/retain 窗口内有界
+  保留，连接/接收超时分别为 6/12 秒。网络失败降级为局部可重试图标，不再把可选图片超时上抛为
+  Provider 失败，也不让图片错误替换整个 README。
+- Repository 保留 Tab 现在区分可见与隐藏呈现：切到 Actions 等页面后，Code 的 README 图片仍完成
+  Runtime 下载/分类并保留 lease，但不会在隐藏 Sliver 树中插入迟到的 `Image`；返回 Code 后才呈现
+  最新结果。这样保留滚动与查询状态的同时，避免后台 README 布局级联触发 Material
+  `referenceBox.attached` 断言。
 - 右栏使用既有 `RepoInfo` 展示 About、Releases、Sponsor 和 Languages；Contributors 改用独立、轻量的真实 REST 摘要 provider，与文件表和完整 Repository 查询互不阻塞。
 - 根目录不再重复显示仓库名面包屑；桌面 Code/About 比例收紧到接近网页的主内容布局，最新 Commit 与文件列表合并为同一个描边区域，README 页签与正文合并为一个文档区域。
 - 文件表在未启用逐路径 Commit 查询时会隐藏 Commit/时间列，不再用“目录”或本地化占位文字伪装服务器没有返回的数据；360px、800px、1440px 均有无横向溢出的结构回归。
@@ -161,13 +172,23 @@ Events API 不是实时流，官方明确提示可存在延迟，且时间线仅
 - Repository 的 Issues 与 Pull requests Tab 已直接进入各自的 MD3 列表，不再显示阶段占位，也不再嵌入旧 `NavCenterShell`。
 - 两页复用查询、筛选、刷新和分页基础，但保留不同语义：Issues 在桌面宽度显示局部导航，Pull requests 保持全宽；状态选项分别为 Open/Closed 与 Open/Closed/Merged。
 - 查询、筛选和页面状态仍复用既有 `SearchScope` / `SearchState`；登录态继续由 `SearchService`/GraphQL 取得数据，访客态由既有公共 `PublicRepositoryService` 请求 REST `/search/issues`，仓库范围均固定为当前 `repo:`。两条正式数据链返回的真实总数贯通到列表顶部，不用已加载条数伪装总数。
+- Issue/PR 页资源工厂按当前 transport 延迟解析服务：访客 REST 会话不再提前构造认证
+  `ApiClient`，登录 GraphQL 会话也不依赖匿名 REST 服务；账号 scope 变化仍由列表会话键触发旧
+  Controller 释放和新 source 创建。
+- 登录列表不再复用全局搜索的重型 Issue/PR card fragment；新投影只取行实际展示的编号、标题、
+  作者、状态、时间、评论数和前 5 个标签。详情正文、assignees、milestone、projects、reactions、
+  review/check 等字段仍由既有详情入口按需加载，没有建立第二套列表或 Runtime。
 - 默认 Open 预设在 `SearchStateNotifier.build()` 构造初始状态时完成，不再依赖页面 `initState`、`didUpdateWidget` 或 post-frame 写入；搜索输入使用真实 300ms 防抖，提交时立即应用，外部状态变化不会覆盖尚未提交的输入。
 - 用户在默认 `is:open` 上输入 `is:closed` 或其他同键限定词时会原子替换旧值，不再生成互相冲突的查询；普通文本保留现有筛选，同一次输入的多值标签仍可并存。
 - 加载、空数据、错误、重试、下拉刷新和接近列表末端自动加载下一页均有明确状态。首屏加载使用五行、接近真实 Issue/PR 行结构的响应式 Shimmer，而不是单个空白占位。手动刷新会隔离旧请求 epoch、保留已提交列表直到新首页成功后原子替换；失败时旧列表仍可阅读，连续刷新会合并，重试从空 cursor 开始。搜索条件或结果类型改变时激活独立查询会话，不会在新筛选下展示旧结果；最近四个查询可直接恢复，超过容量后最旧会话被释放。
+- fresh Runtime 页由新 Controller 直接复用；stale 首页先进入现有 Controller，再由后台 revalidate
+  原位替换。隐藏 Repository Tab 的 sentinel 不会继续翻页，重新成为活动 Tab 后才恢复按需分页。
 - Repository 顶栏刷新会按当前 Tab 刷新 Code、Issues 或 Pull requests；Tab 内容在索引变化时立即切换，不等待动画结束后再整页替换。
 - 登录后新建按钮进入既有 `NewIssueRoute` / `NewPullRequestRoute`，列表项进入既有原生详情路由；未登录使用相同搜索、状态、刷新、空/错误、分页与行组件，但数据改由既有无会话 `RESTHandler` 请求 `/search/issues`，不创建 Search GraphQL、Account 或 Token。
 - 未登录写操作与需要账号元数据的高级筛选仍进入明确登录流程；在原生详情迁移完成前，公开列表项打开 GitHub 返回的真实网页 URL，不伪装为已完成的访客原生详情。
-- 公开 REST 只增加传输边界摘要，并立即映射为共用的 `RepositoryIssuePullRowData`；登录态继续消费现有 `IssueOrPull`，没有建立第二套列表状态机、分页或页面外壳。
+- 公开 REST 摘要与登录 GraphQL 轻量摘要都立即映射为共用的
+  `RepositoryIssuePullRowData`；全局搜索仍消费现有 `IssueOrPull` 丰富卡片，没有建立第二套列表
+  状态机、分页或页面外壳。
 - 360px、800px、1440px 的 Issues/PR 结构、长标题、加载/空/错误/刷新、搜索防抖和访客 REST/no-GraphQL 已有 Widget Test；800px/1.3× 与 360px/2× 文字缩放会按可用宽度重排工具栏，不再横向溢出；新增筛选和公共 API 限流客户端文案已进入 `gen_l10n`，标签、分支、账号、Issue/PR 标题保持原文。
 
 尚未完成：
@@ -198,6 +219,11 @@ Events API 不是实时流，官方明确提示可存在延迟，且时间线仅
 
 - 四个 Tab 共用 `RepositoryTabScaffold` 的页面标题、刷新、宽屏局部导航和窄屏选择器；它只负责页内筛选，不复制全局抽屉或仓库二级 Tab。
 - Actions 复用现有 Workflow Service，展示真实 workflow、总运行数、分支筛选、状态、触发者、分支和 SHA；列表接入既有 `PaginationController`，加载更多只影响尾部。
+- 2026-07-24 复核确认“打开 Actions 连续红屏”的首个异常来自后台保留的 Code/README 图片完成，
+  不是 Actions workflow 请求；修复保持 Actions 数据链不变，只收敛 Repository 隐藏 Tab 的异步
+  呈现边界和转场 Material 边界。Linux Debug 在真实 `krille-chan/fluffychat` README 图片位置连续
+  执行 Code → Actions → Code → Actions → Code 后，Actions 真数据、README 图片和 Code 滚动恢复
+  均正常，VM Extension/Logging 流没有新的 Flutter 异常。
 - Projects 复用现有 ProjectsV2 GraphQL，支持真实标题排序、加载、刷新、空状态、错误和分页；没有项目时不显示伪造的“新建项目”能力。
 - Security 复用现有 Dependabot GraphQL、Code scanning REST、Secret scanning REST 和 Repository 文档 provider；默认分支的 SECURITY.md、未配置分析、无告警、权限失败分别呈现，不再把 GitHub 的 `no analysis found` 404 当成权限错误。
 - Insights 复用现有 participation、languages、contributors、traffic 和 community profile providers；Pulse 使用真实年度提交柱状图和语言比例，Contributors、Traffic、Community standards 按进入的局部页面延迟请求。
@@ -239,20 +265,185 @@ Events API 不是实时流，官方明确提示可存在延迟，且时间线仅
 
 | 需求 | 实现 | 状态 | 验证 |
 | --- | --- | --- | --- |
-| Home/Repository 刷新不能因“有功能”而闪空或丢失旧数据 | 公共 `PaginationController` 默认使用 SWR，成功后原子替换；刷新失败保留旧内容并提供 refresh-aware retry | 已满足，待 Git 检查点 | controller 4/4、Sliver 2/2、全仓 227/227 |
+| Home/Repository 刷新不能因“有功能”而闪空或丢失旧数据 | 公共 `PaginationController` 默认使用 SWR，成功后原子替换；刷新失败保留旧内容并提供 refresh-aware retry | 已满足，待 Git 检查点 | controller 4/4、Sliver 2/2、全仓 237/237 |
 | Repository Tab 首次进入不应预取无关页面，返回时不能丢失会话 | 未访问 Tab 为占位；首次访问后在当前路由的有界 `IndexedStack` 中保留 Code/Issues/PR/Wiki 子树 | 已满足，待 Git 检查点 | no-build、搜索输入、Wiki 页面和 360px/2× 滚动保持 Widget Test |
 | Repository 跳转和左右 Tab 切换必须可感知且不以动画伪装重载 | 路由使用固定 16px 位移；Tab 对保活栈施加方向化 8px/轻淡入，Reduced Motion 直接返回原子树；Issue/PR 去除额外初始化占位帧 | 实现完成，真实运行待用户验收 | page/tab/reduced-motion 与返回无骨架断言已在目标 Widget Test 通过 |
 | Issue/PR 的 Open/Closed 往返不能重复首屏加载或在 build 中写 Provider | Provider 构造默认 Open；每页按 query + 类型保留最近四个独立分页会话，缓存命中使用 180ms 轻淡入且不重取；Reduced Motion 为零时长 | 已满足，待真实运行复验 | Issue/PR 20/20、Search Provider 8/8；两类列表均证明 Open→Closed→Open 仅两次请求，LRU 淘汰边界已覆盖 |
-| README 不贴边且可选图片失败不得破坏文档 | 文档正文使用 16/24px 响应式内边距；图片分类结果 bytes 直接渲染、1 分钟有界缓存、6/12 秒超时、局部重试软失败 | 实现完成，目标测试已复验 | 三档 padding、bytes 渲染、失败软化与缓存命中目标测试通过 |
+| README 不贴边且可选图片失败不得破坏文档 | 文档正文使用 16/24px 响应式内边距；栅格复用 source bytes 直接渲染、Runtime 有界缓存、6/12 秒超时、局部重试软失败 | 实现完成，目标测试已复验 | 三档 padding、bytes 对象身份/渲染、失败软化与缓存命中目标测试通过 |
 | 平台 Reduced Motion 不得被应用设置反向覆盖 | 根级 `AppMotionMediaQuery` 对应用与平台值取逻辑 OR | 已满足，待 Git 检查点 | 3 种组合 3/3，通过全仓回归 |
-| Home/Repository 在文字放大时仍可用 | Home 快捷操作允许标签弹性换行；Issues/PR 工具栏断点同时考虑可用宽度与 text scale | 已满足当前基线 | 1.0 的 360/800/1440、1.3× 的 800、2× 的 360；全仓 227/227 |
-| 不因本轮性能讨论扩散业务层 | 未修改 GraphQL、codegen、路由、认证、数据库或核心模型；仅在获批的访客浏览边界增加 Public REST 传输摘要与 adapter；TD-006/007 保持待 Profile/专项任务 | 已登记未处理 | Git diff 复核；没有新增核心 API、全局 Provider 或第二套页面状态模型 |
+| Home/Repository 在文字放大时仍可用 | Home 快捷操作允许标签弹性换行；Issues/PR 工具栏断点同时考虑可用宽度与 text scale | 已满足当前基线 | 1.0 的 360/800/1440、1.3× 的 800、2× 的 360；全仓 237/237 |
+| 不因本轮性能讨论扩散业务层 | 未修改 GraphQL、codegen、路由、认证、数据库或核心模型；TD-006 保持待 Profile/GraphQL 专项，TD-007 仅推进根 README、CONTRIBUTING、SECURITY 顶层 artifact 与 README 图片原始字节/分类，其余 Markdown/Diff 保持待 Profile/专项任务 | 边界已保持；TD-007 部分推进 | Git diff 复核；没有新增核心 API 或第二套页面状态模型，Runtime Provider 仍是唯一全局控制面 |
 | 证明首页到仓库“更快” | 本轮只消除视觉闪空和重复构造，不将 Widget Test 解释为帧性能结论 | 待验证 | 仍需 Linux/Android Profile 的冷/暖导航 trace |
-| 未登录公开 Repository Issues/PR 可读 | 复用公共 RESTHandler、SearchState、PaginationController 与 MD3 行；REST 摘要只作为传输 DTO，未创建账号或 Token | 已满足列表范围 | 公开 REST 5/5、全仓 227/227；生产 guest shell 证明无 Repository/Search GraphQL |
-| Repository Wiki 必须是可验证的真实页面而非占位 | 共用既有 Wiki provider/controller，接入同一 Repository Tab 与深链；页面列表、正文、状态与外部入口均消费真实参数 | 已满足只读浏览范围 | Wiki 6/6、目标回归 54/54、全仓 227/227 |
-| Repository 未完成 Tab 不能继续保留阶段占位 | Actions/Projects/Security/Insights 接入各自既有正式 Service/Provider、共享局部页面壳、类型化深链及完整状态；网页没有公开等价数据的管理子页明确留在未完成边界 | 已满足四个主 Tab 的只读浏览范围 | 二级标签页目标回归 18/18；Linux Debug 真实仓库逐页截图；全仓 227/227 |
-| Issue/PR 详情不得再次出现第二套全局顶栏和嵌套页面壳 | 详情路由接入 `RepositoryContextChrome`，旧详情内容以 embedded 模式复用，移除嵌套 `Scaffold`/`SafeArea` | 已满足外壳范围，内容迁移未完成 | 共用外壳 4/4、详情 Tab Motion 2/2、全仓 227/227 |
+| 未登录公开 Repository Issues/PR 可读 | 复用公共 RESTHandler、SearchState、PaginationController 与 MD3 行；REST 摘要只作为传输 DTO，未创建账号或 Token | 已满足列表范围 | 公开 REST 5/5、全仓 237/237；生产 guest shell 证明无 Repository/Search GraphQL |
+| Repository Wiki 必须是可验证的真实页面而非占位 | 共用既有 Wiki provider/controller，接入同一 Repository Tab 与深链；页面列表、正文、状态与外部入口均消费真实参数 | 已满足只读浏览范围 | Wiki 6/6、目标回归 54/54、全仓 237/237 |
+| Repository 未完成 Tab 不能继续保留阶段占位 | Actions/Projects/Security/Insights 接入各自既有正式 Service/Provider、共享局部页面壳、类型化深链及完整状态；网页没有公开等价数据的管理子页明确留在未完成边界 | 已满足四个主 Tab 的只读浏览范围 | 二级标签页目标回归 18/18；Linux Debug 真实仓库逐页截图；全仓 237/237 |
+| Issue/PR 详情不得再次出现第二套全局顶栏和嵌套页面壳 | 详情路由接入 `RepositoryContextChrome`，旧详情内容以 embedded 模式复用，移除嵌套 `Scaffold`/`SafeArea` | 已满足外壳范围，内容迁移未完成 | 共用外壳 4/4、详情 Tab Motion 2/2、全仓 237/237 |
+| Profile 主入口仿照 GitHub 网页且不新建业务层 | 主路径接入共享 `AppChrome`、五项资料导航、真实 `userProvider` / README / Pinned / contributions；既有四类分页列表在惰性保活 Tab 中复用 | Overview 已满足；次级列表仅完成正式接入，视觉迁移未完成 | Profile 10/10；共享 Home/Repository 回归 28/28 |
 | 本轮 Profile 性能 | 用户明确允许暂不测试；没有以 Debug 观感或 Widget Test 代替测量 | 待验证 | 未运行，不提供帧时间或“已优化”结论 |
+| 统一资源加载、渲染交付和生命周期管理 | 纯 Dart `ResourceRuntime` 控制 identity/scope/lease/freshness/dependency/budget；正式试点迁移 Repository Code 文档/图片及 Issues/PR 不可变 forward page | 控制面与首个分页桥已满足；License、Wiki、Flutter 像素解码、详情分页和有界 Controller 页窗口未迁移 | 原目标 69/69 + 分页当前 9/9；全仓 294/294 是本轮轻量投影与 stale 原位替换前基线 |
+| Repository Issues/PR 冷暖列表不应下载详情字段或在隐藏页继续分页 | 同一 Runtime page source 改用轻量 GraphQL 投影；stale 首页立即回显/后台替换；隐藏 sentinel 禁止请求；每个 Repository Tab 使用独立 Material 边界 | 代码与定向回归已满足；真实大仓库 Profile 和当前 Linux Debug 快速切页待验证 | 本轮定向 43/43，0 error/0 warning；未运行全仓、build、Profile |
+| 全局整理可能拖长加载的信息流并形成复用模板 | 主要信息流清单按 Integrated/Partial/Wave A/B/C/Excluded 分类；固定 Controller/Runtime page/Service 混合所有权与身份、预算、失效、UI、正/负验证模板 | 设计基线完成；Issues/PR 首个生产试点部分接入 | 静态追踪 67 处 `PaginationController`、25 处定时保活；试点合同见独立文档 |
+
+## 3.8 Profile MD3 第一阶段
+
+已完成：
+
+- `UserProfileRoute` 的 Overview、Repositories、Projects、Packages、Stars 主路径进入新的 Profile MD3 页面；Gists、Organizations、Followers、Keys、Sponsors 等尚未迁移的扩展路径继续走旧页面，不用占位内容冒充完成。
+- Profile 复用 Home/Repository 的 `AppChrome`、DioHub 标识、全局搜索、抽屉和账户菜单；窄屏标题空间不足时只保留带语义标签的标识，不再产生 360px 顶栏溢出。
+- Overview 使用既有 `userProvider` 及生成类型展示头像、姓名、登录名、状态、简介、关注关系和公开元数据；编辑资料与 Follow/Unfollow 继续复用既有 mutation。
+- Profile README、Pinned repositories、贡献日历和贡献活动分别复用已有正式 Provider/组件。贡献加载错误保持局部重试，不替换整张 Profile；Pinned 卡片打开现有 Repository 路由。
+- 1440px 使用身份侧栏 + Overview 主列；800px 与 360px 折叠为同一信息架构。Repositories/Projects/Packages/Stars 在窄屏仍保留身份上下文，并复用既有 `TabBody` 分页/刷新生命周期。
+- 五个主标签首次访问才创建内容，访问后在当前 Profile 路由的有界 `IndexedStack` 中保留，标签切换使用集中 Motion；Profile 路由使用与 Home/Repository 相同的页面转场。
+- 新增客户端文案进入 English / 简体中文 ARB；用户名、简介、仓库名、README 等服务端或用户内容保持原文。
+
+尚未完成：
+
+- Repositories、Projects、Packages、Stars 当前是“正式数据与生命周期已接入”，但列表行、筛选区和空状态仍主要复用旧呈现，不能称为四张网页式页面已经完成。
+- 贡献日历与活动时间线继续使用原组件；年份/时间范围控件和 GitHub 网页的完整 Activity 筛选尚未迁移进新 Overview。
+- Organizations、Gists、Followers/Following、Sponsors、Keys 等扩展页仍是旧 UI；没有在本轮批量删除。
+- 尚未在真实登录态 Linux/Android 运行并截图对比，也未建立 Profile/Release 帧性能与内存基线。
+
+## 3.9 ResourceRuntime 第三阶段
+
+架构边界见 [`resource-runtime-architecture.md`](resource-runtime-architecture.md)。
+
+已完成：
+
+- 建立纯 Dart 类型化资源身份、稳定账号/服务器 scope、Loading/Data/Failure 状态、独立 Lease 与
+  visible/retained presence。
+- 建立有界 L1、Single Flight、SWR、generation 旧结果隔离、pending revalidate、精确标签失效、
+  scope 清理、三档调度、预取接管、LRU/内存 trim、可注入时钟与结构化 Telemetry。
+- Runtime 继续作为一个统一控制面，但把 network、compute、decode 放入独立调度 lane；页面不能
+  自建调度器，也不能把领域 Service、Widget 或业务模型塞入 Runtime。调度 lane 只控制优先级与
+  并发，纯 Dart CPU 变换必须显式调用 `runInWorker()` 才真正离开调用 isolate。
+- `ResourceSpec` 可静态声明强类型依赖；derived loader 只能通过 `ResourceLoadContext.require`
+  读取已声明的同 scope 依赖。未声明、循环和当前会死锁的同调度 lane 依赖快速失败，source 失效沿
+  依赖图级联。
+- 应用生命周期通过 Flutter 薄适配器进入 Runtime；账号切换清理上一 scope，既有 `APICache` 继续作为
+  L2 transport cache。
+- Repository Code 根目录与所有子目录统一迁移：Riverpod 继续作为薄页面适配器，正式 Loader 仍是
+  既有 `fetchDirectoryEntries`；目录不再同时使用旧 keep-alive。
+- 根 README 拆为既有 `RepositoryServices.fetchReadmeHtml` 网络源与纯 Dart Markdown artifact；
+  顶层 HTML 解析、标题提取和 section 切分通过短生命周期 `Isolate.run` worker 完成，artifact 缓存
+  headings/惰性 HTML sections，不缓存 Widget/Element/BuildContext。正式 Code 文档卡消费 artifact，
+  原链接和 HtmlWidget 展示组件继续复用。
+- CONTRIBUTING / SECURITY 拆为既有 `RepositoryDocumentService.fetchHtml()` source 与同一
+  `MarkdownRenderArtifact`；Code 文档页签与 Security Tab 持有独立 presence Lease，但相同账号、
+  仓库、分支和文档类型共享同一 source/artifact。候选路径全部 404 是可保留的缺失数据，传输失败、
+  重试与显式刷新保持独立状态。
+- README 图片拆为未认证 source 与分类 artifact：第三方下载使用专用 Dio client，剥离认证/Cookie，
+  同时按 header 和流累计执行 8 MiB 上限；SVG/栅格判定进入真实 worker，同 scope/URL Single Flight，
+  失败短期负缓存并只显示局部重试。worker 对栅格只返回分类元数据，artifact 直接复用 source 的同一
+  份 `Uint8List`，不再跨 isolate 返回第二份 bytes。栅格像素仍由 `Image.memory`/Flutter ImageCache
+  解码，SVG 仍由 `jovial_svg` 展示，Runtime 不缓存 `ui.Image`、texture 或 Widget。
+- 图片 source/classification 在 Repository Tab 隐藏时继续运行并保留 lease，但 Flutter `Image`
+  只在所属 Tab 可见时从最新 artifact 实体化；资源生命周期和 Widget/Sliver 呈现生命周期不再混为
+  一层。
+- 所有资源使用统一 4 KiB 估算权重；默认约 16 MiB L1 上限、内存压力约 8 MiB trim 目标，至少容纳
+  一条合法最大 README 栅格链。普通 LRU 同时保护持有 Lease 的 artifact 及其递归依赖，避免“产物还在、
+  source 已被逐出”导致返回后重新下载；多个大 Lease 导致无法立即满足预算时，Telemetry 明确标记
+  超预算并报告估算字节，最外层 Lease 释放后再淘汰。
+- derived artifact 记录 dependency data revision；依赖显式失效、自然过期、更新或被回收都会使旧
+  artifact 失去 fresh 资格，不再只依赖标签级联。
+- 预取在策略或生命周期拒绝时不会先创建空的 L1 Loading 条目；获准入队后立即受条目/权重预算约束。
+  ticket 与进入后台造成的排队取消只记录 canceled，因预算或淘汰移除的未接管预取才记录 wasted，
+  遥测不再对同一任务重复计数。
+- 点击一个具有可靠默认分支的 Top repository 时可在导航前预取同一资源；预取和目的页 acquire
+  共享同一次请求，不批量预取 Home 卡片。
+- Code / Security Tab 由用户事件更新各自页面会话 presence，目录、README 与社区文档 adapter 共同
+  监听对应状态；返回 fresh 内容不重取或重做顶层解析，过期后先交付旧对象再刷新。
+- 文件创建、编辑或删除成功后按账号、仓库、分支和父目录精确失效；只有根 `README` / `README.*`
+  额外失效根 README source；只有精确命中 CONTRIBUTING / SECURITY 现有候选路径才失效对应文档，
+  其他分支、账号和无关 Markdown 不受影响。
+
+明确边界：
+
+- License、Wiki、其他 Markdown、Actions、Profile、Home、Repository 主 Provider 与大多数分页
+  尚未迁移；Issues/PR 只有列表 forward page 部分接入，详情和有界页窗口仍未迁移。
+- README 图片“下载与分类”已经迁移，但 Flutter 像素解码/GPU 上传没有迁移；这两层必须分开报告，
+  不能把原始字节进入 Runtime 写成完整图像管线已统一。
+- artifact 已避免返回页面时重复执行顶层 `html.parse`、标题遍历与 section 切分；每个惰性
+  `HtmlWidget` section 的内部构建/解析及 Diff 同步解析仍未处理，TD-007 仅是 In Progress。
+- 导航前没有可靠 immutable tree OID，当前沿用现有分支名语义；外部提交在 2 分钟 fresh 窗口内
+  可能读到 L1 旧数据，显式刷新、过期恢复和本地 mutation 会重取。
+- 尚未接入可靠网络状态源，也不支持取消已经进入现有网络栈的请求；排队任务可取消，旧完成结果由
+  generation 丢弃。worker 当前每次使用短生命周期 `Isolate.run`，尚未建立常驻池，启动成本待
+  Profile。
+- 本轮没有改写 GraphQL/codegen、认证、数据库、路由、业务模型、Repository 主 mutation 或
+  `PaginationController`。
+
+验证：
+
+- 纯 Dart 核心 35/35；Markdown artifact/Sliver 4/4；README 图片 10/10；目录与 README
+  Provider/失效 6/6；社区文档 Provider/失效 7/7；社区文档 Service 3/3；Code 正式入口 4/4，
+  合计 69/69。请求/解析次数、缺失负缓存、失败重试、跨 scope、in-flight 账号切换、凭证剥离、
+  大小上限、递归依赖租约保护、预取拒绝/取消/即时预算、bytes 身份、默认容量及精确失效均有正向
+  与负向断言。
+- 全仓测试 294/294，Linux Debug build 通过；3.3 的 12 个变更路径定向 analyze 为 0 error、
+  0 warning、157 info；本轮触及 Dart 文件均已定向 format。
+- 全仓 `flutter analyze --no-pub` 在扫描前因 analysis server LSP JSON 于第 353 字符截断而以 255
+  退出，不能声称通过；全仓 format 仍受 1155 个既有差异阻塞。
+- Android Debug 本轮因 Kotlin 独立 daemon 导致 Swap 耗尽而主动中止，旧 APK 未被覆盖，当前
+  Android 构建状态明确为待低内存环境复验。
+
+## 3.10 ResourceRuntime 3.3（已完成）
+
+精确完成范围：
+
+- CONTRIBUTING / SECURITY 的正式 Loader 继续是 `RepositoryDocumentService.fetchHtml()` 与原候选
+  路径；候选列表已集中为 Service 的单一事实源，Runtime 失效复用同一列表。
+- source / artifact 身份包含 server/principal scope、仓库、分支、文档类型和版本；继续复用
+  `MarkdownRenderArtifact` 与 worker，不新增 API、GraphQL、领域模型或第二套解析缓存。
+- `repositoryDocumentProvider` 已改为薄 Runtime adapter。Code 与 Security 使用不同 consumer/
+  presence Lease，但相同 SECURITY 身份共享一次 source 与一次解析；auto-dispose 后返回复用 retain
+  数据，显式刷新只重取并重建一次。
+- Code 正文直接消费 render artifact；Security 卡片消费同一 artifact 中的文档存在性与命中路径。
+  404 全部缺失、首次失败、局部重试和加载成功仍是可区分状态。
+- Code 全局刷新失效当前分支 README、CONTRIBUTING 与 SECURITY；Security 局部刷新只处理 SECURITY。
+  文件 mutation 仅在变更路径精确命中相应候选路径时失效，不清空无关分支、文档或整个仓库缓存。
+- Repository 主 Tab 用户事件同时维护 Code/Security presence；没有在 Widget build/init/dispose 等
+  生命周期写共享 Provider。
+
+回归证据：
+
+- 先建立失败基线，再完成 7 个社区文档资源回归：双消费者 Single Flight、retained/null 复用、显式
+  刷新、首次失败重试、账号切换旧完成隔离、分支/类型身份、候选路径精确失效。
+- ResourceRuntime 完整目标 69/69、全仓 294/294、Linux Debug build 通过；3.3 的 12 个生产/测试
+  路径定向 analyze 为 0 error、0 warning。
+
+仍未完成：
+
+- License、Wiki、Issues/PR、分页和 Repository 主 Provider 没有迁移；页面视觉也没有在本阶段改写。
+- License 仍依赖 branch/blob 加载链，Wiki 有自己的页面身份和 Markdown 来源；两者必须先独立审计，
+  不能因表面都展示文档就直接塞入当前合同。
+- 常驻 worker pool 仍需 Profile/Release 证据，本阶段没有性能数值结论。
+
+## 3.11 主要信息流全局接入与首个分页试点
+
+新增：
+
+- [`resource-runtime-information-flow-inventory.md`](resource-runtime-information-flow-inventory.md)：追踪启动/账号、Home、Repository Code、Issues/PR、Actions/Projects/Security/Insights、Wiki/Profile、Notifications/Search、Workbench 的主要信息流，并按迁移波次标记。
+- [`resource-runtime-integration-template.md`](resource-runtime-integration-template.md)：
+  固定生产入口、状态层级、可证伪复现、资源身份、分页会话、预算、调度、mutation 失效、UI 状态、请求次数与性能记录格式。
+- [`resource-runtime-pagination-pilot.md`](resource-runtime-pagination-pilot.md)：记录 Repository Issues/PR 正式 GraphQL/REST 页资源接入、已证明行为和未完成边界。
+
+本轮确定：
+
+- `PaginationController` 与 Runtime 不是二选一。Controller 保留 query、cursor、page order、refresh 与 scroll；不可变 page result 才进入 Runtime。
+- Repository Issues/PR 已用显式 cursor/page 身份接入通用 forward source；登录首页使用轻量行投影，
+  stale 首页立即交付并后台替换，隐藏 Tab 不继续分页。大列表仍由 Controller 无界展开实体，
+  Runtime 的 LRU 尚不能单独解决实际内存，后续必须设计有界页窗口或轻量索引。
+- 长轮询、watcher、Stream、下载/上传、SSH、本地 Git、表单与滚动状态不作为普通 Runtime 资源；它们使用专用 session/manager，稳定只读 snapshot 才能被页面缓存。
+- 首批高风险候选是 Repository 主查询中的 6 组快捷计数、Issues/PR 列表与详情分页、全量 review
+  threads、单文件 patch 顺序翻页、Home Events/Search/Notifications、Workflow overview 扇出和
+  Profile activity 全量聚合。
+
+完成边界：
+
+- 清单与模板是设计合同；首个生产试点只修改分页 bridge、Repository 列表接线和作用域生命周期，
+  没有修改 Service、GraphQL/codegen、业务模型或视觉；
+- 没有证明页面更快，也没有建立 Profile/Release 数据、有界页窗口、距离式预取或 mutation overlay；
+- TD-012 已改为 In Progress，其他主要信息流仍不得写成已迁移。
 
 ## 4. 已完成
 
@@ -271,6 +462,7 @@ Events API 不是实时流，官方明确提示可存在延迟，且时间线仅
 - 将统一主页调整为 GitHub Dashboard 式响应布局，用 `viewer.topRepositories` 接入账户隔离的 Top repositories，并接入官方 GitHub Changelog。
 - 还原左侧全局导航抽屉、右侧账户菜单展开态与 DioHub 全局标识；360px/1440px 展开态 Widget Test 均无溢出。
 - 建立 Home/Repository 共用的 `AppChrome`，统一全局顶栏、抽屉、账户菜单和导航语义，同时允许页面注入自己的二级导航。
+- 建立 Profile Overview 的 GitHub 式 MD3 第一阶段：共享全局外壳、真实身份/README/Pinned/贡献数据、五项主导航、三档响应式、简中与稳定异步状态；次级列表视觉迁移和旧扩展页保留为明确边界。
 - 完善 Repository Code MD3 响应式样板：GitHub 式顶栏/Tab、桌面 Code+About 双列、移动单列信息顺序，360/800/1440px semantics Widget Test 通过。
 - 完成 Repository Issues 与 Pull requests 两张独立 MD3 列表：真实仓库查询、默认 Open、筛选、防抖、真实总数、刷新、错误重试、自动分页、响应式和未登录权限边界均已接入；详情已接入共享外壳但仍复用旧内容层，新建仍复用旧路由。
 - 完成 Home/Repository P1 状态收口：手动刷新 SWR、查询变化不展示旧范围结果、Repository Tab 惰性构建与路由内保活、根 Reduced Motion 合并，以及 1.3×/2× 文字缩放溢出回归。
@@ -366,18 +558,23 @@ UnifiedRepoController / WorkbenchViewState    （已组合本地与远程快照�
 
 ### Now
 
-1. 人工核对已完成的 Repository Code/Issues/Pull requests/Actions/Projects/Wiki/Security/Insights，以及本轮路由/左右 Tab 动效、README 留白和图片失败重试；仍需用户确认最终信息密度与动效强度。
-2. 在当前真实 `flutter run` 会话中复验 Issues 与 Pull requests 的 Open→Closed→Open：缓存返回应保留列表/滚动、不出现五行首屏骨架、不新增第三次搜索请求，也不得再出现 Riverpod build-time mutation 红屏。
-3. 迁移 Issue 详情的标题/状态/正文/评论时间线为 MD3 内容层，同时继续复用现有 Provider、评论与 mutation；不得把已经完成的共享外壳重复实现一遍。
-4. Issue 详情验收后，再以相同外壳迁移 Pull request 标题/状态/时间线，并单独保留 Review、Checks 与 Files changed 的领域状态。
-5. 在已完成访客 Issues/PR 列表的基础上，将公开 Repository Code 接入同一稳定外壳；复用现有公共目录/文件 REST 能力，不伪造完整 `RepoInfo`。
+1. 人工复核 Repository Issues/PR 首个分页试点的真实大仓库连续翻页、Open/Closed、刷新失败、
+   返回滚动与账号切换；自动测试不能替代真实网络验收。
+2. 人工审阅 ResourceRuntime 3.3 的社区文档身份、双 consumer Lease 与 mutation 精确失效 diff；
+   自动验证已完成，但尚未建立 Profile/Release 性能基线。
+3. 在真实登录态核对 Code 的 CONTRIBUTING / SECURITY，以及 Repository Code/Issues/Pull
+   requests/Actions/Projects/Wiki/Security/Insights 与 Profile Overview；没有操作证据前不扩大
+   页面或性能完成结论。
 
 ### Next
 
-1. 在现有 RepositoryPreview/稳定外壳之上，将完整 `repo_info` 查询拆为 Code baseline + 区域惰性 provider，并增加 stale-while-revalidate；优先移出 6 组 Issues/PR 快捷计数及 Releases/Languages。
-2. 固定 Workbench 桌面三栏/双栏与移动折叠信息结构，建立独立路由的 Fake 功能性 UI 骨架。
-3. 建立类型化 Drift 快照与 schema 版本，完成 PR Review 概览与自适应 Workflow 轮询。
-4. 打通 Repository → Local Repo → HEAD → PR → Actions → Editor 真实纵向演示。
+1. 在现有 forward page 试点上设计有界 Controller 页窗口、距离式预取与 mutation 精确失效；
+   在实体保留量证据前不扩散到其他列表。
+2. 在现有 RepositoryPreview/稳定外壳之上，将完整 `repo_info` 查询拆为 Code baseline + 区域惰性
+   Provider；优先移出 6 组 Issues/PR 快捷计数及 Releases/Languages。
+3. 迁移 Issue/PR 详情摘要、评论/Review 时间线、commits/files 的页资源，先消除全量 review threads
+   和单文件 patch 从头翻页，再继续 MD3 内容层。
+4. 单独审计 License 与 Wiki 的数据身份、分支语义和失效合同；不能为了统一表面 API 吞掉领域差异。
 5. 审阅当前基线 diff，决定是否建立本地 Git 检查点。
 
 ### Later
@@ -385,8 +582,9 @@ UnifiedRepoController / WorkbenchViewState    （已组合本地与远程快照�
 1. 依赖与代码生成精简，详见 `docs/technology-simplification.md`。
 2. `diohub_models` 纯 Dart 化。
 3. GraphQL 生成体积和 `copyWith` 策略优化。
-4. AI、Premium、Shorebird 与非 MVP 功能的插件化/取舍。
-5. 全局 UI 视觉统一、高级动画和更多平台发布。
+4. 在代表性 Profile/Release trace 证明短生命周期 isolate 启动成本是瓶颈后，再评估常驻 worker pool。
+5. AI、Premium、Shorebird 与非 MVP 功能的插件化/取舍。
+6. 全局 UI 视觉统一、高级动画和更多平台发布。
 
 ## 8. 当前非目标
 
@@ -420,4 +618,7 @@ UnifiedRepoController / WorkbenchViewState    （已组合本地与远程快照�
 
 ## 11. 下一个唯一建议
 
-下一步唯一建议是迁移 Issue 详情内容层：保持已经完成的 `RepositoryContextChrome` 不动，逐段替换标题/状态、正文与评论时间线，并为加载、错误、空评论、刷新、360/800/1440px 和 Reduced Motion 建立回归；完成并人工验收后再开始 Pull request 的 Review/Checks/Files changed。
+下一步唯一建议是先在真实大仓库人工复核 Repository Issues / Pull requests 首个分页试点，再设计
+有界 Controller 页窗口。当前自动回归已证明 Open→Closed→Open、fresh 复用、显式下一页、刷新失败
+保留旧项和账号 scope；返回滚动、query 晚到与四会话 LRU 沿用既有测试，实体保留量、预取、
+mutation、Profile/Release 尚未完成，因此不扩散到全仓分页，也不声称页面已经更快。

@@ -7,6 +7,7 @@ import 'package:diohub/providers/database_providers.dart';
 import 'package:diohub/providers/repository/public_repository_providers.dart';
 import 'package:diohub/providers/repository/repository_providers.dart';
 import 'package:diohub/providers/repository/wiki_providers.dart';
+import 'package:diohub/providers/users/user_providers.dart';
 import 'package:diohub/services/repositories/public_repository_service.dart';
 import 'package:diohub/view/repository/md3/repository_navigation.dart';
 import 'package:diohub/view/repository/repository_screen.dart';
@@ -40,6 +41,7 @@ void main() {
         settingsCacheProvider.overrideWithValue(
           SettingsCache(<String, String>{}),
         ),
+        currentUserProvider.overrideWithBuild((final _, final _) async => null),
         repositoryProvider.overrideWith2(
           (final RepoRef arg) => _CountingRepositoryNotifier(
             arg,
@@ -237,6 +239,7 @@ void main() {
         const ValueKey<String>('repository-issues-search'),
       );
       await tester.enterText(issueSearch, 'keep this issue filter');
+      await tester.pumpAndSettle();
 
       await tester.tap(find.text('Pull requests'));
       await tester.pumpAndSettle();
@@ -371,6 +374,42 @@ void main() {
           )
           .index,
       1,
+    );
+    expect(
+      tester
+          .widget<TickerMode>(
+            find.byKey(
+              const ValueKey<String>('repository-retained-tab-0'),
+              skipOffstage: false,
+            ),
+          )
+          .enabled,
+      isFalse,
+    );
+    expect(
+      tester
+          .widget<TickerMode>(
+            find.byKey(
+              const ValueKey<String>('repository-retained-tab-1'),
+              skipOffstage: false,
+            ),
+          )
+          .enabled,
+      isTrue,
+    );
+    expect(
+      find.byKey(
+        const ValueKey<String>('repository-tab-material-0'),
+        skipOffstage: false,
+      ),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(
+        const ValueKey<String>('repository-tab-material-1'),
+        skipOffstage: false,
+      ),
+      findsOneWidget,
     );
     expect(
       find.byKey(

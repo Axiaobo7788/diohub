@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:diohub/app/settings/code_browser_settings.dart';
+import 'package:diohub/common/resource_runtime/resource_runtime.dart';
 import 'package:diohub_graphql/fragments/fragment_typedefs.dart';
 import 'package:diohub_graphql/queries/repositories/repo_typedefs.dart';
 import 'package:diohub_graphql/schema_typedefs.dart' show RepositoryPermission;
@@ -15,6 +16,8 @@ import 'package:diohub/providers/code_browser/code_browser_state_provider.dart';
 import 'package:diohub/providers/code_browser/directory_last_commit_provider.dart';
 import 'package:diohub/providers/code_browser/directory_provider.dart';
 import 'package:diohub/providers/repository/repository_providers.dart';
+import 'package:diohub/providers/repository/repository_readme_resource.dart';
+import 'package:diohub/providers/resource_runtime/resource_runtime_provider.dart';
 import 'package:diohub/providers/settings/code_browser_settings_provider.dart';
 import 'package:diohub/utils/permission_utils.dart';
 import 'package:diohub/view/repository/code/create_file_screen.dart';
@@ -549,16 +552,29 @@ Future<void> refreshRepositoryCode(
   }
   final String path = ref.read(codeBrowserStateProvider(repoRef)).currentPath;
   final DirectoryKey key = (repo: repoRef, branch: branch.refValue, path: path);
-  ref
-    ..invalidate(
-      directoryLastCommitProvider((
-        repo: repoRef,
-        branch: branch.refValue,
-        path: path,
-      )),
-    )
-    ..invalidate(readmeProvider(repoRef));
-  final List<CodeTreeNode> _ = await ref.refresh(directoryProvider(key).future);
+  final ResourceScope? scope = ref.read(activeResourceScopeProvider);
+  if (scope != null) {
+    final runtime = ref.read(resourceRuntimeProvider);
+    invalidateRepositoryReadmeResource(
+      runtime: runtime,
+      scope: scope,
+      key: (repoRef: repoRef, branch: branch.refValue),
+    );
+    invalidateRepositoryDocumentResources(
+      runtime: runtime,
+      scope: scope,
+      repo: repoRef,
+      branch: branch.refValue,
+    );
+  }
+  ref..invalidate(
+    directoryLastCommitProvider((
+      repo: repoRef,
+      branch: branch.refValue,
+      path: path,
+    )),
+  );
+  await ref.read(directoryProvider(key).notifier).refreshResource();
 }
 
 class _CodeToolbar extends ConsumerStatefulWidget {
@@ -1261,18 +1277,38 @@ class _RepositoryDocumentsSliverState
     final RepositoryDocumentKind selected = availableKinds.contains(_selected)
         ? _selected
         : RepositoryDocumentKind.readme;
-    final RepositoryDocumentKey key = (
-      repoRef: widget.repoRef,
-      branch: widget.branch,
-      kind: selected,
-    );
-    final AsyncValue<RepositoryDocument?> document = ref.watch(
-      repositoryDocumentProvider(key),
-    );
     final EdgeInsets pagePadding = RepositoryMd3Layout.pagePaddingFor(
       widget.windowClass,
     );
     final ColorScheme colors = Theme.of(context).colorScheme;
+    final Widget documentSliver;
+    if (selected == RepositoryDocumentKind.readme) {
+      final RepositoryReadmeKey key = (
+        repoRef: widget.repoRef,
+        branch: widget.branch,
+      );
+      documentSliver = _buildReadmeSliver(
+        context,
+        ref.watch(repositoryReadmeArtifactProvider(key)),
+        key,
+      );
+    } else {
+      final RepositoryDocumentKey key = (
+        repoRef: widget.repoRef,
+        branch: widget.branch,
+        kind: selected,
+      );
+      final RepositoryDocumentRequest request = (
+        key: key,
+        consumer: RepositoryDocumentConsumer.code,
+      );
+      documentSliver = _buildDocumentSliver(
+        context,
+        ref.watch(repositoryDocumentProvider(request)),
+        request,
+        selected,
+      );
+    }
     return SliverPadding(
       key: const ValueKey<String>('repository-document-card'),
       padding: EdgeInsets.fromLTRB(
@@ -1304,7 +1340,7 @@ class _RepositoryDocumentsSliverState
               ),
             ),
             const SliverToBoxAdapter(child: Divider(height: 1)),
-            _buildDocumentSliver(context, document, key, selected),
+            documentSliver,
           ],
         ),
       ),
@@ -1313,10 +1349,10 @@ class _RepositoryDocumentsSliverState
 
   Widget _buildDocumentSliver(
     final BuildContext context,
-    final AsyncValue<RepositoryDocument?> document,
-    final RepositoryDocumentKey key,
+    final AsyncValue<RepositoryDocumentArtifact?> artifact,
+    final RepositoryDocumentRequest request,
     final RepositoryDocumentKind selected,
-  ) => document.when(
+  ) => artifact.when(
     loading: () => const SliverToBoxAdapter(
       child: Padding(
         padding: EdgeInsets.symmetric(vertical: RepositoryMd3Layout.space32),
@@ -1329,12 +1365,16 @@ class _RepositoryDocumentsSliverState
         title: Text(context.l10n.repoDocumentLoadError('$error')),
         trailing: IconButton(
           tooltip: context.l10n.commonRetry,
-          onPressed: () => ref.invalidate(repositoryDocumentProvider(key)),
+          onPressed: () => unawaited(
+            ref
+                .read(repositoryDocumentProvider(request).notifier)
+                .refreshResource(),
+          ),
           icon: const Icon(Icons.refresh),
         ),
       ),
     ),
-    data: (final RepositoryDocument? value) {
+    data: (final RepositoryDocumentArtifact? value) {
       if (value == null) {
         return SliverToBoxAdapter(
           child: Padding(
@@ -1345,12 +1385,14 @@ class _RepositoryDocumentsSliverState
           ),
         );
       }
-      return switch (value.format) {
+      final RepositoryDocument document = value.document;
+      return switch (document.format) {
         RepositoryDocumentFormat.html => RepositoryReadmeSliver(
           key: ValueKey<String>(
             '${widget.repoRef.fullName}-${widget.branch}-${selected.name}',
           ),
-          readmeAsync: AsyncData<String?>(value.content),
+          readmeAsync: AsyncData<String?>(document.content),
+          renderArtifact: value.renderArtifact,
           branch: widget.branch,
           repoFullName: widget.repoRef.fullName,
           contentPadding: RepositoryMd3Layout.documentContentPaddingFor(
@@ -1361,7 +1403,7 @@ class _RepositoryDocumentsSliverState
           child: Padding(
             padding: const EdgeInsets.all(RepositoryMd3Layout.space16),
             child: SelectableText(
-              value.content,
+              document.content,
               style: Theme.of(
                 context,
               ).textTheme.bodyMedium?.copyWith(fontFamily: 'monospace'),
@@ -1369,6 +1411,58 @@ class _RepositoryDocumentsSliverState
           ),
         ),
       };
+    },
+  );
+
+  Widget _buildReadmeSliver(
+    final BuildContext context,
+    final AsyncValue<RepositoryReadmeArtifact?> artifact,
+    final RepositoryReadmeKey key,
+  ) => artifact.when(
+    loading: () => const SliverToBoxAdapter(
+      child: Padding(
+        padding: EdgeInsets.symmetric(vertical: RepositoryMd3Layout.space32),
+        child: Center(child: CircularProgressIndicator()),
+      ),
+    ),
+    error: (final Object error, final StackTrace stack) => SliverToBoxAdapter(
+      child: ListTile(
+        leading: const Icon(Icons.warning_amber_outlined),
+        title: Text(context.l10n.repoDocumentLoadError('$error')),
+        trailing: IconButton(
+          tooltip: context.l10n.commonRetry,
+          onPressed: () => unawaited(
+            ref
+                .read(repositoryReadmeArtifactProvider(key).notifier)
+                .refreshResource(),
+          ),
+          icon: const Icon(Icons.refresh),
+        ),
+      ),
+    ),
+    data: (final RepositoryReadmeArtifact? value) {
+      if (value == null) {
+        return SliverToBoxAdapter(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(
+              vertical: RepositoryMd3Layout.space32,
+            ),
+            child: Center(child: Text(context.l10n.repoDocumentNotFound)),
+          ),
+        );
+      }
+      return RepositoryReadmeSliver(
+        key: ValueKey<String>(
+          '${widget.repoRef.fullName}-${widget.branch}-readme',
+        ),
+        readmeAsync: AsyncData<String?>(value.document.content),
+        renderArtifact: value.renderArtifact,
+        branch: widget.branch,
+        repoFullName: widget.repoRef.fullName,
+        contentPadding: RepositoryMd3Layout.documentContentPaddingFor(
+          widget.windowClass,
+        ),
+      );
     },
   );
 }

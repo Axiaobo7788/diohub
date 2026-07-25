@@ -25,6 +25,12 @@ class PaginationController<T, R> {
     this.getPatches,
     bool autoFetch = true,
   }) {
+    final PageSource<T> currentSource = source;
+    if (currentSource is ForwardPageReplacementSource<T>) {
+      _sourceReplacementSubscription =
+          (currentSource as ForwardPageReplacementSource<T>).pageReplacements
+              .listen(_handleSourceReplacement);
+    }
     if (autoFetch) {
       Future.microtask(fetchForward);
     }
@@ -79,6 +85,8 @@ class PaginationController<T, R> {
   Completer<void>? _refreshCompleter;
   bool _lastForwardFailureWasRefresh = false;
   bool _lastRefreshRetainedItems = true;
+  StreamSubscription<ForwardPageReplacement<T>>? _sourceReplacementSubscription;
+  ForwardPageReplacement<T>? _pendingSourceReplacement;
 
   List<R> _process(List<T> raw) {
     final transformed = transform != null ? transform!(raw) : raw as List<R>;
@@ -129,6 +137,7 @@ class PaginationController<T, R> {
       }
       _lastForwardFailureWasRefresh = false;
       _publishState(phase: const Idle());
+      _applyPendingSourceReplacement();
     } catch (e, st) {
       AppLogger.error(
         'PaginationController.fetchForward failed',
@@ -429,6 +438,8 @@ class PaginationController<T, R> {
 
   void dispose() {
     _disposed = true;
+    unawaited(_sourceReplacementSubscription?.cancel());
+    source.dispose();
     final refreshCompleter = _refreshCompleter;
     if (refreshCompleter != null && !refreshCompleter.isCompleted) {
       refreshCompleter.complete();
@@ -439,6 +450,50 @@ class PaginationController<T, R> {
   // -------------------------------------------------------------------------
   // Internal
   // -------------------------------------------------------------------------
+
+  void _handleSourceReplacement(final ForwardPageReplacement<T> update) {
+    if (_disposed) {
+      return;
+    }
+    if (_fetchingForward || _refreshCompleter != null) {
+      _pendingSourceReplacement = update;
+      return;
+    }
+    _applySourceReplacement(update);
+  }
+
+  void _applyPendingSourceReplacement() {
+    final ForwardPageReplacement<T>? pending = _pendingSourceReplacement;
+    if (pending == null || _fetchingBackward || _refreshCompleter != null) {
+      return;
+    }
+    _pendingSourceReplacement = null;
+    _applySourceReplacement(pending);
+  }
+
+  void _applySourceReplacement(final ForwardPageReplacement<T> update) {
+    final List<R> previousItems = _process(update.previous.items);
+    final List<R> replacementItems = _process(update.replacement.items);
+
+    // Runtime currently emits only first-page replacements. Apply it
+    // atomically only while the controller still represents exactly that
+    // stale page; if the user already paged, the refreshed Runtime value is
+    // retained for the next query session instead of risking page overlap.
+    if (_items.length != previousItems.length ||
+        !_itemsIdsEqual(_items, previousItems)) {
+      return;
+    }
+    _items
+      ..clear()
+      ..addAll(replacementItems);
+    _clearLocalPatches();
+    _publishState(
+      hasMoreForward: update.replacement.hasNextPage,
+      totalCount: update.replacement.totalCount,
+      clearTotalCount: true,
+      force: true,
+    );
+  }
 
   Future<void> _runRefreshLoop(final Completer<void> completer) async {
     try {
@@ -592,6 +647,7 @@ class PaginationController<T, R> {
     bool clearTotalCount = false,
     PaginationPhase? phase,
     int? syntheticTailCount,
+    bool force = false,
   }) {
     if (_disposed) return;
 
@@ -606,7 +662,8 @@ class PaginationController<T, R> {
       phase: phase ?? prev.phase,
       syntheticTailCount: syntheticTailCount ?? _syntheticTailCount,
     );
-    if (prev.phase == next.phase &&
+    if (!force &&
+        prev.phase == next.phase &&
         prev.hasMoreForward == next.hasMoreForward &&
         prev.hasMoreBackward == next.hasMoreBackward &&
         prev.anchorId == next.anchorId &&

@@ -5,15 +5,20 @@ import 'package:diohub/common/bottom_sheet/bottom_sheets.dart';
 import 'package:diohub/common/nav_center/models/preset.dart';
 import 'package:diohub/common/misc/shimmer_bone.dart';
 import 'package:diohub/common/misc/shimmer_scope.dart';
+import 'package:diohub/common/pagination/pagination.dart';
+import 'package:diohub/common/resource_runtime/resource_runtime.dart';
 import 'package:diohub/common/search_overlay/search_filter_sheet.dart';
 import 'package:diohub/common/wrappers/search_scroll_wrapper.dart';
 import 'package:diohub/l10n/l10n.dart';
 import 'package:diohub/models/repositories/public_repository.dart';
+import 'package:diohub/models/repositories/repository_issue_pull_summary.dart';
 import 'package:diohub/models/search/quick_filter.dart';
 import 'package:diohub/models/search/search_scope.dart';
 import 'package:diohub/models/search/search_state.dart';
 import 'package:diohub/models/search/search_type_config.dart';
 import 'package:diohub/providers/search/search_state_notifier.dart';
+import 'package:diohub/providers/repository/repository_issue_pull_page_source.dart';
+import 'package:diohub/providers/resource_runtime/resource_runtime_provider.dart';
 import 'package:diohub/routes/navigable_actions.dart';
 import 'package:diohub/routes/router.gr.dart';
 import 'package:diohub/services/repositories/public_repository_service.dart';
@@ -299,6 +304,30 @@ class _RepositoryIssuePullMd3PageState
     );
   }
 
+  PageSource<Object> _runtimePageSource(
+    final WidgetRef ref,
+    final SearchScope _,
+    final String query,
+    final SearchTypeConfig config,
+  ) {
+    final ResourceScope? resourceScope = ref.read(activeResourceScopeProvider);
+    if (resourceScope == null) {
+      return SliceForwardSource<Object>(
+        fetch: (final int count) =>
+            config.fetchSlice(query: query, count: count),
+        resetState: config.resetState,
+      );
+    }
+    return ref
+        .read(repositoryIssuePullRuntimePageSourceFactoryProvider)
+        .call(
+          repo: widget.repoRef,
+          query: query,
+          signedIn: widget.signedIn,
+          scope: resourceScope,
+        );
+  }
+
   Future<void> _openListItem(final RepositoryIssuePullRowData row) async {
     if (widget.signedIn) {
       await row.ref.navigate(context, ref);
@@ -317,6 +346,18 @@ class _RepositoryIssuePullMd3PageState
         context,
       ).showSnackBar(SnackBar(content: Text(context.l10n.homeNoSystemBrowser)));
     }
+  }
+
+  String _itemId(final Object item) {
+    return switch (item) {
+      final RepositoryIssuePullSummary result => result.nodeId,
+      final PublicRepositoryIssuePullSummary result => result.nodeId,
+      IssueResult(:final data) => data.id,
+      PullResult(:final data) => data.id,
+      _ => throw StateError(
+        'Unsupported Repository issue/PR result: ${item.runtimeType}',
+      ),
+    };
   }
 
   bool get _creationEnabled {
@@ -429,6 +470,10 @@ class _RepositoryIssuePullMd3PageState
     required final int? closedCount,
   }) {
     final double horizontalPadding = compactToolbar ? 16 : 24;
+    final bool usesRuntimePageSource = widget.searchConfigFactory == null;
+    final Object? sourceScopeKey = usesRuntimePageSource
+        ? ref.watch(activeResourceScopeProvider)
+        : null;
     return RefreshIndicator(
       onRefresh: _refresh,
       child: CustomScrollView(
@@ -484,6 +529,11 @@ class _RepositoryIssuePullMd3PageState
             configFactory:
                 widget.searchConfigFactory ??
                 (widget.signedIn ? null : _publicSearchConfig),
+            pageSourceFactory: usesRuntimePageSource
+                ? _runtimePageSource
+                : null,
+            itemId: _itemId,
+            sourceScopeKey: sourceScopeKey,
             querySessionCapacity: 4,
             animateQueryChanges: true,
             listPadding: EdgeInsets.fromLTRB(
@@ -504,6 +554,8 @@ class _RepositoryIssuePullMd3PageState
                   final int index,
                 ) {
                   final RepositoryIssuePullRowData row = switch (item) {
+                    final RepositoryIssuePullSummary result =>
+                      RepositoryIssuePullRowData.fromSummary(result),
                     final IssueOrPull result =>
                       RepositoryIssuePullRowData.fromSearchResult(result),
                     final PublicRepositoryIssuePullSummary result =>

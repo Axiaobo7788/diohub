@@ -3,6 +3,7 @@ import 'package:diohub/common/utils/github_visual_styles.dart';
 import 'package:diohub/l10n/l10n.dart';
 import 'package:diohub/l10n/relative_time.dart';
 import 'package:diohub/models/repositories/public_repository.dart';
+import 'package:diohub/models/repositories/repository_issue_pull_summary.dart';
 import 'package:diohub_graphql/fragments/fragment_typedefs.dart' as gql;
 import 'package:diohub_models/models/entity_ref.dart';
 import 'package:diohub_models/models/search/issue_or_pull.dart';
@@ -123,6 +124,41 @@ class RepositoryIssuePullRowData {
           )
           .toList(growable: false),
       externalUrl: result.htmlUrl,
+    );
+  }
+
+  factory RepositoryIssuePullRowData.fromSummary(
+    final RepositoryIssuePullSummary result,
+  ) {
+    return RepositoryIssuePullRowData(
+      ref: result.isPullRequest
+          ? PullRequestRef(repo: result.repo, number: result.number)
+          : IssueRef(repo: result.repo, number: result.number),
+      title: result.title,
+      number: result.number,
+      author: result.author,
+      timestamp: result.mergedAt ?? result.closedAt ?? result.createdAt,
+      commentsCount: result.commentsCount,
+      visualState: result.isPullRequest
+          ? PrVisualState.fromNames(
+              result.state,
+              merged: result.isMerged,
+              isDraft: result.isDraft,
+            )
+          : IssueVisualState.fromNames(
+              result.state,
+              reasonName: result.stateReason,
+            ),
+      labels: result.labels
+          .map(
+            (final RepositoryIssuePullLabelSummary label) =>
+                RepositoryIssuePullLabelData(
+                  name: label.name,
+                  color: label.color,
+                ),
+          )
+          .toList(growable: false),
+      externalUrl: result.url,
     );
   }
 

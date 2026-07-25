@@ -650,7 +650,9 @@ class SearchListBody extends TabBody {
 class LeadingTabBody extends TabBody {
   LeadingTabBody({required this.leading, required this.child});
 
-  final Widget leading;
+  /// May be updated by a responsive shell while [child] retains its
+  /// pagination and scroll lifecycle.
+  Widget? leading;
   final TabBody child;
 
   @override
@@ -665,7 +667,7 @@ class LeadingTabBody extends TabBody {
     final WidgetRef ref,
   ) {
     return <Widget>[
-      SliverToBoxAdapter(child: leading),
+      if (leading != null) SliverToBoxAdapter(child: leading!),
       ...child.buildSliversWithRef(context, ref),
     ];
   }

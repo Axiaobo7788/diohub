@@ -6,11 +6,12 @@ import 'package:diohub/common/nav_center/shell/nav_center_shell_widgets.dart';
 import 'package:diohub/models/contributions/contribution_query_models.dart';
 import 'package:diohub/providers/users/user_providers.dart';
 import 'package:diohub/view/profile/about/widgets/tabbed_contribution_section.dart';
+import 'package:diohub/view/profile/md3/profile_md3_screen.dart';
+import 'package:diohub/view/profile/md3/profile_navigation.dart';
 import 'package:diohub/view/profile/widgets/profile_screen_config.dart';
 import 'package:diohub/view/profile/widgets/user_profile_screen_skeleton.dart';
 import 'package:diohub_graphql/queries/users/user_typedefs.dart';
 import 'package:diohub_models/models/entity_ref.dart';
-import 'package:diohub_premium_api/diohub_premium_api.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -28,14 +29,32 @@ class UserProfileScreen extends ConsumerStatefulWidget {
 class UserProfileScreenState extends ConsumerState<UserProfileScreen> {
   late ContributionQueryKey _contributionQueryKey;
   ContributionTab _contributionTab = TabbedContributionSection.defaultTab;
+  late bool _useLegacyLayout;
 
   @override
   void initState() {
     super.initState();
+    _useLegacyLayout = !ProfileNavigationDestination.supportsPath(
+      widget.userRef.tab,
+    );
     _contributionQueryKey = ContributionQueryKey.lastYear(widget.userRef.login);
     if (kDebugMode) {
       final (from, to) = _contributionQueryKey.dateRange.dates;
       debugPrint('Contribution range initialized: $from → $to');
+    }
+  }
+
+  @override
+  void didUpdateWidget(covariant final UserProfileScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.userRef != widget.userRef) {
+      _useLegacyLayout = !ProfileNavigationDestination.supportsPath(
+        widget.userRef.tab,
+      );
+      _contributionQueryKey = ContributionQueryKey.lastYear(
+        widget.userRef.login,
+      );
+      _contributionTab = TabbedContributionSection.defaultTab;
     }
   }
 
@@ -46,16 +65,19 @@ class UserProfileScreenState extends ConsumerState<UserProfileScreen> {
 
   void _onYearChanged(int year) {
     setState(() {
-      _contributionQueryKey =
-          ContributionQueryKey.year(widget.userRef.login, year);
+      _contributionQueryKey = ContributionQueryKey.year(
+        widget.userRef.login,
+        year,
+      );
     });
   }
 
   void _onCustomRangeChanged(DateTime? from, DateTime? to) {
     setState(() {
       if (from == null && to == null) {
-        _contributionQueryKey =
-            ContributionQueryKey.lastYear(widget.userRef.login);
+        _contributionQueryKey = ContributionQueryKey.lastYear(
+          widget.userRef.login,
+        );
       } else if (from != null && to != null) {
         _contributionQueryKey = ContributionQueryKey.customRange(
           userName: widget.userRef.login,
@@ -74,6 +96,13 @@ class UserProfileScreenState extends ConsumerState<UserProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
+    if (!_useLegacyLayout) {
+      return ProfileMd3Screen(
+        key: ValueKey<UserRef>(widget.userRef),
+        userRef: widget.userRef,
+        onOpenLegacy: () => setState(() => _useLegacyLayout = true),
+      );
+    }
     final userAsync = ref.watch(userProvider(widget.userRef));
 
     return Scaffold(
@@ -207,19 +236,13 @@ class _ProfileShellContentState extends ConsumerState<_ProfileShellContent> {
       (TabConfig p) => p.deeplinkPath == _config!.initialTabPath,
     );
     final initialIndex = idx >= 0 ? idx : 0;
-    return NavCenterShell(
-      config: _config!,
-      initialTabIndex: initialIndex,
-    );
+    return NavCenterShell(config: _config!, initialTabIndex: initialIndex);
   }
 }
 
 /// Wraps org profile content with an optional MaterialBanner when [org] has a non-expired announcement.
 class _OrgAnnouncementWrapper extends StatefulWidget {
-  const _OrgAnnouncementWrapper({
-    required this.org,
-    required this.child,
-  });
+  const _OrgAnnouncementWrapper({required this.org, required this.child});
 
   final OrgProfile org;
   final Widget child;
@@ -237,7 +260,8 @@ class _OrgAnnouncementWrapperState extends State<_OrgAnnouncementWrapper> {
     final banner = widget.org.announcementBanner;
     final announcement = banner?.message;
     final expiresAt = banner?.expiresAt?.toIso8601String();
-    final isExpired = expiresAt != null &&
+    final isExpired =
+        expiresAt != null &&
         DateTime.tryParse(expiresAt)?.isBefore(DateTime.now()) == true;
     if (_dismissed ||
         announcement == null ||

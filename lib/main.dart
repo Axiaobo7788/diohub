@@ -30,6 +30,8 @@ import 'package:diohub/common/animations/app_motion_media_query.dart';
 import 'package:diohub/l10n/app_localizations.dart';
 import 'package:diohub/l10n/l10n.dart';
 import 'package:diohub/providers/logging/log_providers.dart';
+import 'package:diohub/providers/resource_runtime/resource_runtime_lifecycle.dart';
+import 'package:diohub/providers/resource_runtime/resource_runtime_provider.dart';
 import 'package:diohub/providers/settings/locale_provider.dart';
 import 'package:diohub/providers/watchers/watcher_manager_provider.dart';
 import 'package:diohub/providers/settings/appearance_provider.dart';
@@ -263,6 +265,7 @@ class _RootAppState extends ConsumerState<RootApp> with WidgetsBindingObserver {
       _router = AppRouter();
       _navObserver = AppNavigationObserver(container);
       ref.read(logPruneSchedulerProvider);
+      ref.read(resourceRuntimeProvider);
     }
   }
 
@@ -277,6 +280,7 @@ class _RootAppState extends ConsumerState<RootApp> with WidgetsBindingObserver {
   void didChangeAppLifecycleState(AppLifecycleState state) {
     super.didChangeAppLifecycleState(state);
     if (!mounted) return;
+    updateResourceRuntimeLifecycle(ref.read(resourceRuntimeProvider), state);
     try {
       final service = ref.read(watcherServiceProvider);
       switch (state) {
@@ -297,6 +301,13 @@ class _RootAppState extends ConsumerState<RootApp> with WidgetsBindingObserver {
         tag: 'main',
       );
     }
+  }
+
+  @override
+  void didHaveMemoryPressure() {
+    super.didHaveMemoryPressure();
+    if (!mounted) return;
+    ref.read(resourceRuntimeProvider).trimMemory();
   }
 
   @override

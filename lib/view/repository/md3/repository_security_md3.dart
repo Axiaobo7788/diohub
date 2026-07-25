@@ -11,6 +11,7 @@ import 'package:diohub/l10n/relative_time.dart';
 import 'package:diohub/models/repository_document.dart';
 import 'package:diohub/providers/database_providers.dart';
 import 'package:diohub/providers/repository/repository_document_provider.dart';
+import 'package:diohub/providers/repository/repository_document_resource.dart';
 import 'package:diohub/routes/router.gr.dart';
 import 'package:diohub/services/base/service_extensions.dart';
 import 'package:diohub/view/repository/md3/repository_md3_layout.dart';
@@ -134,19 +135,25 @@ class _RepositorySecurityMd3PageState
 
   Future<void> _refresh({final bool retainItems = true}) async {
     final String? defaultBranch = widget.defaultBranch;
+    Future<void>? policyRefresh;
     if (_section == _SecuritySection.overview &&
         defaultBranch != null &&
         defaultBranch.isNotEmpty) {
-      ref.invalidate(
-        repositoryDocumentProvider((
+      final RepositoryDocumentRequest request = (
+        key: (
           repoRef: widget.repoRef,
           branch: defaultBranch,
           kind: RepositoryDocumentKind.security,
-        )),
+        ),
+        consumer: RepositoryDocumentConsumer.security,
       );
+      policyRefresh = ref
+          .read(repositoryDocumentProvider(request).notifier)
+          .refreshResource();
     }
     await switch (_section) {
       _SecuritySection.overview => Future.wait<void>(<Future<void>>[
+        if (policyRefresh != null) policyRefresh,
         _dependabot.refresh(retainItems: retainItems),
         _codeScanning.refresh(retainItems: retainItems),
         _secretScanning.refresh(retainItems: retainItems),
@@ -350,14 +357,17 @@ class _RepositorySecurityMd3PageState
 
   Widget _buildOverview() {
     final String? defaultBranch = widget.defaultBranch;
-    final AsyncValue<RepositoryDocument?>? policy =
+    final AsyncValue<RepositoryDocumentArtifact?>? policy =
         defaultBranch == null || defaultBranch.isEmpty
         ? null
         : ref.watch(
             repositoryDocumentProvider((
-              repoRef: widget.repoRef,
-              branch: defaultBranch,
-              kind: RepositoryDocumentKind.security,
+              key: (
+                repoRef: widget.repoRef,
+                branch: defaultBranch,
+                kind: RepositoryDocumentKind.security,
+              ),
+              consumer: RepositoryDocumentConsumer.security,
             )),
           );
     return LayoutBuilder(

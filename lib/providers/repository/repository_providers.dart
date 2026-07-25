@@ -34,7 +34,21 @@ export 'package:diohub/providers/repository/license_content_notifier.dart'
 export 'package:diohub/providers/repository/readme_notifier.dart'
     show readmeProvider, ReadmeNotifier;
 export 'package:diohub/providers/repository/repository_document_provider.dart'
-    show repositoryDocumentProvider, RepositoryDocumentKey;
+    show
+        repositoryDocumentProvider,
+        RepositoryDocumentConsumer,
+        RepositoryDocumentKey,
+        RepositoryDocumentNotifier,
+        RepositoryDocumentRequest;
+export 'package:diohub/providers/repository/repository_document_resource.dart'
+    show
+        invalidateRepositoryDocumentResources,
+        RepositoryDocumentArtifact,
+        RepositoryDocumentResourceKey;
+export 'package:diohub/providers/repository/repository_readme_resource.dart'
+    show RepositoryReadmeArtifact, RepositoryReadmeKey;
+export 'package:diohub/providers/repository/repository_readme_resource_provider.dart'
+    show repositoryReadmeArtifactProvider, RepositoryReadmeArtifactNotifier;
 export 'package:diohub/providers/repository/repository_providers_core.dart'
     show
         compareResultProvider,
@@ -50,16 +64,21 @@ export 'package:diohub/providers/repository/repository_providers_core.dart'
 /// is specified.
 final profileReadmeHtmlProvider = FutureProvider.autoDispose
     .family<String?, UserRef>((final Ref ref, final UserRef userRef) async {
-  keepAliveFor(ref);
-  final RepoRef repoRef = RepoRef(owner: userRef.login, name: userRef.login);
-  final RepositoryServices services = repoRef.services(ref.read(apiClientProvider));
-  try {
-    return await services.fetchReadmeHtml();
-  } on DioException catch (e) {
-    if (e.response?.statusCode == 404) return null;
-    rethrow;
-  }
-});
+      keepAliveFor(ref);
+      final RepoRef repoRef = RepoRef(
+        owner: userRef.login,
+        name: userRef.login,
+      );
+      final RepositoryServices services = repoRef.services(
+        ref.read(apiClientProvider),
+      );
+      try {
+        return await services.fetchReadmeHtml();
+      } on DioException catch (e) {
+        if (e.response?.statusCode == 404) return null;
+        rethrow;
+      }
+    });
 
 /// Fetches the profile README HTML for an **organization** (from the
 /// `{login}/.github` repo, sub-directory `profile/README.md`).
@@ -72,13 +91,15 @@ final profileReadmeHtmlProvider = FutureProvider.autoDispose
 /// `GET /repos/{owner}/{repo}/readme/{dir}`
 final orgProfileReadmeHtmlProvider = FutureProvider.autoDispose
     .family<String?, UserRef>((final Ref ref, final UserRef userRef) async {
-  keepAliveFor(ref);
-  final RepoRef repoRef = RepoRef(owner: userRef.login, name: '.github');
-  final RepositoryServices services = repoRef.services(ref.read(apiClientProvider));
-  try {
-    return await services.fetchReadmeHtml(dir: 'profile');
-  } on DioException catch (e) {
-    if (e.response?.statusCode == 404) return null;
-    rethrow;
-  }
-});
+      keepAliveFor(ref);
+      final RepoRef repoRef = RepoRef(owner: userRef.login, name: '.github');
+      final RepositoryServices services = repoRef.services(
+        ref.read(apiClientProvider),
+      );
+      try {
+        return await services.fetchReadmeHtml(dir: 'profile');
+      } on DioException catch (e) {
+        if (e.response?.statusCode == 404) return null;
+        rethrow;
+      }
+    });

@@ -1,0 +1,62 @@
+query searchRepositoryIssuePulls(
+  $query: String!
+  $first: Int!
+  $after: String
+) {
+  search(query: $query, type: ISSUE, first: $first, after: $after) {
+    issueCount
+    pageInfo {
+      endCursor
+      hasNextPage
+    }
+    nodes {
+      __typename
+      ... on Issue {
+        id
+        title
+        number
+        issueState: state
+        stateReason
+        url
+        createdAt
+        closedAt
+        comments {
+          totalCount
+        }
+        author {
+          login
+        }
+        labels(first: 5) {
+          nodes {
+            name
+            color
+          }
+        }
+      }
+      ... on PullRequest {
+        id
+        title
+        number
+        pullRequestState: state
+        url
+        createdAt
+        closedAt
+        mergedAt
+        merged
+        isDraft
+        comments {
+          totalCount
+        }
+        author {
+          login
+        }
+        labels(first: 5) {
+          nodes {
+            name
+            color
+          }
+        }
+      }
+    }
+  }
+}

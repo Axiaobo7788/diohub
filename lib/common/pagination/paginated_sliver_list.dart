@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:diohub/common/animations/logo_progress_indicator.dart';
 import 'package:diohub/common/misc/async_error_widgets.dart';
 import 'package:diohub/common/pagination/anchor_highlight.dart';
@@ -245,12 +247,12 @@ class _ForwardPageTriggerState extends State<_ForwardPageTrigger> {
   }
 
   void _scheduleFetch() {
-    if (_scheduled) return;
+    if (_scheduled || !TickerMode.valuesOf(context).enabled) return;
     _scheduled = true;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _scheduled = false;
-      if (mounted) {
-        widget.controller.fetchForward();
+      if (mounted && TickerMode.valuesOf(context).enabled) {
+        unawaited(widget.controller.fetchForward());
       }
     });
   }

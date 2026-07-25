@@ -72,6 +72,58 @@ void main() {
     expect(controller.state.value.totalCount, 37);
   });
 
+  testWidgets('a retained hidden sentinel does not fetch until visible', (
+    final WidgetTester tester,
+  ) async {
+    int fetchCalls = 0;
+    final PaginationController<int, int> controller =
+        PaginationController<int, int>(
+          source: SliceForwardSource<int>(
+            fetch: (final int count) async {
+              fetchCalls += 1;
+              return const PageSlice<int>(items: <int>[1], hasNextPage: false);
+            },
+            resetState: () {},
+          ),
+          idOf: (final int item) => '$item',
+          autoFetch: false,
+        );
+    addTearDown(controller.dispose);
+
+    Widget buildPage(final bool visible) {
+      return MaterialApp(
+        home: TickerMode(
+          enabled: visible,
+          child: CustomScrollView(
+            slivers: <Widget>[
+              PaginatedSliverList<int>(
+                controller: controller,
+                itemBuilder: (_, final int item, __) => Text('$item'),
+                loadingBuilder: (_) => const SizedBox(height: 24),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    await tester.pumpWidget(buildPage(false));
+    await tester.pump();
+    await tester.pump();
+    expect(
+      fetchCalls,
+      0,
+      reason: 'a retained Repository tab must not page in the background',
+    );
+
+    await tester.pumpWidget(buildPage(true));
+    await tester.pump();
+    await tester.pump();
+    expect(fetchCalls, 1);
+    expect(find.text('1'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets(
     'refresh keeps committed rows visible through failure and retry',
     (final WidgetTester tester) async {
