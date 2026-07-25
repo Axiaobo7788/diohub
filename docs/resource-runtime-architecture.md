@@ -45,6 +45,72 @@ domain ResourceSpec
 身份、预算、优先级、依赖和失效由 Runtime 统一裁决；网络、解析、解码仍由独立强类型
 `ResourceSpec` 和已有领域实现执行。Runtime 不导入 Widget、Theme、BuildContext 或页面模型。
 
+### 1.1 统一治理不等于统一加载算法
+
+Runtime 统一的是资源治理，不会自动决定一张 Issue 行需要哪些 GraphQL 字段、时间线从哪个方向
+分页、目录如何复用 immutable tree、聚合请求怎样分批，或实时状态何时订阅。冷加载速度仍取决于
+正式 Service 的最小投影和与访问模式匹配的专用算法。
+
+目标结构是：
+
+```text
+Widget / Riverpod thin binding
+             ↓
+query or page session（按需）
+             ↓
+specialized access-pattern executor  ←  Resource Recipe
+             ↓
+       ResourceRuntime control plane
+             ↓
+typed ResourceSpec loader
+             ↓
+existing domain Service / transport cache
+```
+
+这里的 Resource Recipe 是对身份、页键、标签、策略、估算权重和正式 Loader 的声明，可以由现有
+`ResourceSpec` factory 与 Provider 组成，不要求再造一套配置框架。特化执行器按访问模式封装操作
+算法，不能包含某个页面的 Widget、文案、业务字段或第二套 Service。
+
+| 层级 | 职责 |
+| --- | --- |
+| 领域 Service | 正式 REST/GraphQL、本页最小字段投影、游标和领域错误语义 |
+| Resource Recipe | 类型化身份、scope、页键、标签、策略、Loader、依赖和估算权重 |
+| 特化执行器 | 该访问模式的分页、增量刷新、锚点、预取、页窗口、有界扇出及 Lease 生命周期 |
+| `ResourceRuntime` | Single Flight、SWR、generation、调度、Lease、失效、LRU、预算和 Telemetry |
+| Riverpod thin binding / Notifier | 依赖注入、Recipe 构造、简单资源的 Lease 生命周期、执行器注入和状态投影 |
+| Widget | 真实可见性事件、筛选、滚动、展示和用户操作；不直接协调资源机制 |
+
+当前访问模式的事实边界如下：
+
+| 访问模式 | 应负责的专用算法 | 当前状态 |
+| --- | --- | --- |
+| Snapshot / source→artifact | 单值交付、静态依赖、派生产物重建 | 已由 Runtime acquire、dependencies 与 worker 原语落地 |
+| Forward page | 显式页键、首页 SWR、顺序游标和页替换 | `RuntimeForwardPageSource` 已完成首个生产试点，尚未由第二个消费者证明成熟；有界 Controller 页窗口、距离式预取和 mutation overlay 未完成 |
+| Bidirectional timeline | 头部增量、尾部历史分页、锚点与双向去重 | 尚未实现；至少存在第二个明确潜在消费者且任务获批时再建立 |
+| Tree / path | immutable tree/ref、path 分块和父子失效 | 目录资源试点已落地，但没有通用 `TreeExecutor` |
+| Bounded fan-out | 有界并发、局部交付、失败隔离和阶段进度 | 尚未实现；不得用无界 `Future.wait` 代替 |
+| Live activity | 前后台订阅、轮询退避和停止语义 | 不作为普通 Runtime 执行器；使用专用 session，稳定只读 snapshot 可进入 Runtime |
+
+Repository Issues/PR 首个试点目前仍由 `repository_issue_pull_md3.dart` 读取 active scope、选择 fallback
+并构造 Runtime page source。这是迁移期例外，不是推荐 binding：在选择第二个 forward-page 消费者
+前，应先把 scope、transport 与 source factory 收进显式 Riverpod/query-session binding，使 Widget
+只提交 repo、query、登录能力与可见性。新页面不得复制当前胶水。
+
+后续读取型功能使用以下工作流：
+
+1. 从真实 UI 需求追踪正式 Service，先固定最小投影、身份、规模、错误和 mutation 语义；
+2. 判断访问模式，优先复用已有执行器；普通 snapshot/source→artifact 直接使用 Runtime 原语；
+3. 用 Recipe 声明资源差异，不把字段、scope、页键或标签散落在 Widget；
+4. 以生产入口测试首次、fresh、stale、下一页/增量、返回、失效、scope 和禁止事件；
+5. TTL 先由新鲜度与失效合同解释；正确性成立后再用 Profile/Release 调整页大小、预取距离、窗口和
+   并发预算；
+6. 第二个生产消费者只新增 Recipe/领域 Loader 而无需修改执行器，才证明该访问模式抽象成熟。
+
+如果新页面必须修改 Runtime 核心、通用 `PaginationController`，或让 Widget 直接管理 Lease、
+generation、资源身份和请求协调，应立即停止页面扩展并审查抽象。只有现有执行器缺少通用能力、需求
+确实构成新的访问模式、且至少存在第二个明确潜在消费者时，才新增公共执行器；单页差异留在领域
+Service/Provider 的薄适配器中。
+
 ## 2. 公共合同与状态
 
 - `ResourceId<T>`：由 kind、schema version、`ResourceScope` 与领域键组成；同一逻辑 ID 冲突使用

@@ -105,7 +105,26 @@ Route:
 - [ ] 本地数据库/工作区状态（不进入 Runtime）
 - [ ] 表单、筛选、滚动或草稿（页面状态）
 
-### 3.2 为什么接入
+### 3.2 访问模式与特化执行
+
+选择并说明：直接 snapshot/source→artifact、forward page、bidirectional timeline、tree/path、
+bounded fan-out，或普通 Runtime 之外的 live session。不得把尚未实现的分类写成现成执行器。
+
+```text
+复用的执行器或 Runtime 原语：
+Resource Recipe / spec factory：
+本模式需要的专用算法：
+页面特有而不上推公共层的差异：
+第二个潜在消费者：
+```
+
+如果接入要求修改 Runtime 核心、通用 `PaginationController`，或让 Widget 直接管理 Lease、
+generation、identity 或请求调度，先停止页面实现并审查是否缺少通用执行能力。新增公共执行器必须
+对应新的访问模式并至少有第二个明确潜在消费者；当前已证明的公共路径只有直接
+snapshot/source→artifact。`RuntimeForwardPageSource` 已完成首个生产试点，但尚未由第二个消费者
+证明抽象成熟，且当前 Issues/PR Widget 中的 scope/source 胶水不得复制。
+
+### 3.3 为什么接入
 
 ```text
 需要 Runtime 统一的能力：

@@ -1,6 +1,6 @@
 # DioHub 二次开发实施约束
 
-最后更新：2026-07-23
+最后更新：2026-07-24
 
 ## 1. 总原则
 
@@ -91,6 +91,37 @@ Android 与 Linux 基准并不表示可以破坏 Windows/macOS；未在对应 ru
 10. Loading、Empty、Error、Refreshing 和 Loading More 是不同状态；不得用全页 Skeleton 掩盖不必要的状态重建。
 11. 优先复用现有 HTTP 缓存、实体缓存、`PaginationController`、请求 epoch 和 Sliver 实现，不再造第二套加载框架。
 12. 低内存机器上验证任务串行运行，不并发启动 Flutter、Gradle 或 CMake 构建。
+
+### 4.5 统一治理与特化执行
+
+`ResourceRuntime` 是适合缓存和复用的远程只读资源控制面，不是能自动优化所有数据流的通用加载
+算法。接入 Runtime 的新功能必须同时完成治理接入和访问模式设计，不能把“进入 Runtime”直接等同于
+“加载已经特化或变快”；长轮询、Stream、本地数据库和命令式副作用仍使用各自专用边界。
+
+1. 先从当前生产入口追踪到正式 Service，再定义当前 UI 真正需要的最小字段投影、资源身份、分页或
+   增量语义、mutation 失效和规模上限；Runtime 不负责猜测这些领域合同。
+2. 实现前识别访问模式，并优先复用已经存在且有生产回归的执行路径。当前可视为已证明的基础只有直接
+   snapshot/source→artifact 资源和 `RuntimeForwardPageSource`；Timeline、Tree、FanOut、Live 等
+   是候选分类，不是尚未存在的公共 API。
+3. Resource Recipe 只声明 `ResourceSpec`、身份、页键、标签、策略、正式 Loader 和估算权重；访问
+   模式执行器负责分页、头部增量、锚点、页窗口、距离式预取或有界扇出等算法；两者都不得复制 Service。
+4. Widget 永不直接持有 Lease。简单资源可由显式 Riverpod binding/Notifier 负责构造 Recipe、
+   acquire、订阅、presence 和幂等 release；分页等访问模式可由特化执行器/query session 持有 Lease。
+   所有权必须单一且可追踪，两类 owner 都不得重实现 generation、Single Flight、调度队列，或另建
+   一套资源身份与缓存体系。
+5. 新页面允许新增领域投影、Recipe 和薄适配器。如果必须修改 Runtime 核心、通用
+   `PaginationController`，或在 Widget 中协调请求，必须暂停并先判断现有执行器是否缺少通用能力。
+   当前 Issues/PR 首个分页试点仍在 Widget 中读取 scope 并构造 page source，是已登记的过渡例外，
+   不得复制到第二个消费者。
+6. 新公共执行器必须对应新的访问模式，至少有第二个明确的潜在消费者，并以领域无关的确定性测试证明
+   复用；不得因一个页面的特殊字段或 UI 结构创建专用加载框架。
+7. 没有第二个消费者时，页面特有差异保留在领域 Service/Provider 的薄适配器中，不上推到 Runtime
+   核心；一旦第二个消费者要求相同算法，再提炼并用两条生产链验证。
+8. TTL 必须由数据的新鲜度、一致性和失效合同解释；页大小、预取距离、窗口容量和并发预算必须在
+   正确性测试通过后由 Profile/Release 同环境数据调整。请求次数减少只能证明复用或传输变化，不能
+   单独证明帧性能或端到端耗时提升。
+9. Mutation、上传、评论提交及其他主动写操作继续由正式 Service/Notifier 管理，不绑定页面 Resource
+   Lease；成功后通过局部 overlay 或精确标签失效同步相关只读资源。
 
 ## 5. Motion 规范
 

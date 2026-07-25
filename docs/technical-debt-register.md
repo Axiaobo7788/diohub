@@ -236,16 +236,16 @@
 | ID | TD-012 |
 | 状态 | In Progress（首个 Repository Issues/PR forward page 生产试点已接入） |
 | 优先级 | P1 |
-| 位置 | `lib/providers`；`lib/view`；`lib/services`；`docs/resource-runtime-information-flow-inventory.md`；`docs/resource-runtime-integration-template.md` |
-| 症状 | Runtime 已覆盖 Repository Code/文档/图片及 Issues/PR 不可变列表页，但 Controller 仍展开持有全部已加载项目；Home、Repository 主信息、详情时间线、Actions、Profile、Notifications 等仍由页面级分页 Controller、Riverpod 定时保活或 Service 聚合分别管理。 |
-| 证据 | Issues/PR 正式入口现在按 scope + repository + transport + query + cursor/page + size 建立页身份，GraphQL/REST 仍复用原 Service；登录列表已从全局重卡片 fragment 分离为只含行字段的 GraphQL 投影，不再取正文、review/check/project/reaction 等详情数据，labels 从 100 收敛为 5。Runtime stale 首页立即回显并后台原位替换，隐藏 Tab sentinel 保持 0 请求。静态搜索仍有 67 处 `PaginationController<...>` 类型引用和 25 处 `keepAliveFor(ref)`。`allReviewThreadsMapProvider` 会分页到耗尽；单文件 patch 查找可能从第一页循环；workflow overview 对工作流列表执行多请求 `Future.wait`；Profile activity 会跨连接和年份聚合；Repository 完整首查询仍携带 6 组 Issues/PR 快捷计数。尚无 Profile 耗时结论。 |
+| 位置 | `lib/providers`；`lib/view`；`lib/services`；`lib/view/repository/md3/repository_issue_pull_md3.dart`；`docs/resource-runtime-information-flow-inventory.md`；`docs/resource-runtime-integration-template.md` |
+| 症状 | Runtime 已覆盖 Repository Code/文档/图片及 Issues/PR 不可变列表页，但 Controller 仍展开持有全部已加载项目；首个 Issues/PR 试点还由 Widget 读取 active scope、选择 fallback 并构造 Runtime page source，尚未形成可直接复用的 Riverpod/query-session binding；Home、Repository 主信息、详情时间线、Actions、Profile、Notifications 等仍由页面级分页 Controller、Riverpod 定时保活或 Service 聚合分别管理。 |
+| 证据 | Issues/PR 正式入口现在按 scope + repository + transport + query + cursor/page + size 建立页身份，GraphQL/REST 仍复用原 Service；登录列表已从全局重卡片 fragment 分离为只含行字段的 GraphQL 投影，不再取正文、review/check/project/reaction 等详情数据，labels 从 100 收敛为 5。Runtime stale 首页立即回显并后台原位替换，隐藏 Tab sentinel 保持 0 请求；但 `_runtimePageSource()` 与 `_buildListContent()` 仍在 Widget state 中读取 `activeResourceScopeProvider`、处理 null fallback 并选择 page source。静态搜索仍有 67 处 `PaginationController<...>` 类型引用和 25 处 `keepAliveFor(ref)`。`allReviewThreadsMapProvider` 会分页到耗尽；单文件 patch 查找可能从第一页循环；workflow overview 对工作流列表执行多请求 `Future.wait`；Profile activity 会跨连接和年份聚合；Repository 完整首查询仍携带 6 组 Issues/PR 快捷计数。尚无 Profile 耗时结论。 |
 | 用户影响 | 高频页面可能重复请求、在辅助数据到齐前等待、产生网络扇出，或让 Controller 长期持有大列表；具体卡顿和内存影响仍待 Profile/Release 测量。 |
 | 冲突来源 | 上游按页面建立 Provider/Controller，ResourceRuntime 后加入且只做了窄试点；分页会话与页资源所有权此前被错误理解为二选一。 |
-| 建议方案 | 使用混合边界：`PaginationController` 保留 query/cursor/order/refresh/scroll，会话中的不可变 page result 以 query + cursor/page + size + scope 接入 Runtime；大列表 Controller 改为有界页窗口或轻量索引。优先试点 Repository Issues/PR，再拆 Repository baseline、PR 时间线/files/reviews、Home feed、Notifications 和 Actions 扇出。 |
+| 建议方案 | 使用混合边界：`PaginationController` 保留 query/cursor/order/refresh/scroll，会话中的不可变 page result 以 query + cursor/page + size + scope 接入 Runtime；先把 Issues/PR 的 scope、transport、fallback 与 source factory 收进显式 Riverpod/query-session binding，再用第二个 forward-page 消费者验证执行器只需新 Recipe/Loader；大列表 Controller 改为有界页窗口或轻量索引。之后再拆 Repository baseline、PR 时间线/files/reviews、Home feed、Notifications 和 Actions 扇出。 |
 | 清理风险 | 直接替换全部 Controller 会破坏双向分页、滚动恢复、mutation overlay、公开 REST 回退和既有查询 LRU；只加 Runtime 缓存但继续无界保留实体则不会降低内存。 |
 | 前置条件 | 逐信息流填写接入模板；明确身份、页窗口、SWR、失效、Lease、预算和禁止事件；先建立请求次数与 Controller 身份失败回归。 |
 | 回归验证 | 本轮定向 43/43：通用 source 5/5、分页 sliver 3/3、轻量查询合同 1/1、正式 Runtime 入口 4/4、Repository Issues/PR 20/20、Tab transition + guest shell 10/10。已证明 Single Flight、fresh/stale 复用与后台替换、显式下一页、隐藏页 0 请求、刷新失败保留旧项、Open→Closed→Open、REST transport、账号 scope 与独立 Material 边界。尚待真实大仓库、LRU 后实体/Lease、360/800/1440px 人工复核及 Profile/Release 冷暖与内存对比。 |
-| 触发条件 | 先人工复核首个试点，再设计有界 Controller 页窗口、距离式预取和 mutation 失效；完成前不机械扩散到全仓分页。 |
+| 触发条件 | 先人工复核首个试点并收敛 Widget 中的 Runtime 胶水，再设计有界 Controller 页窗口、距离式预取和 mutation 失效；第二个 forward-page 消费者必须验证执行器无需再次修改，完成前不机械扩散到全仓分页。 |
 
 ### TD-013 Repository 隐藏 Tab 的异步图片会污染活动 Tab 布局
 
