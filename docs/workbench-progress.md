@@ -1,10 +1,10 @@
 # DioHub Workbench 项目进度
 
-最后更新：2026-07-24
+最后更新：2026-08-09
 
-当前阶段：Phase 1 进行中（Workbench 边界已建立，纯 Dart ResourceRuntime 第三阶段、Repository Code 文档/图片及 Issues/PR forward page 首个生产试点已落地；主要信息流全局接入清单与复用模板已建立；GitHub 式 Home、Repository 主标签、Profile Overview、共享 App Chrome、Device Flow 与新 UI i18n/Motion 基线已落地）
+当前阶段：Phase 1 进行中（Workbench 边界已建立，纯 Dart ResourceRuntime 第三阶段、Repository Code 文档/图片及 Issues/PR、Notifications 与全局工作列表的 forward page 生产入口已落地；主要信息流全局接入清单与复用模板已建立；GitHub 式 Home、Repository 主标签、Profile Overview、共享 App Chrome、Device Flow、新 Settings 主入口与新 UI i18n/Motion 基线已落地）
 
-UI 状态：应用无账号时也直接进入 MD3 主页，登录前后共用 GitHub Dashboard 式响应式信息架构；Home、Repository 与 Profile 主入口真正共用同一套 `AppChrome` 顶栏、导航抽屉和账户菜单，页面只追加自己的二级 Tab；Profile Overview 已接入真实身份字段、Profile README、Pinned repositories、贡献日历与活动时间线，Repositories/Projects/Packages/Stars 继续复用已有正式分页列表并在同一路由内保活，但这些列表的 GitHub 网页式视觉尚未逐页迁移；Repository 的 Code、Issues、Pull requests、Actions、Projects、Wiki、Security、Insights 均已接入同一稳定外壳及正式数据源；Issue/PR 详情内容层仍未完成；新页面支持跟随系统 / English / 简体中文与集中 Reduced Motion；Notifications/Bookmarks、公开访客 Code、Profile 次级列表视觉迁移、Issue/PR 详情内容层和可解释推荐尚待完成
+UI 状态：应用无账号时也直接进入 MD3 主页，登录前后共用 GitHub Dashboard 式响应式信息架构；Home、Repository、Profile、Notifications 与 Settings 主入口真正共用同一套 `AppChrome` 顶栏、导航抽屉和账户菜单，页面只追加自己的局部信息结构；Settings 使用唯一原生路由，先按 GitHub 网页端组织账户身份、个人设置、Access 与 Code/planning 分组，再在侧栏底部追加独立 DioHub 应用设置大类；Public profile 已复用真实 `userProvider` 与 `ViewerSettingsService` 批量写回，Emails、三类密钥、Moderation、Organizations 与 Repositories 已接入现有 REST/GraphQL 及 Provider-owned Runtime 分页会话，DioHub 分类继续复用 `SettingsCache` / persisted Provider；其余 GitHub 设置按 Web 独占、部分 API 或缺 OAuth scope 明确显示边界并提供当前 GitHub/GHES 外部入口，不伪造完整能力；Notifications 已接入真实收件箱、All/Unread、原因筛选、自定义筛选、仓库筛选、本地搜索/排序/分组、刷新/自动分页、选择及已读/完成 mutation；Saved/Done 状态入口保留 GitHub 信息结构，但因 GitHub REST 不提供等价列表查询而明确提示不可用，没有伪造内容；Profile Overview 已接入真实身份字段、Profile README、Pinned repositories、贡献日历与活动时间线，Repositories/Projects/Packages/Stars 继续复用已有正式分页列表并在同一路由内保活，但这些列表的 GitHub 网页式视觉尚未逐页迁移；Repository 的 Code、Issues、Pull requests、Actions、Projects、Wiki、Security、Insights 均已接入同一稳定外壳及正式数据源；Issue/PR 详情内容层仍未完成；新页面支持跟随系统 / English / 简体中文与集中 Reduced Motion；Bookmarks、公开访客 Code、Profile 次级列表视觉迁移、Issue/PR 详情内容层和可解释推荐尚待完成
 
 实施约束：所有后续改动遵循 [`docs/development-constraints.md`](development-constraints.md)。基础设施可用、占位页可打开或局部测试通过均不等于用户可见事项完成。
 
@@ -29,7 +29,8 @@ MVP 只验证一条纵向链路：
 | --- | --- | --- |
 | 分支 | `develop` | downstream 基线 |
 | 改造起点 | `df722a4963e18c40cf0d19db52a4f883ddcc0949` | Repository MD3、Device Flow 与统一主页开始前的 `develop` HEAD |
-| 本轮检查点 | Included | Repository MD3 UI、Device Flow、统一主页/Events Feed、公共浏览、测试与文档 |
+| 本轮功能检查点 | `6916f32a` | Runtime-backed 全局 Issues/PR/Repositories、Notifications、融合 Settings、共享排版与 Home/Repository/Profile 响应式视觉收口；包含正式路由、i18n 生成文件和回归测试 |
+| Downstream workflows | `5edcf488` | CI/Release 改为仅手动触发；依赖上游私有仓库的 AI 分析任务保持可恢复文件但禁用 job，不再因每次提交自动失败 |
 | Flutter | 3.44.7 | Dart 3.12.2 |
 | Android SDK | Passed | SDK 36.1、Build Tools 36.1、NDK 28.2、JDK 21，licenses 已接受 |
 | Linux 系统依赖 | Simplified | 认证已移除 `flutter_inappwebview`/WPE 依赖；剩余 `webview_flutter` 为 HTML 渲染的 Android/macOS 间接依赖 |
@@ -42,7 +43,7 @@ MVP 只验证一条纵向链路：
 | Unified home tests | Passed | 360px 未登录/已登录、800px、1440px、1.3×/2× 文字缩放、中文、未登录语言入口、左右展开态、Changelog 失败重试及滚动预加载 Widget Test 共 17/17 通过 |
 | Events 空仓库回归 | Passed | 真实 `repo: {}` ForkEvent 的解析、fork 目标降级展示数据、三级分组键与仓库专用消费者保护共 4/4 通过 |
 | Dashboard data tests | Passed | Top repositories 主源/兼容回退/账户隔离与 Changelog 请求/解析/官方链接限制共 11/11 通过 |
-| Repository shell tests | Passed | 开启 semantics 后的 360px、800px、1440px 响应式与简中外壳 Widget Test 4/4 通过 |
+| Repository shell tests | Passed | 当前 P0 定向 14/14：身份区 3/3、MD3 外壳 4/4、guest/正式入口 7/7；覆盖 360px 紧凑身份、真实可见性边界、稳定外壳及未登录不构造认证请求 |
 | i18n + Home + Repository target tests | Passed | 2026-07-23 使用 `--concurrency=1` 串行验证 39/39；覆盖持久化、未登录语言入口、中英主页、Repository preview/文档数据层与稳定 loading 外壳 |
 | Home + Repository current target tests | Passed | 2026-07-23 使用 `--no-pub --concurrency=1` 串行复验 54/54；覆盖共享顶栏/抽屉、360/800/1440px Code/Issues/PR/Wiki、1.3×/2× 文字缩放、加载/空/错误、SWR 刷新失败重试、查询变化清除旧结果、生产 Repository 外壳认证三态、已访问 Tab 状态/滚动保持、共享详情外壳和 Reduced Motion |
 | Repository README regression | Passed | 36 个标题 + 28 个长代码块的 semantics/滚动/无界 sliver 回归通过；根 README 正式入口消费 Runtime artifact，fresh/retained 返回不重复请求或顶层解析，三档 Code 布局仍通过 |
@@ -51,7 +52,7 @@ MVP 只验证一条纵向链路：
 | Public Repository target tests | Passed | l10n、Public REST、Repository Issues/PR 与生产 guest shell 共 31/31 通过；覆盖真实 REST 行、无 GraphQL、刷新/错误/搜索、360px/800px/1440px 及 1.3×/2× 文字缩放 |
 | Repository secondary tabs target tests | Passed | Actions/Projects/Security/Insights 局部导航、360px/800px/1440px 登录边界、2× 文字、Reduced Motion、真实 Insights 比例图、SECURITY 文档候选路径及四类类型化深链共 18/18 通过 |
 | Profile MD3 target tests | Passed | 生产 Profile 主入口、360px/800px/1440px、360px 2× 文字、简中、真实 Pinned fixture、稳定 loading/error、共享抽屉及主/旧路径边界共 10/10 通过 |
-| Changed-code analyze | No error/warning in targeted paths | Profile MD3、ResourceRuntime、Markdown artifact/图片、目录/README/社区文档 adapter、共享顶栏、路由、通用 TabBody 和测试定向分析未报告 error/warning；ResourceRuntime 3.3 的 12 个生产/测试路径定向分析为 0 error、0 warning、157 条严格 lint info，未把全仓 lint 清理混入资源任务。Flutter 3.44.7 的 `flutter analyze --no-pub` 仍在扫描前将 LSP 初始化 JSON 截断于第 353 字符并以 255 退出；可完成的全仓 `dart analyze --format=machine` 为 0 error、704 warning、17735 info |
+| Changed-code analyze | No error/warning in targeted paths | 2026-08-08 对本轮精确生产/测试文件集合筛选 `dart analyze --format=machine`：0 error、0 warning；全仓仍有 701 条历史 warning，未混入本轮 UI 修改。Flutter 3.44.7 的 `flutter analyze --no-pub` 再次在扫描前将 LSP 初始化 JSON 截断于第 353 字符并以 255 退出；该工具故障不冒充全仓 analyze 通过 |
 | Repository loading/motion follow-up | Passed | 2026-07-23 已在当前环境串行运行：Repository Issues/PR 20/20、Search 默认状态 8/8、相关 Home/Repository/Tab 26/26，并在修复 README 测试容器依赖后完成全仓 237/237。覆盖路由/Tab/查询 Reduced Motion、README 留白、图片软失败、Open→Closed→Open 会话复用、四会话 LRU、五行响应式 Shimmer 和“返回列表无骨架/无新请求” |
 | Format check | Existing baseline fails | 2026-07-24 的 `dart format --output=none --set-exit-if-changed .` 只读检查扫描 2196 个文件，其中 1155 个存在既有格式差异并返回 1；命令没有改写工作区，本轮触及 Dart 文件已定向 format |
 | Workbench tests | Passed | 17/17 纯 Dart 契约/边界测试通过 |
@@ -59,6 +60,9 @@ MVP 只验证一条纵向链路：
 | ResourceRuntime target tests | Passed | 2026-07-24 原第三阶段 69/69；分页通用 source 当前 5/5、Repository 正式入口 4/4。覆盖页 Single Flight、fresh/stale 复用与后台替换、显式下一页、刷新失败保留旧项、Open→Closed→Open、REST transport 与账号 scope；尚无 Profile/Release 结论 |
 | ResourceRuntime changed-code analyze | No error/warning in targeted paths | 3.3 的生产 Provider、resource spec、Service、Code/Security 正式消费者、mutation 失效及回归测试共 12 个路径定向 `dart analyze` 为 0 error、0 warning、157 info；全仓 `dart analyze --format=machine` 为 0 error、704 个既有 warning 和 17735 info |
 | Issues/PR Runtime performance follow-up | Target tests passed; live Profile pending | 2026-07-24 定向 43/43：登录列表改用轻量 GraphQL 投影，Runtime stale 首页立即回显并后台替换，隐藏 Tab sentinel 为 0 请求，Repository Tab 使用独立 Material 边界；定向 `dart analyze` 为 0 error、0 warning（179 个严格 lint info）。`flutter analyze` 仍因 analysis server LSP JSON 截断以 255 退出；未运行全仓测试、build 或 Profile，不能声称真实耗时已经达标 |
+| Notifications MD3 + Runtime target | Target tests passed; current live-account visual recheck pending | 2026-08-08 当前呈现定向 15/15：覆盖 All→Unread→All、原因/仓库/查询/排序/分组本地重投影、失败首屏原位 Retry、360/800/1440、文字缩放、Reduced Motion，以及账户初始化/失败重试/确认未登录/已登录四态。宽屏使用分类侧栏，360/800px 通过同一分类模型的底部面板访问 Inbox/Saved/Done、Filters 与 Repositories；Saved/Done 仍按公开 API 边界锁定说明，不伪造列表。真实登录态 Linux/Android 视觉仍待复核；Profile 性能、未读 count/watcher 和有界页窗口合同未在本轮验证 |
+| Settings MD3 target | Blended GitHub/DioHub structure plus five native account collections implemented; live visual review pending | 2026-08-08 当前呈现定向 23/23：唯一 `SettingsRoute` 复用 `AppChrome`，宽屏侧栏保持 GitHub 分组并追加 DioHub 应用设置；紧凑账户头可进入既有账户上下文切换。账户初始化/失败重试/确认未登录/已登录在 360/800/1440px 分开呈现，加载/错误保持稳定外壳且不会误显示 Sign in。Public profile 与五类账户集合仍复用正式 Provider/Service/Runtime；这些数据层专项测试本轮未重跑。Linux/Android 实拍、真实 API 写入、全仓测试及平台 build 仍待执行 |
+| Global work lists target | Formal Issues / Pull requests / Repositories route and retained destination sessions implemented; live-account page review pending | 2026-08-02 抽屉三项进入唯一 `GlobalListsRoute`，并在同一稳定 `AppChrome` 内懒加载、保留访问过的目标页，不再通过 route replacement 销毁查询池和滚动位置。Issues/PR 使用现有跨仓库 Search Service，可访问仓库使用 `OWNER/COLLABORATOR/ORGANIZATION_MEMBER` GraphQL；两类数据均由 Runtime page + Provider-owned 有界查询会话管理。Open→Closed→Open、Issues→PR→Issues、滚动恢复、仓库本地文字投影、刷新、自动分页、真实空/错误/重试、新建 Issue/PR 正式路由及 360/800/1440 + 1.3×/2× 已覆盖。相关共享回归 24/24、全仓串行测试 356/356；Linux Debug 已构建并启动真实首页，但目标三页仍待真实账号点击/实拍，纯贡献但无 affiliation 的仓库合并见 TD-016。 |
 
 ## 3. 主页统一决策与状态
 
@@ -108,7 +112,7 @@ Events API 不是实时流，官方明确提示可存在延迟，且时间线仅
 尚未完成：
 
 - 旧 Dashboard 的个人动态、贡献、Pinned Repositories、Review Requests 等尚未按 MD3 信息层级迁入统一主页。
-- Notifications、Bookmarks 等账号能力尚未迁入新的原生内容页；账户菜单中的 Copilot settings、Feature preview、Appearance、Accessibility、Enterprise 等暂为明确的阶段入口。
+- Bookmarks 尚未迁入新的原生内容页；Notifications 已完成活动收件箱主路径，未读 count/watcher 与网页 Saved/Done 能力仍是独立后续边界。账户菜单中的 Copilot settings、Feature preview、Appearance、Accessibility、Enterprise 等暂为明确的阶段入口。
 - Home 页的问答框和 `Agent / Create issue / Write code / Git / Pull requests` 当前是信息架构入口；DioHub 尚无 GitHub Copilot Dashboard 的私有后端能力，因此已登录点击时显示阶段提示。
 - 尚未建立能将 Activity 与 `Suggested by DioHub` 稳定穿插的类型化 `HomeFeedEntry` 组合层。
 - 所有旧路由尚未统一接入“需要登录”的功能门控。
@@ -125,6 +129,7 @@ Events API 不是实时流，官方明确提示可存在延迟，且时间线仅
 - Repository 页已接入与 Home 相同的 `AppChrome`；宽屏刷新/旧版回退保留为顶栏动作，窄屏次要动作进入溢出菜单，仓库 Tab 作为可横向滚动的二级导航。
 - 1440px 使用居中内容区、Code 主列和 About 辅助列；800px 收窄为单主列；360px 保持单列和横向可滚动 Tab。
 - 窄屏信息顺序调整为 Watch/Fork/Star → About → Branch/Code/更多 → fork 上游状态 → 最新 Commit → 文件列表 → README。
+- 360px 仓库身份区不再被操作按钮替换：保留头像、`owner/repository`、真实 Public/Private、Archived 与 fork 来源，再在其后折叠操作；预览和完整仓库都没有可见性字段时不再猜测为 Public。全局仓库标题也移除了没有对应交互的下拉箭头。
 - About 复用真实 `RepoInfo`，展示描述、主页、License、Contributing、Security Policy、Topics、Star/Fork/Watch、Branch/Tag、语言与 fork 上游。
 - 窄屏次要操作收入 `Code options`；当前目录过滤仍可用，未实现的 Repository-wide `Go to file` 明确禁用。
 - 实时 render tree 证明首个布局异常位于 README 代码块：旧横向 `SingleChildScrollView` 向后来迁入的 `re_editor` 传递无限宽/高，其 `Row + Expanded` 先失败，后续 `geometry == null`/semantics 异常均为级联。
@@ -265,12 +270,13 @@ Events API 不是实时流，官方明确提示可存在延迟，且时间线仅
 
 | 需求 | 实现 | 状态 | 验证 |
 | --- | --- | --- | --- |
-| Home/Repository 刷新不能因“有功能”而闪空或丢失旧数据 | 公共 `PaginationController` 默认使用 SWR，成功后原子替换；刷新失败保留旧内容并提供 refresh-aware retry | 已满足，待 Git 检查点 | controller 4/4、Sliver 2/2、全仓 237/237 |
-| Repository Tab 首次进入不应预取无关页面，返回时不能丢失会话 | 未访问 Tab 为占位；首次访问后在当前路由的有界 `IndexedStack` 中保留 Code/Issues/PR/Wiki 子树 | 已满足，待 Git 检查点 | no-build、搜索输入、Wiki 页面和 360px/2× 滚动保持 Widget Test |
+| Home/Repository 刷新不能因“有功能”而闪空或丢失旧数据 | 公共 `PaginationController` 默认使用 SWR，成功后原子替换；刷新失败保留旧内容并提供 refresh-aware retry | 已满足（`6916f32a`） | controller 4/4、Sliver 2/2、全仓 237/237 |
+| Repository Tab 首次进入不应预取无关页面，返回时不能丢失会话 | 未访问 Tab 为占位；首次访问后在当前路由的有界 `IndexedStack` 中保留 Code/Issues/PR/Wiki 子树 | 已满足（`6916f32a`） | no-build、搜索输入、Wiki 页面和 360px/2× 滚动保持 Widget Test |
 | Repository 跳转和左右 Tab 切换必须可感知且不以动画伪装重载 | 路由使用固定 16px 位移；Tab 对保活栈施加方向化 8px/轻淡入，Reduced Motion 直接返回原子树；Issue/PR 去除额外初始化占位帧 | 实现完成，真实运行待用户验收 | page/tab/reduced-motion 与返回无骨架断言已在目标 Widget Test 通过 |
-| Issue/PR 的 Open/Closed 往返不能重复首屏加载或在 build 中写 Provider | Provider 构造默认 Open；每页按 query + 类型保留最近四个独立分页会话，缓存命中使用 180ms 轻淡入且不重取；Reduced Motion 为零时长 | 已满足，待真实运行复验 | Issue/PR 20/20、Search Provider 8/8；两类列表均证明 Open→Closed→Open 仅两次请求，LRU 淘汰边界已覆盖 |
+| 紧凑 Repository 不能丢失身份、猜测可见性或展示假交互 | 360px 身份区保留 avatar、`owner/repository`、服务端已知的可见性/Archived/fork，再排列操作；未知可见性不渲染 Public，仓库全局标题移除无动作的下拉箭头 | P0 结构已满足；真实字形与触控仍待平台实拍 | identity 3/3、shell 4/4、guest/正式入口 7/7 |
+| Issue/PR 的 Open/Closed 往返不能重复首屏加载或在 build 中写 Provider | Provider 构造默认 Open；每页按 query + 类型保留最近四个独立分页会话，缓存命中使用 180ms 轻淡入且不重取；Reduced Motion 为零时长 | 已满足，待真实运行复验 | Issue/PR 21/21、Search Provider 8/8；两类列表均证明 Open→Closed→Open 仅两次请求，LRU 淘汰、加载语义与中性骨架边界已覆盖 |
 | README 不贴边且可选图片失败不得破坏文档 | 文档正文使用 16/24px 响应式内边距；栅格复用 source bytes 直接渲染、Runtime 有界缓存、6/12 秒超时、局部重试软失败 | 实现完成，目标测试已复验 | 三档 padding、bytes 对象身份/渲染、失败软化与缓存命中目标测试通过 |
-| 平台 Reduced Motion 不得被应用设置反向覆盖 | 根级 `AppMotionMediaQuery` 对应用与平台值取逻辑 OR | 已满足，待 Git 检查点 | 3 种组合 3/3，通过全仓回归 |
+| 平台 Reduced Motion 不得被应用设置反向覆盖 | 根级 `AppMotionMediaQuery` 对应用与平台值取逻辑 OR | 已满足（`6916f32a`） | 3 种组合 3/3，通过全仓回归 |
 | Home/Repository 在文字放大时仍可用 | Home 快捷操作允许标签弹性换行；Issues/PR 工具栏断点同时考虑可用宽度与 text scale | 已满足当前基线 | 1.0 的 360/800/1440、1.3× 的 800、2× 的 360；全仓 237/237 |
 | 不因本轮性能讨论扩散业务层 | 未修改 GraphQL、codegen、路由、认证、数据库或核心模型；TD-006 保持待 Profile/GraphQL 专项，TD-007 仅推进根 README、CONTRIBUTING、SECURITY 顶层 artifact 与 README 图片原始字节/分类，其余 Markdown/Diff 保持待 Profile/专项任务 | 边界已保持；TD-007 部分推进 | Git diff 复核；没有新增核心 API 或第二套页面状态模型，Runtime Provider 仍是唯一全局控制面 |
 | 证明首页到仓库“更快” | 本轮只消除视觉闪空和重复构造，不将 Widget Test 解释为帧性能结论 | 待验证 | 仍需 Linux/Android Profile 的冷/暖导航 trace |
@@ -278,11 +284,29 @@ Events API 不是实时流，官方明确提示可存在延迟，且时间线仅
 | Repository Wiki 必须是可验证的真实页面而非占位 | 共用既有 Wiki provider/controller，接入同一 Repository Tab 与深链；页面列表、正文、状态与外部入口均消费真实参数 | 已满足只读浏览范围 | Wiki 6/6、目标回归 54/54、全仓 237/237 |
 | Repository 未完成 Tab 不能继续保留阶段占位 | Actions/Projects/Security/Insights 接入各自既有正式 Service/Provider、共享局部页面壳、类型化深链及完整状态；网页没有公开等价数据的管理子页明确留在未完成边界 | 已满足四个主 Tab 的只读浏览范围 | 二级标签页目标回归 18/18；Linux Debug 真实仓库逐页截图；全仓 237/237 |
 | Issue/PR 详情不得再次出现第二套全局顶栏和嵌套页面壳 | 详情路由接入 `RepositoryContextChrome`，旧详情内容以 embedded 模式复用，移除嵌套 `Scaffold`/`SafeArea` | 已满足外壳范围，内容迁移未完成 | 共用外壳 4/4、详情 Tab Motion 2/2、全仓 237/237 |
-| Profile 主入口仿照 GitHub 网页且不新建业务层 | 主路径接入共享 `AppChrome`、五项资料导航、真实 `userProvider` / README / Pinned / contributions；既有四类分页列表在惰性保活 Tab 中复用 | Overview 已满足；次级列表仅完成正式接入，视觉迁移未完成 | Profile 10/10；共享 Home/Repository 回归 28/28 |
+| Profile 主入口仿照 GitHub 网页且不新建业务层 | 主路径接入共享 `AppChrome`、五项资料导航、真实 `userProvider` / README / Pinned / contributions；既有四类分页列表在惰性保活 Tab 中复用 | Overview 已满足；次级列表仅完成正式接入，视觉迁移未完成 | Profile 11/11，新增元数据链接视觉/语义断言；未运行 Profile 性能 |
 | 本轮 Profile 性能 | 用户明确允许暂不测试；没有以 Debug 观感或 Widget Test 代替测量 | 待验证 | 未运行，不提供帧时间或“已优化”结论 |
 | 统一资源加载、渲染交付和生命周期管理 | 纯 Dart `ResourceRuntime` 控制 identity/scope/lease/freshness/dependency/budget；正式试点迁移 Repository Code 文档/图片及 Issues/PR 不可变 forward page | 控制面与首个分页桥已满足；License、Wiki、Flutter 像素解码、详情分页和有界 Controller 页窗口未迁移 | 原目标 69/69 + 分页当前 9/9；全仓 294/294 是本轮轻量投影与 stale 原位替换前基线 |
 | Repository Issues/PR 冷暖列表不应下载详情字段或在隐藏页继续分页 | 同一 Runtime page source 改用轻量 GraphQL 投影；stale 首页立即回显/后台替换；隐藏 sentinel 禁止请求；每个 Repository Tab 使用独立 Material 边界 | 代码与定向回归已满足；真实大仓库 Profile 和当前 Linux Debug 快速切页待验证 | 本轮定向 43/43，0 error/0 warning；未运行全仓、build、Profile |
 | 全局整理可能拖长加载的信息流并形成复用模板 | 主要信息流清单按 Integrated/Partial/Wave A/B/C/Excluded 分类；固定 Controller/Runtime page/Service 混合所有权与身份、预算、失效、UI、正/负验证模板 | 设计基线完成；Issues/PR 首个生产试点部分接入 | 静态追踪 67 处 `PaginationController`、25 处定时保活；试点合同见独立文档 |
+| 右上角 Notifications 必须是共享外壳中的真实原生页面，并避免筛选往返重复首屏请求 | `NotificationsRoute` 复用 `AppChrome`；既有 REST Service 经不可变 Runtime page 进入 Provider-owned All/Unread 两会话池；原因/自定义/仓库筛选和查询、排序、分组均对 Controller 保留数据做可逆本地重投影，已读/完成以 overlay 乐观更新并精确失效。宽屏左栏分为 Inbox/Saved/Done、Filters、Repositories；360/800px 通过复用同一分类模型的底部面板到达这些入口。账户初始化、失败、确认未登录和已登录分开呈现，仅已登录构造 inbox/Runtime scope。条件提示继续遵循已有本地合同，控件保持 GitHub 式矩形边界 | 活动 Inbox 主路径、本地筛选投影、三档分类可达性和账户四态已实现；Saved/Done 只有带 lock/说明的诚实入口，自定义筛选使用既有 SavedSearch 持久化；跨未加载页服务端全局搜索、GitHub 未公开提示算法、count/watcher、有界页窗口及真实账号视觉仍未完成或待验证 | 本轮 UI 17/17：会话/本地投影/失败 Retry、360/800/1440、文字缩放、Reduced Motion、退场树不可交互/不可宣读、48dp 筛选清除目标和账户四态；真实登录态 Linux/Android 待人工检查 |
+| 设置入口必须缝合 GitHub 网页设置与 DioHub 应用设置 | 账户菜单进入唯一 `SettingsRoute`；账户身份头和宽屏分组侧栏先复现 GitHub 设置 IA，底部追加 DioHub 大类；紧凑头部进入同一既有账户上下文切换；账户初始化/失败/确认未登录/已登录使用稳定外壳分开呈现。Public profile 从真实 `userProvider` 读取并由 `ViewerSettingsService` 单次更新，GitHub 私有页面诚实外跳；DioHub 值继续来自既有持久化 Provider | Public profile、统一结构、紧凑上下文入口及账户状态边界已实现；GitHub Account/Access/Code planning 其余页面仅有外部管理边界，旧 Advanced theme、watcher/account/integration/log 仍未迁移 | 本轮 UI 14/14，覆盖 360/800/1440、2×、简中、Reduced Motion、四种账户结果、retry 及 comfortable density 下 48dp 菜单目标；数据集合专项本轮未重跑，真实 Linux/Android 视觉、真 API 写入和重启恢复待人工验证 |
+
+### 3.7.1 2026-08-08 Gemini 视觉审查闭环
+
+Gemini 本轮仅用于 UI、信息密度、动效和 Material 3 符合度审查；数据源、路由、状态与 Runtime 边界仍由项目约束和生产代码决定。
+
+| 审查项 | 本轮实现 | 验证与完成边界 |
+| --- | --- | --- |
+| 排版比例散落 | 建立 `AppTypography` ThemeExtension，安装到亮/暗 Theme，并迁移 Home、Repository、Compare 首批语义角色 | Typography 2/2；全页迁移和真机字形矩阵仍见 TD-009 |
+| 全局顶栏密度、搜索与侧栏不一致 | Home/Repository 继续共用 `AppChrome`；固定稳定边线、集中 52/56dp 高度、`/` 搜索快捷键、相同抽屉宽度与选中对比 | Motion/Chrome/Drawer/Secondary 34/34；不采用 64dp 顶栏、胶囊抽屉、桌面 48dp 可见 SearchBar 和滚动动态阴影，因其与当前 GitHub 紧凑参照及项目 Token 冲突；桌面 40dp 可见控件仍保留至少 48dp 命中区 |
+| Home 夸大为单个搜索目标，子控件像假按钮 | Ask、添加上下文、模型和发送拆成独立可操作目标；紧凑账户行改为真实 48dp 切换操作 | Home + Compare 23/23；公开搜索结果与正式 guest Repository 路由尚未合流，见 TD-017 |
+| Repository 加载几何不稳定、旧玻璃骨架、列表太矮、README 边距/语义不稳定 | Code 首屏统一 5 行几何，桌面目录行至少 48dp；Issues/PR 改中性 `surfaceContainerHighest` 骨架，保留单一 loading 语义和 Reduced Motion；README 使用响应式内边距 | Code + Issues/PR 26/26；正式 `lib/view/repository/md3` 已无 legacy Shimmer/Glass/Squircle 引用 |
+| Actions 长标题被 branch/SHA 挤压 | 小于 520px 或文字放大时将 branch/SHA 收入元数据 Wrap，状态同时用文本和图标表达 | API 字段形状在 360px/2×/Reduced Motion 的二级 Tab 7/7 通过；实机长名 workflow 待拍摄复核 |
+| Notifications/Settings 紧凑目标、退场语义及密度收缩 | 筛选清除、紧凑菜单与触发器强制 48dp 命中；退场通知树不可点击/不可宣读；保留 GitHub 式矩形密度，不滥用 MD3 大胶囊 | Notifications + Settings 31/31；Saved/Done 和 Web 独占设置仍按 API 边界明确未完成 |
+| Profile 链接仅有颜色、Compare 紧凑区域溢出 | Profile 元数据加链接语义/点击；Compare 在 480px 下或 1.3× 以上堆叠 ref 选择器，摘要改 Wrap 并完成客户端文案 i18n | Profile 11/11、Compare 已包含在 23/23；Compare 独立 Scaffold 尚未进入共享 Repository 外壳，见 TD-018 |
+
+本轮不重复计数的目标 Widget Test 共 159/159 通过，覆盖 360/800/1440px、1.3×/2× 文字、Reduced Motion、键盘搜索、链接/选中/loading 语义、稳定异步外壳和查询会话保留。未执行实机截图、Windows/macOS 运行、Profile/Release 性能或平台 build，因此不声称最终视觉和流畅度已验收。
 
 ## 3.8 Profile MD3 第一阶段
 
@@ -386,64 +410,121 @@ Events API 不是实时流，官方明确提示可存在延迟，且时间线仅
 - Android Debug 本轮因 Kotlin 独立 daemon 导致 Swap 耗尽而主动中止，旧 APK 未被覆盖，当前
   Android 构建状态明确为待低内存环境复验。
 
-## 3.10 ResourceRuntime 3.3（已完成）
+全局迁移范围、优先级和逐任务验收不在进度文件重复维护：
 
-精确完成范围：
+- 架构、已落地资源和 Repository Issues/PR forward page 精确合同以
+  [`resource-runtime-architecture.md`](resource-runtime-architecture.md) 为唯一事实源；
+- 其他主要信息流的 Integrated / Partial / Wave A–C / Excluded 状态以
+  [`resource-runtime-information-flow-inventory.md`](resource-runtime-information-flow-inventory.md)
+  为准；
+- 后续接入统一填写
+  [`resource-runtime-integration-template.md`](resource-runtime-integration-template.md)，不能复制
+  当前 Issues/PR Widget 胶水或把候选访问模式写成已实现能力；
+- 风险、触发条件和未解决项继续登记在 TD-007、TD-012、TD-013，不在本节复制技术债全文。
 
-- CONTRIBUTING / SECURITY 的正式 Loader 继续是 `RepositoryDocumentService.fetchHtml()` 与原候选
-  路径；候选列表已集中为 Service 的单一事实源，Runtime 失效复用同一列表。
-- source / artifact 身份包含 server/principal scope、仓库、分支、文档类型和版本；继续复用
-  `MarkdownRenderArtifact` 与 worker，不新增 API、GraphQL、领域模型或第二套解析缓存。
-- `repositoryDocumentProvider` 已改为薄 Runtime adapter。Code 与 Security 使用不同 consumer/
-  presence Lease，但相同 SECURITY 身份共享一次 source 与一次解析；auto-dispose 后返回复用 retain
-  数据，显式刷新只重取并重建一次。
-- Code 正文直接消费 render artifact；Security 卡片消费同一 artifact 中的文档存在性与命中路径。
-  404 全部缺失、首次失败、局部重试和加载成功仍是可区分状态。
-- Code 全局刷新失效当前分支 README、CONTRIBUTING 与 SECURITY；Security 局部刷新只处理 SECURITY。
-  文件 mutation 仅在变更路径精确命中相应候选路径时失效，不清空无关分支、文档或整个仓库缓存。
-- Repository 主 Tab 用户事件同时维护 Code/Security presence；没有在 Widget build/init/dispose 等
-  生命周期写共享 Provider。
+## 3.10 GitHub / DioHub 融合 Settings 第一阶段
 
-回归证据：
+已完成：
 
-- 先建立失败基线，再完成 7 个社区文档资源回归：双消费者 Single Flight、retained/null 复用、显式
-  刷新、首次失败重试、账号切换旧完成隔离、分支/类型身份、候选路径精确失效。
-- ResourceRuntime 完整目标 69/69、全仓 294/294、Linux Debug build 通过；3.3 的 12 个生产/测试
-  路径定向 analyze 为 0 error、0 warning。
+- 账户菜单中的 Settings、Appearance、Accessibility 不再进入旧 Profile/NavCenter 路径，而是进入
+  唯一 `SettingsRoute`；Home 的显式账户菜单回调与其他 `AppChrome` 页面使用相同路由语义。
+- Settings 页面复用全局 `AppChrome`。800/1440px 使用 GitHub 式分组侧栏和受限宽度内容列，
+  360px 将同一分组/目的地模型折叠到 `MenuAnchor` 与单列滚动，不复制第二套设置业务状态。
+- 页面顶部显示当前 GitHub 账户身份；侧栏顺序先是 Public profile、Account、GitHub Appearance /
+  Accessibility / Notifications，再是 Access、Code/planning，最下方才是独立 DioHub 应用设置大类。
+- Public profile 直接复用 `userProvider` 的正式 GraphQL 资料；公开邮箱选择器从现有
+  `ViewerSettingsService.listEmails` 读取已验证邮箱且局部处理失败，一次保存再通过
+  `ViewerSettingsService.updateProfile` 合并为一次 REST `PATCH /user`；头像、Pronouns 等公开
+  API 不支持的编辑项明确交给当前 GitHub/GHES 服务器管理。
+- General、Appearance、Accessibility、Code & repositories、Notifications、Privacy、About
+  只读写既有 `SettingsCache`、`PersistedNotifier` 与正式 Provider；语言、主题、布局、代码浏览、
+  Diff、通知轮询和诊断偏好继续使用原数据库持久化，没有新增第二套设置仓库。
+- Emails、SSH keys、GPG keys、SSH signing keys 与 blocked users 复用
+  `ViewerSettingsService` 的正式 REST；Organizations 与 Repositories 复用 `UserInfoService` 的正式
+  GraphQL。只为组织查询补回既有 operation 已返回的 `pageInfo/totalCount`，没有改 codegen 或再造 API。
+- 上述远程集合统一使用 `ResourceRuntime` 不可变 page recipe、显式 REST page/GraphQL cursor identity、
+  精确 collection tag，以及 Provider-owned 惰性 `ViewerSettingsSession`；短时离开目的地保留
+  Controller，返回时可复用 30 秒 fresh page。Widget 不持有 cursor、Lease、generation 或资源 identity。
+- Emails 原生页支持添加、删除非主邮箱和主邮箱公开可见性；三类密钥支持添加/删除；Moderation 支持
+  列出、屏蔽与取消屏蔽。Organizations 与 Repositories 是原生真实只读列表并跳转应用内资料/仓库，
+  成员关系与仓库管理明确继续前往当前 GitHub/GHES。
+- 其余 GitHub 页面不再共用语义不明的占位说明：Account/Appearance/Accessibility/Password/Sessions/
+  Enterprises 标注为 Web 独占；Billing/Notifications 标注公开 API 只覆盖部分；Codespaces 标注当前
+  OAuth scope 未授权。三类都保留当前服务器外部入口，不写成原生完成。
+- 所有新增客户端文案进入 English / 简体中文 ARB；仓库、账号及其他用户内容不翻译。
+- 分类切换使用集中内容 Motion，`MediaQuery.disableAnimations` 下为零时长。选择控件以当前值作为
+  identity，Provider 更新后不会继续显示旧的 `initialSelection`。
+- 当前定向验证 Settings 21/21：既有 12 项覆盖 360/800/1440、360px/2×、简中、深链、
+  Reduced Motion 与 Public profile 单次写入；新增 3 项用真实页面组件覆盖 Emails 在
+  360/800/1440 的数据/可见性 mutation 与无溢出，2 项证明 REST page identity、返回 fresh cache
+  不重复请求和精确 refresh，4 项覆盖 Keys/Organizations/Moderation/Repositories 正式空状态与
+  360px 无溢出。它没有替代真实服务器写入、失败回滚实测和平台实拍。
 
-仍未完成：
+尚未完成：
 
-- License、Wiki、Issues/PR、分页和 Repository 主 Provider 没有迁移；页面视觉也没有在本阶段改写。
-- License 仍依赖 branch/blob 加载链，Wiki 有自己的页面身份和 Markdown 来源；两者必须先独立审计，
-  不能因表面都展示文档就直接塞入当前合同。
-- 常驻 worker pool 仍需 Profile/Release 证据，本阶段没有性能数值结论。
+- 旧 Themes/Preferences/Behavior 中的高级色彩、透明度、玻璃效果、卡片显示、watcher 管理、
+  integrations/accounts/logs/AI/Premium 等未逐项迁移；它们保留为 TD-015，不用本轮本地偏好页
+  冒充完整旧设置功能对等。
+- Account、GitHub Appearance/Accessibility、Password/Authentication、Sessions、Enterprises
+  仍是 Web 独占；Billing 与 GitHub Notifications 只有部分 API；Codespaces 尚缺 OAuth scope。
+  这些目的地是“边界说明 + 外部管理”，不是原生页面完成。Repositories/Organizations 当前也只是
+  原生真实只读与应用内导航，不冒充已具备完整账户管理写操作。
+- 尚未在当前 Linux/Android 真实进程执行设置修改、重启恢复及三档实拍；本轮 Widget Test 证明
+  响应式与 Provider 读取结构，不替代平台持久化和最终视觉验收。
 
-## 3.11 主要信息流全局接入与首个分页试点
+## 3.11 全局 Issues / Pull requests / Repositories
 
-新增：
+已完成：
 
-- [`resource-runtime-information-flow-inventory.md`](resource-runtime-information-flow-inventory.md)：追踪启动/账号、Home、Repository Code、Issues/PR、Actions/Projects/Security/Insights、Wiki/Profile、Notifications/Search、Workbench 的主要信息流，并按迁移波次标记。
-- [`resource-runtime-integration-template.md`](resource-runtime-integration-template.md)：
-  固定生产入口、状态层级、可证伪复现、资源身份、分页会话、预算、调度、mutation 失效、UI 状态、请求次数与性能记录格式。
-- [`resource-runtime-pagination-pilot.md`](resource-runtime-pagination-pilot.md)：记录 Repository Issues/PR 正式 GraphQL/REST 页资源接入、已证明行为和未完成边界。
+- 全局导航抽屉的 All issues、All pull requests、All repositories 使用显式选中态并进入唯一
+  `GlobalListsRoute`；三页互相切换时停留在同一稳定 `AppChrome`，只在页面协调层切换目的地，不再
+  replace 路由并销毁查询会话。从其他页面首次进入仍正常 push，不复制 Home/Repository 的 App Chrome。
+- Issues 与 Pull requests 继续复用正式 `SearchService.searchIssuesPulls`、`SearchScope` 与
+  `SearchStateNotifier`。账号 login 在 `ViewerInfo` 尚未返回时也不会丢失，因此首个请求始终保留
+  `involves:<login>` 与 `type:issue/type:pr`，不会短暂退化成全 GitHub 搜索。
+- Open、Closed、Assigned、Created、Mentioned、排序、搜索、下拉刷新、错误重试、空状态和接近末端
+  自动分页都连接真实查询。最近四个查询 Controller 有界保留，Runtime 保存不可变 page；实测
+  Open→Closed→Open 只产生两个首屏请求，返回 Open 不重现骨架、不产生第三次请求。抽屉跨目的地
+  Issues→PR→Issues 也只为首次访问的目的地创建首屏请求，返回后保留原搜索条件和滚动位置；访问过的
+  页面保持 mounted，隐藏页由 `TickerMode` 禁止分页 sentinel 在后台推进，账号切换则按 account key
+  重建会话边界。
+- 查询或 Open/Closed 切换不再用 `AnimatedSwitcher` 同时挂载退场与入场的两棵分页树；旧 sentinel
+  立即离开生产树，只对新结果使用集中 Motion Token 做单树淡入，避免视觉动画额外推进旧查询分页。
+- All repositories 不再使用 `user:<login>` Search API。正式源改为现有
+  `UserInfoService.getUserRepositories`，其 GraphQL affiliations 为 OWNER、COLLABORATOR 与
+  ORGANIZATION_MEMBER；公开/私有、最近推送/更新、名称、Stars 由服务器查询，仓库名/描述与 fork
+  为已保留页上的可逆本地投影。文字投影切换复用同一 Runtime page，不建立第二份远程缓存。
+- 仓库行只展示正式投影实际拥有的字段：仓库全名、可见性、fork、描述、语言、Stars 与更新时间；
+  不伪造未查询的 fork count、archive 或总数。分页未结束且 API 没有 totalCount 时只显示列表标题，
+  到末页后才显示精确已加载总数。
+- 新建议题与新建 Pull request 使用同一可访问仓库 Runtime 会话打开原生 MD3 选择器；Issue 继续读取
+  既有正式 issue templates 并进入 `NewIssueRoute`，PR 进入 `NewPullRequestRoute`。没有新增 API、
+  mutation 模型或旧 Bottom Sheet 业务副本。
+- 新文案进入 English / 简体中文 `gen_l10n`，仓库名、Issue/PR 标题、标签和模板等用户内容保持原文。
+  360/800/1440px、360px/1.3×、1440px/2×、抽屉正式 destination、新建仓库选择、真实空状态及
+  请求次数均有回归；三张页面现在分别覆盖三档宽度，修复了只有短标题 Issues 通过、Pull requests 与
+  Repositories 在 360px 结果头溢出的漏测；新增跨目的地状态/请求次数、滚动恢复、单分页树切换及真实
+  失败重试回归。本轮定向测试 23/23、相关路径分析 0 issues；此前相关共享测试 24/24、全仓串行测试
+  356/356，本轮没有重跑全仓。此前通过路径定向分析为
+  0 error、0 warning；全仓 `dart analyze --format=machine` 为 0 error、702 个既有 warning 和
+  17761 个 info。
+- 原 1850 行页面已按稳定外壳、筛选控件、结果列表、创建流程和纯映射辅助拆为同一 Dart library 的
+  五个职责文件，单文件均不超过 600 行；拆分没有引入第二套 Provider、Controller 或数据模型。
 
-本轮确定：
+尚未完成：
 
-- `PaginationController` 与 Runtime 不是二选一。Controller 保留 query、cursor、page order、refresh 与 scroll；不可变 page result 才进入 Runtime。
-- Repository Issues/PR 已用显式 cursor/page 身份接入通用 forward source；登录首页使用轻量行投影，
-  stale 首页立即交付并后台替换，隐藏 Tab 不继续分页。大列表仍由 Controller 无界展开实体，
-  Runtime 的 LRU 尚不能单独解决实际内存，后续必须设计有界页窗口或轻量索引。
-- 长轮询、watcher、Stream、下载/上传、SSH、本地 Git、表单与滚动状态不作为普通 Runtime 资源；它们使用专用 session/manager，稳定只读 snapshot 才能被页面缓存。
-- 首批高风险候选是 Repository 主查询中的 6 组快捷计数、Issues/PR 列表与详情分页、全量 review
-  threads、单文件 patch 顺序翻页、Home Events/Search/Notifications、Workflow overview 扇出和
-  Profile activity 全量聚合。
-
-完成边界：
-
-- 清单与模板是设计合同；首个生产试点只修改分页 bridge、Repository 列表接线和作用域生命周期，
-  没有修改 Service、GraphQL/codegen、业务模型或视觉；
-- 没有证明页面更快，也没有建立 Profile/Release 数据、有界页窗口、距离式预取或 mutation overlay；
-- TD-012 已改为 In Progress，其他主要信息流仍不得写成已迁移。
+- GitHub 网页仓库 Dashboard 还会出现“参与贡献但不是 owner/collaborator/org member”的公开仓库；
+  现有单一 GraphQL connection 不返回该集合。补齐需要第二个正式 source、去重/排序合同和已经实现
+  的 FanOut/聚合执行器，当前只登记 TD-016，不抓取网页私有接口，也不把 affiliation 集合写成完全
+  等价。
+- Issues/PR 的全局 Search 仍复用较丰富的已有 card fragment；Runtime 解决重复请求、SWR 和会话恢复，
+  不会自动减少 GraphQL 字段。若真实 Profile 证明首屏仍慢，应新增全局工作列表的最小投影，而不是在
+  Widget 再建一条加载链。
+- 2026-08-02 Linux Debug 已实际构建并启动，真实首页账号数据正常显示；目标三页因本机 Wayland
+  环境缺少输入自动化仍未完成点击/实拍。运行日志继续复现既有 display mode、sharing intent、Linux
+  notifications settings、Watcher 外键和 Sentry crashpad 问题，均不冒充本轮通过。仍需真实账号验证
+  大列表连续翻页、限流/权限错误、从新建页返回后的滚动保持和 Android 实拍；本节不包含
+  Profile/Release 性能达标结论。
 
 ## 4. 已完成
 
@@ -463,6 +544,8 @@ Events API 不是实时流，官方明确提示可存在延迟，且时间线仅
 - 还原左侧全局导航抽屉、右侧账户菜单展开态与 DioHub 全局标识；360px/1440px 展开态 Widget Test 均无溢出。
 - 建立 Home/Repository 共用的 `AppChrome`，统一全局顶栏、抽屉、账户菜单和导航语义，同时允许页面注入自己的二级导航。
 - 建立 Profile Overview 的 GitHub 式 MD3 第一阶段：共享全局外壳、真实身份/README/Pinned/贡献数据、五项主导航、三档响应式、简中与稳定异步状态；次级列表视觉迁移和旧扩展页保留为明确边界。
+- 建立 Settings MD3 第一阶段：唯一设置路由、共享 App Chrome、七个真实本地偏好分类、三档响应式、
+  简中、2× 文字和 Reduced Motion；旧高级设置及 GitHub 账户设置保留为明确边界。
 - 完善 Repository Code MD3 响应式样板：GitHub 式顶栏/Tab、桌面 Code+About 双列、移动单列信息顺序，360/800/1440px semantics Widget Test 通过。
 - 完成 Repository Issues 与 Pull requests 两张独立 MD3 列表：真实仓库查询、默认 Open、筛选、防抖、真实总数、刷新、错误重试、自动分页、响应式和未登录权限边界均已接入；详情已接入共享外壳但仍复用旧内容层，新建仍复用旧路由。
 - 完成 Home/Repository P1 状态收口：手动刷新 SWR、查询变化不展示旧范围结果、Repository Tab 惰性构建与路由内保活、根 Reduced Motion 合并，以及 1.3×/2× 文字缩放溢出回归。
@@ -552,19 +635,24 @@ UnifiedRepoController / WorkbenchViewState    （已组合本地与远程快照�
 - [ ] 确定桌面三栏/双栏与移动折叠的信息结构，不先确定全站视觉皮肤。
 - [ ] 新 Workbench 使用独立路由，不删除现有移动 Repository 页面。
 - [ ] 定义需持久化的标签、选中对象、滚动位置、过滤条件和面板尺寸。
-- [ ] 对当前 60+ 项 worktree 变更做一次人工审阅；是否建立 Git 检查点由用户授权。
+- [x] 当前累计 worktree 已完成提交前范围、生成文件、敏感文件、临时产物和文档合并审阅；用户授权后建立本地功能检查点 `6916f32a`，未 push。
 
 ## 7. Now / Next / Later
 
 ### Now
 
-1. 人工复核 Repository Issues/PR 首个分页试点的真实大仓库连续翻页、Open/Closed、刷新失败、
+1. 在真实登录态人工复核全局 All issues / All pull requests / All repositories 的首屏、连续翻页、
+   Open/Closed 返回、文字筛选、新建流程和抽屉选中态；自动请求次数测试不能替代真实限流与数据规模。
+2. 在真实登录态 Linux/Android 复核 Notifications：360/800px 分类面板、1440px 侧栏、账户加载/失败/
+   未登录/已登录切换、Saved/Done 能力提示及真实长标题；Widget Test 不替代最终字形和触控验收。
+3. 在真实 Linux/Android 进程人工复核 Settings 的 360/800/1440 视觉、紧凑账户上下文、语言/主题切换、重启恢复与
+   账户菜单深链；自动 Widget Test 不能替代平台持久化和最终视觉验收。
+4. 人工复核 Repository Issues/PR 首个分页试点的真实大仓库连续翻页、Open/Closed、刷新失败、
    返回滚动与账号切换；自动测试不能替代真实网络验收。
-2. 人工审阅 ResourceRuntime 3.3 的社区文档身份、双 consumer Lease 与 mutation 精确失效 diff；
+5. 人工审阅 ResourceRuntime 3.3 的社区文档身份、双 consumer Lease 与 mutation 精确失效 diff；
    自动验证已完成，但尚未建立 Profile/Release 性能基线。
-3. 在真实登录态核对 Code 的 CONTRIBUTING / SECURITY，以及 Repository Code/Issues/Pull
-   requests/Actions/Projects/Wiki/Security/Insights 与 Profile Overview；没有操作证据前不扩大
-   页面或性能完成结论。
+6. 在 360px 真实字形下核对 Repository 身份/操作顺序、长 `owner/repository` 和真实 Public/Private/
+   Archived/fork，再核对 Code 的 CONTRIBUTING / SECURITY 及其余主 Tab；没有操作证据前不扩大页面或性能完成结论。
 
 ### Next
 
@@ -575,7 +663,6 @@ UnifiedRepoController / WorkbenchViewState    （已组合本地与远程快照�
 3. 迁移 Issue/PR 详情摘要、评论/Review 时间线、commits/files 的页资源，先消除全量 review threads
    和单文件 patch 从头翻页，再继续 MD3 内容层。
 4. 单独审计 License 与 Wiki 的数据身份、分支语义和失效合同；不能为了统一表面 API 吞掉领域差异。
-5. 审阅当前基线 diff，决定是否建立本地 Git 检查点。
 
 ### Later
 
@@ -618,7 +705,7 @@ UnifiedRepoController / WorkbenchViewState    （已组合本地与远程快照�
 
 ## 11. 下一个唯一建议
 
-下一步唯一建议是先在真实大仓库人工复核 Repository Issues / Pull requests 首个分页试点，再设计
-有界 Controller 页窗口。当前自动回归已证明 Open→Closed→Open、fresh 复用、显式下一页、刷新失败
-保留旧项和账号 scope；返回滚动、query 晚到与四会话 LRU 沿用既有测试，实体保留量、预取、
-mutation、Profile/Release 尚未完成，因此不扩散到全仓分页，也不声称页面已经更快。
+下一步唯一建议是先运行当前生产入口，人工核对全局 All issues / All pull requests /
+All repositories 在真实账号下的三档布局、连续翻页、Open→Closed→Open、文字筛选、仓库跳转和
+新建 Issue/PR。自动回归已经证明请求次数与响应式结构，但不能替代真实数据规模、限流和最终视觉；
+通过后再决定先做全局 Issues/PR 最小字段投影，还是为纯贡献仓库设计 FanOut 合同。

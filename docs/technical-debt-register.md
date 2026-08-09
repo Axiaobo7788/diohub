@@ -1,15 +1,15 @@
 # DioHub 技术债登记表
 
-最后更新：2026-07-24
+最后更新：2026-08-09
 
 ## 1. 用途与边界
 
 本文件登记已经有代码、测试、Profile 或稳定复现证据的问题。登记不等于授权立即重构；处理范围仍受
 [`development-constraints.md`](development-constraints.md) 和当轮用户任务约束。
 
-本轮审查基于 `develop` 分支、提交 `324de833` 的工作区代码。审查是只读静态审查，没有建立 Android
-或 Linux Profile 性能基线，因此涉及耗时和掉帧的影响均标记为“待 Profile 验证”，不把代码形态直接
-写成已测量的性能结论。
+本表最初基于 `develop@324de833` 建立，后续条目按当前工作区的生产入口、代码和回归逐项更新。
+未建立 Android 或 Linux Profile 性能基线的条目仍统一标记为“待 Profile 验证”，不把代码形态、Debug
+观感或 Widget Test 直接写成已测量的性能结论。
 
 ### 状态
 
@@ -54,18 +54,18 @@
 | 字段 | 内容 |
 | --- | --- |
 | ID | TD-002 |
-| 状态 | In Progress（代码与回归已完成，待建立解决提交） |
+| 状态 | Resolved（`6916f32a`） |
 | 优先级 | P1 |
 | 位置 | `lib/common/animations/app_motion_media_query.dart`；`lib/main.dart` 根应用包装；`test/common/animations/app_motion_media_query_test.dart` |
 | 症状 | 原根 `MediaQuery` 将 `disableAnimations` 直接写成应用设置值，没有与继承自平台的 `MediaQuery.disableAnimations` 合并。 |
-| 证据 | 当前工作区新增单一 `AppMotionMediaQuery`，按 `appAnimationsDisabled || platformData.disableAnimations` 合并；应用/平台 `false/false`、`true/false`、`false/true` 三种组合测试均通过。解决提交尚未建立，因此暂不标记 `Resolved`。 |
+| 证据 | `6916f32a` 保留单一 `AppMotionMediaQuery`，按 `appAnimationsDisabled || platformData.disableAnimations` 合并；应用/平台 `false/false`、`true/false`、`false/true` 三种组合测试均通过。 |
 | 用户影响 | 已避免应用设置重新开启平台明确要求关闭的动画；具体组件级 Reduced Motion 覆盖仍属于 TD-003。 |
 | 冲突来源 | 自定义外观设置与 Flutter 平台辅助功能状态的合并规则缺失。 |
 | 建议方案 | 已采用根级单一合并策略；后续组件只读取合并后的 `MediaQuery.disableAnimations`，不得自行反转。 |
 | 清理风险 | 根 `MediaQuery` 改动会影响全应用动画与现有测试时序。 |
 | 前置条件 | 根级组合矩阵已完成；路由、Tab、Drawer 的组件级行为仍由 TD-003 继续约束。 |
 | 回归验证 | `flutter test --concurrency=1 test/common/animations/app_motion_media_query_test.dart` 3/3 通过；全仓 237/237 通过。 |
-| 触发条件 | 用户确认当前工作区并建立 Git 检查点后补写解决提交，转为 `Resolved`。 |
+| 触发条件 | 后续修改根 `MediaQuery`、应用动画总开关或平台辅助功能桥接时，必须重跑组合矩阵；若组件绕过合并值则重新开启本条目。 |
 
 ### TD-003 Motion Token 与路由/组件时序尚未收敛
 
@@ -90,36 +90,36 @@
 | 字段 | 内容 |
 | --- | --- |
 | ID | TD-004 |
-| 状态 | In Progress（代码与回归已完成，待建立解决提交） |
+| 状态 | Resolved（`6916f32a`） |
 | 优先级 | P1 |
 | 位置 | `lib/view/repository/md3/repository_md3_screen.dart`；`lib/common/wrappers/search_scroll_wrapper.dart`；`lib/providers/search/search_state_notifier.dart`；相关 Repository/Search Widget Test |
 | 症状 | 原 Repository 只构建当前 Tab；切离 Issues/PR 时其 Stateful 子树被卸载，内部 `PaginationController` 随之 dispose，返回时重新创建。第一轮保活只覆盖 Repository 主 Tab，Issue/PR 内部 Open/Closed 仍共用一个 controller，切换查询会清空并重取；页面还会在 `initState` 写入默认 Open Provider，存在 Riverpod build-time mutation 红屏。 |
-| 证据 | 当前工作区使用两层有界会话：八个仓库主 Tab “首次访问才构建 + `IndexedStack` 保活”；Issue/PR 内部按完整 API query 与 SearchType 分配独立 `PaginationController`，仅保留最近四个 LRU 查询。默认 Open 由 `SearchStateNotifier.build()` 创建，不再由 Widget 生命周期写 Provider；查询切换使用 180ms 轻淡入，Reduced Motion 下为零时长，缓存命中不显示首屏骨架也不发新请求。解决提交尚未建立。 |
+| 证据 | `6916f32a` 使用两层有界会话：八个仓库主 Tab “首次访问才构建 + `IndexedStack` 保活”；Issue/PR 内部按完整 API query 与 SearchType 分配独立 `PaginationController`，仅保留最近四个 LRU 查询。默认 Open 由 `SearchStateNotifier.build()` 创建，不再由 Widget 生命周期写 Provider；查询切换使用 180ms 轻淡入，Reduced Motion 下为零时长，缓存命中不显示首屏骨架也不发新请求。 |
 | 用户影响 | 已消除同一 Repository 路由内返回 Tab，以及 Issue/PR 的 Open→Closed→Open 往返时丢失列表、重复首屏请求和概率性 Riverpod 红屏；显式刷新仍会刷新当前查询。 |
 | 冲突来源 | 新 Repository 外壳与原搜索分页 Widget 的页面级生命周期不一致。 |
 | 建议方案 | 已采用每个 Repository 路由最多保活八个主 Tab 子树、每张 Issue/PR 列表最多四个查询会话的双重有界策略；跨仓库仍由路由实例隔离，不提升为全局缓存。后续增加主 Tab 或会话容量前必须重新评估生命周期边界。 |
 | 清理风险 | 用户访问全部主 Tab 后会同时保留其已加载页面状态，Issue/PR 各保留最多四个分页控制器；LRU 淘汰会在第五个不同查询后重新请求最旧查询，这是明确的内存/网络折中。低内存 Profile 尚未建立，不能据此声称内存影响已解决。 |
 | 前置条件 | 当前身份键、惰性构建和状态恢复 Widget Test 已建立；内存影响待 Profile。 |
 | 回归验证 | `repository_issue_pull_md3_test.dart` 20/20：Issues 与 Pull requests 都验证 Open→Closed→Open 只有两次请求、返回无首屏骨架，四会话 LRU、五行响应式 Shimmer、Reduced Motion、360/800/1440px、错误重试和刷新均通过；`search_state_notifier_test.dart` 8/8 验证六类 Issue/PR scope 在 Provider 创建时即有 Open；相关 Home/Repository/Tab 回归另有 26/26、全仓 237/237 通过。 |
-| 触发条件 | 用户确认当前工作区并建立 Git 检查点后补写解决提交，转为 `Resolved`；若后续扩展保活 Tab，先做内存验证。 |
+| 触发条件 | 若后续扩展保活 Tab 或查询会话容量，先做内存验证；若生产回归再次出现返回骨架、重复首屏请求或生命周期写 Provider，则重新开启本条目。 |
 
 ### TD-005 分页刷新会在新结果成功前清空旧内容
 
 | 字段 | 内容 |
 | --- | --- |
 | ID | TD-005 |
-| 状态 | In Progress（代码与回归已完成，待建立解决提交） |
+| 状态 | Resolved（`6916f32a`） |
 | 优先级 | P1 |
 | 位置 | `lib/common/pagination/pagination_controller.dart`；`lib/common/pagination/paginated_sliver_list.dart`；`lib/common/events/events.dart`；`lib/common/wrappers/search_scroll_wrapper.dart` |
 | 症状 | 原 `refresh()` 在 replacement first page 返回前执行 `_items.clear()` 并清空总数。 |
-| 证据 | 当前工作区默认刷新保留已提交 items/count，首个新页成功后原子替换；失败保留旧内容，重试仍从空 cursor 开始。查询或搜索类型变化显式使用 `retainItems: false`，不会在新筛选下短暂展示旧查询结果。解决提交尚未建立。 |
+| 证据 | `6916f32a` 的默认刷新保留已提交 items/count，首个新页成功后原子替换；失败保留旧内容，重试仍从空 cursor 开始。查询或搜索类型变化显式使用 `retainItems: false`，不会在新筛选下短暂展示旧查询结果。 |
 | 用户影响 | Home Feed 与 Repository Issues/PR 手动刷新不再闪空或因刷新失败丢失可读内容；筛选切换仍保持结果语义正确。 |
 | 冲突来源 | 现有分页控制器将 refresh 定义为 reset-and-fetch。 |
 | 建议方案 | 已在公共 `PaginationController` 实现 SWR 与 refresh-aware retry；搜索范围变化使用明确的非保留刷新，不建立第二套分页状态机。 |
 | 清理风险 | controller 被多个页面复用，状态机变化可能影响筛选、乐观更新和 refresh 去重。 |
 | 前置条件 | 有数据刷新、失败重试、连续 refresh、旧请求 epoch 与查询变化测试均已建立。 |
 | 回归验证 | Pagination controller 4/4、Sliver 刷新 2/2、目标测试 54/54、全仓 237/237 通过。 |
-| 触发条件 | 用户确认当前工作区并建立 Git 检查点后补写解决提交，转为 `Resolved`。 |
+| 触发条件 | 后续修改分页刷新、epoch 隔离或查询切换语义时必须保留正向结果与禁止事件断言；若再次出现刷新闪空或失败清空旧内容则重新开启本条目。 |
 
 ### TD-006 Repository 首个正式查询携带多组非 Code 必需计数
 
@@ -164,34 +164,34 @@
 | ID | TD-008 |
 | 状态 | Accepted |
 | 优先级 | P2 |
-| 位置 | `repository_md3_screen.dart` 1329 行；`repository_code_md3.dart` 1869 行；`repository_issue_pull_md3.dart` 1201 行；`github_dashboard_home.dart` 1066 行；`unified_home_screen.dart` 711 行 |
+| 位置 | 既有：`repository_md3_screen.dart` 1420 行、`repository_code_md3.dart` 2099 行、`repository_issue_pull_md3.dart` 1331 行、`github_dashboard_home.dart` 1112 行、`unified_home_screen.dart` 725 行；本轮新增：`notifications_inbox_toolbar.dart` 1201 行、`notifications_md3_screen.dart` 840 行、`settings_github_account_page.dart` 629 行、`global_lists_results.dart` 628 行；对应 Notifications/Global Lists 场景测试也已超过 600 行。 |
 | 症状 | 多个文件同时包含请求/状态协调、响应式布局、工具栏、导航、列表、辅助区和多种异步状态 Section。 |
-| 证据 | 静态行数和类清单显示：Repository shell 同时实现身份、操作、About 和 Contributors；Code 同时实现工具栏、目录、提交和文档；Issue/PR 同时实现查询、筛选、侧栏、列表与状态面板。共享导航/上下文已抽为独立组件，Wiki 已拆为数据协调器与纯响应式视图；本轮 Actions 与 Security 也把纯行/状态卡拆为同 library 的展示文件，Insights 拆出图表/指标组件，但其余大文件职责仍混合。判定依据是职责混合，不是单纯行数。 |
+| 证据 | 静态行数和类清单显示：Repository shell 同时实现身份、操作、About 和 Contributors；Code 同时实现工具栏、目录、提交和文档；Issue/PR 同时实现查询、筛选、侧栏、列表与状态面板。共享导航/上下文已抽为独立组件，Wiki 已拆为数据协调器与纯响应式视图；Actions 与 Security 也把纯行/状态卡拆为同 library 的展示文件，Insights 拆出图表/指标组件。新 Notifications 工具栏仍同时包含状态分类、自定义筛选、仓库投影、查询、排序和分组；Notifications 协调页、Settings 账户页与 Global Lists 结果页也各自跨越多个 Section。判定依据是职责混合，不是单纯行数。 |
 | 用户影响 | 小改动触发大范围 review 和回归，容易再次出现重复尺寸、生命周期或“基础完成被误报为页面完成”。 |
 | 冲突来源 | UI 快速迁移阶段将样板页面持续堆叠在少数文件。 |
-| 建议方案 | 按 shell、数据协调、响应式布局、Section 和纯展示组件逐步抽取；保持现有 Provider/Controller 为唯一业务源。 |
+| 建议方案 | 按 shell、数据协调、响应式布局、Section 和纯展示组件逐步抽取；Notifications 优先按分类导航、搜索/排序/分组和 Saved filter 编辑器拆分，Global Lists 按结果头/行/分页状态拆分，测试按可见状态与生命周期场景拆分；保持现有 Provider/Controller 为唯一业务源。 |
 | 清理风险 | 机械拆文件会制造参数传递、重复状态和无语义组件，扩大 diff。 |
 | 前置条件 | 先建立当前入口、状态、响应式和关键交互测试；逐文件职责图；限定单轮只拆一条边界。 |
 | 回归验证 | 360/800/1440 Widget Test、导航/Tab/刷新测试、analyze/test 和截图对比。 |
-| 触发条件 | 下一次大幅修改对应文件，或文件继续新增独立 Section 时。 |
+| 触发条件 | 下一次修改对应大文件前先拆其本轮触及职责；尤其 Notifications、Global Lists 或 Settings 再新增筛选、Section 或交互时，不允许继续直接增长现有超限文件。当前检查点不在提交前机械拆分，是为了保留已完成的 159 项 UI 回归证据；后续拆分必须以同一入口、请求次数、响应式、语义和 Reduced Motion 回归保持为完成条件。 |
 
 ### TD-009 Dense Typography 与可访问性验证尚未形成单一入口
 
 | 字段 | 内容 |
 | --- | --- |
 | ID | TD-009 |
-| 状态 | Accepted（可访问性回归基线已建立，Typography Token 尚未建立） |
+| 状态 | In Progress（`AppTypography` 基线与首批消费者已建立，全页迁移与真机矩阵待完成） |
 | 优先级 | P2 |
-| 位置 | `lib/main.dart` Theme extensions；Home/Repository 页面排版；`test/view/home/unified_home_screen_test.dart`；`test/view/repository/repository_guest_shell_test.dart`；`test/common/animations/app_motion_media_query_test.dart` |
-| 症状 | 新 UI 尚无专门的 GitHub Dense MD3 语义排版扩展，仍有页面级裸 `fontSize`；可访问性测试入口已建立，但尚未形成全部宽度与文字比例的完整笛卡尔矩阵。 |
-| 证据 | Home/Repository 已覆盖 360/800/1440px 的 1.0 基线、800px 的 1.3× 和 360px 的 2×；测试实际发现并修复 Home 快捷操作与 Repository Issues 状态栏溢出。根 Reduced Motion 三组合并测试已建立。语义 Typography Token 仍不存在。 |
-| 用户影响 | 文字放大和 Reduced Motion 已有第一层回归守门；页面迁移过程中相同语义仍可能出现不同字号，需要后续集中排版入口。 |
+| 位置 | `lib/style/app_typography.dart`；`lib/main.dart` Theme extensions；Home/Repository/Compare 首批消费者；`test/style/app_typography_test.dart`；Home/Repository 响应式与可访问性测试 |
+| 症状 | 新 UI 已有 GitHub Dense MD3 语义排版扩展，但当前只迁移了首批标题、主信息和等宽文本；其他新页与旧 UI 仍有裸 `fontSize` 或同一语义不同尺寸。可访问性测试也尚未形成全部页面×宽度×文字比例的完整矩阵。 |
+| 证据 | `AppTypography` 已集中定义页标题、仓库标题、区块标题、主信息、正文、元数据、标签和等宽角色，并安装到亮/暗 Theme；专项测试校验角色尺寸、行高、字重、用户字体与 Theme 颜色继承。Home 页标题、Repository Code 主信息和 Compare 文件名等已开始消费 Token；静态搜索仍可见未迁移排版。 |
+| 用户影响 | 首批页面开始共用稳定排版语义，文字放大和 Reduced Motion 也已有第一层回归守门；未迁移区域仍可能在字号、行高和密度上产生视觉漂移。 |
 | 冲突来源 | 旧 UI Theme 与新 MD3 语义层仍处于过渡阶段。 |
-| 建议方案 | 建立最小语义 Typography/Motion 入口，先迁移 Home 与 Repository；仅替换视觉常量，不触碰用户内容。 |
+| 建议方案 | 保持现有 `AppTypography` 为唯一语义入口，按正式页面逐步迁移 Home、Repository、Notifications、Settings、Profile 与全局列表；仅替换客户端视觉常量，不翻译或改写用户内容。 |
 | 清理风险 | 全仓机械替换会改变旧页面布局并造成大范围 Golden 变化。 |
-| 前置条件 | 三档文字缩放和根 Reduced Motion 基线已建立；仍需明确 Token API，并用实际 Profile/视觉验收校准密度。 |
-| 回归验证 | 当前 Home/Repository 1.0/1.3/2.0 目标测试通过；建立 Token 后补齐 360/800/1440 × 三档比例的参数化矩阵及普通/Reduced Motion 组件测试。 |
-| 触发条件 | 下一轮主题/排版基础工程，或继续迁移新页面前。 |
+| 前置条件 | Token API 与亮/暗 Theme 安装已建立；仍需为各正式页面建立 360/800/1440 与 1.0/1.3/2.0 的有界验收矩阵，并用实际视觉验收校准密度。 |
+| 回归验证 | `app_typography_test.dart` 已覆盖角色派生与亮/暗 Theme 安装；Home/Repository/Compare 已有部分三档宽度和文字放大回归。尚未证明所有新页均已消费 Token，也尚未完成全矩阵和真机字形对比。 |
+| 触发条件 | 每次继续迁移正式新页时同步收敛该页排版；全页迁移与可访问性矩阵完成后才可转 `Resolved`。 |
 
 ### TD-010 Issue/PR 详情仅完成共享外壳，内容层仍为旧 UI
 
@@ -264,6 +264,114 @@
 | 前置条件 | 回归必须在同一保留栈中完成“Code 图片 loading → 切 Actions → 图片完成 → 返回 Code”，并断言隐藏阶段没有 `Image` 实体化、返回后真实图片存在、全程无 Flutter 异常。 |
 | 回归验证 | 本轮分页 sentinel 3/3、Tab motion 3/3、Repository guest shell 7/7 通过，并断言隐藏 sentinel 0 请求、两个已访问 Tab 各自存在 Material 边界。此前 README late raster/图片回归仍是历史证据；由于用户复现推翻旧运行结论，当前代码尚须重新执行同一 Linux Debug Code/Actions/Issues/PR 快速切换与 VM 错误流检查。 |
 | 触发条件 | 当前工作区 Linux Debug 复现序列无框架异常后才可转为 `Resolved`；若其他隐藏 Tab 仍触发同类布局更新，继续以具体异步叶节点补失败回归，不把整个保活栈退回销毁重建。 |
+
+### TD-014 Notifications 网页信息结构超出公开 REST 列表能力
+
+| 字段 | 内容 |
+| --- | --- |
+| ID | TD-014 |
+| 状态 | Open（活动 Inbox 已完成，本项只登记不可等价部分） |
+| 优先级 | P2 |
+| 位置 | `lib/view/notifications/notifications_md3_screen.dart`；`lib/providers/notifications/notifications_filters_provider.dart`；GitHub Notifications REST |
+| 症状 | GitHub 网页公开展示 Saved、Done、全文搜索、排序、分组及条件引导，但公开 REST 列表只提供 All/Unread、Participating、时间范围和分页；没有 Saved/Done 列表、服务端全文搜索、排序或分组参数，也没有公开“Clear out the clutter”触发合同。 |
+| 证据 | 当前页面的 All/Unread 使用正式 REST 会话；原因、自定义、仓库筛选及查询/排序/分组只对已加载窗口做可逆本地投影。宽屏侧栏与 360/800px 底部面板复用同一分类模型；Saved/Done 带 lock 和能力说明，不创建假列表。账户初始化、失败重试、确认未登录、已登录已分离，仅已登录构造 inbox 与 Runtime scope；条件提示只在 All 范围存在已读可见项且本地未关闭时显示。 |
+| 用户影响 | 三档宽度都能到达同一通知分类，但本地搜索仍不能命中尚未加载的历史页；Saved/Done 不能像网页一样列出内容；提示出现条件可能与 GitHub 私有服务端策略不同。 |
+| 冲突来源 | 网页产品能力与公开 REST 契约不对等，不是通过更换 Flutter 组件或再建一套本地列表即可可靠补齐。 |
+| 建议方案 | 保持当前诚实边界。若要补齐 Saved/Done 或全局搜索，先确认官方 GraphQL/REST 是否出现稳定等价接口；否则单独评估本地持久化索引的产品语义、跨设备一致性、账号隔离和迁移成本，不抓取网页私有接口。 |
+| 清理风险 | 把当前已加载窗口结果冒充全局结果，或只在本地维护 Saved/Done，会造成跨设备与 GitHub 网页状态不一致；反向工程网页私有接口会引入稳定性和合规风险。 |
+| 前置条件 | 明确产品是否接受“仅本地”语义；建立账号切换、分页历史、mutation 回滚、数据库迁移和跨设备不一致提示。 |
+| 回归验证 | 当前呈现定向 15/15 证明 All/Unread 会话、本地投影、过滤可恢复、360/800/1440 分类可达、账户四态、文字缩放、Reduced Motion 与错误重试；未证明 Saved/Done、跨未加载页搜索、GitHub 私有提示条件或真实账户平台视觉。 |
+| 触发条件 | 用户明确要求本地 Saved/Done，或 GitHub 提供稳定公开接口时重新评估；在此之前不把入口扩写为完整实现。 |
+
+### TD-015 旧设置表面仍有未迁移的高级与运维能力
+
+| 字段 | 内容 |
+| --- | --- |
+| ID | TD-015 |
+| 状态 | Accepted（融合入口、Public profile 与五类正式账户集合已迁移，Web 独占/部分 API 和旧高级表面待逐项取舍） |
+| 优先级 | P2 |
+| 位置 | `lib/view/settings/` 旧 Themes/Preferences/Behavior；`lib/view/settings/md3/`；旧 Home secondary settings |
+| 症状 | 新 `SettingsRoute` 已建立 GitHub 网页设置 IA、真实 Public profile、五类原生账户集合和底部 DioHub 持久化偏好，但 GitHub Web 独占、部分公开 API 与当前 OAuth 未授权能力仍不能完整原生管理；旧设置还包含高级主题/玻璃参数、卡片显示、watcher、accounts、integrations、logs、AI/Premium 等混合能力，不能机械搬入新页面。 |
+| 证据 | 当前生产 Settings 的 Public profile 读取 `userProvider` 并由 `ViewerSettingsService` 单次 PATCH；Emails、三类密钥、blocked users 使用现有 REST，Organizations/Repositories 使用现有 GraphQL，并由 Provider-owned Runtime page session 管理分页和精确失效。Account/Appearance/Accessibility/Password/Sessions/Enterprises 明确为 Web 独占，Billing/Notifications 标记部分 API，Codespaces 标记缺 scope。紧凑账户头已接入既有上下文切换；初始化、失败重试、确认未登录与已登录使用稳定外壳分开呈现。DioHub 分类仍读取既有 persisted Provider；旧 secondary settings 未破坏性删除。 |
+| 用户影响 | 公开资料、邮箱、密钥和屏蔽可原生管理，组织/仓库可原生浏览；其他 GitHub 设置仍需离开应用，需要旧高级能力的用户也暂时缺少新的原生入口。 |
+| 冲突来源 | 原设置按旧 Dashboard secondary tab 和自定义主题体系组织，而当前产品采用共享 App Chrome、MD3 与按正式能力渐进迁移。 |
+| 建议方案 | 先为每项旧设置确认真实消费者、平台支持和产品保留决策；保留项接入现有 persisted Provider，新视觉参数优先集中到 Theme/ThemeExtension，watcher/账号/日志按独立页面迁移，不建立第二套 Settings Repository。 |
+| 清理风险 | 直接删除会丢失仍有消费者的偏好；直接复制会把过时视觉、平台专用能力和本地/服务器设置混为一谈。 |
+| 前置条件 | 旧设置消费者清单；GitHub REST/GraphQL 能力与 OAuth scope 清单；Windows/macOS/Linux/Android 能力矩阵；真实资料写入/重启回归；每轮只迁移一类职责。 |
+| 回归验证 | 当前呈现 23/23 覆盖 360/800/1440、2× 文字、简中、Reduced Motion、紧凑上下文入口和账户四态；Public profile 写入与 Runtime 集合专项是此前验证，本轮未重跑。仍需真实账户 REST/GraphQL、失败回滚、数据库重启恢复与 Linux/Android 实拍，对删除项证明无生产消费者和迁移策略。 |
+| 触发条件 | 用户确认 Settings 第一阶段视觉后，或下一项功能需要旧偏好入口时按类别排期；在此之前不声称完整设置功能对等。 |
+
+### TD-016 全部仓库尚未合并纯贡献仓库集合
+
+| 字段 | 内容 |
+| --- | --- |
+| ID | TD-016 |
+| 状态 | Accepted（affiliation 正式入口已完成，贡献集合待执行器） |
+| 优先级 | P2 |
+| 位置 | `lib/view/global_lists/`；`lib/providers/search/global_search_*`；`UserInfoService.getUserRepositories` |
+| 症状 | All repositories 已包含 viewer 拥有、协作及组织成员仓库，但不会包含仅提交过代码、当前没有 collaborator/org affiliation 的公开仓库；GitHub 网页 Repository Dashboard 的集合语义更宽。 |
+| 证据 | 现有 GraphQL operation 固定 `affiliations: [OWNER, COLLABORATOR, ORGANIZATION_MEMBER]`；GitHub 官方“Viewing all your repositories”文档说明网页列表也包含 contributed repositories。Search API 的 `user:` 只能按 owner 限定，不能作为等价补源。 |
+| 用户影响 | 主要可访问仓库可浏览、搜索和新建工作项，但少量历史贡献仓库不会出现在 All repositories，不能称为 GitHub 网页完全等价。 |
+| 冲突来源 | 公开 API 将 affiliation repositories 与 contributions 分成不同连接；当前 Runtime 已落地 snapshot/forward page，没有已证明的 FanOut 合并执行器。 |
+| 建议方案 | 先定义 contributed repository 的正式 GraphQL source、稳定去重键、跨源排序、游标/刷新与失败降级合同；确认第二个消费者后实现通用 FanOut 执行器，再把两条 source 合并到同一查询会话。 |
+| 清理风险 | 在 Widget 中 `Future.wait` 两条列表、抓完再排序或把 Search `user:` 结果混入都会破坏首屏、分页顺序、请求预算和准确语义；抓取网页私有接口不可接受。 |
+| 前置条件 | 真实账号 fixture 能区分 owner/collaborator/org member/contributed-only；FanOut 身份、分页和局部失败测试；大列表 Profile/Release 基线。 |
+| 回归验证 | 首屏不等待抓完；重复仓库只出现一次；任一 source 失败时边界明确；刷新与账号切换精确失效；360/800/1440 与滚动恢复不回归。 |
+| 触发条件 | 用户确认 affiliation 版本 UI 后，且产品要求网页 Repository Dashboard 完整集合时进入架构评审；在此之前不为单页临时实现聚合。 |
+
+### TD-017 Home 公开搜索浏览与正式 Repository 路由尚未合流
+
+| 字段 | 内容 |
+| --- | --- |
+| ID | TD-017 |
+| 状态 | Accepted |
+| 优先级 | P1 |
+| 位置 | `lib/view/home/unified_home_screen.dart`；正式 `RepositoryRoute` guest shell |
+| 症状 | Home 中点击公开搜索结果后，在当前 Home 外壳内切换到独立 `PublicRepositoryBrowser`；点击 Top repositories 则进入正式 `RepositoryRoute`。两条入口的顶栏语义、返回行为、加载状态和可用功能不完全一致。 |
+| 证据 | `_UnifiedHomeScreenState` 对选中搜索结果直接构建 `PublicRepositoryBrowser`，而 Top repository 走 `_openTopRepository` 的正式导航。当前未登录正式 Repository Code 尚未与该公开 REST 浏览能力对等，直接改路由会让无账号用户丢失已有公开目录/文本浏览。 |
+| 用户影响 | 同一仓库因入口不同呈现两种页面和导航语义，也扩大了响应式、空/错误状态与可访问性的双重维护面。 |
+| 冲突来源 | 公开 REST 浏览早于正式 guest Repository Code 对等落地，不能用一次路由替换掩盖数据能力差异。 |
+| 建议方案 | 先让正式 Repository Code guest shell 复用现有公开 REST Service/Provider，达到目录、文本、loading/empty/error/retry 和权限对等；再让 Home 搜索结果统一导向正式路由，最后删除页面内临时浏览分支。 |
+| 清理风险 | 过早改路由会回归免登录浏览；直接把 `PublicRepositoryBrowser` 搬进外壳会形成第二套 Repository 状态模型。 |
+| 前置条件 | 列出两条生产入口的能力差异；为正式 guest Code 建立公开仓库、限流、404、二进制文件和返回状态回归。 |
+| 回归验证 | 未登录从 Home 搜索和 Top repositories 打开同一公开仓库时，只出现一个正式 Repository 路由，且目录/文本能力、返回、刷新、深链、360/800/1440px 和 2× 文字均不回归。 |
+| 触发条件 | 下一轮公开 Repository Code 对等任务；在对等完成前不删除当前公开浏览能力。 |
+
+### TD-018 Compare 仍使用独立 Scaffold，未进入共享 Repository 外壳
+
+| 字段 | 内容 |
+| --- | --- |
+| ID | TD-018 |
+| 状态 | Accepted |
+| 优先级 | P2 |
+| 位置 | `lib/view/repository/compare_view_screen.dart`；Repository context chrome/shell |
+| 症状 | Compare 已完成响应式 ref 选择、文案本地化和差异摘要排版，但根页面仍直接返回自己的 `Scaffold + AppBar`，没有复用统一 `AppChrome` 与 Repository 上下文。 |
+| 证据 | `CompareViewScreen.build()` 实例化独立 `Scaffold`、`AppBar`；当前 360px/2×、800px/1.3×、1440px 测试只证明 Compare 内容自身不溢出，没有证明共享顶栏、仓库面包屑、抽屉和返回语义一致。 |
+| 用户影响 | 从 Repository 进入 Compare 时全局顶栏与仓库上下文会改变，与 Home/Repository/Profile/Notifications/Settings 的统一外壳决策不一致。 |
+| 冲突来源 | Compare 内容先于共享 App Chrome 迁移存在，本轮只收敛了它的局部视觉与响应式。 |
+| 建议方案 | 保留现有 Compare Provider/数据源，将内容拆成可嵌入的 Repository 子页，由正式路由提供共享 `AppChrome`、仓库面包屑与返回语义；不复制顶栏或再造 Compare 状态层。 |
+| 清理风险 | 去掉内层 Scaffold 时可能改变 SafeArea、键盘、BottomSheet 与深链返回行为。 |
+| 前置条件 | 确认 Compare 路由与 Repository 上下文的所有入口；为 branch sheet、swap、result tabs 和深链建立行为回归。 |
+| 回归验证 | 从 Code/PR 进入 Compare 后共享顶栏、仓库身份与返回不变；360/800/1440px、1.3×/2×、键盘、Reduced Motion 和深链均通过。 |
+| 触发条件 | 下一轮 Repository 非 Tab 子页外壳收敛，或 Compare 继续增加页面级操作前。 |
+
+### TD-019 Actions 运行行紧凑文字放大回归
+
+| 字段 | 内容 |
+| --- | --- |
+| ID | TD-019 |
+| 状态 | Resolved（自动回归缺口已关闭；真机视觉仍属全局验收） |
+| 优先级 | P2 |
+| 位置 | `lib/view/repository/md3/repository_actions_md3.dart`；`lib/view/repository/md3/repository_actions_widgets.dart`；`test/view/repository/md3/repository_secondary_tabs_test.dart` |
+| 症状 | 早期 Actions 运行行会在紧凑宽度或文字放大时重排 branch/SHA 元数据，但没有用 API 字段形状在 360px/2× 条件下构建生产行的回归。 |
+| 证据 | `RepositoryWorkflowRunRow` 现使用包含长标题、workflow、branch、SHA、event 与 actor 的 `WorkflowRunItem` fixture；`repository_secondary_tabs_test.dart` 在 360px、2× 文字、`disableAnimations` 下断言无溢出、branch/SHA 可见、整行目标至少 48dp，且链接语义含 tap。当前二级 Tab 回归 7/7 通过。 |
+| 用户影响 | 自动回归已守住 Android 窄屏/大字号的布局、触控与链接语义；实际字形与手指可用性仍归属 Linux/Android 平台实拍，不再单独作为此技术债。 |
+| 冲突来源 | 早期回归主要验证 Tab 外壳和登录边界，没有将 Actions 行本身纳入文字缩放 fixture。 |
+| 建议方案 | 已按生产行 + API 字段形状 fixture 补齐 P0 回归；800px/1.3×、1440px/1× 的页面外壳仍由二级 Tab 通用矩阵覆盖。 |
+| 清理风险 | 过度为测试缩减文本或隐藏真实元数据会掩盖问题；fixture 必须保留真实字段结构。 |
+| 前置条件 | 已保持正式 `WorkflowRunItem` 与生产行，没有重建第二套 workflow model。 |
+| 回归验证 | 二级 Tab 7/7 通过；仍需 Android/Linux 真实已登录长名 workflow 复核字形、行高和触控，且在平台验收前不扩大为整张 Actions 页“已完成”。 |
+| 触发条件 | 若 Actions 行字段或布局再改，必须保持该回归；平台实拍异常时以新证据重开。 |
 
 ## 3. 本轮未确认成技术债的检查项
 

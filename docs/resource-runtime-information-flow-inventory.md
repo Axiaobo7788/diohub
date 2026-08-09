@@ -1,7 +1,7 @@
 # DioHub ResourceRuntime 信息流接入清单
 
-状态：Active migration（清单已建立；Repository Issues/PR 为首个分页生产试点）
-日期：2026-07-24
+状态：Active migration（清单已建立；Repository Issues/PR、Notifications 与全局工作列表已成为分页生产入口）
+日期：2026-07-28
 
 ## 1. 目的
 
@@ -11,15 +11,14 @@
 2. 哪些资源适合进入 `ResourceRuntime`，哪些状态必须继续由页面、分页 Controller 或专用服务管理；
 3. 后续迁移如何使用同一份任务模板，而不是每张页面重新发明缓存、预取和加载状态。
 
-清单最初来自静态审计；当前已按其合同完成 Repository Issues/PR 不可变 forward page 的首个
-生产试点，其他分类仍是迁移计划。没有建立 Profile/Release 性能基线；下文的“风险”表示代码结构
-可能产生的成本，不表示已经测得具体耗时。
+清单最初来自静态审计；当前已按其合同完成 Repository Issues/PR、Notifications 与全局工作列表的
+不可变 forward page 生产入口，其他分类仍是迁移计划。没有建立 Profile/Release 性能基线；下文的
+“风险”表示代码结构可能产生的成本，不表示已经测得具体耗时。
 
 配套文档：
 
 - [ResourceRuntime 第三阶段架构](resource-runtime-architecture.md)
 - [ResourceRuntime 接入任务模板](resource-runtime-integration-template.md)
-- [Repository Issues/PR 分页生产试点](resource-runtime-pagination-pilot.md)
 - [开发约束](development-constraints.md)
 - [技术债登记表](technical-debt-register.md)
 
@@ -31,8 +30,13 @@
 - `lib/providers` 中有 25 处 `keepAliveFor(ref)`；
 - Runtime 已正式覆盖 Repository Code 全目录、根 README、README 图片以及
   CONTRIBUTING / SECURITY 的 source 与 render artifact；
-- Home、Repository 主信息、Issues、Pull requests、Actions、Profile、Notifications 等主要信息流
-  仍分别使用 Riverpod keep-alive、页面级 Controller、Service 聚合或直接 FutureProvider。
+- Notifications 正式页已成为第二个通用 `RuntimeForwardPageSource` consumer；All/Unread 的两个
+  Provider-owned Controller 会话有界保留，原因筛选只重投影已加载页，REST mutation 使用 overlay
+  后按账号 scope 精确失效；
+- 全局 Issues/PR 正式入口使用短保留 Search page 与四查询 Controller LRU；All repositories 使用
+  affiliation GraphQL page 与六查询 Controller LRU，文字/fork 只重投影已保留页，不拆分远程资源身份；
+- Home、Repository 主信息、Actions、Profile 等其他主要信息流仍分别使用 Riverpod keep-alive、
+  页面级 Controller、Service 聚合或直接 FutureProvider。
 
 计数只用于说明迁移面较大，不能直接推导 67 个新资源或 25 个缺陷。每条信息流仍须按身份、生命周期、
 分页、mutation 和 UI 语义独立审计。
@@ -161,14 +165,17 @@ Route / page / main tab
 | Contributions 多年数据 | `user_contributions_service.dart` | 多年份 `Future.wait` | Wave B；按年度资源化，当前年优先，历史年延迟 |
 | Activity timeline | `user_activity_service.dart` | 多连接循环至耗尽并跨年聚合 | Wave A；禁止首屏全量，改时间窗口/页资源 |
 | Repositories / Stars / Followers 等 | 多个 Profile Tab | 大量分页 Controller | Wave B；统一页资源模板，保留各自查询会话 |
+| Viewer Settings 集合 | 融合 Settings + `ViewerSettingsService` / `UserInfoService` | Emails、三类 keys、blocked users 为 REST page；Organizations/Repositories 为 GraphQL cursor；mutation 后要求精确一致 | Partial；通用 Runtime forward page、显式 page identity、Provider-owned 惰性 session 与 collection 精确失效已落地；小型列表仍保留 Controller 展开项，真实账号失败/限流和低内存 Profile 待验证 |
 
 ### 5.7 Notifications、搜索与后台活动
 
 | 信息流 | 当前入口 | 风险/特征 | 决策 |
 | --- | --- | --- | --- |
-| Notifications list | Notifications `PaginationController` | 与未读计数、已读 mutation 耦合 | Wave A；页资源 + mutation overlay + 精确失效 |
+| Notifications list | MD3 Notifications page + REST Service + Runtime source | All/Unread 两会话；原因/自定义/仓库筛选和查询/排序/分组为已加载窗口上的可逆投影；已读/完成 mutation；Controller 仍展开已加载实体 | Partial；页资源、Provider-owned 会话、overlay、可逆 `refilter()` 与精确失效已落地；Saved/Done 无官方 REST 列表，待有界页窗口/距离预取、服务端全局搜索决策和真实 Profile |
 | Notification count | count Provider / watcher | 轻量、周期更新 | Wave B；快照可缓存，轮询由 watcher 管理 |
-| Global issue/PR/code/user search | Search Service / Controller | query 高基数、短生命周期 | Wave A；短 retain、严格预算、取消未开始预取 |
+| Global Issues / Pull requests | `GlobalListsShell` + Search Service + Runtime source | 跨仓库 query 高基数；Open/Closed/筛选切换频繁；现有 GraphQL card 投影仍偏丰富 | Partial；短 retain page、Provider-owned 四会话 LRU、SWR/刷新/自动分页已落地；三个全局目的地在同一路由内懒加载并保留已访问会话，隐藏 sentinel 不推进；待最小字段投影与真实 Profile |
+| Global repositories | `GlobalListsShell` + `UserInfoService.getUserRepositories` + Runtime source | affiliation cursor page；服务器无文本参数；纯贡献仓库需要第二 source 聚合 | Partial；远程页按账号/visibility/sort/cursor 身份，文字/fork 为可逆本地投影并复用 page；跨目的地返回保留查询和滚动；待 FanOut 合同与真实大列表 Profile |
+| Global code/user search | Search Service / Controller | query 高基数、短生命周期 | Wave A；短 retain、严格预算、取消未开始预取 |
 | Background inbox polling | Watcher engine | 周期任务、数据库写入 | Excluded；专用 watcher，不伪装成页面资源 |
 | Avatar / repository icon | Flutter image stack / URL | HTTP bytes、解码、GPU 三层不同 | Wave B；只在有统一下载需求时接 source，像素缓存仍属 Flutter |
 
@@ -188,7 +195,8 @@ Route / page / main tab
 1. 完成 Repository Issues / Pull requests forward page 试点后，补有界页窗口、预取和 mutation；
 2. 将 Repository 主查询拆为 baseline 与惰性区域，移出 6 组快捷计数；
 3. 迁移 Issue/PR 详情摘要、时间线页、PR files/commits/review threads；
-4. 处理 Home Events、Top repositories、全局 Search 与 Notifications 页资源；
+4. 处理 Home Events、Top repositories 与其余 Global Search；已接入的全局工作列表和 Notifications
+   继续补有界页窗口、距离预取、最小字段投影及未读计数/watcher 的独立合同；
 5. 把 Workflow overview 的按工作流扇出改为有界调度和惰性加载；
 6. 把 Profile activity 从“抓完再显示”改为时间窗口或分页。
 

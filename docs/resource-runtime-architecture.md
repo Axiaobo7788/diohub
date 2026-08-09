@@ -1,7 +1,7 @@
 # ResourceRuntime 第三阶段架构
 
-状态：Implemented（统一控制面、Repository Code/文档/图片试点；Repository Issues/PR 分页部分接入）
-日期：2026-07-24
+状态：Implemented（统一控制面、Repository Code/文档/图片试点；Repository Issues/PR 与 Notifications 分页部分接入）
+日期：2026-07-25
 
 ## 1. 决策
 
@@ -25,8 +25,8 @@ Runtime 不替换 Riverpod、REST/GraphQL Service、`ApiClient`、`APICache`、D
 scope + query + cursor/page + page size 进入 Runtime，由统一控制面负责 Single Flight、SWR、
 调度、预取、Lease 与预算。完整候选清单和逐信息流任务格式见
 [信息流接入清单](resource-runtime-information-flow-inventory.md) 与
-[接入任务模板](resource-runtime-integration-template.md)。首个生产接入的精确边界见
-[分页生产试点](resource-runtime-pagination-pilot.md)。
+[接入任务模板](resource-runtime-integration-template.md)。首个生产接入的精确合同与验证记录见
+本文 [§5.2](#52-repository-issuespr-forward-page-生产试点)。
 
 这里的“统一”是一个控制面，不是一个包含所有业务的 God Object：
 
@@ -85,16 +85,17 @@ existing domain Service / transport cache
 | 访问模式 | 应负责的专用算法 | 当前状态 |
 | --- | --- | --- |
 | Snapshot / source→artifact | 单值交付、静态依赖、派生产物重建 | 已由 Runtime acquire、dependencies 与 worker 原语落地 |
-| Forward page | 显式页键、首页 SWR、顺序游标和页替换 | `RuntimeForwardPageSource` 已完成首个生产试点，尚未由第二个消费者证明成熟；有界 Controller 页窗口、距离式预取和 mutation overlay 未完成 |
+| Forward page | 显式页键、首页 SWR、顺序游标和页替换 | Repository Issues/PR 与 Notifications 两个生产消费者未修改通用执行器；基础抽象已由第二消费者证明，有界 Controller 页窗口与距离式预取仍未完成 |
 | Bidirectional timeline | 头部增量、尾部历史分页、锚点与双向去重 | 尚未实现；至少存在第二个明确潜在消费者且任务获批时再建立 |
 | Tree / path | immutable tree/ref、path 分块和父子失效 | 目录资源试点已落地，但没有通用 `TreeExecutor` |
 | Bounded fan-out | 有界并发、局部交付、失败隔离和阶段进度 | 尚未实现；不得用无界 `Future.wait` 代替 |
 | Live activity | 前后台订阅、轮询退避和停止语义 | 不作为普通 Runtime 执行器；使用专用 session，稳定只读 snapshot 可进入 Runtime |
 
-Repository Issues/PR 首个试点目前仍由 `repository_issue_pull_md3.dart` 读取 active scope、选择 fallback
-并构造 Runtime page source。这是迁移期例外，不是推荐 binding：在选择第二个 forward-page 消费者
-前，应先把 scope、transport 与 source factory 收进显式 Riverpod/query-session binding，使 Widget
-只提交 repo、query、登录能力与可见性。新页面不得复制当前胶水。
+Repository Issues/PR 首个试点目前仍由 `repository_issue_pull_md3.dart` 读取 active scope、选择
+fallback 并构造 Runtime page source。这是迁移期例外，不是推荐 binding。第二个消费者
+Notifications 已把 scope、Recipe factory、All/Unread Controller 与销毁收进显式 Riverpod
+query-session pool；Widget 只读取当前会话、提交筛选与用户事件，不管理 Lease、generation、资源
+身份或请求调度。后续新页面应沿用这一所有权方向，不复制 Issues/PR 的迁移期胶水。
 
 后续读取型功能使用以下工作流：
 
@@ -227,6 +228,68 @@ Repository Issues / Pull requests 已按这条边界接入通用 `RuntimeForward
 滚动仍由原 Controller 管理。该试点尚未建立有界 Controller 页窗口、距离式预取或 mutation
 overlay，不能据此声称全局分页或大列表内存治理完成。
 
+### 5.2 Repository Issues/PR forward page 生产试点
+
+精确生产入口仅为 Repository → Issues 与 Repository → Pull requests 的不可变列表页。登录态继续
+复用 `SearchService`，但使用只包含编号、标题、作者、状态、时间、评论数和前 5 个标签的
+`searchRepositoryIssuePulls` GraphQL 投影；访客态继续使用
+`PublicRepositoryService.searchIssuesPulls` REST。详情正文、review/check、project、reaction 与
+mutation 没有进入这份列表合同。
+
+每页身份固定包含：
+
+- server/principal `ResourceScope`；
+- owner/repository；
+- authenticated GraphQL 或 public REST transport；
+- 完整规范化 query；
+- GraphQL cursor 或 REST page number；
+- page size 与 schema version。
+
+GraphQL 首页使用 `cursor:start`，后续页必须有非空 `endCursor`；REST 使用显式 `page:1`、
+`page:2`。当前策略为 fresh 1 分钟、retain 5 分钟；估算重量为每项 2 个统一单位，空页 1 个单位。
+显式刷新精确失效当前 query 的全部页，在替换首页成功前保留旧列表；stale 首页立即进入 Controller，
+后台 revalidate 仅在 Controller 仍表示该首页时原位替换。隐藏 Repository Tab 的 sentinel 不请求
+下一页，重新可见后才恢复按需分页。
+
+截至提交 `698c3837`，自动回归已经证明：
+
+- 同页并发 source 只有一次 Loader，新 Controller 可复用 fresh 页；
+- next page 使用独立身份，reset 会等待替换首页，刷新失败保留旧项；
+- stale 首页先交付再后台替换；
+- Open → Closed → Open 只加载两个查询页，显式刷新才产生第三次加载；
+- public REST、账号 scope 隔离、REST page 推进、隐藏 sentinel 0 请求均成立；
+- 登录投影不再下载列表不展示的详情字段。
+
+当前仍是 Partial：`PaginationController` 会展开保留当前会话全部对象，尚无有界页窗口、距离式预取
+或 mutation overlay；Issue/PR 详情、评论、Review、commits、files、review threads 及 Repository
+主查询的六组快捷计数也未迁移。没有 Profile/Release 冷暖耗时、帧时间或 heap 证据，因此这里只能
+证明合同、请求复用和禁止事件，不能宣称页面已经更快。
+
+### 5.3 Notifications forward page 第二生产消费者
+
+精确生产入口为共享 `AppChrome` 右上角通知按钮进入的 `NotificationsRoute`。领域 Loader 继续调用
+既有 `NotificationsService.getNotifications` REST 入口，没有创建第二套 API、模型或传输缓存。
+资源身份包含 server/principal scope、All/Unread 查询、显式 REST page number、page size 与版本；
+策略为 fresh 30 秒、retain 5 分钟，每项估算 2 个统一单位。
+
+该入口验证了通用 forward-page 执行器无需为第二个页面增加核心分支：
+
+- Riverpod route session pool 最多持有 All 与 Unread 两个 Controller，切换返回原 Controller；
+- 原因、自定义、仓库筛选及查询、排序、分组只对 Controller 保留的已加载页调用 `refilter()`，
+  不改变资源身份也不产生请求；`PaginationController.filter` 是可逆视图投影，不再在页进入
+  Controller 时破坏性丢弃被过滤项；
+- 已读、完成、批量完成和全部已读仍由正式 Service 执行，成功后按账号 scope 的 inbox tag 精确失效；
+- mutation 先向两会话应用 overlay，失败只回滚对应 thread patch；
+- Provider 负责 Controller/source 销毁；Widget 不注册全局 controller，也不在生命周期回调中写共享
+  Provider；
+- 返回新 Route session 时，30 秒内的 fresh 首页可由 Runtime 直接交付。
+
+自动回归证明 All → Unread → All 只有两次首次 Loader、返回 All 不出现骨架、原因筛选零请求，以及
+销毁页面会话后新会话复用 fresh Runtime 页。该入口仍是 Partial：Controller 仍展开已加载实体，
+分页触发仍是视口 sentinel 而非带预算的距离式预取；未读 count 与后台 watcher 继续使用独立合同，
+Saved/Done 收件箱也没有可用的 GitHub REST 查询，不能伪造为已实现。当前查询只覆盖已加载窗口；
+GitHub REST 列表没有服务端搜索、排序和分组参数，因此它不能表述为跨所有未加载通知的全局搜索。
+
 ## 6. Repository Code 正式试点
 
 试点保持 `directoryProvider` 为 Widget 兼容层：
@@ -318,9 +381,9 @@ Debug/测试可读取结构化事件与汇总，不记录 scope principal 或资
 - 尚未接入可靠网络状态源；接口已保留，当前只依据应用生命周期限制投机工作。
 - retainFor 不建立每资源 Timer；条目在访问、预算收紧、scope 清理或显式 trim 时惰性回收。
 - Repository Code 全目录、根 README source/artifact、README 图片下载/分类，以及 CONTRIBUTING /
-  SECURITY source/artifact 已迁移；Repository Issues/PR 列表的不可变 forward page 已部分接入。
-  License、Wiki、其他 Markdown、Issue/PR 详情、Actions、Profile、Home 数据及 Repository 主
-  Provider 均未迁移。分页 Controller 仍展开持有已加载项目，尚无有界页窗口。
+  SECURITY source/artifact 已迁移；Repository Issues/PR 与 Notifications 列表的不可变 forward
+  page 已部分接入。License、Wiki、其他 Markdown、Issue/PR 详情、Actions、Profile、Home 数据及
+  Repository 主 Provider 均未迁移。分页 Controller 仍展开持有已加载项目，尚无有界页窗口。
 - README artifact 消除了页面重复的顶层 `html.parse`、标题遍历和 section 切分，但每个惰性
   `HtmlWidget` section 仍可能执行自己的 HTML 构建/解析；Diff 同步解析也未处理。因此 TD-007 只是
   部分推进，不得宣称 Markdown/Diff 性能问题已解决。
@@ -333,7 +396,8 @@ Debug/测试可读取结构化事件与汇总，不记录 scope principal 或资
 README/图片仍需 Profile/Release 冷暖基线；若 isolate 启动开销成为证据充分的瓶颈，再评估常驻
 pool。License 与 Wiki 仍须独立审计，不能因二者都展示 Markdown 就强行并入同一加载语义。
 
-通用 forward page resource 桥接与 Repository Issues / Pull requests 小范围生产试点已经落地，
-只把不可变页面结果接入 Runtime，没有重写 Search Service、`PaginationController` 或页面业务
-模型。下一步应先人工复核真实大仓库并设计有界 Controller 页窗口、mutation 失效与距离式预取；
-在 Profile/Release 和实体保留量都被证明前，仍只能标记“部分接入”。
+通用 forward page resource 桥接已经由 Repository Issues/Pull requests 与 Notifications 两个生产
+消费者复用，第二个消费者只增加领域 Recipe、Provider-owned 会话和 mutation adapter，没有修改
+执行器核心、正式 Service、`PaginationController` 或业务模型。下一步应人工复核真实大仓库/大收件
+箱并设计有界 Controller 页窗口与距离式预取；在 Profile/Release 和实体保留量都被证明前，仍只能
+标记“部分接入”。
