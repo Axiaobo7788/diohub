@@ -78,6 +78,219 @@ class AppLocalizationsEn extends AppLocalizations {
   String get homeNotifications => 'Notifications';
 
   @override
+  String get notificationsInbox => 'Inbox';
+
+  @override
+  String get notificationsSaved => 'Saved';
+
+  @override
+  String get notificationsDone => 'Done';
+
+  @override
+  String get notificationsAll => 'All';
+
+  @override
+  String get notificationsUnread => 'Unread';
+
+  @override
+  String get notificationsSearchHint => 'Search notifications';
+
+  @override
+  String get notificationsClearSearch => 'Clear notification search';
+
+  @override
+  String notificationsSortLabel(String value) {
+    return 'Sort by: $value';
+  }
+
+  @override
+  String notificationsGroupLabel(String value) {
+    return 'Group by: $value';
+  }
+
+  @override
+  String get notificationsNewestToOldest => 'Newest to oldest';
+
+  @override
+  String get notificationsOldestToNewest => 'Oldest to newest';
+
+  @override
+  String get notificationsRepository => 'Repository';
+
+  @override
+  String get notificationsRepositories => 'Repositories';
+
+  @override
+  String get notificationsAllRepositories => 'All repositories';
+
+  @override
+  String get notificationsDate => 'Date';
+
+  @override
+  String get notificationsDateUnknown => 'Unknown date';
+
+  @override
+  String get notificationsRefresh => 'Refresh notifications';
+
+  @override
+  String get notificationsMarkAllRead => 'Mark all as read';
+
+  @override
+  String get notificationsMarkRead => 'Mark as read';
+
+  @override
+  String get notificationsMarkDone => 'Mark as done';
+
+  @override
+  String get notificationsSelectAll => 'Select all loaded notifications';
+
+  @override
+  String get notificationsClearSelection => 'Clear selection';
+
+  @override
+  String notificationsSelectedCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count selected',
+      one: '1 selected',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String notificationsBulkDone(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count notifications marked as done.',
+      one: '1 notification marked as done.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String notificationsBulkFailed(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count notifications could not be updated.',
+      one: '1 notification could not be updated.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get notificationsFilters => 'Filters';
+
+  @override
+  String get notificationsFilterReasons => 'Reasons';
+
+  @override
+  String get notificationsClearFilters => 'Clear filters';
+
+  @override
+  String get notificationsAssigned => 'Assigned';
+
+  @override
+  String get notificationsParticipating => 'Participating';
+
+  @override
+  String get notificationsAuthor => 'Author';
+
+  @override
+  String get notificationsComment => 'Comment';
+
+  @override
+  String get notificationsInvitation => 'Invitation';
+
+  @override
+  String get notificationsFollowing => 'Following';
+
+  @override
+  String get notificationsMentioned => 'Mentioned';
+
+  @override
+  String get notificationsReviewRequested => 'Review requested';
+
+  @override
+  String get notificationsSecurityAlert => 'Security alert';
+
+  @override
+  String get notificationsStateChange => 'State change';
+
+  @override
+  String get notificationsSubscribed => 'Subscribed';
+
+  @override
+  String get notificationsTeamMention => 'Team mention';
+
+  @override
+  String get notificationsCiActivity => 'CI activity';
+
+  @override
+  String notificationsReason(String reason) {
+    return 'Reason: $reason';
+  }
+
+  @override
+  String get notificationsCaughtUp => 'You’re all caught up';
+
+  @override
+  String get notificationsNoUnread => 'You have no unread notifications.';
+
+  @override
+  String get notificationsNoResults =>
+      'No notifications match the selected filters.';
+
+  @override
+  String get notificationsLoadError => 'Notifications could not be loaded.';
+
+  @override
+  String get notificationsUpdateError =>
+      'The notification could not be updated.';
+
+  @override
+  String get notificationsSignInTitle => 'Sign in to view notifications';
+
+  @override
+  String get notificationsSignInBody =>
+      'GitHub notifications are private to your account.';
+
+  @override
+  String get notificationsOpen => 'Open notification';
+
+  @override
+  String get notificationsAddFilter => 'Add new filter';
+
+  @override
+  String get notificationsFilterName => 'Filter name';
+
+  @override
+  String get notificationsFilterQuery => 'Filter query';
+
+  @override
+  String get notificationsSaveFilter => 'Save filter';
+
+  @override
+  String get notificationsCleanupTitle => 'Clear out the clutter.';
+
+  @override
+  String get notificationsCleanupBody =>
+      'Select the read notifications currently loaded so you can mark them as done.';
+
+  @override
+  String get notificationsDismiss => 'Dismiss';
+
+  @override
+  String get notificationsGetStarted => 'Get started';
+
+  @override
+  String notificationsSectionUnavailable(String section) {
+    return '$section cannot be listed through the current GitHub API.';
+  }
+
+  @override
   String get homeCouldNotOpenLink => 'Could not open the link.';
 
   @override
@@ -114,6 +327,15 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get homeAskAnything => 'Ask anything or type @ to add context';
+
+  @override
+  String get homeAddContext => 'Add context';
+
+  @override
+  String get homeSelectModel => 'Select model';
+
+  @override
+  String get homeSendPrompt => 'Send prompt';
 
   @override
   String get homeAgent => 'Agent';
@@ -189,6 +411,128 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get navAllRepositories => 'All repositories';
+
+  @override
+  String get globalListsSignInTitle => 'Sign in to view your work';
+
+  @override
+  String get globalListsSignInDescription =>
+      'Issues, pull requests, and repositories associated with your account are available after sign-in.';
+
+  @override
+  String get globalListsSignInAction => 'Sign in';
+
+  @override
+  String get globalListsAll => 'All';
+
+  @override
+  String get globalListsSearchIssues => 'Search your issues';
+
+  @override
+  String get globalListsSearchPullRequests => 'Search your pull requests';
+
+  @override
+  String get globalListsSearchRepositories => 'Find a repository';
+
+  @override
+  String globalListsResultsCount(int count) {
+    return '$count results';
+  }
+
+  @override
+  String get globalListsNoIssues => 'No issues match these filters';
+
+  @override
+  String get globalListsNoPullRequests =>
+      'No pull requests match these filters';
+
+  @override
+  String get globalListsNoRepositories => 'No repositories match these filters';
+
+  @override
+  String get globalListsNoResultsDescription =>
+      'Try changing the search text or filters.';
+
+  @override
+  String globalListsRepositoriesFor(String login) {
+    return 'Repositories available to @$login';
+  }
+
+  @override
+  String globalListsUpdated(String time) {
+    return 'Updated $time';
+  }
+
+  @override
+  String globalListsIssueMetadata(
+    String repository,
+    int number,
+    String action,
+    String author,
+    String time,
+  ) {
+    return '$repository #$number $action by $author $time';
+  }
+
+  @override
+  String get globalListsBestMatch => 'Best match';
+
+  @override
+  String get globalListsNewest => 'Newest';
+
+  @override
+  String get globalListsOldest => 'Oldest';
+
+  @override
+  String get globalListsMostComments => 'Most comments';
+
+  @override
+  String get globalListsRecentlyPushed => 'Recently pushed';
+
+  @override
+  String get globalListsRecentlyUpdated => 'Recently updated';
+
+  @override
+  String get globalListsName => 'Name';
+
+  @override
+  String get globalListsMostStars => 'Most stars';
+
+  @override
+  String get globalListsMostForks => 'Most forks';
+
+  @override
+  String get globalListsMirrors => 'Mirrors';
+
+  @override
+  String get globalListsForks => 'Forks';
+
+  @override
+  String get globalListsClearFilters => 'Clear filters';
+
+  @override
+  String get globalListsRefresh => 'Refresh results';
+
+  @override
+  String get globalListsLoadError => 'Could not load results.';
+
+  @override
+  String get globalListsNewIssue => 'New issue';
+
+  @override
+  String get globalListsNewPullRequest => 'New pull request';
+
+  @override
+  String get globalListsSelectRepository => 'Select a repository';
+
+  @override
+  String get globalListsChooseIssueTemplate => 'Choose an issue template';
+
+  @override
+  String get globalListsBlankIssue => 'Blank issue';
+
+  @override
+  String get globalListsCreateFlowError => 'Could not start the create flow.';
 
   @override
   String get navProjects => 'Projects';
@@ -1723,4 +2067,928 @@ class AppLocalizationsEn extends AppLocalizations {
   String activityJoinMany(String head, String last) {
     return '$head, and $last';
   }
+
+  @override
+  String get settingsTitle => 'Settings';
+
+  @override
+  String get settingsPageDescription =>
+      'Manage your GitHub account and DioHub preferences in one place.';
+
+  @override
+  String get settingsPreferences => 'Preferences';
+
+  @override
+  String get settingsCategory => 'Settings category';
+
+  @override
+  String get settingsGeneral => 'General';
+
+  @override
+  String get settingsAppearance => 'Appearance';
+
+  @override
+  String get settingsAccessibility => 'Accessibility';
+
+  @override
+  String get settingsCodeAndRepositories => 'Code & repositories';
+
+  @override
+  String get settingsNotifications => 'Notifications';
+
+  @override
+  String get settingsPrivacy => 'Privacy & diagnostics';
+
+  @override
+  String get settingsAbout => 'About';
+
+  @override
+  String get settingsSaveError => 'The setting could not be saved.';
+
+  @override
+  String get settingsGeneralDescription =>
+      'Choose the app language, information density, and default browsing behavior.';
+
+  @override
+  String get settingsAppLanguage => 'App language';
+
+  @override
+  String get settingsAppLanguageDescription =>
+      'Follow the operating system or choose a language for DioHub.';
+
+  @override
+  String get settingsLayout => 'Layout';
+
+  @override
+  String get settingsLayoutDescription =>
+      'Use one density across shared Android and desktop layouts.';
+
+  @override
+  String get settingsDensity => 'Information density';
+
+  @override
+  String get settingsDensityDescription =>
+      'Adjust spacing without shrinking text or touch targets.';
+
+  @override
+  String get settingsDensityCompact => 'Compact';
+
+  @override
+  String get settingsDensityDefault => 'Default';
+
+  @override
+  String get settingsDensitySpacious => 'Spacious';
+
+  @override
+  String get settingsStickyHeaders => 'Sticky section headers';
+
+  @override
+  String get settingsStickyHeadersDescription =>
+      'Keep section context visible while scrolling supported legacy views.';
+
+  @override
+  String get settingsFeedAndSearch => 'Feed & search';
+
+  @override
+  String get settingsGroupRelatedActivity => 'Group related activity';
+
+  @override
+  String get settingsGroupRelatedActivityDescription =>
+      'Combine related GitHub events into a single feed entry.';
+
+  @override
+  String get settingsTimelineFeed => 'Timeline feed';
+
+  @override
+  String get settingsTimelineFeedDescription =>
+      'Show activity with a continuous timeline instead of plain cards.';
+
+  @override
+  String get settingsFuzzySearch => 'Fuzzy local filtering';
+
+  @override
+  String get settingsFuzzySearchDescription =>
+      'Match approximate text in client-side filters.';
+
+  @override
+  String get settingsAppearanceDescription =>
+      'Choose the color mode and how profile colors influence the interface.';
+
+  @override
+  String get settingsTheme => 'Theme';
+
+  @override
+  String get settingsThemeDescription =>
+      'Material 3 colors remain centralized and respond immediately.';
+
+  @override
+  String get settingsThemeMode => 'Theme mode';
+
+  @override
+  String get settingsThemeModeDescription =>
+      'Follow the system or keep DioHub light or dark.';
+
+  @override
+  String get settingsThemeSystem => 'System';
+
+  @override
+  String get settingsThemeLight => 'Light';
+
+  @override
+  String get settingsThemeDark => 'Dark';
+
+  @override
+  String get settingsMaterialYou => 'Use system colors';
+
+  @override
+  String get settingsMaterialYouDescription =>
+      'Use dynamic Material You colors when the platform provides them.';
+
+  @override
+  String get settingsProfileColors => 'Profile colors';
+
+  @override
+  String get settingsProfileColorsDescription =>
+      'Optionally blend a profile avatar color into profile pages.';
+
+  @override
+  String get settingsProfileTheme => 'Profile-based color';
+
+  @override
+  String get settingsProfileThemeDescription =>
+      'Apply a scoped color treatment when viewing a profile.';
+
+  @override
+  String get settingsProfileThemeIntensity => 'Color intensity';
+
+  @override
+  String get settingsProfileThemeIntensityDescription =>
+      'Control how strongly the profile color is blended.';
+
+  @override
+  String get settingsAccessibilityDescription =>
+      'Control motion and physical feedback while preserving platform accessibility preferences.';
+
+  @override
+  String get settingsMotion => 'Motion';
+
+  @override
+  String get settingsMotionDescription =>
+      'The operating system Reduced Motion preference always takes priority.';
+
+  @override
+  String get settingsAnimationLevel => 'Animation level';
+
+  @override
+  String get settingsAnimationLevelDescription =>
+      'Choose how much interface motion DioHub adds.';
+
+  @override
+  String get settingsAnimationNone => 'None';
+
+  @override
+  String get settingsAnimationReduced => 'Reduced';
+
+  @override
+  String get settingsAnimationNormal => 'Normal';
+
+  @override
+  String get settingsAnimationEnhanced => 'Enhanced';
+
+  @override
+  String get settingsFeedback => 'Feedback';
+
+  @override
+  String get settingsHaptics => 'Haptic feedback';
+
+  @override
+  String get settingsHapticsDescription =>
+      'Control vibration feedback on supported devices.';
+
+  @override
+  String get settingsHapticsOn => 'On';
+
+  @override
+  String get settingsHapticsReduced => 'Reduced';
+
+  @override
+  String get settingsHapticsOff => 'Off';
+
+  @override
+  String get settingsCodeAndRepositoriesDescription =>
+      'Set repository entry behavior, file browsing details, and diff readability.';
+
+  @override
+  String get settingsRepositoryDefaults => 'Repository defaults';
+
+  @override
+  String get settingsDefaultRepositoryTab => 'Default repository tab';
+
+  @override
+  String get settingsDefaultRepositoryTabDescription =>
+      'Open this tab when a repository link does not specify a destination.';
+
+  @override
+  String get settingsCommits => 'Commits';
+
+  @override
+  String get settingsCodeBrowser => 'Code browser';
+
+  @override
+  String get settingsFileSort => 'File sorting';
+
+  @override
+  String get settingsFileSortDescription =>
+      'Choose how directories and files are ordered.';
+
+  @override
+  String get settingsSortType => 'Type';
+
+  @override
+  String get settingsSortNameAscending => 'Name A–Z';
+
+  @override
+  String get settingsSortNameDescending => 'Name Z–A';
+
+  @override
+  String get settingsSortSize => 'Size';
+
+  @override
+  String get settingsSortExtension => 'Extension';
+
+  @override
+  String get settingsShowDotfiles => 'Show dotfiles';
+
+  @override
+  String get settingsShowDotfilesDescription =>
+      'Include files and directories whose names begin with a dot.';
+
+  @override
+  String get settingsShowFileMetadata => 'Show file metadata';
+
+  @override
+  String get settingsShowFileMetadataDescription =>
+      'Display available size and type details in the file list.';
+
+  @override
+  String get settingsShowGeneratedFiles => 'Show generated files';
+
+  @override
+  String get settingsShowGeneratedFilesDescription =>
+      'Include files GitHub identifies as generated.';
+
+  @override
+  String get settingsShowLastCommit => 'Show last commit per path';
+
+  @override
+  String get settingsShowLastCommitDescription =>
+      'Fetch commit information for visible paths. Large directories may require extra requests.';
+
+  @override
+  String get settingsDiffViewer => 'Diff viewer';
+
+  @override
+  String get settingsDiffLayout => 'Default diff layout';
+
+  @override
+  String get settingsDiffLayoutDescription =>
+      'Choose a unified or split comparison.';
+
+  @override
+  String get settingsDiffUnified => 'Unified';
+
+  @override
+  String get settingsDiffSplit => 'Split';
+
+  @override
+  String get settingsWrapCode => 'Wrap long lines';
+
+  @override
+  String get settingsWrapCodeDescription =>
+      'Wrap code and diff lines to the available width.';
+
+  @override
+  String get settingsLineNumbers => 'Show line numbers';
+
+  @override
+  String get settingsLineNumbersDescription =>
+      'Display source line numbers beside code.';
+
+  @override
+  String get settingsDiffHighlight => 'Change highlight';
+
+  @override
+  String get settingsDiffHighlightDescription =>
+      'Adjust the contrast of added and removed lines.';
+
+  @override
+  String get settingsHighlightSubtle => 'Subtle';
+
+  @override
+  String get settingsHighlightDefault => 'Default';
+
+  @override
+  String get settingsHighlightHigh => 'High';
+
+  @override
+  String get settingsCodeFontScale => 'Code text size';
+
+  @override
+  String get settingsCodeFontScaleDescription =>
+      'Scale monospace content independently from interface text.';
+
+  @override
+  String get settingsNotificationsDescription =>
+      'Control inbox presentation and background notification checks.';
+
+  @override
+  String get settingsInbox => 'Inbox';
+
+  @override
+  String get settingsAutoMarkRead => 'Auto-mark as read';
+
+  @override
+  String get settingsAutoMarkReadDescription =>
+      'Mark notifications as read when they become visible.';
+
+  @override
+  String get settingsGroupByRepository => 'Group by repository';
+
+  @override
+  String get settingsGroupByRepositoryDescription =>
+      'Organize loaded notifications under repository headings.';
+
+  @override
+  String get settingsBackgroundChecks => 'Background checks';
+
+  @override
+  String get settingsBackgroundChecksDescription =>
+      'Background availability depends on platform support and operating system permissions.';
+
+  @override
+  String get settingsInboxPolling => 'Inbox polling';
+
+  @override
+  String get settingsInboxPollingDescription =>
+      'Periodically check for new GitHub notifications.';
+
+  @override
+  String get settingsPollingInterval => 'Polling interval';
+
+  @override
+  String get settingsPollingIntervalDescription =>
+      'Choose how often the inbox is checked in the background.';
+
+  @override
+  String settingsMinutes(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count minutes',
+      one: '1 minute',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get settingsSystemNotifications => 'System notifications';
+
+  @override
+  String get settingsSystemNotificationsDescription =>
+      'Show operating system notifications while DioHub is in the background.';
+
+  @override
+  String get settingsWorkflowAlerts => 'Workflow run alerts';
+
+  @override
+  String get settingsWorkflowAlertsDescription =>
+      'Notify when a watched workflow run completes.';
+
+  @override
+  String get settingsPrivacyDescription =>
+      'Choose which diagnostics DioHub may collect when reporting failures.';
+
+  @override
+  String get settingsDiagnostics => 'Diagnostics';
+
+  @override
+  String get settingsDiagnosticsDescription =>
+      'Diagnostic preferences take effect after the next app launch.';
+
+  @override
+  String get settingsCrashReports => 'Crash reports';
+
+  @override
+  String get settingsCrashReportsDescription =>
+      'Send anonymous stack traces when DioHub crashes.';
+
+  @override
+  String get settingsHttpDiagnostics => 'HTTP diagnostics';
+
+  @override
+  String get settingsHttpDiagnosticsDescription =>
+      'Include anonymized API error patterns and timing.';
+
+  @override
+  String get settingsNavigationDiagnostics => 'Navigation diagnostics';
+
+  @override
+  String get settingsNavigationDiagnosticsDescription =>
+      'Include the sequence of screens visited before a crash.';
+
+  @override
+  String get settingsPerformanceDiagnostics => 'Performance monitoring';
+
+  @override
+  String get settingsPerformanceDiagnosticsDescription =>
+      'Measure responsiveness and slow operations.';
+
+  @override
+  String get settingsSessionReplay => 'Session replay';
+
+  @override
+  String get settingsSessionReplayDescription =>
+      'Record a masked visual trace when a crash occurs.';
+
+  @override
+  String get settingsRestartRequired =>
+      'Changes to diagnostics take effect after the next app launch.';
+
+  @override
+  String get settingsAboutDescription =>
+      'Version, release notes, and open-source acknowledgements.';
+
+  @override
+  String get settingsApplication => 'Application';
+
+  @override
+  String get settingsApplicationName => 'DioHub';
+
+  @override
+  String settingsVersion(String version, String build) {
+    return 'Version $version ($build)';
+  }
+
+  @override
+  String get settingsWhatsNew => 'What’s new';
+
+  @override
+  String get settingsWhatsNewDescription =>
+      'Read the changelog and release history.';
+
+  @override
+  String get settingsOpenSourceLicenses => 'Open-source licenses';
+
+  @override
+  String get settingsOpenSourceLicensesDescription =>
+      'View licenses for Flutter and bundled dependencies.';
+
+  @override
+  String get settingsAccessGroup => 'Access';
+
+  @override
+  String get settingsCodePlanningAutomation => 'Code, planning, and automation';
+
+  @override
+  String get settingsDioHubGroup => 'DioHub app settings';
+
+  @override
+  String get settingsPublicProfile => 'Public profile';
+
+  @override
+  String get settingsGitHubAccount => 'Account';
+
+  @override
+  String get settingsBillingAndLicensing => 'Billing and licensing';
+
+  @override
+  String get settingsEmails => 'Emails';
+
+  @override
+  String get settingsPasswordAndAuthentication => 'Password and authentication';
+
+  @override
+  String get settingsSessions => 'Sessions';
+
+  @override
+  String get settingsSshAndGpgKeys => 'SSH and GPG keys';
+
+  @override
+  String get settingsOrganizations => 'Organizations';
+
+  @override
+  String get settingsEnterprises => 'Enterprises';
+
+  @override
+  String get settingsModeration => 'Moderation';
+
+  @override
+  String get settingsCodespaces => 'Codespaces';
+
+  @override
+  String get settingsSignedOutDescription =>
+      'DioHub preferences remain available without a GitHub account.';
+
+  @override
+  String get settingsPersonalAccount => 'Your personal account';
+
+  @override
+  String get settingsSwitchContext => 'Switch settings context';
+
+  @override
+  String get settingsPublicProfileDescription =>
+      'Manage the information shown on your GitHub profile.';
+
+  @override
+  String get settingsProfileName => 'Name';
+
+  @override
+  String get settingsProfilePublicEmail => 'Public email';
+
+  @override
+  String get settingsProfilePublicEmailDescription =>
+      'This address is visible on your public GitHub profile.';
+
+  @override
+  String get settingsProfileEmailHidden => 'Don\'t show my email';
+
+  @override
+  String get settingsProfileEmailLoadError =>
+      'Verified emails could not be loaded. Your current public email is unchanged.';
+
+  @override
+  String get settingsProfileBio => 'Bio';
+
+  @override
+  String get settingsProfilePronouns => 'Pronouns';
+
+  @override
+  String get settingsProfileUrl => 'URL';
+
+  @override
+  String get settingsProfileCompany => 'Company';
+
+  @override
+  String get settingsProfileLocation => 'Location';
+
+  @override
+  String get settingsProfileTwitter => 'X username';
+
+  @override
+  String get settingsProfileAvailableForHire => 'Available for hire';
+
+  @override
+  String get settingsProfilePicture => 'Profile picture';
+
+  @override
+  String get settingsManageProfilePicture => 'Edit on GitHub';
+
+  @override
+  String get settingsUpdateProfile => 'Update profile';
+
+  @override
+  String get settingsProfileUpdated => 'Your public profile was updated.';
+
+  @override
+  String get settingsPublicProfileLoadError =>
+      'DioHub could not load the public profile for this account.';
+
+  @override
+  String get settingsManagedByGitHub => 'Continue on GitHub';
+
+  @override
+  String get settingsBrowserOnly => 'GitHub web setting';
+
+  @override
+  String settingsBrowserOnlyDescription(String setting) {
+    return '$setting does not have a supported public API. DioHub opens the matching page for the active server.';
+  }
+
+  @override
+  String get settingsPartialApiCoverage => 'Partial public API';
+
+  @override
+  String settingsPartialApiCoverageDescription(String setting) {
+    return 'GitHub exposes only part of $setting through public APIs. DioHub does not present an incomplete subset as the full setting.';
+  }
+
+  @override
+  String get settingsOAuthScopeRequired => 'Additional authorization required';
+
+  @override
+  String settingsOAuthScopeRequiredDescription(String setting) {
+    return '$setting has public API coverage, but the current DioHub OAuth scope does not authorize it. Authorization changes are handled separately.';
+  }
+
+  @override
+  String settingsGitHubManagedDescription(String setting) {
+    return '$setting is managed by GitHub. DioHub opens the matching page for the active server instead of imitating unavailable private APIs.';
+  }
+
+  @override
+  String get settingsOpenOnGitHub => 'Open on GitHub';
+
+  @override
+  String get settingsSignInToManageGitHub =>
+      'Sign in to manage this GitHub setting.';
+
+  @override
+  String settingsOpenOnGitHubDescription(String host) {
+    return 'Open this setting on $host.';
+  }
+
+  @override
+  String get settingsCollectionLoadError =>
+      'DioHub could not load this setting. Check the connection and try again.';
+
+  @override
+  String get settingsLoadMore => 'Load more';
+
+  @override
+  String get settingsRefresh => 'Refresh';
+
+  @override
+  String get settingsDelete => 'Delete';
+
+  @override
+  String get settingsEmailsDescription =>
+      'Manage the email addresses associated with your GitHub account.';
+
+  @override
+  String get settingsAddEmail => 'Add email address';
+
+  @override
+  String get settingsDeleteEmail => 'Delete email address';
+
+  @override
+  String settingsDeleteEmailConfirmation(String email) {
+    return 'Remove $email from your GitHub account?';
+  }
+
+  @override
+  String get settingsPrimaryEmailVisibility => 'Primary email visibility';
+
+  @override
+  String get settingsPrimaryEmailVisibilityDescription =>
+      'Choose whether your primary email may be shown on your public GitHub profile.';
+
+  @override
+  String get settingsNoEmails => 'No email addresses';
+
+  @override
+  String get settingsNoEmailsDescription =>
+      'Add an email address to use it with your GitHub account.';
+
+  @override
+  String get settingsEmailPrimary => 'Primary';
+
+  @override
+  String get settingsEmailVerified => 'Verified';
+
+  @override
+  String get settingsEmailUnverified => 'Unverified';
+
+  @override
+  String get settingsEmailPublic => 'Public';
+
+  @override
+  String get settingsEmailPrivate => 'Private';
+
+  @override
+  String get settingsEmailAddress => 'Email address';
+
+  @override
+  String get settingsEmailInvalid => 'Enter a valid email address.';
+
+  @override
+  String get settingsKeysDescription =>
+      'Manage the keys GitHub uses for authentication and verified signing.';
+
+  @override
+  String get settingsSshKeys => 'SSH keys';
+
+  @override
+  String get settingsGpgKeys => 'GPG keys';
+
+  @override
+  String get settingsSshSigningKeys => 'Signing keys';
+
+  @override
+  String get settingsAddKey => 'New key';
+
+  @override
+  String get settingsDeleteKey => 'Delete key';
+
+  @override
+  String settingsDeleteKeyConfirmation(String title) {
+    return 'Delete “$title”? This cannot be undone.';
+  }
+
+  @override
+  String get settingsNoSshKeys => 'No SSH keys';
+
+  @override
+  String get settingsNoSshKeysDescription =>
+      'Add an SSH key to authenticate Git operations.';
+
+  @override
+  String get settingsNoGpgKeys => 'No GPG keys';
+
+  @override
+  String get settingsNoGpgKeysDescription =>
+      'Add a GPG key to mark supported commits and tags as verified.';
+
+  @override
+  String get settingsNoSigningKeys => 'No SSH signing keys';
+
+  @override
+  String get settingsNoSigningKeysDescription =>
+      'Add an SSH signing key for verified Git signatures.';
+
+  @override
+  String settingsAddedOn(String date) {
+    return 'Added $date';
+  }
+
+  @override
+  String get settingsKeyNameOptional => 'Name (optional)';
+
+  @override
+  String get settingsKeyTitle => 'Title';
+
+  @override
+  String get settingsArmoredGpgKey => 'ASCII-armored GPG public key';
+
+  @override
+  String get settingsPublicKey => 'Public key';
+
+  @override
+  String get settingsFieldRequired => 'This field is required.';
+
+  @override
+  String get settingsOrganizationsDescription =>
+      'Organizations associated with your GitHub account. Membership changes continue on GitHub.';
+
+  @override
+  String get settingsNoOrganizations => 'No organizations';
+
+  @override
+  String get settingsNoOrganizationsDescription =>
+      'This account does not currently belong to an organization.';
+
+  @override
+  String settingsOrganizationSummary(int repositories, int members) {
+    return '$repositories repositories · $members members';
+  }
+
+  @override
+  String get settingsRepositoriesDescription =>
+      'Browse repositories available to this account. Administrative controls continue on GitHub.';
+
+  @override
+  String get settingsNoRepositories => 'No repositories';
+
+  @override
+  String get settingsNoRepositoriesDescription =>
+      'No repository is available to this account.';
+
+  @override
+  String get settingsFork => 'Fork';
+
+  @override
+  String settingsStars(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count stars',
+      one: '1 star',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String settingsUpdatedOn(String date) {
+    return 'Updated $date';
+  }
+
+  @override
+  String get settingsModerationDescription =>
+      'Review and manage users blocked by this GitHub account.';
+
+  @override
+  String get settingsBlockUser => 'Block a user';
+
+  @override
+  String get settingsGitHubUsername => 'GitHub username';
+
+  @override
+  String get settingsBlock => 'Block';
+
+  @override
+  String get settingsNoBlockedUsers => 'No blocked users';
+
+  @override
+  String get settingsNoBlockedUsersDescription =>
+      'Users blocked by this account will appear here.';
+
+  @override
+  String get settingsUnblock => 'Unblock';
+
+  @override
+  String get commonLoading => 'Loading…';
+
+  @override
+  String get repoWorkflowStatusSuccess => 'Succeeded';
+
+  @override
+  String get repoWorkflowStatusFailure => 'Failed';
+
+  @override
+  String get repoWorkflowStatusTimedOut => 'Timed out';
+
+  @override
+  String get repoWorkflowStatusCancelled => 'Cancelled';
+
+  @override
+  String get repoWorkflowStatusInProgress => 'In progress';
+
+  @override
+  String get repoWorkflowStatusQueued => 'Queued';
+
+  @override
+  String get repoWorkflowStatusWaiting => 'Waiting';
+
+  @override
+  String get repoWorkflowStatusPending => 'Pending';
+
+  @override
+  String get repoWorkflowStatusUnknown => 'Unknown status';
+
+  @override
+  String get compareFileStatusAdded => 'Added';
+
+  @override
+  String get compareFileStatusRemoved => 'Removed';
+
+  @override
+  String get compareFileStatusRenamed => 'Renamed';
+
+  @override
+  String get compareFileStatusModified => 'Modified';
+
+  @override
+  String get compareTitle => 'Compare';
+
+  @override
+  String get compareSelectBaseRef => 'Select base ref';
+
+  @override
+  String get compareSelectHeadRef => 'Select head ref';
+
+  @override
+  String get compareSelectBase => 'Select base…';
+
+  @override
+  String get compareSelectHead => 'Select head…';
+
+  @override
+  String get compareSwapBaseHead => 'Swap base and head';
+
+  @override
+  String get compareEnterRefs =>
+      'Select base and head refs to compare changes.';
+
+  @override
+  String compareLoadError(String error) {
+    return 'Could not load comparison: $error';
+  }
+
+  @override
+  String get compareAhead => 'ahead';
+
+  @override
+  String get compareBehind => 'behind';
+
+  @override
+  String compareFilesChanged(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count files changed',
+      one: '1 file changed',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get compareCommits => 'Commits';
+
+  @override
+  String get compareFiles => 'Files';
+
+  @override
+  String get projectPickerLinked => 'Linked';
+
+  @override
+  String get projectPickerAddToProject => 'Add to project';
 }

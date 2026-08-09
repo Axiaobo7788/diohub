@@ -20,8 +20,10 @@ class BreadcrumbBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final List<String> segments =
-        currentPath.split('/').where((String s) => s.isNotEmpty).toList();
+    final List<String> segments = currentPath
+        .split('/')
+        .where((String s) => s.isNotEmpty)
+        .toList();
     final ThemeData theme = Theme.of(context);
     final ColorScheme scheme = theme.colorScheme;
     final TextTheme textTheme = theme.textTheme;
@@ -112,9 +114,12 @@ class _BreadcrumbSegment extends StatelessWidget {
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(4),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-          child: content,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(minHeight: 48),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8),
+            child: Center(child: content),
+          ),
         ),
       ),
     );

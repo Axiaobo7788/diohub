@@ -59,35 +59,51 @@ class SuggestedReviewersSection extends StatelessWidget {
             runSpacing: spacing.compactSpacing,
             children: suggested.map((s) {
               final isSelected = selectedNodeIds.contains(s.id);
-              return GestureDetector(
-                onTap: () => onToggle(s.id),
-                child: Container(
-                  padding: EdgeInsets.symmetric(
-                    horizontal: spacing.chipPadding.horizontal,
-                    vertical: spacing.chipPadding.vertical,
-                  ),
-                  decoration: BoxDecoration(
+              final String label = s.name ?? s.login;
+              void toggle() => onToggle(s.id);
+              return Semantics(
+                container: true,
+                button: true,
+                selected: isSelected,
+                label: label,
+                onTap: toggle,
+                child: ExcludeSemantics(
+                  child: Material(
                     color: isSelected
                         ? theme.colorScheme.primaryContainer
                         : theme.colorScheme.surfaceContainerHighest,
                     borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: <Widget>[
-                      UserAvatar(
-                        avatarUrl: s.avatarUrl,
-                        size: 24,
-                      ),
-                      SizedBox(width: spacing.tightSpacing),
-                      Text(
-                        s.name ?? s.login,
-                        style: theme.textTheme.bodyMedium?.copyWith(
-                          fontWeight:
-                              isSelected ? FontWeight.w600 : FontWeight.w400,
+                    child: InkWell(
+                      key: ValueKey<String>('suggested-reviewer-${s.id}'),
+                      onTap: toggle,
+                      borderRadius: BorderRadius.circular(8),
+                      child: ConstrainedBox(
+                        constraints: const BoxConstraints(
+                          minWidth: 48,
+                          minHeight: 48,
+                        ),
+                        child: Padding(
+                          padding: EdgeInsets.symmetric(
+                            horizontal: spacing.chipPadding.horizontal,
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: <Widget>[
+                              UserAvatar(avatarUrl: s.avatarUrl, size: 24),
+                              SizedBox(width: spacing.tightSpacing),
+                              Text(
+                                label,
+                                style: theme.textTheme.bodyMedium?.copyWith(
+                                  fontWeight: isSelected
+                                      ? FontWeight.w600
+                                      : FontWeight.w400,
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
                       ),
-                    ],
+                    ),
                   ),
                 ),
               );

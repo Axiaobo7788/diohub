@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:auto_route/auto_route.dart';
 import 'package:diohub/l10n/l10n.dart';
 import 'package:diohub/models/github_changelog_item.dart';
 import 'package:diohub/models/home_repository_item.dart';
@@ -11,8 +12,10 @@ import 'package:diohub/providers/repository/repository_providers.dart';
 import 'package:diohub/providers/repository/repository_preview_provider.dart';
 import 'package:diohub/providers/repository/public_repository_providers.dart';
 import 'package:diohub/routes/navigable_actions.dart';
+import 'package:diohub/routes/router.gr.dart';
 import 'package:diohub/services/dashboard/github_changelog_service.dart';
 import 'package:diohub/services/repositories/public_repository_service.dart';
+import 'package:diohub/style/app_typography.dart';
 import 'package:diohub/view/app_chrome/app_chrome.dart';
 import 'package:diohub/view/app_chrome/global_header.dart';
 import 'package:diohub/view/app_chrome/global_navigation_drawer.dart';
@@ -185,6 +188,15 @@ class _UnifiedHomeScreenState extends ConsumerState<UnifiedHomeScreen> {
   }
 
   void _openProfileTab(final String? tab) {
+    if (tab == 'settings' || (tab?.startsWith('settings/') ?? false)) {
+      final String? section = tab == 'settings'
+          ? null
+          : tab!.substring('settings/'.length);
+      unawaited(
+        context.router.push<void>(SettingsRoute(initialSection: section)),
+      );
+      return;
+    }
     final AccountModel? account = widget.account;
     if (account == null) {
       unawaited(widget.onSignIn());
@@ -297,7 +309,6 @@ class _UnifiedHomeScreenState extends ConsumerState<UnifiedHomeScreen> {
                   query: _query,
                   desktop: desktop,
                   showAside: showAside,
-                  onSearch: () => _showCompactSearch(context),
                   onClearSearch: _clearSearch,
                   onSelectSearchResult: _openSearchResult,
                   onOpenTopRepository: _openTopRepository,
@@ -311,6 +322,7 @@ class _UnifiedHomeScreenState extends ConsumerState<UnifiedHomeScreen> {
                   onRefreshActivity: widget.onRefreshActivity,
                   onLoadMoreActivity: widget.onLoadMoreActivity,
                   onSignIn: widget.onSignIn,
+                  onSwitchAccount: _switchAccount,
                   onStagedAction: _showStagedAction,
                 ),
         );
@@ -582,14 +594,7 @@ class _PublicRepositoryBrowserState
                   child: SingleChildScrollView(
                     padding: const EdgeInsets.all(16),
                     child: SelectionArea(
-                      child: Text(
-                        content,
-                        style: const TextStyle(
-                          fontFamily: 'monospace',
-                          fontSize: 13,
-                          height: 1.45,
-                        ),
-                      ),
+                      child: Text(content, style: context.appTypography.mono),
                     ),
                   ),
                 ),

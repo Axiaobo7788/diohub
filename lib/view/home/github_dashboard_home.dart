@@ -7,6 +7,7 @@ import 'package:diohub/models/home_repository_item.dart';
 import 'package:diohub/models/repositories/public_repository.dart';
 import 'package:diohub/providers/repository/public_repository_providers.dart';
 import 'package:diohub/services/repositories/public_repository_service.dart';
+import 'package:diohub/style/app_typography.dart';
 import 'package:diohub/view/home/home_layout.dart';
 import 'package:diohub/view/home/widgets/github_changelog_aside.dart';
 import 'package:diohub_models/models/authentication/account_model.dart';
@@ -22,7 +23,6 @@ class GitHubDashboardHome extends StatelessWidget {
     required this.query,
     required this.desktop,
     required this.showAside,
-    required this.onSearch,
     required this.onClearSearch,
     required this.onSelectSearchResult,
     required this.onOpenTopRepository,
@@ -34,6 +34,7 @@ class GitHubDashboardHome extends StatelessWidget {
     required this.onRefreshActivity,
     required this.onLoadMoreActivity,
     required this.onSignIn,
+    required this.onSwitchAccount,
     required this.onStagedAction,
     super.key,
   });
@@ -45,7 +46,6 @@ class GitHubDashboardHome extends StatelessWidget {
   final String query;
   final bool desktop;
   final bool showAside;
-  final VoidCallback onSearch;
   final VoidCallback onClearSearch;
   final ValueChanged<PublicRepositorySummary> onSelectSearchResult;
   final ValueChanged<HomeRepositoryItem> onOpenTopRepository;
@@ -57,6 +57,7 @@ class GitHubDashboardHome extends StatelessWidget {
   final Future<void> Function()? onRefreshActivity;
   final Future<bool> Function()? onLoadMoreActivity;
   final Future<void> Function() onSignIn;
+  final VoidCallback onSwitchAccount;
   final ValueChanged<String> onStagedAction;
 
   @override
@@ -66,10 +67,13 @@ class GitHubDashboardHome extends StatelessWidget {
         ? <Widget>[_SearchResultsHeader(query: query, onClose: onClearSearch)]
         : <Widget>[
             if (!desktop)
-              _MobileAccountStrip(account: account, onSignIn: onSignIn),
+              _MobileAccountStrip(
+                account: account,
+                onSignIn: onSignIn,
+                onSwitchAccount: onSwitchAccount,
+              ),
             _HomeCenterIntro(
               account: account,
-              onSearch: onSearch,
               onSignIn: onSignIn,
               onStagedAction: onStagedAction,
             ),
@@ -167,10 +171,15 @@ class GitHubDashboardHome extends StatelessWidget {
 }
 
 class _MobileAccountStrip extends StatelessWidget {
-  const _MobileAccountStrip({required this.account, required this.onSignIn});
+  const _MobileAccountStrip({
+    required this.account,
+    required this.onSignIn,
+    required this.onSwitchAccount,
+  });
 
   final AccountModel? account;
   final Future<void> Function() onSignIn;
+  final VoidCallback onSwitchAccount;
 
   @override
   Widget build(final BuildContext context) {
@@ -192,24 +201,42 @@ class _MobileAccountStrip extends StatelessWidget {
                 ),
               ],
             )
-          : Row(
-              children: <Widget>[
-                UserAvatar(
-                  avatarUrl: activeAccount.avatarUrl,
-                  fallbackText: activeAccount.username,
-                  size: 28,
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Text(
-                    activeAccount.username,
-                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                      fontWeight: FontWeight.w600,
+          : Semantics(
+              key: const ValueKey<String>('home-mobile-account-switch'),
+              container: true,
+              button: true,
+              label: context.l10n.accountSwitch,
+              onTap: onSwitchAccount,
+              child: ExcludeSemantics(
+                child: Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                    onTap: onSwitchAccount,
+                    borderRadius: BorderRadius.circular(6),
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(minHeight: 48),
+                      child: Row(
+                        children: <Widget>[
+                          UserAvatar(
+                            avatarUrl: activeAccount.avatarUrl,
+                            fallbackText: activeAccount.username,
+                            size: 28,
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Text(
+                              activeAccount.username,
+                              style: Theme.of(context).textTheme.titleSmall
+                                  ?.copyWith(fontWeight: FontWeight.w600),
+                            ),
+                          ),
+                          const Icon(Icons.arrow_drop_down),
+                        ],
+                      ),
                     ),
                   ),
                 ),
-                const Icon(Icons.arrow_drop_down),
-              ],
+              ),
             ),
     );
   }
@@ -218,13 +245,11 @@ class _MobileAccountStrip extends StatelessWidget {
 class _HomeCenterIntro extends StatelessWidget {
   const _HomeCenterIntro({
     required this.account,
-    required this.onSearch,
     required this.onSignIn,
     required this.onStagedAction,
   });
 
   final AccountModel? account;
-  final VoidCallback onSearch;
   final Future<void> Function() onSignIn;
   final ValueChanged<String> onStagedAction;
 
@@ -233,16 +258,10 @@ class _HomeCenterIntro extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: <Widget>[
-        Text(
-          context.l10n.homeTitle,
-          style: Theme.of(
-            context,
-          ).textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.w700),
-        ),
+        Text(context.l10n.homeTitle, style: context.appTypography.pageTitle),
         const SizedBox(height: 20),
         _HomeCommandPanel(
           account: account,
-          onSearch: onSearch,
           onSignIn: onSignIn,
           onStagedAction: onStagedAction,
         ),
@@ -255,13 +274,11 @@ class _HomeCenterIntro extends StatelessWidget {
 class _HomeCommandPanel extends StatelessWidget {
   const _HomeCommandPanel({
     required this.account,
-    required this.onSearch,
     required this.onSignIn,
     required this.onStagedAction,
   });
 
   final AccountModel? account;
-  final VoidCallback onSearch;
   final Future<void> Function() onSignIn;
   final ValueChanged<String> onStagedAction;
 
@@ -280,39 +297,70 @@ class _HomeCommandPanel extends StatelessWidget {
         Card(
           margin: EdgeInsets.zero,
           clipBehavior: Clip.antiAlias,
-          child: InkWell(
-            onTap: onSearch,
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(20, 20, 12, 12),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: <Widget>[
-                  Text(
-                    context.l10n.homeAskAnything,
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(12, 12, 8, 8),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: <Widget>[
+                InkWell(
+                  onTap: () => _activate(context.l10n.homeAskAnything),
+                  borderRadius: BorderRadius.circular(6),
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(minHeight: 72),
+                    child: Padding(
+                      padding: const EdgeInsets.all(8),
+                      child: Text(
+                        context.l10n.homeAskAnything,
+                        style: Theme.of(context).textTheme.titleMedium
+                            ?.copyWith(
+                              color: Theme.of(
+                                context,
+                              ).colorScheme.onSurfaceVariant,
+                            ),
+                      ),
                     ),
                   ),
-                  const SizedBox(height: 42),
-                  Row(
-                    children: <Widget>[
-                      const Icon(Icons.chat_bubble_outline, size: 20),
-                      const SizedBox(width: 14),
-                      const Icon(Icons.add_box_outlined, size: 20),
-                      const Spacer(),
-                      const Icon(Icons.smart_toy_outlined, size: 20),
-                      const SizedBox(width: 8),
-                      Text(
-                        context.l10n.commonAuto,
-                        style: Theme.of(context).textTheme.bodyMedium,
+                ),
+                Row(
+                  children: <Widget>[
+                    IconButton(
+                      key: const ValueKey<String>('home-command-ask'),
+                      onPressed: () => _activate(context.l10n.homeAskAnything),
+                      tooltip: context.l10n.homeAskAnything,
+                      icon: const Icon(Icons.chat_bubble_outline, size: 20),
+                    ),
+                    IconButton(
+                      key: const ValueKey<String>('home-command-add-context'),
+                      onPressed: () => _activate(context.l10n.homeAddContext),
+                      tooltip: context.l10n.homeAddContext,
+                      icon: const Icon(Icons.add_box_outlined, size: 20),
+                    ),
+                    const Spacer(),
+                    ConstrainedBox(
+                      key: const ValueKey<String>('home-command-model'),
+                      constraints: const BoxConstraints(minHeight: 48),
+                      child: TextButton.icon(
+                        onPressed: () =>
+                            _activate(context.l10n.homeSelectModel),
+                        icon: const Icon(Icons.smart_toy_outlined, size: 20),
+                        label: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: <Widget>[
+                            Text(context.l10n.commonAuto),
+                            const Icon(Icons.arrow_drop_down),
+                          ],
+                        ),
                       ),
-                      const Icon(Icons.arrow_drop_down),
-                      const SizedBox(width: 12),
-                      const Icon(Icons.send_outlined, size: 22),
-                    ],
-                  ),
-                ],
-              ),
+                    ),
+                    IconButton(
+                      key: const ValueKey<String>('home-command-send'),
+                      onPressed: () => _activate(context.l10n.homeSendPrompt),
+                      tooltip: context.l10n.homeSendPrompt,
+                      icon: const Icon(Icons.send_outlined, size: 22),
+                    ),
+                  ],
+                ),
+              ],
             ),
           ),
         ),
@@ -622,9 +670,7 @@ class _SearchResultsHeader extends StatelessWidget {
             children: <Widget>[
               Text(
                 context.l10n.homeRepositorySearch,
-                style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                  fontWeight: FontWeight.w700,
-                ),
+                style: context.appTypography.pageTitle,
               ),
               Text(
                 query,

@@ -9,14 +9,14 @@ import 'package:diohub_models/models/authentication/account_model.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-enum GlobalNavigationDestination { home }
+enum GlobalNavigationDestination { home, issues, pullRequests, repositories }
 
 /// GitHub-style global navigation shared by Home and Repository pages.
 class GlobalNavigationDrawer extends StatelessWidget {
   const GlobalNavigationDrawer({
     required this.account,
     required this.topRepositories,
-    required this.onHome,
+    required this.onDestination,
     required this.onSearchRepositories,
     required this.onSignIn,
     required this.onOpenTopRepository,
@@ -28,7 +28,7 @@ class GlobalNavigationDrawer extends StatelessWidget {
   final AccountModel? account;
   final AsyncValue<List<HomeRepositoryItem>> topRepositories;
   final GlobalNavigationDestination? selectedDestination;
-  final VoidCallback onHome;
+  final ValueChanged<GlobalNavigationDestination> onDestination;
   final VoidCallback onSearchRepositories;
   final Future<void> Function() onSignIn;
   final ValueChanged<HomeRepositoryItem> onOpenTopRepository;
@@ -77,31 +77,46 @@ class GlobalNavigationDrawer extends StatelessWidget {
           ),
           const Divider(),
           _DrawerNavigationTile(
+            key: const ValueKey<String>('global-nav-home'),
             icon: Icons.home_outlined,
             label: context.l10n.homeTitle,
             selected: selectedDestination == GlobalNavigationDestination.home,
-            onTap: () => _closeThen(context, onHome),
+            onTap: () => _closeThen(
+              context,
+              () => onDestination(GlobalNavigationDestination.home),
+            ),
           ),
           _DrawerNavigationTile(
+            key: const ValueKey<String>('global-nav-issues'),
             icon: Icons.adjust_outlined,
             label: context.l10n.navAllIssues,
+            selected: selectedDestination == GlobalNavigationDestination.issues,
             onTap: () => _closeThen(
               context,
-              () => onStagedAction(context.l10n.navAllIssues),
+              () => onDestination(GlobalNavigationDestination.issues),
             ),
           ),
           _DrawerNavigationTile(
+            key: const ValueKey<String>('global-nav-pull-requests'),
             icon: Icons.call_merge_outlined,
             label: context.l10n.navAllPullRequests,
+            selected:
+                selectedDestination == GlobalNavigationDestination.pullRequests,
             onTap: () => _closeThen(
               context,
-              () => onStagedAction(context.l10n.navAllPullRequests),
+              () => onDestination(GlobalNavigationDestination.pullRequests),
             ),
           ),
           _DrawerNavigationTile(
+            key: const ValueKey<String>('global-nav-repositories'),
             icon: Icons.book_outlined,
             label: context.l10n.navAllRepositories,
-            onTap: () => _closeThen(context, onSearchRepositories),
+            selected:
+                selectedDestination == GlobalNavigationDestination.repositories,
+            onTap: () => _closeThen(
+              context,
+              () => onDestination(GlobalNavigationDestination.repositories),
+            ),
           ),
           for (final (IconData, String) destination in <(IconData, String)>[
             (Icons.grid_view_outlined, context.l10n.navProjects),
@@ -178,6 +193,7 @@ class GlobalNavigationDrawer extends StatelessWidget {
                   ))
                     ListTile(
                       dense: true,
+                      minTileHeight: 48,
                       visualDensity: VisualDensity.compact,
                       contentPadding: const EdgeInsets.symmetric(
                         horizontal: 20,
@@ -227,6 +243,7 @@ class _DrawerNavigationTile extends StatelessWidget {
     required this.label,
     required this.onTap,
     this.selected = false,
+    super.key,
   });
 
   final IconData icon;
@@ -240,6 +257,7 @@ class _DrawerNavigationTile extends StatelessWidget {
     child: ListTile(
       selected: selected,
       selectedTileColor: Theme.of(context).colorScheme.secondaryContainer,
+      selectedColor: Theme.of(context).colorScheme.onSecondaryContainer,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
       leading: Icon(icon, size: 21),
       title: Text(label),

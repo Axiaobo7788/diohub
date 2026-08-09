@@ -38,6 +38,114 @@
   "homeSearchRepositoriesHint": "Owner, repository, topic...",
   "homeBackToSearch": "Back to search",
   "homeNotifications": "Notifications",
+  "notificationsInbox": "Inbox",
+  "notificationsSaved": "Saved",
+  "notificationsDone": "Done",
+  "notificationsAll": "All",
+  "notificationsUnread": "Unread",
+  "notificationsSearchHint": "Search notifications",
+  "notificationsClearSearch": "Clear notification search",
+  "notificationsSortLabel": "Sort by: {value}",
+  "@notificationsSortLabel": {
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "notificationsGroupLabel": "Group by: {value}",
+  "@notificationsGroupLabel": {
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "notificationsNewestToOldest": "Newest to oldest",
+  "notificationsOldestToNewest": "Oldest to newest",
+  "notificationsRepository": "Repository",
+  "notificationsRepositories": "Repositories",
+  "notificationsAllRepositories": "All repositories",
+  "notificationsDate": "Date",
+  "notificationsDateUnknown": "Unknown date",
+  "notificationsRefresh": "Refresh notifications",
+  "notificationsMarkAllRead": "Mark all as read",
+  "notificationsMarkRead": "Mark as read",
+  "notificationsMarkDone": "Mark as done",
+  "notificationsSelectAll": "Select all loaded notifications",
+  "notificationsClearSelection": "Clear selection",
+  "notificationsSelectedCount": "{count, plural, =1{1 selected} other{{count} selected}}",
+  "@notificationsSelectedCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "notificationsBulkDone": "{count, plural, =1{1 notification marked as done.} other{{count} notifications marked as done.}}",
+  "@notificationsBulkDone": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "notificationsBulkFailed": "{count, plural, =1{1 notification could not be updated.} other{{count} notifications could not be updated.}}",
+  "@notificationsBulkFailed": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "notificationsFilters": "Filters",
+  "notificationsFilterReasons": "Reasons",
+  "notificationsClearFilters": "Clear filters",
+  "notificationsAssigned": "Assigned",
+  "notificationsParticipating": "Participating",
+  "notificationsAuthor": "Author",
+  "notificationsComment": "Comment",
+  "notificationsInvitation": "Invitation",
+  "notificationsFollowing": "Following",
+  "notificationsMentioned": "Mentioned",
+  "notificationsReviewRequested": "Review requested",
+  "notificationsSecurityAlert": "Security alert",
+  "notificationsStateChange": "State change",
+  "notificationsSubscribed": "Subscribed",
+  "notificationsTeamMention": "Team mention",
+  "notificationsCiActivity": "CI activity",
+  "notificationsReason": "Reason: {reason}",
+  "@notificationsReason": {
+    "placeholders": {
+      "reason": {
+        "type": "String"
+      }
+    }
+  },
+  "notificationsCaughtUp": "You’re all caught up",
+  "notificationsNoUnread": "You have no unread notifications.",
+  "notificationsNoResults": "No notifications match the selected filters.",
+  "notificationsLoadError": "Notifications could not be loaded.",
+  "notificationsUpdateError": "The notification could not be updated.",
+  "notificationsSignInTitle": "Sign in to view notifications",
+  "notificationsSignInBody": "GitHub notifications are private to your account.",
+  "notificationsOpen": "Open notification",
+  "notificationsAddFilter": "Add new filter",
+  "notificationsFilterName": "Filter name",
+  "notificationsFilterQuery": "Filter query",
+  "notificationsSaveFilter": "Save filter",
+  "notificationsCleanupTitle": "Clear out the clutter.",
+  "notificationsCleanupBody": "Select the read notifications currently loaded so you can mark them as done.",
+  "notificationsDismiss": "Dismiss",
+  "notificationsGetStarted": "Get started",
+  "notificationsSectionUnavailable": "{section} cannot be listed through the current GitHub API.",
+  "@notificationsSectionUnavailable": {
+    "placeholders": {
+      "section": {
+        "type": "String"
+      }
+    }
+  },
   "homeCouldNotOpenLink": "Could not open the link.",
   "homeFeatureNotAvailable": "{feature} is not connected in this phase yet.",
   "@homeFeatureNotAvailable": {
@@ -57,6 +165,9 @@
   "homeBrowsingGitHubPublicly": "Browsing GitHub publicly",
   "homePublicBrowsing": "Public browsing",
   "homeAskAnything": "Ask anything or type @ to add context",
+  "homeAddContext": "Add context",
+  "homeSelectModel": "Select model",
+  "homeSendPrompt": "Send prompt",
   "homeAgent": "Agent",
   "homeCreateIssue": "Create issue",
   "homeWriteCode": "Write code",
@@ -81,6 +192,65 @@
   "navAllIssues": "All issues",
   "navAllPullRequests": "All pull requests",
   "navAllRepositories": "All repositories",
+  "globalListsSignInTitle": "Sign in to view your work",
+  "globalListsSignInDescription": "Issues, pull requests, and repositories associated with your account are available after sign-in.",
+  "globalListsSignInAction": "Sign in",
+  "globalListsAll": "All",
+  "globalListsSearchIssues": "Search your issues",
+  "globalListsSearchPullRequests": "Search your pull requests",
+  "globalListsSearchRepositories": "Find a repository",
+  "globalListsResultsCount": "{count} results",
+  "@globalListsResultsCount": {
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
+  "globalListsNoIssues": "No issues match these filters",
+  "globalListsNoPullRequests": "No pull requests match these filters",
+  "globalListsNoRepositories": "No repositories match these filters",
+  "globalListsNoResultsDescription": "Try changing the search text or filters.",
+  "globalListsRepositoriesFor": "Repositories available to @{login}",
+  "@globalListsRepositoriesFor": {
+    "placeholders": {
+      "login": {"type": "String"}
+    }
+  },
+  "globalListsUpdated": "Updated {time}",
+  "@globalListsUpdated": {
+    "placeholders": {
+      "time": {"type": "String"}
+    }
+  },
+  "globalListsIssueMetadata": "{repository} #{number} {action} by {author} {time}",
+  "@globalListsIssueMetadata": {
+    "placeholders": {
+      "repository": {"type": "String"},
+      "number": {"type": "int"},
+      "action": {"type": "String"},
+      "author": {"type": "String"},
+      "time": {"type": "String"}
+    }
+  },
+  "globalListsBestMatch": "Best match",
+  "globalListsNewest": "Newest",
+  "globalListsOldest": "Oldest",
+  "globalListsMostComments": "Most comments",
+  "globalListsRecentlyPushed": "Recently pushed",
+  "globalListsRecentlyUpdated": "Recently updated",
+  "globalListsName": "Name",
+  "globalListsMostStars": "Most stars",
+  "globalListsMostForks": "Most forks",
+  "globalListsMirrors": "Mirrors",
+  "globalListsForks": "Forks",
+  "globalListsClearFilters": "Clear filters",
+  "globalListsRefresh": "Refresh results",
+  "globalListsLoadError": "Could not load results.",
+  "globalListsNewIssue": "New issue",
+  "globalListsNewPullRequest": "New pull request",
+  "globalListsSelectRepository": "Select a repository",
+  "globalListsChooseIssueTemplate": "Choose an issue template",
+  "globalListsBlankIssue": "Blank issue",
+  "globalListsCreateFlowError": "Could not start the create flow.",
   "navProjects": "Projects",
   "navDiscussions": "Discussions",
   "navCodespaces": "Codespaces",
@@ -694,5 +864,338 @@
       "head": {"type": "String"},
       "last": {"type": "String"}
     }
-  }
+  },
+  "settingsTitle": "Settings",
+  "settingsPageDescription": "Manage your GitHub account and DioHub preferences in one place.",
+  "settingsPreferences": "Preferences",
+  "settingsCategory": "Settings category",
+  "settingsGeneral": "General",
+  "settingsAppearance": "Appearance",
+  "settingsAccessibility": "Accessibility",
+  "settingsCodeAndRepositories": "Code & repositories",
+  "settingsNotifications": "Notifications",
+  "settingsPrivacy": "Privacy & diagnostics",
+  "settingsAbout": "About",
+  "settingsSaveError": "The setting could not be saved.",
+  "settingsGeneralDescription": "Choose the app language, information density, and default browsing behavior.",
+  "settingsAppLanguage": "App language",
+  "settingsAppLanguageDescription": "Follow the operating system or choose a language for DioHub.",
+  "settingsLayout": "Layout",
+  "settingsLayoutDescription": "Use one density across shared Android and desktop layouts.",
+  "settingsDensity": "Information density",
+  "settingsDensityDescription": "Adjust spacing without shrinking text or touch targets.",
+  "settingsDensityCompact": "Compact",
+  "settingsDensityDefault": "Default",
+  "settingsDensitySpacious": "Spacious",
+  "settingsStickyHeaders": "Sticky section headers",
+  "settingsStickyHeadersDescription": "Keep section context visible while scrolling supported legacy views.",
+  "settingsFeedAndSearch": "Feed & search",
+  "settingsGroupRelatedActivity": "Group related activity",
+  "settingsGroupRelatedActivityDescription": "Combine related GitHub events into a single feed entry.",
+  "settingsTimelineFeed": "Timeline feed",
+  "settingsTimelineFeedDescription": "Show activity with a continuous timeline instead of plain cards.",
+  "settingsFuzzySearch": "Fuzzy local filtering",
+  "settingsFuzzySearchDescription": "Match approximate text in client-side filters.",
+  "settingsAppearanceDescription": "Choose the color mode and how profile colors influence the interface.",
+  "settingsTheme": "Theme",
+  "settingsThemeDescription": "Material 3 colors remain centralized and respond immediately.",
+  "settingsThemeMode": "Theme mode",
+  "settingsThemeModeDescription": "Follow the system or keep DioHub light or dark.",
+  "settingsThemeSystem": "System",
+  "settingsThemeLight": "Light",
+  "settingsThemeDark": "Dark",
+  "settingsMaterialYou": "Use system colors",
+  "settingsMaterialYouDescription": "Use dynamic Material You colors when the platform provides them.",
+  "settingsProfileColors": "Profile colors",
+  "settingsProfileColorsDescription": "Optionally blend a profile avatar color into profile pages.",
+  "settingsProfileTheme": "Profile-based color",
+  "settingsProfileThemeDescription": "Apply a scoped color treatment when viewing a profile.",
+  "settingsProfileThemeIntensity": "Color intensity",
+  "settingsProfileThemeIntensityDescription": "Control how strongly the profile color is blended.",
+  "settingsAccessibilityDescription": "Control motion and physical feedback while preserving platform accessibility preferences.",
+  "settingsMotion": "Motion",
+  "settingsMotionDescription": "The operating system Reduced Motion preference always takes priority.",
+  "settingsAnimationLevel": "Animation level",
+  "settingsAnimationLevelDescription": "Choose how much interface motion DioHub adds.",
+  "settingsAnimationNone": "None",
+  "settingsAnimationReduced": "Reduced",
+  "settingsAnimationNormal": "Normal",
+  "settingsAnimationEnhanced": "Enhanced",
+  "settingsFeedback": "Feedback",
+  "settingsHaptics": "Haptic feedback",
+  "settingsHapticsDescription": "Control vibration feedback on supported devices.",
+  "settingsHapticsOn": "On",
+  "settingsHapticsReduced": "Reduced",
+  "settingsHapticsOff": "Off",
+  "settingsCodeAndRepositoriesDescription": "Set repository entry behavior, file browsing details, and diff readability.",
+  "settingsRepositoryDefaults": "Repository defaults",
+  "settingsDefaultRepositoryTab": "Default repository tab",
+  "settingsDefaultRepositoryTabDescription": "Open this tab when a repository link does not specify a destination.",
+  "settingsCommits": "Commits",
+  "settingsCodeBrowser": "Code browser",
+  "settingsFileSort": "File sorting",
+  "settingsFileSortDescription": "Choose how directories and files are ordered.",
+  "settingsSortType": "Type",
+  "settingsSortNameAscending": "Name A–Z",
+  "settingsSortNameDescending": "Name Z–A",
+  "settingsSortSize": "Size",
+  "settingsSortExtension": "Extension",
+  "settingsShowDotfiles": "Show dotfiles",
+  "settingsShowDotfilesDescription": "Include files and directories whose names begin with a dot.",
+  "settingsShowFileMetadata": "Show file metadata",
+  "settingsShowFileMetadataDescription": "Display available size and type details in the file list.",
+  "settingsShowGeneratedFiles": "Show generated files",
+  "settingsShowGeneratedFilesDescription": "Include files GitHub identifies as generated.",
+  "settingsShowLastCommit": "Show last commit per path",
+  "settingsShowLastCommitDescription": "Fetch commit information for visible paths. Large directories may require extra requests.",
+  "settingsDiffViewer": "Diff viewer",
+  "settingsDiffLayout": "Default diff layout",
+  "settingsDiffLayoutDescription": "Choose a unified or split comparison.",
+  "settingsDiffUnified": "Unified",
+  "settingsDiffSplit": "Split",
+  "settingsWrapCode": "Wrap long lines",
+  "settingsWrapCodeDescription": "Wrap code and diff lines to the available width.",
+  "settingsLineNumbers": "Show line numbers",
+  "settingsLineNumbersDescription": "Display source line numbers beside code.",
+  "settingsDiffHighlight": "Change highlight",
+  "settingsDiffHighlightDescription": "Adjust the contrast of added and removed lines.",
+  "settingsHighlightSubtle": "Subtle",
+  "settingsHighlightDefault": "Default",
+  "settingsHighlightHigh": "High",
+  "settingsCodeFontScale": "Code text size",
+  "settingsCodeFontScaleDescription": "Scale monospace content independently from interface text.",
+  "settingsNotificationsDescription": "Control inbox presentation and background notification checks.",
+  "settingsInbox": "Inbox",
+  "settingsAutoMarkRead": "Auto-mark as read",
+  "settingsAutoMarkReadDescription": "Mark notifications as read when they become visible.",
+  "settingsGroupByRepository": "Group by repository",
+  "settingsGroupByRepositoryDescription": "Organize loaded notifications under repository headings.",
+  "settingsBackgroundChecks": "Background checks",
+  "settingsBackgroundChecksDescription": "Background availability depends on platform support and operating system permissions.",
+  "settingsInboxPolling": "Inbox polling",
+  "settingsInboxPollingDescription": "Periodically check for new GitHub notifications.",
+  "settingsPollingInterval": "Polling interval",
+  "settingsPollingIntervalDescription": "Choose how often the inbox is checked in the background.",
+  "settingsMinutes": "{count, plural, =1{1 minute} other{{count} minutes}}",
+  "@settingsMinutes": {"placeholders": {"count": {"type": "int"}}},
+  "settingsSystemNotifications": "System notifications",
+  "settingsSystemNotificationsDescription": "Show operating system notifications while DioHub is in the background.",
+  "settingsWorkflowAlerts": "Workflow run alerts",
+  "settingsWorkflowAlertsDescription": "Notify when a watched workflow run completes.",
+  "settingsPrivacyDescription": "Choose which diagnostics DioHub may collect when reporting failures.",
+  "settingsDiagnostics": "Diagnostics",
+  "settingsDiagnosticsDescription": "Diagnostic preferences take effect after the next app launch.",
+  "settingsCrashReports": "Crash reports",
+  "settingsCrashReportsDescription": "Send anonymous stack traces when DioHub crashes.",
+  "settingsHttpDiagnostics": "HTTP diagnostics",
+  "settingsHttpDiagnosticsDescription": "Include anonymized API error patterns and timing.",
+  "settingsNavigationDiagnostics": "Navigation diagnostics",
+  "settingsNavigationDiagnosticsDescription": "Include the sequence of screens visited before a crash.",
+  "settingsPerformanceDiagnostics": "Performance monitoring",
+  "settingsPerformanceDiagnosticsDescription": "Measure responsiveness and slow operations.",
+  "settingsSessionReplay": "Session replay",
+  "settingsSessionReplayDescription": "Record a masked visual trace when a crash occurs.",
+  "settingsRestartRequired": "Changes to diagnostics take effect after the next app launch.",
+  "settingsAboutDescription": "Version, release notes, and open-source acknowledgements.",
+  "settingsApplication": "Application",
+  "settingsApplicationName": "DioHub",
+  "settingsVersion": "Version {version} ({build})",
+  "@settingsVersion": {
+    "placeholders": {
+      "version": {"type": "String"},
+      "build": {"type": "String"}
+    }
+  },
+  "settingsWhatsNew": "What’s new",
+  "settingsWhatsNewDescription": "Read the changelog and release history.",
+  "settingsOpenSourceLicenses": "Open-source licenses",
+  "settingsOpenSourceLicensesDescription": "View licenses for Flutter and bundled dependencies.",
+  "settingsAccessGroup": "Access",
+  "settingsCodePlanningAutomation": "Code, planning, and automation",
+  "settingsDioHubGroup": "DioHub app settings",
+  "settingsPublicProfile": "Public profile",
+  "settingsGitHubAccount": "Account",
+  "settingsBillingAndLicensing": "Billing and licensing",
+  "settingsEmails": "Emails",
+  "settingsPasswordAndAuthentication": "Password and authentication",
+  "settingsSessions": "Sessions",
+  "settingsSshAndGpgKeys": "SSH and GPG keys",
+  "settingsOrganizations": "Organizations",
+  "settingsEnterprises": "Enterprises",
+  "settingsModeration": "Moderation",
+  "settingsCodespaces": "Codespaces",
+  "settingsSignedOutDescription": "DioHub preferences remain available without a GitHub account.",
+  "settingsPersonalAccount": "Your personal account",
+  "settingsSwitchContext": "Switch settings context",
+  "settingsPublicProfileDescription": "Manage the information shown on your GitHub profile.",
+  "settingsProfileName": "Name",
+  "settingsProfilePublicEmail": "Public email",
+  "settingsProfilePublicEmailDescription": "This address is visible on your public GitHub profile.",
+  "settingsProfileEmailHidden": "Don't show my email",
+  "settingsProfileEmailLoadError": "Verified emails could not be loaded. Your current public email is unchanged.",
+  "settingsProfileBio": "Bio",
+  "settingsProfilePronouns": "Pronouns",
+  "settingsProfileUrl": "URL",
+  "settingsProfileCompany": "Company",
+  "settingsProfileLocation": "Location",
+  "settingsProfileTwitter": "X username",
+  "settingsProfileAvailableForHire": "Available for hire",
+  "settingsProfilePicture": "Profile picture",
+  "settingsManageProfilePicture": "Edit on GitHub",
+  "settingsUpdateProfile": "Update profile",
+  "settingsProfileUpdated": "Your public profile was updated.",
+  "settingsPublicProfileLoadError": "DioHub could not load the public profile for this account.",
+  "settingsManagedByGitHub": "Continue on GitHub",
+  "settingsBrowserOnly": "GitHub web setting",
+  "settingsBrowserOnlyDescription": "{setting} does not have a supported public API. DioHub opens the matching page for the active server.",
+  "@settingsBrowserOnlyDescription": {
+    "placeholders": {
+      "setting": {"type": "String"}
+    }
+  },
+  "settingsPartialApiCoverage": "Partial public API",
+  "settingsPartialApiCoverageDescription": "GitHub exposes only part of {setting} through public APIs. DioHub does not present an incomplete subset as the full setting.",
+  "@settingsPartialApiCoverageDescription": {
+    "placeholders": {
+      "setting": {"type": "String"}
+    }
+  },
+  "settingsOAuthScopeRequired": "Additional authorization required",
+  "settingsOAuthScopeRequiredDescription": "{setting} has public API coverage, but the current DioHub OAuth scope does not authorize it. Authorization changes are handled separately.",
+  "@settingsOAuthScopeRequiredDescription": {
+    "placeholders": {
+      "setting": {"type": "String"}
+    }
+  },
+  "settingsGitHubManagedDescription": "{setting} is managed by GitHub. DioHub opens the matching page for the active server instead of imitating unavailable private APIs.",
+  "@settingsGitHubManagedDescription": {
+    "placeholders": {
+      "setting": {"type": "String"}
+    }
+  },
+  "settingsOpenOnGitHub": "Open on GitHub",
+  "settingsSignInToManageGitHub": "Sign in to manage this GitHub setting.",
+  "settingsOpenOnGitHubDescription": "Open this setting on {host}.",
+  "@settingsOpenOnGitHubDescription": {
+    "placeholders": {
+      "host": {"type": "String"}
+    }
+  },
+  "settingsCollectionLoadError": "DioHub could not load this setting. Check the connection and try again.",
+  "settingsLoadMore": "Load more",
+  "settingsRefresh": "Refresh",
+  "settingsDelete": "Delete",
+  "settingsEmailsDescription": "Manage the email addresses associated with your GitHub account.",
+  "settingsAddEmail": "Add email address",
+  "settingsDeleteEmail": "Delete email address",
+  "settingsDeleteEmailConfirmation": "Remove {email} from your GitHub account?",
+  "@settingsDeleteEmailConfirmation": {
+    "placeholders": {
+      "email": {"type": "String"}
+    }
+  },
+  "settingsPrimaryEmailVisibility": "Primary email visibility",
+  "settingsPrimaryEmailVisibilityDescription": "Choose whether your primary email may be shown on your public GitHub profile.",
+  "settingsNoEmails": "No email addresses",
+  "settingsNoEmailsDescription": "Add an email address to use it with your GitHub account.",
+  "settingsEmailPrimary": "Primary",
+  "settingsEmailVerified": "Verified",
+  "settingsEmailUnverified": "Unverified",
+  "settingsEmailPublic": "Public",
+  "settingsEmailPrivate": "Private",
+  "settingsEmailAddress": "Email address",
+  "settingsEmailInvalid": "Enter a valid email address.",
+  "settingsKeysDescription": "Manage the keys GitHub uses for authentication and verified signing.",
+  "settingsSshKeys": "SSH keys",
+  "settingsGpgKeys": "GPG keys",
+  "settingsSshSigningKeys": "Signing keys",
+  "settingsAddKey": "New key",
+  "settingsDeleteKey": "Delete key",
+  "settingsDeleteKeyConfirmation": "Delete “{title}”? This cannot be undone.",
+  "@settingsDeleteKeyConfirmation": {
+    "placeholders": {
+      "title": {"type": "String"}
+    }
+  },
+  "settingsNoSshKeys": "No SSH keys",
+  "settingsNoSshKeysDescription": "Add an SSH key to authenticate Git operations.",
+  "settingsNoGpgKeys": "No GPG keys",
+  "settingsNoGpgKeysDescription": "Add a GPG key to mark supported commits and tags as verified.",
+  "settingsNoSigningKeys": "No SSH signing keys",
+  "settingsNoSigningKeysDescription": "Add an SSH signing key for verified Git signatures.",
+  "settingsAddedOn": "Added {date}",
+  "@settingsAddedOn": {
+    "placeholders": {
+      "date": {"type": "String"}
+    }
+  },
+  "settingsKeyNameOptional": "Name (optional)",
+  "settingsKeyTitle": "Title",
+  "settingsArmoredGpgKey": "ASCII-armored GPG public key",
+  "settingsPublicKey": "Public key",
+  "settingsFieldRequired": "This field is required.",
+  "settingsOrganizationsDescription": "Organizations associated with your GitHub account. Membership changes continue on GitHub.",
+  "settingsNoOrganizations": "No organizations",
+  "settingsNoOrganizationsDescription": "This account does not currently belong to an organization.",
+  "settingsOrganizationSummary": "{repositories} repositories · {members} members",
+  "@settingsOrganizationSummary": {
+    "placeholders": {
+      "repositories": {"type": "int"},
+      "members": {"type": "int"}
+    }
+  },
+  "settingsRepositoriesDescription": "Browse repositories available to this account. Administrative controls continue on GitHub.",
+  "settingsNoRepositories": "No repositories",
+  "settingsNoRepositoriesDescription": "No repository is available to this account.",
+  "settingsFork": "Fork",
+  "settingsStars": "{count, plural, =1{1 star} other{{count} stars}}",
+  "@settingsStars": {
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
+  "settingsUpdatedOn": "Updated {date}",
+  "@settingsUpdatedOn": {
+    "placeholders": {
+      "date": {"type": "String"}
+    }
+  },
+  "settingsModerationDescription": "Review and manage users blocked by this GitHub account.",
+  "settingsBlockUser": "Block a user",
+  "settingsGitHubUsername": "GitHub username",
+  "settingsBlock": "Block",
+  "settingsNoBlockedUsers": "No blocked users",
+  "settingsNoBlockedUsersDescription": "Users blocked by this account will appear here.",
+  "settingsUnblock": "Unblock",
+  "commonLoading": "Loading…",
+  "repoWorkflowStatusSuccess": "Succeeded",
+  "repoWorkflowStatusFailure": "Failed",
+  "repoWorkflowStatusTimedOut": "Timed out",
+  "repoWorkflowStatusCancelled": "Cancelled",
+  "repoWorkflowStatusInProgress": "In progress",
+  "repoWorkflowStatusQueued": "Queued",
+  "repoWorkflowStatusWaiting": "Waiting",
+  "repoWorkflowStatusPending": "Pending",
+  "repoWorkflowStatusUnknown": "Unknown status",
+  "compareFileStatusAdded": "Added",
+  "compareFileStatusRemoved": "Removed",
+  "compareFileStatusRenamed": "Renamed",
+  "compareFileStatusModified": "Modified",
+  "compareTitle": "Compare",
+  "compareSelectBaseRef": "Select base ref",
+  "compareSelectHeadRef": "Select head ref",
+  "compareSelectBase": "Select base…",
+  "compareSelectHead": "Select head…",
+  "compareSwapBaseHead": "Swap base and head",
+  "compareEnterRefs": "Select base and head refs to compare changes.",
+  "compareLoadError": "Could not load comparison: {error}",
+  "@compareLoadError": {"placeholders": {"error": {"type": "String"}}},
+  "compareAhead": "ahead",
+  "compareBehind": "behind",
+  "compareFilesChanged": "{count, plural, =1{1 file changed} other{{count} files changed}}",
+  "@compareFilesChanged": {"placeholders": {"count": {"type": "int"}}},
+  "compareCommits": "Commits",
+  "compareFiles": "Files",
+  "projectPickerLinked": "Linked",
+  "projectPickerAddToProject": "Add to project"
 }

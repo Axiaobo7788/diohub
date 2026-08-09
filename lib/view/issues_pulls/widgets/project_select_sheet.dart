@@ -4,12 +4,14 @@ import 'package:diohub/common/misc/button.dart';
 import 'package:diohub_models/models/pagination/page_slice.dart';
 import 'package:diohub/common/pagination/page_source.dart';
 import 'package:diohub/common/pagination/pagination_controller.dart';
+import 'package:diohub/l10n/l10n.dart';
 import 'package:diohub_graphql/queries/repositories/repo_typedefs.dart';
 import 'package:diohub_models/models/entity_ref.dart';
 import 'package:diohub/services/base/service_extensions.dart';
 import 'package:diohub/style/app_spacing.dart';
 import 'package:flutter/material.dart';
-import 'package:diohub/providers/database_providers.dart' show apiClientProvider;
+import 'package:diohub/providers/database_providers.dart'
+    show apiClientProvider;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 /// One linked project item (for display and remove).
@@ -45,8 +47,12 @@ class ProjectSelectSheet extends ConsumerWidget {
   final List<ProjectItemInfo> initialItems;
 
   /// Called when user adds to a project. Pass [projectTitle] and [projectUrl] for optimistic UI.
-  final Future<void> Function(String projectId,
-      {String? projectTitle, Uri? projectUrl}) onAdd;
+  final Future<void> Function(
+    String projectId, {
+    String? projectTitle,
+    Uri? projectUrl,
+  })
+  onAdd;
   final void Function(String itemId, String projectId) onRemove;
 
   Set<String> get _linkedProjectIds =>
@@ -63,14 +69,14 @@ class ProjectSelectSheet extends ConsumerWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: <Widget>[
           if (initialItems.isNotEmpty) ...<Widget>[
-            const Padding(
-              padding: EdgeInsets.fromLTRB(16, 8, 16, 4),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
               child: Text(
-                'Linked',
-                style: TextStyle(
+                context.l10n.projectPickerLinked,
+                style: Theme.of(context).textTheme.labelMedium?.copyWith(
                   fontSize: 12,
                   fontWeight: FontWeight.w500,
-                  color: Colors.grey,
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
                 ),
               ),
             ),
@@ -88,40 +94,40 @@ class ProjectSelectSheet extends ConsumerWidget {
             ),
             const Divider(height: 1),
           ],
-          const Padding(
-            padding: EdgeInsets.fromLTRB(16, 8, 16, 4),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
             child: Text(
-              'Add to project',
-              style: TextStyle(
+              context.l10n.projectPickerAddToProject,
+              style: Theme.of(context).textTheme.labelMedium?.copyWith(
                 fontSize: 12,
                 fontWeight: FontWeight.w500,
-                color: Colors.grey,
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
               ),
             ),
           ),
           Expanded(
-            child: PaginatedListSheetBody<
-                ProjectV2PickerEdge?>(
+            child: PaginatedListSheetBody<ProjectV2PickerEdge?>(
               scrollController: scrollController,
-              createController: () => PaginationController<
-                  ProjectV2PickerEdge?,
-                  ProjectV2PickerEdge?>(
-                source: CursorForwardSource<
-                    ProjectV2PickerEdge?>(
-                  fetch: ({required int first, String? after}) async {
-                    final r = await repoRef.services(ref.read(apiClientProvider))
-                        .listProjectsV2GQL(first: first, after: after);
-                    return CursorPage<
-                        ProjectV2PickerEdge?>(
-                      items: r.items,
-                      hasNextPage: r.hasNextPage,
-                      endCursor: r.endCursor,
-                    );
-                  },
-                ),
-                idOf: (e) => e?.cursor ?? '',
-                pageSize: 20,
-              ),
+              createController: () =>
+                  PaginationController<
+                    ProjectV2PickerEdge?,
+                    ProjectV2PickerEdge?
+                  >(
+                    source: CursorForwardSource<ProjectV2PickerEdge?>(
+                      fetch: ({required int first, String? after}) async {
+                        final r = await repoRef
+                            .services(ref.read(apiClientProvider))
+                            .listProjectsV2GQL(first: first, after: after);
+                        return CursorPage<ProjectV2PickerEdge?>(
+                          items: r.items,
+                          hasNextPage: r.hasNextPage,
+                          endCursor: r.endCursor,
+                        );
+                      },
+                    ),
+                    idOf: (e) => e?.cursor ?? '',
+                    pageSize: 20,
+                  ),
               itemBuilder: (context, ref, edge, index, applyPatch) {
                 final rawNode = edge?.node;
                 if (rawNode == null) {
@@ -132,14 +138,20 @@ class ProjectSelectSheet extends ConsumerWidget {
                 return ListTile(
                   title: Text(node.title),
                   subtitle: node.closed
-                      ? const Text('Closed', style: TextStyle(fontSize: 12))
+                      ? Text(
+                          context.l10n.repoClosed,
+                          style: Theme.of(context).textTheme.bodySmall,
+                        )
                       : null,
                   enabled: !isLinked,
                   onTap: isLinked
                       ? null
                       : () async {
-                          await onAdd(node.id,
-                              projectTitle: node.title, projectUrl: node.url);
+                          await onAdd(
+                            node.id,
+                            projectTitle: node.title,
+                            projectUrl: node.url,
+                          );
                           if (context.mounted) {
                             Navigator.of(context).pop();
                           }
@@ -148,13 +160,13 @@ class ProjectSelectSheet extends ConsumerWidget {
               },
               emptyBuilder: (context) => Padding(
                 padding: context.spacing.spaciousPadding,
-                child: const EmptyState(message: 'No projects'),
+                child: EmptyState(message: context.l10n.repoNoProjects),
               ),
               trailingBuilder: (_) => Padding(
                 padding: const EdgeInsets.only(bottom: 16),
                 child: Button(
                   onTap: () => Navigator.of(context).pop(),
-                  child: const Text('Done'),
+                  child: Text(context.l10n.filterDone),
                 ),
               ),
             ),

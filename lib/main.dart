@@ -42,6 +42,7 @@ import 'package:diohub/providers/settings/theme_mode_provider.dart';
 import 'package:diohub/routes/router.dart';
 import 'package:diohub/routes/router.gr.dart';
 import 'package:diohub/style/app_spacing.dart';
+import 'package:diohub/style/app_typography.dart';
 import 'package:diohub/style/surface_ext.dart';
 import 'package:diohub/style/surface_style.dart';
 import 'package:diohub_database/database/database.dart';
@@ -566,6 +567,8 @@ ThemeData getTheme(
       fontFamily.isNotEmpty && GoogleFonts.asMap().containsKey(fontFamily)
       ? GoogleFonts.getTextTheme(fontFamily, baseTheme.textTheme)
       : null;
+  final TextTheme resolvedTextTheme =
+      textThemeForGoogleFont ?? baseTheme.textTheme;
 
   // return ThemeData(
   // brightness: Brightness.dark,
@@ -613,6 +616,7 @@ ThemeData getTheme(
       surfaceStyle,
       glassPillSettings.toGlassPillTheme(),
       appSpacing,
+      AppTypography.fromTextTheme(resolvedTextTheme),
     ],
   );
 }

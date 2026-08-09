@@ -95,7 +95,7 @@ class RepositoryTabScaffold extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: <Widget>[
             SizedBox(width: _navigationWidth, child: navigation),
-            const VerticalDivider(width: 1),
+            const VerticalDivider(width: 1, indent: 0, endIndent: 0),
             Expanded(child: content),
           ],
         );
@@ -142,6 +142,7 @@ class RepositoryTabNavigation extends StatelessWidget {
         for (int index = 0; index < destinations.length; index++)
           ListTile(
             selected: index == selectedIndex,
+            minTileHeight: 48,
             leading: Icon(destinations[index].icon),
             title: Text(destinations[index].label),
             onTap: () => onSelected(index),

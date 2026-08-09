@@ -1,5 +1,6 @@
 import 'package:diohub/common/const/app_info.dart';
 import 'package:diohub/l10n/l10n.dart';
+import 'package:diohub/style/app_typography.dart';
 import 'package:diohub/view/app_chrome/app_chrome_layout.dart';
 import 'package:flutter/material.dart';
 
@@ -12,6 +13,7 @@ class GlobalHeader extends StatelessWidget implements PreferredSizeWidget {
     required this.onSubmitGlobalSearch,
     required this.desktop,
     this.pageActions = const <Widget>[],
+    this.searchFocusNode,
     this.showNotifications = false,
     this.onNotifications,
     this.guestAction,
@@ -22,6 +24,7 @@ class GlobalHeader extends StatelessWidget implements PreferredSizeWidget {
   final Widget accountMenu;
   final bool desktop;
   final List<Widget> pageActions;
+  final FocusNode? searchFocusNode;
   final bool showNotifications;
   final VoidCallback? onNotifications;
   final VoidCallback onOpenGlobalSearch;
@@ -29,13 +32,22 @@ class GlobalHeader extends StatelessWidget implements PreferredSizeWidget {
   final Widget? guestAction;
 
   @override
-  Size get preferredSize => const Size.fromHeight(kToolbarHeight);
+  Size get preferredSize => Size.fromHeight(
+    desktop
+        ? AppChromeLayout.desktopToolbarHeight
+        : AppChromeLayout.compactToolbarHeight,
+  );
 
   @override
   Widget build(final BuildContext context) => AppBar(
     key: const ValueKey<String>('global-header'),
+    toolbarHeight: preferredSize.height,
+    elevation: 0,
     scrolledUnderElevation: 0,
     surfaceTintColor: Colors.transparent,
+    shape: Border(
+      bottom: BorderSide(color: Theme.of(context).colorScheme.outlineVariant),
+    ),
     leading: Builder(
       builder: (final BuildContext context) => IconButton(
         icon: const Icon(Icons.menu),
@@ -50,6 +62,7 @@ class GlobalHeader extends StatelessWidget implements PreferredSizeWidget {
         SizedBox(
           width: AppChromeLayout.globalSearchWidth,
           child: SearchBar(
+            focusNode: searchFocusNode,
             constraints: const BoxConstraints(minHeight: 40, maxHeight: 40),
             elevation: const WidgetStatePropertyAll<double>(0),
             backgroundColor: WidgetStatePropertyAll<Color>(
@@ -112,9 +125,14 @@ class GlobalHeaderTitle extends StatelessWidget {
       if (constraints.maxWidth < 96) {
         return Tooltip(
           message: semanticTitle,
+          excludeFromSemantics: true,
           child: Semantics(
+            key: const ValueKey<String>(
+              'global-header-compact-title-semantics',
+            ),
             label: semanticTitle,
-            image: true,
+            header: true,
+            excludeSemantics: true,
             child: const AppLogoWidget(size: 28),
           ),
         );
@@ -141,9 +159,7 @@ class GlobalHeaderTitle extends StatelessWidget {
               title,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: Theme.of(
-                context,
-              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+              style: context.appTypography.primaryInformation,
             ),
           ),
           if (trailing != null) ...<Widget>[

@@ -1,15 +1,15 @@
 import 'package:auto_route/auto_route.dart';
 import 'package:diohub/common/bottom_sheet/bottom_sheets.dart';
-import 'package:diohub/common/cards/branch_refs.dart';
 import 'package:diohub/common/cards/commit_card.dart';
 import 'package:diohub/common/misc/bordered_container.dart';
 import 'package:diohub/common/misc/loading_indicator.dart';
-import 'package:diohub/common/misc/tap_feedback.dart';
+import 'package:diohub/l10n/l10n.dart';
 import 'package:diohub/models/commits/commit_list_item_model.dart';
 import 'package:diohub/providers/repository/repository_providers.dart';
+import 'package:diohub/style/diff_colors.dart';
+import 'package:diohub/style/app_typography.dart';
 import 'package:diohub_models/models/entity_ref.dart';
 import 'package:diohub_models/models/repository/compare_result.dart';
-import 'package:diohub_premium_api/diohub_premium_api.dart';
 import 'package:diohub/style/app_spacing.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -46,17 +46,24 @@ class _CompareViewScreenState extends ConsumerState<CompareViewScreen> {
   Future<void> _openBranchSheet(bool isBase) async {
     final selected = await AppSheet.scrollable<String?>(
       context,
-      header: AppSheetHeader.text('Select ${isBase ? 'base' : 'head'} ref'),
-      bodyBuilder: (BuildContext ctx, StateSetter setState,
-              ScrollController scrollController) =>
-          BranchSelectSheet(
-        widget.repoRef,
-        currentBranch: isBase ? _activeBase : _activeHead,
-        onSelected: (String branch) {
-          Navigator.of(ctx).pop(branch);
-        },
-        controller: scrollController,
+      header: AppSheetHeader.text(
+        isBase
+            ? context.l10n.compareSelectBaseRef
+            : context.l10n.compareSelectHeadRef,
       ),
+      bodyBuilder:
+          (
+            BuildContext ctx,
+            StateSetter setState,
+            ScrollController scrollController,
+          ) => BranchSelectSheet(
+            widget.repoRef,
+            currentBranch: isBase ? _activeBase : _activeHead,
+            onSelected: (String branch) {
+              Navigator.of(ctx).pop(branch);
+            },
+            controller: scrollController,
+          ),
     );
     if (selected != null && mounted) {
       setState(() {
@@ -79,62 +86,78 @@ class _CompareViewScreenState extends ConsumerState<CompareViewScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final Widget baseSelector = ConstrainedBox(
+      constraints: const BoxConstraints(minHeight: 48),
+      child: OutlinedButton.icon(
+        onPressed: () => _openBranchSheet(true),
+        icon: const Icon(Icons.call_split, size: 18),
+        label: Align(
+          alignment: AlignmentDirectional.centerStart,
+          child: Text(
+            _activeBase?.isNotEmpty == true
+                ? _activeBase!
+                : context.l10n.compareSelectBase,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ),
+      ),
+    );
+    final Widget headSelector = ConstrainedBox(
+      constraints: const BoxConstraints(minHeight: 48),
+      child: OutlinedButton.icon(
+        onPressed: () => _openBranchSheet(false),
+        icon: const Icon(Icons.call_split, size: 18),
+        label: Align(
+          alignment: AlignmentDirectional.centerStart,
+          child: Text(
+            _activeHead?.isNotEmpty == true
+                ? _activeHead!
+                : context.l10n.compareSelectHead,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ),
+      ),
+    );
     return Scaffold(
-      appBar: AppBar(title: const Text('Compare')),
+      appBar: AppBar(title: Text(context.l10n.compareTitle)),
       body: Column(
         children: [
           Padding(
             padding: context.spacing.contentPadding,
-            child: Row(
-              children: [
-                Expanded(
-                  child: TapFeedback(
-                    onTap: () => _openBranchSheet(true),
-                    child: _activeBase != null && _activeBase!.isNotEmpty
-                        ? BranchRefPill(branchName: _activeBase!)
-                        : Padding(
-                            padding: context.spacing.chipPadding,
-                            child: Text(
-                              'Select base…',
-                              style: Theme.of(context)
-                                  .textTheme
-                                  .labelMedium
-                                  ?.copyWith(
-                                    color: Theme.of(context)
-                                        .colorScheme
-                                        .onSurfaceVariant,
-                                  ),
-                            ),
-                          ),
-                  ),
-                ),
-                IconButton(
-                  icon: const Icon(Icons.swap_horiz),
-                  onPressed: _swapBaseAndHead,
-                  tooltip: 'Swap base and head',
-                ),
-                Expanded(
-                  child: TapFeedback(
-                    onTap: () => _openBranchSheet(false),
-                    child: _activeHead != null && _activeHead!.isNotEmpty
-                        ? BranchRefPill(branchName: _activeHead!)
-                        : Padding(
-                            padding: context.spacing.chipPadding,
-                            child: Text(
-                              'Select head…',
-                              style: Theme.of(context)
-                                  .textTheme
-                                  .labelMedium
-                                  ?.copyWith(
-                                    color: Theme.of(context)
-                                        .colorScheme
-                                        .onSurfaceVariant,
-                                  ),
-                            ),
-                          ),
-                  ),
-                ),
-              ],
+            child: LayoutBuilder(
+              builder:
+                  (
+                    final BuildContext context,
+                    final BoxConstraints constraints,
+                  ) {
+                    final bool stacked =
+                        constraints.maxWidth < 480 ||
+                        MediaQuery.textScalerOf(context).scale(1) > 1.3;
+                    final Widget swap = IconButton(
+                      icon: Icon(stacked ? Icons.swap_vert : Icons.swap_horiz),
+                      onPressed: _swapBaseAndHead,
+                      tooltip: context.l10n.compareSwapBaseHead,
+                    );
+                    if (stacked) {
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: <Widget>[
+                          baseSelector,
+                          Center(child: swap),
+                          headSelector,
+                        ],
+                      );
+                    }
+                    return Row(
+                      children: <Widget>[
+                        Expanded(child: baseSelector),
+                        swap,
+                        Expanded(child: headSelector),
+                      ],
+                    );
+                  },
             ),
           ),
           if (_activeBase != null &&
@@ -149,9 +172,12 @@ class _CompareViewScreenState extends ConsumerState<CompareViewScreen> {
               ),
             )
           else
-            const Expanded(
+            Expanded(
               child: Center(
-                child: Text('Enter base and head refs, then tap Compare'),
+                child: Text(
+                  context.l10n.compareEnterRefs,
+                  textAlign: TextAlign.center,
+                ),
               ),
             ),
         ],
@@ -174,11 +200,20 @@ class _CompareResultView extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final compareAsync = ref.watch(
-        compareResultProvider((repoRef: repoRef, base: base, head: head)));
+      compareResultProvider((repoRef: repoRef, base: base, head: head)),
+    );
 
     return compareAsync.when(
       loading: () => const CenteredSpinner(),
-      error: (Object e, _) => Center(child: Text('Error: $e')),
+      error: (Object e, _) => Center(
+        child: Padding(
+          padding: context.spacing.contentPadding,
+          child: Text(
+            context.l10n.compareLoadError('$e'),
+            textAlign: TextAlign.center,
+          ),
+        ),
+      ),
       data: (CompareResult result) {
         final theme = Theme.of(context);
         final cs = theme.colorScheme;
@@ -191,82 +226,80 @@ class _CompareResultView extends ConsumerWidget {
                   horizontal: context.spacing.contentPadding.horizontal / 2,
                   vertical: context.spacing.listInset.vertical,
                 ),
-                child: Row(
+                child: Wrap(
+                  alignment: WrapAlignment.spaceBetween,
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  spacing: 16,
+                  runSpacing: 8,
                   children: [
-                    Expanded(
-                      child: Container(
-                        padding: EdgeInsets.symmetric(
-                          horizontal: context.spacing.chipPadding.horizontal,
-                          vertical: context.spacing.tightSpacing,
-                        ),
-                        decoration: BoxDecoration(
-                          color: cs.primaryContainer.withOpacity(0.5),
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(
-                            color: cs.primary.withOpacity(0.3),
-                            width: 1,
-                          ),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(
-                              Icons.arrow_upward_rounded,
-                              size: 18,
-                              color: cs.primary,
-                            ),
-                            context.spacing.tightGap,
-                            Text(
-                              '${result.aheadBy}',
-                              style: theme.textTheme.titleSmall?.copyWith(
-                                fontWeight: FontWeight.w700,
-                                color: cs.primary,
-                              ),
-                            ),
-                            context.spacing.contentGap,
-                            Text(
-                              'ahead',
-                              style: theme.textTheme.labelMedium?.copyWith(
-                                color: cs.onSurfaceVariant,
-                              ),
-                            ),
-                            context.spacing.contentGap,
-                            Icon(
-                              Icons.arrow_downward_rounded,
-                              size: 18,
-                              color: cs.primary,
-                            ),
-                            context.spacing.tightGap,
-                            Text(
-                              '${result.behindBy}',
-                              style: theme.textTheme.titleSmall?.copyWith(
-                                fontWeight: FontWeight.w700,
-                                color: cs.primary,
-                              ),
-                            ),
-                            context.spacing.tightGap,
-                            Text(
-                              'behind',
-                              style: theme.textTheme.labelMedium?.copyWith(
-                                color: cs.onSurfaceVariant,
-                              ),
-                            ),
-                          ],
+                    Container(
+                      padding: EdgeInsets.symmetric(
+                        horizontal: context.spacing.chipPadding.horizontal,
+                        vertical: context.spacing.tightSpacing,
+                      ),
+                      decoration: BoxDecoration(
+                        color: cs.primaryContainer.withOpacity(0.5),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(
+                          color: cs.primary.withOpacity(0.3),
+                          width: 1,
                         ),
                       ),
+                      child: Wrap(
+                        crossAxisAlignment: WrapCrossAlignment.center,
+                        spacing: 8,
+                        runSpacing: 4,
+                        children: [
+                          Icon(
+                            Icons.arrow_upward_rounded,
+                            size: 18,
+                            color: cs.primary,
+                          ),
+                          Text(
+                            '${result.aheadBy}',
+                            style: theme.textTheme.titleSmall?.copyWith(
+                              fontWeight: FontWeight.w700,
+                              color: cs.primary,
+                            ),
+                          ),
+                          Text(
+                            context.l10n.compareAhead,
+                            style: theme.textTheme.labelMedium?.copyWith(
+                              color: cs.onSurfaceVariant,
+                            ),
+                          ),
+                          Icon(
+                            Icons.arrow_downward_rounded,
+                            size: 18,
+                            color: cs.primary,
+                          ),
+                          Text(
+                            '${result.behindBy}',
+                            style: theme.textTheme.titleSmall?.copyWith(
+                              fontWeight: FontWeight.w700,
+                              color: cs.primary,
+                            ),
+                          ),
+                          Text(
+                            context.l10n.compareBehind,
+                            style: theme.textTheme.labelMedium?.copyWith(
+                              color: cs.onSurfaceVariant,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
-                    context.spacing.contentGap,
                     Text(
-                      '${result.files.length} files changed',
+                      context.l10n.compareFilesChanged(result.files.length),
                       style: theme.textTheme.labelMedium,
                     ),
                   ],
                 ),
               ),
-              const TabBar(
+              TabBar(
                 tabs: [
-                  Tab(text: 'Commits'),
-                  Tab(text: 'Files'),
+                  Tab(text: context.l10n.compareCommits),
+                  Tab(text: context.l10n.compareFiles),
                 ],
               ),
               Expanded(
@@ -279,13 +312,13 @@ class _CompareResultView extends ConsumerWidget {
                         final c = result.commits[index];
                         final model =
                             CommitListItemModel.fromCompareCommitSummary(
-                          c.sha,
-                          c.message,
-                          repoRef,
-                          authorName: c.authorName,
-                          authorAvatarUrl: c.authorAvatarUrl,
-                          date: c.date,
-                        );
+                              c.sha,
+                              c.message,
+                              repoRef,
+                              authorName: c.authorName,
+                              authorAvatarUrl: c.authorAvatarUrl,
+                              date: c.date,
+                            );
                         return Padding(
                           padding: const EdgeInsets.only(bottom: 8),
                           child: BorderedContainer(
@@ -303,15 +336,20 @@ class _CompareResultView extends ConsumerWidget {
                         final f = result.files[index];
                         return ListTile(
                           dense: true,
-                          leading: _fileStatusIcon(f.status),
-                          title: Text(f.filename,
-                              style: const TextStyle(fontSize: 13)),
-                          trailing: Text(
-                            '+${f.additions} -${f.deletions}',
-                            style: TextStyle(
-                              fontSize: 12,
-                              color:
-                                  f.additions > 0 ? Colors.green : Colors.red,
+                          leading: _fileStatusIcon(context, f.status),
+                          title: Text(
+                            f.filename,
+                            style: context.appTypography.mono,
+                          ),
+                          trailing: Semantics(
+                            label: '+${f.additions}, -${f.deletions}',
+                            child: ExcludeSemantics(
+                              child: Text(
+                                '+${f.additions} -${f.deletions}',
+                                style: theme.textTheme.labelSmall?.copyWith(
+                                  color: cs.onSurface,
+                                ),
+                              ),
                             ),
                           ),
                         );
@@ -327,16 +365,38 @@ class _CompareResultView extends ConsumerWidget {
     );
   }
 
-  Widget _fileStatusIcon(String status) {
-    return switch (status) {
-      'added' => const Icon(Icons.add_circle, color: Colors.green, size: 16),
-      'removed' => const Icon(Icons.remove_circle, color: Colors.red, size: 16),
-      'renamed' => const Icon(
-          Icons.drive_file_rename_outline,
-          color: Colors.blue,
-          size: 16,
-        ),
-      _ => const Icon(Icons.edit, color: Colors.orange, size: 16),
+  Widget _fileStatusIcon(final BuildContext context, final String status) {
+    final (IconData icon, Color color, String label) = switch (status
+        .toLowerCase()) {
+      'added' => (
+        Icons.add_circle,
+        DiffColors.addition,
+        context.l10n.compareFileStatusAdded,
+      ),
+      'removed' => (
+        Icons.remove_circle,
+        DiffColors.deletion,
+        context.l10n.compareFileStatusRemoved,
+      ),
+      'renamed' => (
+        Icons.drive_file_rename_outline,
+        DiffColors.renamed,
+        context.l10n.compareFileStatusRenamed,
+      ),
+      _ => (
+        Icons.edit,
+        DiffColors.modified,
+        context.l10n.compareFileStatusModified,
+      ),
     };
+    return Tooltip(
+      message: label,
+      excludeFromSemantics: true,
+      child: Semantics(
+        label: label,
+        image: true,
+        child: ExcludeSemantics(child: Icon(icon, color: color, size: 16)),
+      ),
+    );
   }
 }

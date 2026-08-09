@@ -3,6 +3,7 @@ import 'package:diohub/common/misc/profile_card.dart' show ProfileCardLoading;
 import 'package:diohub/common/riverpod/keep_alive_helper.dart';
 import 'package:diohub/common/riverpod/mutation_error.dart';
 import 'package:diohub/common/riverpod/optimistic_notifier.dart';
+import 'package:diohub/models/users/email_item.dart';
 import 'package:diohub_graphql/fragments/fragment_typedefs.dart' as gql;
 import 'package:diohub_graphql/queries/users/user_typedefs.dart';
 
@@ -28,27 +29,54 @@ export 'package:diohub/services/users/user_info_service.dart'
 
 /// Single [UserInfoService] instance. Use this in widgets and notifiers instead of static calls.
 final Provider<UserInfoService> userInfoServiceProvider =
-    Provider<UserInfoService>((ref) => UserInfoService(ref.watch(apiClientProvider)));
+    Provider<UserInfoService>(
+      (ref) => UserInfoService(ref.watch(apiClientProvider)),
+    );
 
 /// Single [UserActivityService] instance. Use from providers instead of static calls.
 final Provider<UserActivityService> userActivityServiceProvider =
-    Provider<UserActivityService>((ref) => UserActivityService(ref.read(apiClientProvider)));
+    Provider<UserActivityService>(
+      (ref) => UserActivityService(ref.read(apiClientProvider)),
+    );
 
 /// User card fragment by login (for profile card from login-only context, e.g. events).
 /// Use [ProfileCard]([ProfileCardInputUser]([FragmentUser](data))) when data is non-null.
-final userCardByLoginProvider =
-    FutureProvider.autoDispose.family<gql.UserCardData?, String>(
-  (final Ref ref, final String login) =>
-      ref.read(userInfoServiceProvider).getUserCardByLogin(login),
-);
+final userCardByLoginProvider = FutureProvider.autoDispose
+    .family<gql.UserCardData?, String>(
+      (final Ref ref, final String login) =>
+          ref.read(userInfoServiceProvider).getUserCardByLogin(login),
+    );
 
 /// Single [ViewerSettingsService] instance for viewer-only settings (keys, gists, profile, blocks).
 final Provider<ViewerSettingsService> viewerSettingsServiceProvider =
-    Provider<ViewerSettingsService>((ref) => ViewerSettingsService(ref.read(apiClientProvider)));
+    Provider<ViewerSettingsService>(
+      (ref) => ViewerSettingsService(ref.read(apiClientProvider)),
+    );
+
+/// Verified viewer emails for the Public profile selector.
+///
+/// A failure remains local to the field; the rest of Public profile continues
+/// to use the GraphQL profile payload.
+final FutureProvider<List<EmailItem>> viewerVerifiedEmailsProvider =
+    FutureProvider.autoDispose<List<EmailItem>>((final Ref ref) async {
+      final List<EmailItem> emails =
+          (await ref
+                  .read(viewerSettingsServiceProvider)
+                  .listEmails(perPage: 100))
+              .items
+              .where((final EmailItem email) => email.verified)
+              .toList(growable: false);
+      return emails.toList(growable: false)
+        ..sort((final EmailItem left, final EmailItem right) {
+          if (left.primary != right.primary) {
+            return left.primary ? -1 : 1;
+          }
+          return left.email.compareTo(right.email);
+        });
+    });
 
 final AsyncNotifierProvider<CurrentUserNotifier, ViewerInfo?>
-    currentUserProvider =
-    AsyncNotifierProvider<CurrentUserNotifier, ViewerInfo?>(
+currentUserProvider = AsyncNotifierProvider<CurrentUserNotifier, ViewerInfo?>(
   CurrentUserNotifier.new,
 );
 
@@ -63,8 +91,9 @@ class CurrentUserNotifier extends AsyncNotifier<ViewerInfo?> {
       return null;
     }
 
-    final AccountSession? session =
-        accountAsync.hasValue ? accountAsync.value : null;
+    final AccountSession? session = accountAsync.hasValue
+        ? accountAsync.value
+        : null;
     final AccountModel? activeAccount = session?.activeAccountModel;
     if (activeAccount != null) {
       // We already have account; use cached viewer if present and only reconcile profile
@@ -81,8 +110,9 @@ class CurrentUserNotifier extends AsyncNotifier<ViewerInfo?> {
       if (authenticatedSession == null) {
         return null;
       }
-      final ViewerInfo viewer =
-          await ref.read(userInfoServiceProvider).getViewerInfo();
+      final ViewerInfo viewer = await ref
+          .read(userInfoServiceProvider)
+          .getViewerInfo();
       _reconcileAccountProfile(activeAccount, viewer);
       return viewer;
     }
@@ -94,15 +124,13 @@ class CurrentUserNotifier extends AsyncNotifier<ViewerInfo?> {
     if (activeUsername == null) {
       return null;
     }
-    final ViewerInfo viewer =
-        await ref.read(userInfoServiceProvider).getViewerInfo();
+    final ViewerInfo viewer = await ref
+        .read(userInfoServiceProvider)
+        .getViewerInfo();
     return viewer;
   }
 
-  void _reconcileAccountProfile(
-    AccountModel? account,
-    ViewerInfo viewer,
-  ) {
+  void _reconcileAccountProfile(AccountModel? account, ViewerInfo viewer) {
     if (account == null ||
         account.nodeId != viewer.id ||
         (account.username == viewer.login &&
@@ -110,7 +138,9 @@ class CurrentUserNotifier extends AsyncNotifier<ViewerInfo?> {
             account.avatarUrl == viewer.avatarUrl.toString())) {
       return;
     }
-    ref.read(accountProvider.notifier).updateAccountProfile(
+    ref
+        .read(accountProvider.notifier)
+        .updateAccountProfile(
           nodeId: account.nodeId,
           serverId: account.serverConfig.id,
           username: viewer.login,
@@ -122,13 +152,15 @@ class CurrentUserNotifier extends AsyncNotifier<ViewerInfo?> {
 
 final userProvider = AsyncNotifierProvider.autoDispose
     .family<UserProfileNotifier, UserProfileData, UserRef>(
-  UserProfileNotifier.new,
-);
+      UserProfileNotifier.new,
+    );
 
 /// Block state for the block/unblock button. Reads [UserProfileNotifier.checkBlocked]; refreshes when popup reopens (autoDispose).
 final blockStateForUserProvider = FutureProvider.autoDispose
-    .family<bool, String>((final Ref ref, final String login) =>
-        ref.read(userProvider(UserRef(login: login)).notifier).checkBlocked());
+    .family<bool, String>(
+      (final Ref ref, final String login) =>
+          ref.read(userProvider(UserRef(login: login)).notifier).checkBlocked(),
+    );
 
 class UserProfileNotifier extends AsyncNotifier<UserProfileData>
     with OptimisticFamilyAsyncNotifier<UserProfileData> {
@@ -151,13 +183,14 @@ class UserProfileNotifier extends AsyncNotifier<UserProfileData>
     final bool limitedAvailability = false,
     final DateTime? expiresAt,
   }) async {
-    final ChangedUserStatus? newStatus =
-        await ref.read(viewerSettingsServiceProvider).changeStatus(
-              emoji: emoji,
-              message: message,
-              limitedAvailability: limitedAvailability,
-              expiresAt: expiresAt,
-            );
+    final ChangedUserStatus? newStatus = await ref
+        .read(viewerSettingsServiceProvider)
+        .changeStatus(
+          emoji: emoji,
+          message: message,
+          limitedAvailability: limitedAvailability,
+          expiresAt: expiresAt,
+        );
     if (newStatus != null) _applyStatusFromResponse(newStatus);
   }
 
@@ -167,11 +200,10 @@ class UserProfileNotifier extends AsyncNotifier<UserProfileData>
     _applyStatusFromResponse(null);
   }
 
-  void _applyStatusFromResponse(
-    ChangedUserStatus? status,
-  ) {
-    final UserProfileData? current =
-        state.whenOrNull(data: (final UserProfileData v) => v);
+  void _applyStatusFromResponse(ChangedUserStatus? status) {
+    final UserProfileData? current = state.whenOrNull(
+      data: (final UserProfileData v) => v,
+    );
     if (current == null) return;
     final UserProfileOwner newOwner = current.owner.maybeWhen(
       user: (final UserProfile u) {
@@ -183,9 +215,7 @@ class UserProfileNotifier extends AsyncNotifier<UserProfileData>
                 indicatesLimitedAvailability:
                     status.indicatesLimitedAvailability,
               );
-        return u.copyWith(
-          status: newStatusBuilt,
-        );
+        return u.copyWith(status: newStatusBuilt);
       },
       organization: (_) => current.owner,
       orElse: () => current.owner,
@@ -199,19 +229,46 @@ class UserProfileNotifier extends AsyncNotifier<UserProfileData>
     );
   }
 
-  /// Updates a single profile field via REST PATCH /user. Optimistic update with rollback on error.
+  /// Updates a single profile field via REST PATCH /user.
+  ///
+  /// Kept for existing leaf editors. Full profile forms should use
+  /// [updateProfileFields] so one save action produces one PATCH request.
   Future<void> updateProfileField(final String field, final dynamic value) =>
       optimistic(
         transform: (final UserProfileData profile) =>
             _applyProfileField(profile, field, value),
-        mutation: () => ref
-            .read(viewerSettingsServiceProvider)
-            .updateProfile({field: value}),
+        mutation: () => ref.read(viewerSettingsServiceProvider).updateProfile(
+          <String, dynamic>{field: value},
+        ),
         errorMessage: (_, __) => "Couldn't update $field",
       );
 
+  /// Updates profile fields in one REST PATCH /user request.
+  ///
+  /// The local profile is updated atomically and rolls back as one unit if the
+  /// request fails, matching the single save action in Settings.
+  Future<bool> updateProfileFields(final Map<String, dynamic> fields) async {
+    final bool? updated = await optimistic<bool>(
+      transform: (final UserProfileData profile) {
+        UserProfileData next = profile;
+        for (final MapEntry<String, dynamic> field in fields.entries) {
+          next = _applyProfileField(next, field.key, field.value);
+        }
+        return next;
+      },
+      mutation: () async {
+        await ref.read(viewerSettingsServiceProvider).updateProfile(fields);
+        return true;
+      },
+    );
+    return updated ?? false;
+  }
+
   static UserProfileData _applyProfileField(
-      final UserProfileData profile, final String field, final dynamic value) {
+    final UserProfileData profile,
+    final String field,
+    final dynamic value,
+  ) {
     final UserProfileOwner newOwner = profile.owner.maybeWhen(
       user: (final UserProfile u) {
         switch (field) {
@@ -225,9 +282,10 @@ class UserProfileNotifier extends AsyncNotifier<UserProfileData>
             return u.copyWith(location: value as String?);
           case 'blog':
             return u.copyWith(
-                websiteUrl: value == null || value == ''
-                    ? null
-                    : Uri.tryParse(value as String));
+              websiteUrl: value == null || value == ''
+                  ? null
+                  : Uri.tryParse(value as String),
+            );
           case 'twitter_username':
             return u.copyWith(twitterUsername: value as String?);
           case 'email':
@@ -250,14 +308,18 @@ class UserProfileNotifier extends AsyncNotifier<UserProfileData>
 
   /// Patches state from follow/unfollow mutation response (no refetch).
   void updateFollowFromMutation(
-      final bool viewerIsFollowing, final int followersCount) {
-    final UserProfileData? current =
-        state.whenOrNull(data: (final UserProfileData v) => v);
+    final bool viewerIsFollowing,
+    final int followersCount,
+  ) {
+    final UserProfileData? current = state.whenOrNull(
+      data: (final UserProfileData v) => v,
+    );
     if (current == null) return;
     final UserProfileOwner newOwner = current.owner.maybeWhen(
       user: (final UserProfile u) {
-        final UserFollowers newFollowers =
-            u.followers.copyWith(totalCount: followersCount);
+        final UserFollowers newFollowers = u.followers.copyWith(
+          totalCount: followersCount,
+        );
         return u.copyWith(
           viewerIsFollowing: viewerIsFollowing,
           followers: newFollowers,
@@ -299,8 +361,11 @@ class UserProfileNotifier extends AsyncNotifier<UserProfileData>
   }
 
   /// Follow or unfollow this user or organization. Patches state from mutation response (no refetch).
-  Future<void> changeFollowStatus(final String nodeId,
-      {required final bool follow, final bool isOrg = false}) async {
+  Future<void> changeFollowStatus(
+    final String nodeId, {
+    required final bool follow,
+    final bool isOrg = false,
+  }) async {
     try {
       final ({int followersCount, bool viewerIsFollowing})? result = await ref
           .read(userInfoServiceProvider)
@@ -318,7 +383,12 @@ class UserProfileNotifier extends AsyncNotifier<UserProfileData>
         stackTrace: st,
         tag: 'UserProviders',
       );
-      showMutationError(ref, "Couldn't update follow status", error: e, stackTrace: st);
+      showMutationError(
+        ref,
+        "Couldn't update follow status",
+        error: e,
+        stackTrace: st,
+      );
       rethrow;
     }
   }
@@ -327,12 +397,12 @@ class UserProfileNotifier extends AsyncNotifier<UserProfileData>
 /// Converts [UserProfileData] from [userProvider] to [ProfileCardInput].
 /// Use for peek/popup when resolving profile by login via GQL.
 ProfileCardInput userProfileDataToProfileCardInput(
-        final UserProfileData data) =>
-    data.owner.maybeWhen(
-      user: (final UserProfile u) => ProfileCardInputUser(FullUser(u)),
-      organization: (final OrgProfile o) => ProfileCardInputOrg(FullOrg(o)),
-      orElse: () => throw StateError('Unknown repository owner type'),
-    );
+  final UserProfileData data,
+) => data.owner.maybeWhen(
+  user: (final UserProfile u) => ProfileCardInputUser(FullUser(u)),
+  organization: (final OrgProfile o) => ProfileCardInputOrg(FullOrg(o)),
+  orElse: () => throw StateError('Unknown repository owner type'),
+);
 
 /// Converts [UserProfileData] from [userProvider] to [UserInfoModel].
 ///

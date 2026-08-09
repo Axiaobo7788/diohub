@@ -3,7 +3,6 @@ import 'dart:async';
 import 'package:auto_route/auto_route.dart';
 import 'package:diohub/common/bottom_sheet/bottom_sheets.dart';
 import 'package:diohub/common/nav_center/models/preset.dart';
-import 'package:diohub/common/misc/shimmer_bone.dart';
 import 'package:diohub/common/misc/shimmer_scope.dart';
 import 'package:diohub/common/pagination/pagination.dart';
 import 'package:diohub/common/resource_runtime/resource_runtime.dart';
@@ -612,23 +611,47 @@ class _RepositoryIssuePullMd3PageState
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: <Widget>[
-        Row(
-          children: <Widget>[
-            Expanded(
-              child: Text(
-                title,
-                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-            ),
-            const SizedBox(width: 12),
-            FilledButton.icon(
-              onPressed: _creationEnabled ? _openCreate : null,
-              icon: Icon(widget.signedIn ? Icons.add : Icons.login, size: 18),
-              label: Text(createLabel),
-            ),
-          ],
+        LayoutBuilder(
+          builder:
+              (final BuildContext context, final BoxConstraints constraints) {
+                final bool stack =
+                    MediaQuery.textScalerOf(context).scale(1) > 1.3 ||
+                    constraints.maxWidth < 320;
+                final Widget heading = Text(
+                  title,
+                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                    fontWeight: FontWeight.w700,
+                  ),
+                );
+                final Widget create = FilledButton.icon(
+                  onPressed: _creationEnabled ? _openCreate : null,
+                  icon: Icon(
+                    widget.signedIn ? Icons.add : Icons.login,
+                    size: 18,
+                  ),
+                  label: Text(createLabel),
+                );
+                if (stack) {
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: <Widget>[
+                      heading,
+                      const SizedBox(height: 12),
+                      Align(
+                        alignment: AlignmentDirectional.centerEnd,
+                        child: create,
+                      ),
+                    ],
+                  );
+                }
+                return Row(
+                  children: <Widget>[
+                    Expanded(child: heading),
+                    const SizedBox(width: 12),
+                    create,
+                  ],
+                );
+              },
         ),
         const SizedBox(height: 16),
         Row(
@@ -1002,36 +1025,48 @@ class _StatusButton extends StatelessWidget {
   final VoidCallback onPressed;
 
   @override
-  Widget build(final BuildContext context) => TextButton(
-    onPressed: onPressed,
-    style: TextButton.styleFrom(
-      foregroundColor: selected
-          ? Theme.of(context).colorScheme.onSurface
-          : Theme.of(context).colorScheme.onSurfaceVariant,
-      minimumSize: const Size(0, 48),
-      padding: EdgeInsets.symmetric(horizontal: compact ? 4 : 12),
-      textStyle: TextStyle(
-        fontWeight: selected ? FontWeight.w700 : FontWeight.w400,
-      ),
-    ),
-    child: Row(
-      mainAxisAlignment: compact
-          ? MainAxisAlignment.center
-          : MainAxisAlignment.start,
-      mainAxisSize: compact ? MainAxisSize.max : MainAxisSize.min,
-      children: <Widget>[
-        Icon(icon, size: 18),
-        const SizedBox(width: 4),
-        Flexible(
-          child: Text(
-            count == null ? label : '$label $count',
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
+  Widget build(final BuildContext context) {
+    final String semanticLabel = count == null ? label : '$label $count';
+    return Semantics(
+      container: true,
+      button: true,
+      selected: selected,
+      label: semanticLabel,
+      onTap: onPressed,
+      child: ExcludeSemantics(
+        child: TextButton(
+          onPressed: onPressed,
+          style: TextButton.styleFrom(
+            foregroundColor: selected
+                ? Theme.of(context).colorScheme.onSurface
+                : Theme.of(context).colorScheme.onSurfaceVariant,
+            minimumSize: const Size(0, 48),
+            padding: EdgeInsets.symmetric(horizontal: compact ? 4 : 12),
+            textStyle: TextStyle(
+              fontWeight: selected ? FontWeight.w700 : FontWeight.w400,
+            ),
+          ),
+          child: Row(
+            mainAxisAlignment: compact
+                ? MainAxisAlignment.center
+                : MainAxisAlignment.start,
+            mainAxisSize: compact ? MainAxisSize.max : MainAxisSize.min,
+            children: <Widget>[
+              Icon(icon, size: 18),
+              const SizedBox(width: 4),
+              Flexible(
+                child: Text(
+                  semanticLabel,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ],
           ),
         ),
-      ],
-    ),
-  );
+      ),
+    );
+  }
 }
 
 class _SidebarDestination extends StatelessWidget {
@@ -1050,6 +1085,7 @@ class _SidebarDestination extends StatelessWidget {
   @override
   Widget build(final BuildContext context) => ListTile(
     dense: true,
+    minTileHeight: 48,
     selected: selected,
     selectedTileColor: Theme.of(context).colorScheme.secondaryContainer,
     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
@@ -1065,62 +1101,109 @@ class _RepositoryIssuePullLoading extends StatelessWidget {
   @override
   Widget build(final BuildContext context) {
     final Color outline = Theme.of(context).colorScheme.outlineVariant;
-    return ShimmerScope(
-      key: const ValueKey<String>('repository-issue-pull-loading'),
-      child: Column(
-        children: <Widget>[
-          for (int index = 0; index < 5; index++)
-            Container(
-              key: ValueKey<String>('repository-issue-pull-loading-row-$index'),
-              constraints: const BoxConstraints(minHeight: 76),
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              decoration: BoxDecoration(
-                border: Border(
-                  left: BorderSide(color: outline),
-                  right: BorderSide(color: outline),
-                  bottom: BorderSide(color: outline),
-                ),
-              ),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: <Widget>[
-                  const Padding(
-                    padding: EdgeInsets.only(top: 2),
-                    child: ShimmerBone.icon(size: 18),
+    return Semantics(
+      container: true,
+      label: context.l10n.repoLoading,
+      child: ExcludeSemantics(
+        child: ShimmerScope(
+          key: const ValueKey<String>('repository-issue-pull-loading'),
+          child: Column(
+            children: <Widget>[
+              for (int index = 0; index < 5; index++)
+                Container(
+                  key: ValueKey<String>(
+                    'repository-issue-pull-loading-row-$index',
                   ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: <Widget>[
-                        FractionallySizedBox(
-                          widthFactor: index.isEven ? 0.82 : 0.68,
-                          alignment: AlignmentDirectional.centerStart,
-                          child: const ShimmerBone.title(),
-                        ),
-                        const SizedBox(height: 8),
-                        Row(
-                          children: <Widget>[
-                            const Expanded(child: ShimmerBone.label()),
-                            const SizedBox(width: 8),
-                            const ShimmerBone.chip(width: 58, height: 18),
-                          ],
-                        ),
-                      ],
+                  constraints: const BoxConstraints(minHeight: 76),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 12,
+                  ),
+                  decoration: BoxDecoration(
+                    border: Border(
+                      left: BorderSide(color: outline),
+                      right: BorderSide(color: outline),
+                      bottom: BorderSide(color: outline),
                     ),
                   ),
-                  const SizedBox(width: 12),
-                  const Padding(
-                    padding: EdgeInsets.only(top: 24),
-                    child: ShimmerBone.label(width: 28),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: <Widget>[
+                      const Padding(
+                        padding: EdgeInsets.only(top: 2),
+                        child: _IssuePullLoadingBlock(
+                          width: 18,
+                          height: 18,
+                          borderRadius: 4,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: <Widget>[
+                            FractionallySizedBox(
+                              widthFactor: index.isEven ? 0.82 : 0.68,
+                              alignment: AlignmentDirectional.centerStart,
+                              child: const _IssuePullLoadingBlock(height: 20),
+                            ),
+                            const SizedBox(height: 8),
+                            Row(
+                              children: <Widget>[
+                                const Expanded(
+                                  child: _IssuePullLoadingBlock(height: 12),
+                                ),
+                                const SizedBox(width: 8),
+                                const _IssuePullLoadingBlock(
+                                  width: 58,
+                                  height: 18,
+                                  borderRadius: 4,
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      const Padding(
+                        padding: EdgeInsets.only(top: 24),
+                        child: _IssuePullLoadingBlock(width: 28, height: 12),
+                      ),
+                    ],
                   ),
-                ],
-              ),
-            ),
-        ],
+                ),
+            ],
+          ),
+        ),
       ),
     );
   }
+}
+
+class _IssuePullLoadingBlock extends StatelessWidget {
+  const _IssuePullLoadingBlock({
+    required this.height,
+    this.width,
+    this.borderRadius = 6,
+  });
+
+  final double height;
+  final double? width;
+  final double borderRadius;
+
+  @override
+  Widget build(final BuildContext context) => SizedBox(
+    width: width ?? double.infinity,
+    height: height,
+    child: DecoratedBox(
+      decoration: BoxDecoration(
+        color: Theme.of(
+          context,
+        ).colorScheme.surfaceContainerHighest.withValues(alpha: 0.40),
+        borderRadius: BorderRadius.circular(borderRadius),
+      ),
+    ),
+  );
 }
 
 class _RepositoryIssuePullEmpty extends StatelessWidget {

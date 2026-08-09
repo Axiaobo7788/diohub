@@ -256,6 +256,42 @@ void main() {
     expect(controller.state.value.items, const <int>[2]);
     expect(controller.state.value.totalCount, 1);
   });
+
+  test('refilter restores items excluded by a previous projection', () async {
+    final _CursorHarness harness = _CursorHarness();
+    bool showEven = true;
+    final PaginationController<int, int> controller =
+        PaginationController<int, int>(
+          source: CursorForwardSource<int>(fetch: harness.fetch),
+          idOf: (final int item) => '$item',
+          filter: (final List<int> items) => items
+              .where((final int item) => showEven ? item.isEven : item.isOdd)
+              .toList(growable: false),
+          autoFetch: false,
+        );
+    addTearDown(controller.dispose);
+
+    final Future<void> initialLoad = controller.fetchForward();
+    harness.complete(
+      0,
+      items: const <int>[1, 2, 3, 4],
+      endCursor: 'complete',
+      hasNextPage: false,
+      totalCount: 4,
+    );
+    await initialLoad;
+    expect(controller.state.value.items, const <int>[2, 4]);
+
+    showEven = false;
+    controller.refilter();
+
+    expect(
+      controller.state.value.items,
+      const <int>[1, 3],
+      reason: 'a local projection must not destroy the retained query session',
+    );
+    expect(harness.requests, hasLength(1));
+  });
 }
 
 Future<void> _drainMicrotasks() async {

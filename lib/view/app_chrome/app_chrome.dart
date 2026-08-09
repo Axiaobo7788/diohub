@@ -4,6 +4,7 @@ import 'package:auto_route/auto_route.dart';
 import 'package:diohub/app/settings/locale_settings.dart';
 import 'package:diohub/l10n/l10n.dart';
 import 'package:diohub/l10n/language_picker.dart';
+import 'package:diohub/models/global_list_destination.dart';
 import 'package:diohub/models/home_repository_item.dart';
 import 'package:diohub/models/repository_preview.dart';
 import 'package:diohub/providers/account/account_provider.dart';
@@ -22,7 +23,40 @@ import 'package:diohub/view/home/widgets/switch_account_sheet.dart';
 import 'package:diohub_models/models/authentication/account_model.dart';
 import 'package:diohub_models/models/entity_ref.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+bool get _appChromeEditableTextHasFocus {
+  final BuildContext? focusContext =
+      FocusManager.instance.primaryFocus?.context;
+  if (focusContext == null) {
+    return false;
+  }
+  return focusContext.widget is EditableText ||
+      focusContext.findAncestorWidgetOfExactType<EditableText>() != null;
+}
+
+/// Matches an unmodified slash only when text input does not own focus.
+///
+/// Filtering in the activator (instead of returning early from the callback)
+/// leaves the key event available to the focused editor.
+class _AppChromeSearchActivator extends ShortcutActivator {
+  const _AppChromeSearchActivator();
+
+  static const SingleActivator _delegate = SingleActivator(
+    LogicalKeyboardKey.slash,
+  );
+
+  @override
+  Iterable<LogicalKeyboardKey> get triggers => _delegate.triggers;
+
+  @override
+  bool accepts(final KeyEvent event, final HardwareKeyboard state) =>
+      !_appChromeEditableTextHasFocus && _delegate.accepts(event, state);
+
+  @override
+  String debugDescribeKeys() => _delegate.debugDescribeKeys();
+}
 
 /// Shared application shell for migrated MD3 pages.
 ///
@@ -51,6 +85,7 @@ class AppChrome extends ConsumerStatefulWidget {
     this.onStagedAction,
     this.onOpenTopRepository,
     this.onOpenHome,
+    this.onGlobalListDestination,
     this.onGlobalSearch,
     this.onSearchRepositories,
     super.key,
@@ -75,6 +110,7 @@ class AppChrome extends ConsumerStatefulWidget {
   final ValueChanged<String>? onStagedAction;
   final ValueChanged<HomeRepositoryItem>? onOpenTopRepository;
   final VoidCallback? onOpenHome;
+  final ValueChanged<GlobalListDestination>? onGlobalListDestination;
   final ValueChanged<String?>? onGlobalSearch;
   final VoidCallback? onSearchRepositories;
 
@@ -83,6 +119,31 @@ class AppChrome extends ConsumerStatefulWidget {
 }
 
 class _AppChromeState extends ConsumerState<AppChrome> {
+  final FocusNode _shortcutFocusNode = FocusNode(
+    debugLabel: 'AppChrome shortcuts',
+  );
+  final FocusNode _globalSearchFocusNode = FocusNode(
+    debugLabel: 'AppChrome global search',
+  );
+
+  @override
+  void dispose() {
+    _shortcutFocusNode.dispose();
+    _globalSearchFocusNode.dispose();
+    super.dispose();
+  }
+
+  void _handleSearchShortcut({required final bool desktop}) {
+    if (_appChromeEditableTextHasFocus) {
+      return;
+    }
+    if (desktop) {
+      _globalSearchFocusNode.requestFocus();
+      return;
+    }
+    _openGlobalSearch();
+  }
+
   Future<void> _signIn() async {
     final Future<void> Function()? callback = widget.onSignIn;
     if (callback != null) {
@@ -108,6 +169,15 @@ class _AppChromeState extends ConsumerState<AppChrome> {
     final ValueChanged<String?>? callback = widget.onOpenProfileTab;
     if (callback != null) {
       callback(tab);
+      return;
+    }
+    if (tab == 'settings' || (tab?.startsWith('settings/') ?? false)) {
+      final String? section = tab == 'settings'
+          ? null
+          : tab!.substring('settings/'.length);
+      unawaited(
+        context.router.push<void>(SettingsRoute(initialSection: section)),
+      );
       return;
     }
     final AccountModel? account = widget.account;
@@ -161,6 +231,44 @@ class _AppChromeState extends ConsumerState<AppChrome> {
     unawaited(context.router.replaceAll(<PageRouteInfo>[HomeRoute()]));
   }
 
+  void _openNavigationDestination(
+    final GlobalNavigationDestination destination,
+  ) {
+    if (destination == GlobalNavigationDestination.home) {
+      _openHome();
+      return;
+    }
+    final GlobalListDestination listDestination = switch (destination) {
+      GlobalNavigationDestination.issues => GlobalListDestination.issues,
+      GlobalNavigationDestination.pullRequests =>
+        GlobalListDestination.pullRequests,
+      GlobalNavigationDestination.repositories =>
+        GlobalListDestination.repositories,
+      GlobalNavigationDestination.home => throw StateError(
+        'Home is handled before list routing',
+      ),
+    };
+    if (widget.selectedNavigation == destination) {
+      return;
+    }
+    final ValueChanged<GlobalListDestination>? localNavigation =
+        widget.onGlobalListDestination;
+    if (localNavigation != null) {
+      localNavigation(listDestination);
+      return;
+    }
+    if (context.router.current.name == GlobalListsRoute.name) {
+      unawaited(
+        context.router.replace<void>(
+          GlobalListsRoute(destination: listDestination),
+        ),
+      );
+      return;
+    }
+    final PageRouteInfo route = GlobalListsRoute(destination: listDestination);
+    unawaited(context.router.push<void>(route));
+  }
+
   void _openGlobalSearch([final String? query]) {
     final ValueChanged<String?>? callback = widget.onGlobalSearch;
     if (callback != null) {
@@ -186,6 +294,17 @@ class _AppChromeState extends ConsumerState<AppChrome> {
       return;
     }
     _openGlobalSearch('type:repository');
+  }
+
+  void _openNotifications() {
+    if (widget.account == null) {
+      unawaited(_signIn());
+      return;
+    }
+    if (context.router.current.name == NotificationsRoute.name) {
+      return;
+    }
+    unawaited(context.router.push<void>(const NotificationsRoute()));
   }
 
   void _openTopRepository(final HomeRepositoryItem repository) {
@@ -236,13 +355,13 @@ class _AppChromeState extends ConsumerState<AppChrome> {
       builder: (final BuildContext context, final BoxConstraints constraints) {
         final bool desktop =
             constraints.maxWidth >= AppChromeLayout.desktopBreakpoint;
-        return Scaffold(
+        final Widget scaffold = Scaffold(
           key: const ValueKey<String>('app-chrome'),
           drawer: GlobalNavigationDrawer(
             account: widget.account,
             topRepositories: widget.topRepositories,
             selectedDestination: widget.selectedNavigation,
-            onHome: _openHome,
+            onDestination: _openNavigationDestination,
             onSearchRepositories: _searchRepositories,
             onSignIn: _signIn,
             onOpenTopRepository: _openTopRepository,
@@ -251,13 +370,13 @@ class _AppChromeState extends ConsumerState<AppChrome> {
           appBar: GlobalHeader(
             desktop: desktop,
             title: widget.title,
+            searchFocusNode: _globalSearchFocusNode,
             pageActions: widget.pageActions,
             onOpenGlobalSearch: _openGlobalSearch,
             onSubmitGlobalSearch: _openGlobalSearch,
             showNotifications:
                 widget.showNotifications && widget.account != null,
-            onNotifications: () =>
-                _showStagedAction(context.l10n.homeNotifications),
+            onNotifications: _openNotifications,
             guestAction: widget.account == null
                 ? IconButton(
                     tooltip: context.l10n.languageAndRegion,
@@ -287,10 +406,26 @@ class _AppChromeState extends ConsumerState<AppChrome> {
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: <Widget>[
                     widget.secondaryNavigation!,
-                    const Divider(height: 1),
+                    const Divider(
+                      key: ValueKey<String>('app-chrome-secondary-divider'),
+                      height: 1,
+                      indent: 0,
+                      endIndent: 0,
+                    ),
                     Expanded(child: widget.body),
                   ],
                 ),
+        );
+        return CallbackShortcuts(
+          bindings: <ShortcutActivator, VoidCallback>{
+            const _AppChromeSearchActivator(): () =>
+                _handleSearchShortcut(desktop: desktop),
+          },
+          child: Focus(
+            focusNode: _shortcutFocusNode,
+            autofocus: true,
+            child: scaffold,
+          ),
         );
       },
     );

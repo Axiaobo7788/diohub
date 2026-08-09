@@ -10,6 +10,7 @@ import 'package:diohub/providers/database_providers.dart';
 import 'package:diohub/view/home/unified_home_screen.dart';
 import 'package:diohub_models/models/authentication/account_model.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/semantics.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
@@ -90,7 +91,22 @@ void main() {
 
     expect(find.text('Dashboard'), findsOneWidget);
     expect(find.text('Home'), findsOneWidget);
+    final Text homeTitle = tester.widget<Text>(find.text('Home'));
+    expect(homeTitle.style?.fontSize, 24);
+    expect(homeTitle.style?.height, closeTo(32 / 24, 0.0001));
+    expect(homeTitle.style?.fontWeight, FontWeight.w700);
     expect(find.text('Ask anything or type @ to add context'), findsOneWidget);
+    for (final String key in <String>[
+      'home-command-ask',
+      'home-command-add-context',
+      'home-command-model',
+      'home-command-send',
+    ]) {
+      expect(
+        tester.getSize(find.byKey(ValueKey<String>(key))).height,
+        greaterThanOrEqualTo(48),
+      );
+    }
     expect(find.text('Top repositories'), findsOneWidget);
     expect(
       find.byKey(const ValueKey<String>('home-mobile-top-repositories')),
@@ -102,6 +118,7 @@ void main() {
   testWidgets('keeps the same compact home after sign-in at 360px', (
     final WidgetTester tester,
   ) async {
+    final SemanticsHandle semantics = tester.ensureSemantics();
     final AccountModel account = AccountModel(
       nodeId: 'MDQ6VXNlcjE=',
       username: 'octocat',
@@ -141,7 +158,19 @@ void main() {
     expect(find.text('Feed'), findsOneWidget);
     expect(find.text('Filter'), findsOneWidget);
     expect(find.byType(UserAvatar), findsWidgets);
+    final Finder accountSwitch = find.byKey(
+      const ValueKey<String>('home-mobile-account-switch'),
+    );
+    expect(tester.getSize(accountSwitch).height, greaterThanOrEqualTo(48));
+    expect(
+      tester
+          .getSemantics(accountSwitch)
+          .getSemanticsData()
+          .hasAction(SemanticsAction.tap),
+      isTrue,
+    );
     expect(tester.takeException(), isNull);
+    semantics.dispose();
   });
 
   testWidgets('renders the primary home chrome in Simplified Chinese', (

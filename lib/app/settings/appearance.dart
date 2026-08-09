@@ -9,10 +9,10 @@ enum SurfaceRendering {
   solid;
 
   String get name => switch (this) {
-        SurfaceRendering.glass => 'glass',
-        SurfaceRendering.blur => 'blur',
-        SurfaceRendering.solid => 'solid',
-      };
+    SurfaceRendering.glass => 'glass',
+    SurfaceRendering.blur => 'blur',
+    SurfaceRendering.solid => 'solid',
+  };
 
   static SurfaceRendering fromName(final String name) =>
       SurfaceRendering.values.firstWhere(
@@ -27,9 +27,9 @@ enum AppBarStyle {
   attached;
 
   String get name => switch (this) {
-        AppBarStyle.floating => 'floating',
-        AppBarStyle.attached => 'attached',
-      };
+    AppBarStyle.floating => 'floating',
+    AppBarStyle.attached => 'attached',
+  };
 
   static AppBarStyle fromName(final String name) =>
       AppBarStyle.values.firstWhere(
@@ -47,11 +47,11 @@ enum AnimationPreset {
   enhanced;
 
   String get name => switch (this) {
-        AnimationPreset.none => 'none',
-        AnimationPreset.reduced => 'reduced',
-        AnimationPreset.normal => 'normal',
-        AnimationPreset.enhanced => 'enhanced',
-      };
+    AnimationPreset.none => 'none',
+    AnimationPreset.reduced => 'reduced',
+    AnimationPreset.normal => 'normal',
+    AnimationPreset.enhanced => 'enhanced',
+  };
 
   static AnimationPreset fromName(final String name) =>
       AnimationPreset.values.firstWhere(
@@ -61,13 +61,18 @@ enum AnimationPreset {
 
   /// Duration in ms for this preset (bounded; enhanced capped at 380).
   int get durationMs => switch (this) {
-        AnimationPreset.none => 0,
-        AnimationPreset.reduced => 180,
-        AnimationPreset.normal => 300,
-        AnimationPreset.enhanced => 380,
-      };
+    AnimationPreset.none => 0,
+    AnimationPreset.reduced => 180,
+    AnimationPreset.normal => 300,
+    AnimationPreset.enhanced => 380,
+  };
 
-  bool get disableAnimations => this == AnimationPreset.none;
+  /// Whether spatial/decorative motion must be removed at the application root.
+  ///
+  /// Both `none` and `reduced` opt out of obvious motion. Components may still
+  /// provide immediate color, focus, and selection feedback.
+  bool get disableAnimations =>
+      this == AnimationPreset.none || this == AnimationPreset.reduced;
   bool get reduceListAnimations =>
       this == AnimationPreset.none || this == AnimationPreset.reduced;
   bool get disableShimmerAnimation =>
@@ -116,9 +121,8 @@ class AppearanceSettings {
         : AppBarStyle.floating;
     final SurfaceRendering appBarSurfaceRendering =
         json['appBarSurfaceRendering'] is String
-            ? SurfaceRendering.fromName(
-                json['appBarSurfaceRendering'] as String)
-            : SurfaceRendering.glass;
+        ? SurfaceRendering.fromName(json['appBarSurfaceRendering'] as String)
+        : SurfaceRendering.glass;
     final AnimationPreset preset = json['animationPreset'] is String
         ? AnimationPreset.fromName(json['animationPreset'] as String)
         : AnimationPreset.normal;
@@ -126,24 +130,24 @@ class AppearanceSettings {
         (json['glassBlur'] as num?)?.toDouble() ?? kDefaultGlassBlur;
     final double glassBorderWidth =
         (json['glassBorderWidth'] as num?)?.toDouble() ??
-            kDefaultGlassBorderWidth;
+        kDefaultGlassBorderWidth;
     final double glassVisibility =
         (json['glassVisibility'] as num?)?.toDouble() ??
-            kDefaultGlassVisibility;
+        kDefaultGlassVisibility;
     final double glassThickness =
         (json['glassThickness'] as num?)?.toDouble() ?? kDefaultGlassThickness;
     final double glassLightIntensity =
         (json['glassLightIntensity'] as num?)?.toDouble() ??
-            kDefaultGlassLightIntensity;
+        kDefaultGlassLightIntensity;
     final bool fuzzyFiltering = json['fuzzyFiltering'] as bool? ?? false;
-    final double? appBarGlassBlur =
-        (json['appBarGlassBlur'] as num?)?.toDouble();
+    final double? appBarGlassBlur = (json['appBarGlassBlur'] as num?)
+        ?.toDouble();
     final double? appBarGlassBorderWidth =
         (json['appBarGlassBorderWidth'] as num?)?.toDouble();
     final double? appBarGlassVisibility =
         (json['appBarGlassVisibility'] as num?)?.toDouble();
-    final double? appBarGlassThickness =
-        (json['appBarGlassThickness'] as num?)?.toDouble();
+    final double? appBarGlassThickness = (json['appBarGlassThickness'] as num?)
+        ?.toDouble();
     final double? appBarGlassLightIntensity =
         (json['appBarGlassLightIntensity'] as num?)?.toDouble();
 
@@ -215,27 +219,27 @@ class AppearanceSettings {
   bool get disableShimmerAnimation => animationPreset.disableShimmerAnimation;
 
   Map<String, dynamic> toJson() => <String, dynamic>{
-        'surfaceStyle': surfaceRendering.name,
-        'appBarStyle': appBarStyle.name,
-        'appBarSurfaceRendering': appBarSurfaceRendering.name,
-        if (appBarGlassBlur != null) 'appBarGlassBlur': appBarGlassBlur,
-        if (appBarGlassBorderWidth != null)
-          'appBarGlassBorderWidth': appBarGlassBorderWidth,
-        if (appBarGlassVisibility != null)
-          'appBarGlassVisibility': appBarGlassVisibility,
-        if (appBarGlassThickness != null)
-          'appBarGlassThickness': appBarGlassThickness,
-        if (appBarGlassLightIntensity != null)
-          'appBarGlassLightIntensity': appBarGlassLightIntensity,
-        'animationPreset': animationPreset.name,
-        'toolbarMinimizeOnScroll': toolbarMinimizeOnScroll,
-        'fuzzyFiltering': fuzzyFiltering,
-        'glassBlur': glassBlur,
-        'glassBorderWidth': glassBorderWidth,
-        'glassVisibility': glassVisibility,
-        'glassThickness': glassThickness,
-        'glassLightIntensity': glassLightIntensity,
-      };
+    'surfaceStyle': surfaceRendering.name,
+    'appBarStyle': appBarStyle.name,
+    'appBarSurfaceRendering': appBarSurfaceRendering.name,
+    if (appBarGlassBlur != null) 'appBarGlassBlur': appBarGlassBlur,
+    if (appBarGlassBorderWidth != null)
+      'appBarGlassBorderWidth': appBarGlassBorderWidth,
+    if (appBarGlassVisibility != null)
+      'appBarGlassVisibility': appBarGlassVisibility,
+    if (appBarGlassThickness != null)
+      'appBarGlassThickness': appBarGlassThickness,
+    if (appBarGlassLightIntensity != null)
+      'appBarGlassLightIntensity': appBarGlassLightIntensity,
+    'animationPreset': animationPreset.name,
+    'toolbarMinimizeOnScroll': toolbarMinimizeOnScroll,
+    'fuzzyFiltering': fuzzyFiltering,
+    'glassBlur': glassBlur,
+    'glassBorderWidth': glassBorderWidth,
+    'glassVisibility': glassVisibility,
+    'glassThickness': glassThickness,
+    'glassLightIntensity': glassLightIntensity,
+  };
 
   AppearanceSettings copyWith({
     final SurfaceRendering? surfaceRendering,
@@ -254,30 +258,28 @@ class AppearanceSettings {
     final double? glassVisibility,
     final double? glassThickness,
     final double? glassLightIntensity,
-  }) =>
-      AppearanceSettings(
-        surfaceRendering: surfaceRendering ?? this.surfaceRendering,
-        appBarStyle: appBarStyle ?? this.appBarStyle,
-        appBarSurfaceRendering:
-            appBarSurfaceRendering ?? this.appBarSurfaceRendering,
-        appBarGlassBlur: appBarGlassBlur ?? this.appBarGlassBlur,
-        appBarGlassBorderWidth:
-            appBarGlassBorderWidth ?? this.appBarGlassBorderWidth,
-        appBarGlassVisibility:
-            appBarGlassVisibility ?? this.appBarGlassVisibility,
-        appBarGlassThickness: appBarGlassThickness ?? this.appBarGlassThickness,
-        appBarGlassLightIntensity:
-            appBarGlassLightIntensity ?? this.appBarGlassLightIntensity,
-        animationPreset: animationPreset ?? this.animationPreset,
-        toolbarMinimizeOnScroll:
-            toolbarMinimizeOnScroll ?? this.toolbarMinimizeOnScroll,
-        fuzzyFiltering: fuzzyFiltering ?? this.fuzzyFiltering,
-        glassBlur: glassBlur ?? this.glassBlur,
-        glassBorderWidth: glassBorderWidth ?? this.glassBorderWidth,
-        glassVisibility: glassVisibility ?? this.glassVisibility,
-        glassThickness: glassThickness ?? this.glassThickness,
-        glassLightIntensity: glassLightIntensity ?? this.glassLightIntensity,
-      );
+  }) => AppearanceSettings(
+    surfaceRendering: surfaceRendering ?? this.surfaceRendering,
+    appBarStyle: appBarStyle ?? this.appBarStyle,
+    appBarSurfaceRendering:
+        appBarSurfaceRendering ?? this.appBarSurfaceRendering,
+    appBarGlassBlur: appBarGlassBlur ?? this.appBarGlassBlur,
+    appBarGlassBorderWidth:
+        appBarGlassBorderWidth ?? this.appBarGlassBorderWidth,
+    appBarGlassVisibility: appBarGlassVisibility ?? this.appBarGlassVisibility,
+    appBarGlassThickness: appBarGlassThickness ?? this.appBarGlassThickness,
+    appBarGlassLightIntensity:
+        appBarGlassLightIntensity ?? this.appBarGlassLightIntensity,
+    animationPreset: animationPreset ?? this.animationPreset,
+    toolbarMinimizeOnScroll:
+        toolbarMinimizeOnScroll ?? this.toolbarMinimizeOnScroll,
+    fuzzyFiltering: fuzzyFiltering ?? this.fuzzyFiltering,
+    glassBlur: glassBlur ?? this.glassBlur,
+    glassBorderWidth: glassBorderWidth ?? this.glassBorderWidth,
+    glassVisibility: glassVisibility ?? this.glassVisibility,
+    glassThickness: glassThickness ?? this.glassThickness,
+    glassLightIntensity: glassLightIntensity ?? this.glassLightIntensity,
+  );
 }
 
 Map<String, dynamic> _appearanceToJson(final AppearanceSettings v) =>
@@ -285,8 +287,8 @@ Map<String, dynamic> _appearanceToJson(final AppearanceSettings v) =>
 
 const SettingsDescriptor<AppearanceSettings> appearanceDescriptor =
     SettingsDescriptor<AppearanceSettings>(
-  key: 'app_appearance',
-  defaultValue: AppearanceSettings(),
-  fromJson: AppearanceSettings.fromJson,
-  toJson: _appearanceToJson,
-);
+      key: 'app_appearance',
+      defaultValue: AppearanceSettings(),
+      fromJson: AppearanceSettings.fromJson,
+      toJson: _appearanceToJson,
+    );

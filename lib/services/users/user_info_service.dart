@@ -245,11 +245,27 @@ class UserInfoService extends BaseService {
     @Skip() final bool refresh = false,
     @Desc('Pagination cursor') final String? after,
   }) async {
+    return (await getUserOrganizationsPage(
+      login,
+      refresh: refresh,
+      after: after,
+    )).items;
+  }
+
+  /// Cursor page used by Settings and other session-owned paginated views.
+  ///
+  /// The older list-returning method remains for existing profile consumers.
+  Future<PaginatedResult<UserOrgEdge?>> getUserOrganizationsPage(
+    final String login, {
+    final bool refresh = false,
+    final String? after,
+    final int first = profileListPageSize,
+  }) async {
     final GQLResponse res = await gql.query(
       documentNodeQuerygetUserOrganizations,
       Variables$Query$getUserOrganizations(
         user: login,
-        first: profileListPageSize,
+        first: first,
         after: after,
       ).toJson(),
       refreshCache: refresh,
@@ -257,7 +273,13 @@ class UserInfoService extends BaseService {
     final GetUserOrganizationsData data = GetUserOrganizationsData.fromJson(
       res.data!,
     );
-    return data.user?.organizations.edges?.toList() ?? <UserOrgEdge?>[];
+    final connection = data.user?.organizations;
+    return PaginatedResult<UserOrgEdge?>(
+      items: connection?.edges?.toList() ?? <UserOrgEdge?>[],
+      hasNextPage: connection?.pageInfo.hasNextPage ?? false,
+      endCursor: connection?.pageInfo.endCursor,
+      totalCount: connection?.totalCount,
+    );
   }
 
   /// Organization members (paginated). Uses get_org_members.graphql (codegen).

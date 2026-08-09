@@ -93,6 +93,11 @@ void main() {
       find.byKey(const ValueKey<String>('repository-md3-compact')),
       findsOneWidget,
     );
+    expect(
+      find.byIcon(Icons.arrow_drop_down),
+      findsNothing,
+      reason: 'the repository title has no dropdown action to advertise',
+    );
     await tester.tap(find.byTooltip('Open navigation'));
     await tester.pumpAndSettle();
     expect(find.byType(NavigationDrawer), findsOneWidget);
@@ -122,6 +127,7 @@ void main() {
       find.byKey(const ValueKey<String>('repository-md3-medium')),
       findsOneWidget,
     );
+    expect(find.byIcon(Icons.arrow_drop_down), findsNothing);
     expect(
       find.byKey(const ValueKey<String>('repository-md3-navigation-rail')),
       findsNothing,
@@ -143,6 +149,7 @@ void main() {
       find.byKey(const ValueKey<String>('repository-md3-expanded')),
       findsOneWidget,
     );
+    expect(find.byIcon(Icons.arrow_drop_down), findsNothing);
     expect(
       find.byKey(const ValueKey<String>('repository-md3-navigation-rail')),
       findsNothing,

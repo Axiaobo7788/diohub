@@ -184,14 +184,22 @@ class GlobalAccountMenu extends StatelessWidget {
         for (final (IconData, String) destination in <(IconData, String)>[
           (Icons.smart_toy_outlined, context.l10n.accountCopilotSettings),
           (Icons.science_outlined, context.l10n.accountFeaturePreview),
-          (Icons.palette_outlined, context.l10n.accountAppearance),
-          (Icons.accessibility_new_outlined, context.l10n.accountAccessibility),
         ])
           MenuItemButton(
             onPressed: () => onStagedAction(destination.$2),
             leadingIcon: Icon(destination.$1),
             child: Text(destination.$2),
           ),
+        _profileItem(
+          icon: Icons.palette_outlined,
+          label: context.l10n.accountAppearance,
+          tab: 'settings/appearance',
+        ),
+        _profileItem(
+          icon: Icons.accessibility_new_outlined,
+          label: context.l10n.accountAccessibility,
+          tab: 'settings/accessibility',
+        ),
         MenuItemButton(
           key: const ValueKey<String>('global-language-menu-item'),
           onPressed: () => unawaited(_showLanguageDialog(context)),

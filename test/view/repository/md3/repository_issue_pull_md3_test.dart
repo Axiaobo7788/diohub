@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:diohub/app/settings/settings_cache.dart';
 import 'package:diohub/common/animations/motion.dart';
+import 'package:diohub/common/misc/shimmer_bone.dart';
 import 'package:diohub/common/misc/shimmer_scope.dart';
 import 'package:diohub/common/search_overlay/search_type_adapter.dart';
 import 'package:diohub/common/wrappers/search_scroll_wrapper.dart';
@@ -97,9 +98,31 @@ void main() {
     }
   });
 
+  testWidgets('360px toolbar remains usable at 2x text scaling', (
+    final WidgetTester tester,
+  ) async {
+    final _FakeSearchBackend backend = _FakeSearchBackend(<_SearchResponse>[
+      () async => _emptyPage,
+    ]);
+
+    await _pumpPage(
+      tester,
+      width: 360,
+      kind: RepositoryIssuePullKind.pullRequests,
+      backend: backend,
+      textScaler: const TextScaler.linear(2),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Pull requests'), findsWidgets);
+    expect(find.text('New pull request'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('shows an honest first-page loading state', (
     final WidgetTester tester,
   ) async {
+    final SemanticsHandle semantics = tester.ensureSemantics();
     final Completer<PageSlice<Object>> response =
         Completer<PageSlice<Object>>();
     final _FakeSearchBackend backend = _FakeSearchBackend(<_SearchResponse>[
@@ -124,6 +147,8 @@ void main() {
       findsOneWidget,
     );
     expect(find.byType(ShimmerScope), findsOneWidget);
+    expect(find.byType(ShimmerBone), findsNothing);
+    expect(find.bySemanticsLabel('Loading repository…'), findsOneWidget);
     expect(
       find.byKey(const ValueKey<String>('repository-issue-pull-empty')),
       findsNothing,
@@ -136,6 +161,7 @@ void main() {
       find.byKey(const ValueKey<String>('repository-issue-pull-empty')),
       findsOneWidget,
     );
+    semantics.dispose();
   });
 
   testWidgets('renders the empty state after an empty page', (
@@ -175,6 +201,11 @@ void main() {
 
       expect(backend.fetchCalls, 1);
       expect(backend.queries.single.split(' '), contains('is:open'));
+      expect(_statusSemantics(label: 'Open 0', selected: true), findsOneWidget);
+      expect(
+        _statusSemantics(label: 'Closed', selected: false),
+        findsOneWidget,
+      );
       expect(
         tester
             .widget<sliver_tools.SliverAnimatedSwitcher>(
@@ -191,6 +222,11 @@ void main() {
 
       expect(backend.fetchCalls, 2);
       expect(backend.queries.last.split(' '), contains('is:closed'));
+      expect(_statusSemantics(label: 'Open', selected: false), findsOneWidget);
+      expect(
+        _statusSemantics(label: 'Closed 0', selected: true),
+        findsOneWidget,
+      );
       expect(
         find.byKey(const ValueKey<String>('repository-issue-pull-loading')),
         findsNothing,
@@ -582,6 +618,16 @@ void main() {
   });
 }
 
+Finder _statusSemantics({
+  required final String label,
+  required final bool selected,
+}) => find.byWidgetPredicate(
+  (final Widget widget) =>
+      widget is Semantics &&
+      widget.properties.label == label &&
+      widget.properties.selected == selected,
+);
+
 typedef _SearchResponse = Future<PageSlice<Object>> Function();
 
 final class _FakeSearchBackend {
@@ -647,6 +693,7 @@ Future<void> _pumpPage(
   required final _FakeSearchBackend backend,
   final bool signedIn = true,
   final bool disableAnimations = false,
+  final TextScaler textScaler = TextScaler.noScaling,
   final Locale locale = const Locale('en'),
   final ValueChanged<Future<void> Function()?>? onRefreshReady,
 }) async {
@@ -696,9 +743,10 @@ Future<void> _pumpPage(
         theme: ThemeData(useMaterial3: true),
         builder: (final BuildContext context, final Widget? child) =>
             MediaQuery(
-              data: MediaQuery.of(
-                context,
-              ).copyWith(disableAnimations: disableAnimations),
+              data: MediaQuery.of(context).copyWith(
+                disableAnimations: disableAnimations,
+                textScaler: textScaler,
+              ),
               child: child!,
             ),
         home: Scaffold(body: page),

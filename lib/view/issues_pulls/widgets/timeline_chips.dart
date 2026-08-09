@@ -23,6 +23,10 @@ class ClosesTargetBadge extends StatelessWidget {
       icon: Octicons.issue_closed,
       color: DiffColors.addition,
       iconSize: 12,
+      labelStyle: Theme.of(context).textTheme.labelSmall?.copyWith(
+        color: Theme.of(context).colorScheme.onSurface,
+        fontWeight: FontWeight.w500,
+      ),
     );
   }
 }
@@ -45,6 +49,10 @@ class StateReasonBadge extends StatelessWidget {
       label: label,
       color: color,
       iconSize: 12,
+      labelStyle: Theme.of(context).textTheme.labelSmall?.copyWith(
+        color: Theme.of(context).colorScheme.onSurface,
+        fontWeight: FontWeight.w500,
+      ),
     );
   }
 }
@@ -71,9 +79,9 @@ class CommitOidChip extends StatelessWidget {
       label: abbreviatedOid,
       accentColor: null,
       textStyle: Theme.of(context).textTheme.labelSmall?.copyWith(
-            fontFamily: 'monospace',
-            fontWeight: FontWeight.w600,
-          ),
+        fontFamily: 'monospace',
+        fontWeight: FontWeight.w600,
+      ),
     );
   }
 }
@@ -100,32 +108,42 @@ class InteractiveCommitChip extends ConsumerWidget {
     return PopupButton(
       placement: Placement.bottom,
       buttonBuilder: (final BuildContext c, final VoidCallback showPopup) =>
-          GestureDetector(
-        onTap: () =>
-            CommitRef(repo: repoRef, oid: fullOid).navigate(context, ref),
-        onLongPress: showPopup,
-        child: CommitOidChip(
-          abbreviatedOid: abbreviatedOid,
-          commitUrl: '',
-        ),
-      ),
+          Material(
+            color: Colors.transparent,
+            child: InkWell(
+              key: ValueKey<String>('interactive-commit-chip-$fullOid'),
+              onTap: () =>
+                  CommitRef(repo: repoRef, oid: fullOid).navigate(context, ref),
+              onLongPress: showPopup,
+              borderRadius: BorderRadius.circular(6),
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(minWidth: 48, minHeight: 48),
+                child: Center(
+                  child: CommitOidChip(
+                    abbreviatedOid: abbreviatedOid,
+                    commitUrl: '',
+                  ),
+                ),
+              ),
+            ),
+          ),
       popupBuilder: (final BuildContext c, final VoidCallback onDismiss) =>
           buildCommitPopupContent(
-        context,
-        onDismiss: onDismiss,
-        abbreviatedOid: abbreviatedOid,
-        fullOid: fullOid,
-        repoRef: repoRef,
-        onViewCommit: () =>
-            CommitRef(repo: repoRef, oid: fullOid).navigate(context, ref),
-        onBrowseFiles: () => RepoRef(
-          owner: repoRef.owner,
-          name: repoRef.name,
-          location: RepoLocationTree(branch: fullOid),
-        ).navigate(context, ref),
-        onCompareWithParent: onCompareWithParent,
-        onCopySha: () => ref.read(clipboardServiceProvider).copy(fullOid),
-      ),
+            context,
+            onDismiss: onDismiss,
+            abbreviatedOid: abbreviatedOid,
+            fullOid: fullOid,
+            repoRef: repoRef,
+            onViewCommit: () =>
+                CommitRef(repo: repoRef, oid: fullOid).navigate(context, ref),
+            onBrowseFiles: () => RepoRef(
+              owner: repoRef.owner,
+              name: repoRef.name,
+              location: RepoLocationTree(branch: fullOid),
+            ).navigate(context, ref),
+            onCompareWithParent: onCompareWithParent,
+            onCopySha: () => ref.read(clipboardServiceProvider).copy(fullOid),
+          ),
     );
   }
 }
@@ -145,27 +163,15 @@ class AdditionsDeletionsText extends StatelessWidget {
   Widget build(final BuildContext context) {
     if (additions == 0 && deletions == 0) return const SizedBox.shrink();
 
+    final TextStyle? textStyle = Theme.of(context).textTheme.labelSmall
+        ?.copyWith(color: Theme.of(context).colorScheme.onSurface);
     return Text.rich(
       TextSpan(
-        style: Theme.of(context).textTheme.labelSmall,
+        style: textStyle,
         children: <InlineSpan>[
-          if (additions > 0)
-            TextSpan(
-              text: '+$additions',
-              style: TextStyle(color: DiffColors.addition),
-            ),
-          if (additions > 0 && deletions > 0)
-            TextSpan(
-              text: ' / ',
-              style: TextStyle(
-                color: Theme.of(context).colorScheme.onSurfaceVariant,
-              ),
-            ),
-          if (deletions > 0)
-            TextSpan(
-              text: '-$deletions',
-              style: TextStyle(color: DiffColors.deletion),
-            ),
+          if (additions > 0) TextSpan(text: '+$additions'),
+          if (additions > 0 && deletions > 0) const TextSpan(text: ' / '),
+          if (deletions > 0) TextSpan(text: '-$deletions'),
         ],
       ),
     );
@@ -181,11 +187,7 @@ class ReviewStateLabelBadge extends StatelessWidget {
   @override
   Widget build(final BuildContext context) {
     final Color color = Theme.of(context).colorScheme.onSurfaceVariant;
-    return TintedChip(
-      label: label,
-      color: color,
-      iconSize: 12,
-    );
+    return TintedChip(label: label, color: color, iconSize: 12);
   }
 }
 

@@ -7,7 +7,9 @@ import 'package:diohub/view/repository/md3/repository_security_md3.dart';
 import 'package:diohub/view/repository/md3/repository_tab_scaffold.dart';
 import 'package:diohub_models/models/entity_ref.dart';
 import 'package:diohub_models/models/repositories/participation_response.dart';
+import 'package:diohub_models/models/repositories/workflow_run.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
@@ -96,6 +98,12 @@ void main() {
     expect(find.byKey(const ValueKey<String>('compact-picker')), findsNothing);
     expect(find.text('All workflows'), findsOneWidget);
     expect(find.byKey(const ValueKey<String>('run-list')), findsOneWidget);
+    final Finder navigationTile = find.widgetWithText(
+      ListTile,
+      'All workflows',
+    );
+    expect(tester.widget<ListTile>(navigationTile).minTileHeight, 48);
+    expect(tester.getSize(navigationTile).height, greaterThanOrEqualTo(48));
     expect(tester.takeException(), isNull);
   });
 
@@ -169,6 +177,54 @@ void main() {
     expect(find.text('Retry'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
+
+  testWidgets(
+    'Actions run row reflows API metadata at 360px and 2x text scale',
+    (final WidgetTester tester) async {
+      final SemanticsHandle semantics = tester.ensureSemantics();
+      const WorkflowRunItem run = WorkflowRunItem(
+        id: 42,
+        name: 'CI',
+        displayTitle:
+            'Validate the responsive repository Actions experience on mobile',
+        status: 'completed',
+        conclusion: 'success',
+        headBranch: 'feature/accessible-actions-layout',
+        headSha: 'abc1234def5678',
+        htmlUrl: 'https://github.com/octocat/hello-world/actions/runs/42',
+        runNumber: 19,
+        event: 'pull_request',
+        triggeringActor: WorkflowActor(login: 'octocat'),
+        headCommit: WorkflowHeadCommit(message: 'Improve Actions layout'),
+      );
+      await pumpAt(
+        tester,
+        size: const Size(360, 800),
+        textScale: 2,
+        disableAnimations: true,
+        child: const SingleChildScrollView(
+          padding: EdgeInsets.all(12),
+          child: RepositoryWorkflowRunRow(run: run, first: true),
+        ),
+      );
+
+      expect(find.text('feature/accessible-actions-layout'), findsOneWidget);
+      expect(find.text('abc1234'), findsOneWidget);
+      final Finder runTarget = find.byKey(
+        const ValueKey<String>('repository-actions-run-42'),
+      );
+      expect(tester.getSize(runTarget).height, greaterThanOrEqualTo(48));
+
+      final Finder runLink = find.bySemanticsLabel(
+        RegExp('Validate the responsive repository Actions experience'),
+      );
+      final SemanticsNode node = tester.getSemantics(runLink);
+      expect(node.hasFlag(SemanticsFlag.isLink), isTrue);
+      expect(node.getSemanticsData().hasAction(SemanticsAction.tap), isTrue);
+      expect(tester.takeException(), isNull);
+      semantics.dispose();
+    },
+  );
 
   testWidgets('Insights pulse renders real activity and language proportions', (
     final WidgetTester tester,

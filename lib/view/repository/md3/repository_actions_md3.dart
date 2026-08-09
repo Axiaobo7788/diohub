@@ -11,6 +11,7 @@ import 'package:diohub/l10n/relative_time.dart';
 import 'package:diohub/providers/database_providers.dart';
 import 'package:diohub/routes/router.gr.dart';
 import 'package:diohub/services/base/service_extensions.dart';
+import 'package:diohub/style/diff_colors.dart';
 import 'package:diohub/view/repository/md3/repository_md3_layout.dart';
 import 'package:diohub/view/repository/md3/repository_tab_scaffold.dart';
 import 'package:diohub_models/models/entity_ref.dart';
@@ -18,6 +19,7 @@ import 'package:diohub_models/models/pagination/page_slice.dart';
 import 'package:diohub_models/models/repositories/workflow.dart';
 import 'package:diohub_models/models/repositories/workflow_run.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -223,54 +225,78 @@ class _RepositoryActionsMd3PageState
                 ),
               ],
               slivers: <Widget>[
-                SliverPadding(
-                  padding: const EdgeInsets.fromLTRB(
-                    RepositoryMd3Layout.regularPageInset,
-                    0,
-                    RepositoryMd3Layout.regularPageInset,
-                    RepositoryMd3Layout.space16,
-                  ),
-                  sliver: SliverToBoxAdapter(
-                    child: _buildToolbar(context, state),
-                  ),
-                ),
-                SliverPadding(
-                  padding: const EdgeInsets.fromLTRB(
-                    RepositoryMd3Layout.regularPageInset,
-                    0,
-                    RepositoryMd3Layout.regularPageInset,
-                    RepositoryMd3Layout.regularPageInset,
-                  ),
-                  sliver: PaginatedSliverList<WorkflowRunItem>(
-                    controller: _runsController,
-                    itemBuilder:
-                        (
-                          final BuildContext context,
-                          final WorkflowRunItem run,
-                          final int index,
-                        ) => _WorkflowRunRow(run: run, first: index == 0),
-                    emptyBuilder: (final BuildContext context) =>
-                        RepositoryTabStateCard(
-                          icon: Icons.play_circle_outline,
-                          title: context.l10n.repoNoWorkflowRuns,
-                          message: context.l10n.repoNoWorkflowRunsBody,
-                        ),
-                    errorBuilder:
-                        (
-                          final BuildContext context,
-                          final Object error,
-                          final VoidCallback retry,
-                        ) => RepositoryTabStateCard(
-                          icon: Icons.error_outline,
-                          title: context.l10n.repoActionsLoadError,
-                          message: '$error',
-                          action: OutlinedButton.icon(
-                            onPressed: retry,
-                            icon: const Icon(Icons.refresh),
-                            label: Text(context.l10n.commonRetry),
+                SliverLayoutBuilder(
+                  builder:
+                      (
+                        final BuildContext context,
+                        final SliverConstraints constraints,
+                      ) {
+                        final double inset = RepositoryMd3Layout.pagePaddingFor(
+                          RepositoryMd3Layout.windowClassFor(
+                            constraints.crossAxisExtent,
                           ),
-                        ),
-                  ),
+                        ).left;
+                        return SliverPadding(
+                          padding: EdgeInsets.fromLTRB(
+                            inset,
+                            0,
+                            inset,
+                            RepositoryMd3Layout.space16,
+                          ),
+                          sliver: SliverToBoxAdapter(
+                            child: _buildToolbar(context, state),
+                          ),
+                        );
+                      },
+                ),
+                SliverLayoutBuilder(
+                  builder:
+                      (
+                        final BuildContext context,
+                        final SliverConstraints constraints,
+                      ) {
+                        final double inset = RepositoryMd3Layout.pagePaddingFor(
+                          RepositoryMd3Layout.windowClassFor(
+                            constraints.crossAxisExtent,
+                          ),
+                        ).left;
+                        return SliverPadding(
+                          padding: EdgeInsets.fromLTRB(inset, 0, inset, inset),
+                          sliver: PaginatedSliverList<WorkflowRunItem>(
+                            controller: _runsController,
+                            itemBuilder:
+                                (
+                                  final BuildContext context,
+                                  final WorkflowRunItem run,
+                                  final int index,
+                                ) => RepositoryWorkflowRunRow(
+                                  run: run,
+                                  first: index == 0,
+                                ),
+                            emptyBuilder: (final BuildContext context) =>
+                                RepositoryTabStateCard(
+                                  icon: Icons.play_circle_outline,
+                                  title: context.l10n.repoNoWorkflowRuns,
+                                  message: context.l10n.repoNoWorkflowRunsBody,
+                                ),
+                            errorBuilder:
+                                (
+                                  final BuildContext context,
+                                  final Object error,
+                                  final VoidCallback retry,
+                                ) => RepositoryTabStateCard(
+                                  icon: Icons.error_outline,
+                                  title: context.l10n.repoActionsLoadError,
+                                  message: '$error',
+                                  action: OutlinedButton.icon(
+                                    onPressed: retry,
+                                    icon: const Icon(Icons.refresh),
+                                    label: Text(context.l10n.commonRetry),
+                                  ),
+                                ),
+                          ),
+                        );
+                      },
                 ),
               ],
             );

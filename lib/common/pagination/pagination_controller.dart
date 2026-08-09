@@ -3,10 +3,10 @@ import 'dart:async';
 import 'package:diohub/app/app_logger.dart';
 import 'package:diohub/common/pagination/item_patch.dart';
 import 'package:diohub/common/pagination/page_source.dart';
+import 'package:diohub/common/pagination/page_size.dart';
 import 'package:diohub/common/pagination/pagination_phase.dart';
 import 'package:diohub/common/pagination/pagination_state.dart';
 import 'package:diohub/common/pagination/patch_overlay.dart';
-import 'package:diohub/common/pagination/page_size.dart';
 import 'package:flutter/foundation.dart';
 
 /// Unified controller for forward-only and bidirectional paginated lists.
@@ -39,6 +39,11 @@ class PaginationController<T, R> {
   final PageSource<T> source;
   final String Function(R) idOf;
   final List<R> Function(List<T> raw)? transform;
+
+  /// A reversible view projection over retained items.
+  ///
+  /// Unlike [transform], this never removes items from the controller's source
+  /// buffer, so [refilter] can restore them without another network request.
   final List<R> Function(List<R> items)? filter;
   final R? Function(R previousLast, R nextFirst)? boundaryMerger;
   final Set<String> Function(R)? containedIdsOf;
@@ -89,8 +94,7 @@ class PaginationController<T, R> {
   ForwardPageReplacement<T>? _pendingSourceReplacement;
 
   List<R> _process(List<T> raw) {
-    final transformed = transform != null ? transform!(raw) : raw as List<R>;
-    return filter != null ? filter!(transformed) : transformed;
+    return transform != null ? transform!(raw) : raw as List<R>;
   }
 
   /// Re-apply [filter] to current items without refetching. Call when filter

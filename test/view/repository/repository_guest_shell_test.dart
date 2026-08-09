@@ -2,9 +2,11 @@ import 'dart:async';
 
 import 'package:diohub/app/settings/settings_cache.dart';
 import 'package:diohub/l10n/app_localizations.dart';
+import 'package:diohub/models/repository_preview.dart';
 import 'package:diohub/providers/account/account_provider.dart';
 import 'package:diohub/providers/database_providers.dart';
 import 'package:diohub/providers/repository/public_repository_providers.dart';
+import 'package:diohub/providers/repository/repository_preview_provider.dart';
 import 'package:diohub/providers/repository/repository_providers.dart';
 import 'package:diohub/providers/repository/wiki_providers.dart';
 import 'package:diohub/providers/users/user_providers.dart';
@@ -31,6 +33,7 @@ void main() {
     required final RepoRef repoRef,
     final Size size = const Size(800, 900),
     final TextScaler textScaler = TextScaler.noScaling,
+    final RepositoryPreview? preview,
   }) async {
     var repositoryBuilds = 0;
     var cardBuilds = 0;
@@ -71,6 +74,9 @@ void main() {
       ],
     );
     addTearDown(container.dispose);
+    if (preview != null) {
+      container.read(repositoryPreviewProvider(repoRef).notifier).seed(preview);
+    }
     tester.view
       ..devicePixelRatio = 1
       ..physicalSize = size;
@@ -168,6 +174,11 @@ void main() {
       expect(
         find.byKey(const ValueKey<String>('repository-file-table')),
         findsNothing,
+      );
+      expect(
+        find.byKey(const ValueKey<String>('repository-visibility-public')),
+        findsNothing,
+        reason: 'an unresolved repository must not be mislabeled as public',
       );
       expect(counts.repositoryBuilds, 0);
       expect(counts.cardBuilds, 0);
@@ -354,6 +365,30 @@ void main() {
       repoRef: const RepoRef(owner: 'octocat', name: 'hello-world'),
       size: const Size(360, 800),
       textScaler: const TextScaler.linear(2),
+      preview: const RepositoryPreview(
+        fullName: 'octocat/hello-world',
+        name: 'hello-world',
+        owner: 'octocat',
+        ownerAvatarUrl: null,
+        isPrivate: true,
+      ),
+    );
+
+    expect(
+      find.byKey(const ValueKey<String>('repository-identity-avatar')),
+      findsOneWidget,
+    );
+    expect(
+      tester
+          .widget<Text>(
+            find.byKey(const ValueKey<String>('repository-identity-name')),
+          )
+          .data,
+      'octocat/hello-world',
+    );
+    expect(
+      find.byKey(const ValueKey<String>('repository-visibility-private')),
+      findsOneWidget,
     );
 
     final TabController controller = tester

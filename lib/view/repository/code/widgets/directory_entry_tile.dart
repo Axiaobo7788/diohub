@@ -40,29 +40,35 @@ class DirectoryEntryTile extends ConsumerWidget {
       child: InkWell(
         onTap: () => _handleTap(context),
         borderRadius: BorderRadius.circular(8),
-        child: Padding(
-          padding: context.spacing.screenPadding.copyWith(top: 10, bottom: 10),
-          child: Row(
-            children: <Widget>[
-              _buildIcon(context),
-              context.spacing.itemGap,
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: <Widget>[
-                    _buildPrimaryRow(context),
-                    if (showLastCommit) _buildLastCommitRow(context, ref),
-                  ],
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(minHeight: 48),
+          child: Padding(
+            padding: context.spacing.screenPadding.copyWith(
+              top: 10,
+              bottom: 10,
+            ),
+            child: Row(
+              children: <Widget>[
+                _buildIcon(context),
+                context.spacing.itemGap,
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: <Widget>[
+                      _buildPrimaryRow(context),
+                      if (showLastCommit) _buildLastCommitRow(context, ref),
+                    ],
+                  ),
                 ),
-              ),
-              if (entry.kind == CodeEntryKind.directory)
-                Icon(
-                  Icons.chevron_right_rounded,
-                  size: 20,
-                  color: Theme.of(context).colorScheme.onSurfaceVariant,
-                ),
-            ],
+                if (entry.kind == CodeEntryKind.directory)
+                  Icon(
+                    Icons.chevron_right_rounded,
+                    size: 20,
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
+              ],
+            ),
           ),
         ),
       ),
@@ -88,23 +94,23 @@ class DirectoryEntryTile extends ConsumerWidget {
     final ColorScheme scheme = Theme.of(context).colorScheme;
     final (IconData icon, Color color) = switch (entry.kind) {
       CodeEntryKind.directory => (
-          Octicons.file_directory,
-          scheme.primary.withOpacity(0.8),
-        ),
-      CodeEntryKind.submodule => (
-          Octicons.repo,
-          scheme.tertiary,
-        ),
+        Octicons.file_directory,
+        scheme.primary.withOpacity(0.8),
+      ),
+      CodeEntryKind.submodule => (Octicons.repo, scheme.tertiary),
       CodeEntryKind.symlink => (
-          Octicons.file_symlink_file,
-          scheme.onSurfaceVariant,
-        ),
+        Octicons.file_symlink_file,
+        scheme.onSurfaceVariant,
+      ),
       CodeEntryKind.file => (
-          Octicons.file,
-          entry.languageColor != null
-              ? tryParseHexColor(entry.languageColor!, fallback: scheme.onSurfaceVariant)!
-              : scheme.onSurfaceVariant,
-        ),
+        Octicons.file,
+        entry.languageColor != null
+            ? tryParseHexColor(
+                entry.languageColor!,
+                fallback: scheme.onSurfaceVariant,
+              )!
+            : scheme.onSurfaceVariant,
+      ),
     };
     return Icon(icon, size: 20, color: color);
   }
@@ -120,9 +126,7 @@ class DirectoryEntryTile extends ConsumerWidget {
         Expanded(
           child: Text(
             entry.name,
-            style: textTheme.bodyMedium?.copyWith(
-              fontWeight: FontWeight.w500,
-            ),
+            style: textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w500),
             overflow: TextOverflow.ellipsis,
           ),
         ),
@@ -140,9 +144,7 @@ class DirectoryEntryTile extends ConsumerWidget {
             spacing.tightGap,
             Text(
               '${entry.lineCount} lines',
-              style: textTheme.labelSmall?.copyWith(
-                color: scheme.outline,
-              ),
+              style: textTheme.labelSmall?.copyWith(color: scheme.outline),
             ),
           ],
           if (entry.isGenerated) ...[
@@ -168,13 +170,10 @@ class DirectoryEntryTile extends ConsumerWidget {
   }
 
   Widget _buildLastCommitRow(BuildContext context, WidgetRef ref) {
-    final LastCommitKey key = (
-      repo: repoRef,
-      branch: branch,
-      path: entry.path,
+    final LastCommitKey key = (repo: repoRef, branch: branch, path: entry.path);
+    final AsyncValue<DirectoryLastCommit?> lastCommit = ref.watch(
+      directoryLastCommitProvider(key),
     );
-    final AsyncValue<DirectoryLastCommit?> lastCommit =
-        ref.watch(directoryLastCommitProvider(key));
     final ThemeData theme = Theme.of(context);
     final TextTheme textTheme = theme.textTheme;
     final ColorScheme scheme = theme.colorScheme;
@@ -187,9 +186,7 @@ class DirectoryEntryTile extends ConsumerWidget {
           padding: const EdgeInsets.only(top: 2),
           child: Text(
             '${_truncateMessage(commit.message)} · ${commit.committedDate.toRelativeDate()}',
-            style: textTheme.bodySmall?.copyWith(
-              color: scheme.outline,
-            ),
+            style: textTheme.bodySmall?.copyWith(color: scheme.outline),
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
           ),

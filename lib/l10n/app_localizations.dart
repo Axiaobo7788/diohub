@@ -236,6 +236,360 @@ abstract class AppLocalizations {
   /// **'Notifications'**
   String get homeNotifications;
 
+  /// No description provided for @notificationsInbox.
+  ///
+  /// In en, this message translates to:
+  /// **'Inbox'**
+  String get notificationsInbox;
+
+  /// No description provided for @notificationsSaved.
+  ///
+  /// In en, this message translates to:
+  /// **'Saved'**
+  String get notificationsSaved;
+
+  /// No description provided for @notificationsDone.
+  ///
+  /// In en, this message translates to:
+  /// **'Done'**
+  String get notificationsDone;
+
+  /// No description provided for @notificationsAll.
+  ///
+  /// In en, this message translates to:
+  /// **'All'**
+  String get notificationsAll;
+
+  /// No description provided for @notificationsUnread.
+  ///
+  /// In en, this message translates to:
+  /// **'Unread'**
+  String get notificationsUnread;
+
+  /// No description provided for @notificationsSearchHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Search notifications'**
+  String get notificationsSearchHint;
+
+  /// No description provided for @notificationsClearSearch.
+  ///
+  /// In en, this message translates to:
+  /// **'Clear notification search'**
+  String get notificationsClearSearch;
+
+  /// No description provided for @notificationsSortLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Sort by: {value}'**
+  String notificationsSortLabel(String value);
+
+  /// No description provided for @notificationsGroupLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Group by: {value}'**
+  String notificationsGroupLabel(String value);
+
+  /// No description provided for @notificationsNewestToOldest.
+  ///
+  /// In en, this message translates to:
+  /// **'Newest to oldest'**
+  String get notificationsNewestToOldest;
+
+  /// No description provided for @notificationsOldestToNewest.
+  ///
+  /// In en, this message translates to:
+  /// **'Oldest to newest'**
+  String get notificationsOldestToNewest;
+
+  /// No description provided for @notificationsRepository.
+  ///
+  /// In en, this message translates to:
+  /// **'Repository'**
+  String get notificationsRepository;
+
+  /// No description provided for @notificationsRepositories.
+  ///
+  /// In en, this message translates to:
+  /// **'Repositories'**
+  String get notificationsRepositories;
+
+  /// No description provided for @notificationsAllRepositories.
+  ///
+  /// In en, this message translates to:
+  /// **'All repositories'**
+  String get notificationsAllRepositories;
+
+  /// No description provided for @notificationsDate.
+  ///
+  /// In en, this message translates to:
+  /// **'Date'**
+  String get notificationsDate;
+
+  /// No description provided for @notificationsDateUnknown.
+  ///
+  /// In en, this message translates to:
+  /// **'Unknown date'**
+  String get notificationsDateUnknown;
+
+  /// No description provided for @notificationsRefresh.
+  ///
+  /// In en, this message translates to:
+  /// **'Refresh notifications'**
+  String get notificationsRefresh;
+
+  /// No description provided for @notificationsMarkAllRead.
+  ///
+  /// In en, this message translates to:
+  /// **'Mark all as read'**
+  String get notificationsMarkAllRead;
+
+  /// No description provided for @notificationsMarkRead.
+  ///
+  /// In en, this message translates to:
+  /// **'Mark as read'**
+  String get notificationsMarkRead;
+
+  /// No description provided for @notificationsMarkDone.
+  ///
+  /// In en, this message translates to:
+  /// **'Mark as done'**
+  String get notificationsMarkDone;
+
+  /// No description provided for @notificationsSelectAll.
+  ///
+  /// In en, this message translates to:
+  /// **'Select all loaded notifications'**
+  String get notificationsSelectAll;
+
+  /// No description provided for @notificationsClearSelection.
+  ///
+  /// In en, this message translates to:
+  /// **'Clear selection'**
+  String get notificationsClearSelection;
+
+  /// No description provided for @notificationsSelectedCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 selected} other{{count} selected}}'**
+  String notificationsSelectedCount(int count);
+
+  /// No description provided for @notificationsBulkDone.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 notification marked as done.} other{{count} notifications marked as done.}}'**
+  String notificationsBulkDone(int count);
+
+  /// No description provided for @notificationsBulkFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 notification could not be updated.} other{{count} notifications could not be updated.}}'**
+  String notificationsBulkFailed(int count);
+
+  /// No description provided for @notificationsFilters.
+  ///
+  /// In en, this message translates to:
+  /// **'Filters'**
+  String get notificationsFilters;
+
+  /// No description provided for @notificationsFilterReasons.
+  ///
+  /// In en, this message translates to:
+  /// **'Reasons'**
+  String get notificationsFilterReasons;
+
+  /// No description provided for @notificationsClearFilters.
+  ///
+  /// In en, this message translates to:
+  /// **'Clear filters'**
+  String get notificationsClearFilters;
+
+  /// No description provided for @notificationsAssigned.
+  ///
+  /// In en, this message translates to:
+  /// **'Assigned'**
+  String get notificationsAssigned;
+
+  /// No description provided for @notificationsParticipating.
+  ///
+  /// In en, this message translates to:
+  /// **'Participating'**
+  String get notificationsParticipating;
+
+  /// No description provided for @notificationsAuthor.
+  ///
+  /// In en, this message translates to:
+  /// **'Author'**
+  String get notificationsAuthor;
+
+  /// No description provided for @notificationsComment.
+  ///
+  /// In en, this message translates to:
+  /// **'Comment'**
+  String get notificationsComment;
+
+  /// No description provided for @notificationsInvitation.
+  ///
+  /// In en, this message translates to:
+  /// **'Invitation'**
+  String get notificationsInvitation;
+
+  /// No description provided for @notificationsFollowing.
+  ///
+  /// In en, this message translates to:
+  /// **'Following'**
+  String get notificationsFollowing;
+
+  /// No description provided for @notificationsMentioned.
+  ///
+  /// In en, this message translates to:
+  /// **'Mentioned'**
+  String get notificationsMentioned;
+
+  /// No description provided for @notificationsReviewRequested.
+  ///
+  /// In en, this message translates to:
+  /// **'Review requested'**
+  String get notificationsReviewRequested;
+
+  /// No description provided for @notificationsSecurityAlert.
+  ///
+  /// In en, this message translates to:
+  /// **'Security alert'**
+  String get notificationsSecurityAlert;
+
+  /// No description provided for @notificationsStateChange.
+  ///
+  /// In en, this message translates to:
+  /// **'State change'**
+  String get notificationsStateChange;
+
+  /// No description provided for @notificationsSubscribed.
+  ///
+  /// In en, this message translates to:
+  /// **'Subscribed'**
+  String get notificationsSubscribed;
+
+  /// No description provided for @notificationsTeamMention.
+  ///
+  /// In en, this message translates to:
+  /// **'Team mention'**
+  String get notificationsTeamMention;
+
+  /// No description provided for @notificationsCiActivity.
+  ///
+  /// In en, this message translates to:
+  /// **'CI activity'**
+  String get notificationsCiActivity;
+
+  /// No description provided for @notificationsReason.
+  ///
+  /// In en, this message translates to:
+  /// **'Reason: {reason}'**
+  String notificationsReason(String reason);
+
+  /// No description provided for @notificationsCaughtUp.
+  ///
+  /// In en, this message translates to:
+  /// **'You’re all caught up'**
+  String get notificationsCaughtUp;
+
+  /// No description provided for @notificationsNoUnread.
+  ///
+  /// In en, this message translates to:
+  /// **'You have no unread notifications.'**
+  String get notificationsNoUnread;
+
+  /// No description provided for @notificationsNoResults.
+  ///
+  /// In en, this message translates to:
+  /// **'No notifications match the selected filters.'**
+  String get notificationsNoResults;
+
+  /// No description provided for @notificationsLoadError.
+  ///
+  /// In en, this message translates to:
+  /// **'Notifications could not be loaded.'**
+  String get notificationsLoadError;
+
+  /// No description provided for @notificationsUpdateError.
+  ///
+  /// In en, this message translates to:
+  /// **'The notification could not be updated.'**
+  String get notificationsUpdateError;
+
+  /// No description provided for @notificationsSignInTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign in to view notifications'**
+  String get notificationsSignInTitle;
+
+  /// No description provided for @notificationsSignInBody.
+  ///
+  /// In en, this message translates to:
+  /// **'GitHub notifications are private to your account.'**
+  String get notificationsSignInBody;
+
+  /// No description provided for @notificationsOpen.
+  ///
+  /// In en, this message translates to:
+  /// **'Open notification'**
+  String get notificationsOpen;
+
+  /// No description provided for @notificationsAddFilter.
+  ///
+  /// In en, this message translates to:
+  /// **'Add new filter'**
+  String get notificationsAddFilter;
+
+  /// No description provided for @notificationsFilterName.
+  ///
+  /// In en, this message translates to:
+  /// **'Filter name'**
+  String get notificationsFilterName;
+
+  /// No description provided for @notificationsFilterQuery.
+  ///
+  /// In en, this message translates to:
+  /// **'Filter query'**
+  String get notificationsFilterQuery;
+
+  /// No description provided for @notificationsSaveFilter.
+  ///
+  /// In en, this message translates to:
+  /// **'Save filter'**
+  String get notificationsSaveFilter;
+
+  /// No description provided for @notificationsCleanupTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Clear out the clutter.'**
+  String get notificationsCleanupTitle;
+
+  /// No description provided for @notificationsCleanupBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Select the read notifications currently loaded so you can mark them as done.'**
+  String get notificationsCleanupBody;
+
+  /// No description provided for @notificationsDismiss.
+  ///
+  /// In en, this message translates to:
+  /// **'Dismiss'**
+  String get notificationsDismiss;
+
+  /// No description provided for @notificationsGetStarted.
+  ///
+  /// In en, this message translates to:
+  /// **'Get started'**
+  String get notificationsGetStarted;
+
+  /// No description provided for @notificationsSectionUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'{section} cannot be listed through the current GitHub API.'**
+  String notificationsSectionUnavailable(String section);
+
   /// No description provided for @homeCouldNotOpenLink.
   ///
   /// In en, this message translates to:
@@ -307,6 +661,24 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Ask anything or type @ to add context'**
   String get homeAskAnything;
+
+  /// No description provided for @homeAddContext.
+  ///
+  /// In en, this message translates to:
+  /// **'Add context'**
+  String get homeAddContext;
+
+  /// No description provided for @homeSelectModel.
+  ///
+  /// In en, this message translates to:
+  /// **'Select model'**
+  String get homeSelectModel;
+
+  /// No description provided for @homeSendPrompt.
+  ///
+  /// In en, this message translates to:
+  /// **'Send prompt'**
+  String get homeSendPrompt;
 
   /// No description provided for @homeAgent.
   ///
@@ -451,6 +823,222 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'All repositories'**
   String get navAllRepositories;
+
+  /// No description provided for @globalListsSignInTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign in to view your work'**
+  String get globalListsSignInTitle;
+
+  /// No description provided for @globalListsSignInDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Issues, pull requests, and repositories associated with your account are available after sign-in.'**
+  String get globalListsSignInDescription;
+
+  /// No description provided for @globalListsSignInAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign in'**
+  String get globalListsSignInAction;
+
+  /// No description provided for @globalListsAll.
+  ///
+  /// In en, this message translates to:
+  /// **'All'**
+  String get globalListsAll;
+
+  /// No description provided for @globalListsSearchIssues.
+  ///
+  /// In en, this message translates to:
+  /// **'Search your issues'**
+  String get globalListsSearchIssues;
+
+  /// No description provided for @globalListsSearchPullRequests.
+  ///
+  /// In en, this message translates to:
+  /// **'Search your pull requests'**
+  String get globalListsSearchPullRequests;
+
+  /// No description provided for @globalListsSearchRepositories.
+  ///
+  /// In en, this message translates to:
+  /// **'Find a repository'**
+  String get globalListsSearchRepositories;
+
+  /// No description provided for @globalListsResultsCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} results'**
+  String globalListsResultsCount(int count);
+
+  /// No description provided for @globalListsNoIssues.
+  ///
+  /// In en, this message translates to:
+  /// **'No issues match these filters'**
+  String get globalListsNoIssues;
+
+  /// No description provided for @globalListsNoPullRequests.
+  ///
+  /// In en, this message translates to:
+  /// **'No pull requests match these filters'**
+  String get globalListsNoPullRequests;
+
+  /// No description provided for @globalListsNoRepositories.
+  ///
+  /// In en, this message translates to:
+  /// **'No repositories match these filters'**
+  String get globalListsNoRepositories;
+
+  /// No description provided for @globalListsNoResultsDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Try changing the search text or filters.'**
+  String get globalListsNoResultsDescription;
+
+  /// No description provided for @globalListsRepositoriesFor.
+  ///
+  /// In en, this message translates to:
+  /// **'Repositories available to @{login}'**
+  String globalListsRepositoriesFor(String login);
+
+  /// No description provided for @globalListsUpdated.
+  ///
+  /// In en, this message translates to:
+  /// **'Updated {time}'**
+  String globalListsUpdated(String time);
+
+  /// No description provided for @globalListsIssueMetadata.
+  ///
+  /// In en, this message translates to:
+  /// **'{repository} #{number} {action} by {author} {time}'**
+  String globalListsIssueMetadata(
+    String repository,
+    int number,
+    String action,
+    String author,
+    String time,
+  );
+
+  /// No description provided for @globalListsBestMatch.
+  ///
+  /// In en, this message translates to:
+  /// **'Best match'**
+  String get globalListsBestMatch;
+
+  /// No description provided for @globalListsNewest.
+  ///
+  /// In en, this message translates to:
+  /// **'Newest'**
+  String get globalListsNewest;
+
+  /// No description provided for @globalListsOldest.
+  ///
+  /// In en, this message translates to:
+  /// **'Oldest'**
+  String get globalListsOldest;
+
+  /// No description provided for @globalListsMostComments.
+  ///
+  /// In en, this message translates to:
+  /// **'Most comments'**
+  String get globalListsMostComments;
+
+  /// No description provided for @globalListsRecentlyPushed.
+  ///
+  /// In en, this message translates to:
+  /// **'Recently pushed'**
+  String get globalListsRecentlyPushed;
+
+  /// No description provided for @globalListsRecentlyUpdated.
+  ///
+  /// In en, this message translates to:
+  /// **'Recently updated'**
+  String get globalListsRecentlyUpdated;
+
+  /// No description provided for @globalListsName.
+  ///
+  /// In en, this message translates to:
+  /// **'Name'**
+  String get globalListsName;
+
+  /// No description provided for @globalListsMostStars.
+  ///
+  /// In en, this message translates to:
+  /// **'Most stars'**
+  String get globalListsMostStars;
+
+  /// No description provided for @globalListsMostForks.
+  ///
+  /// In en, this message translates to:
+  /// **'Most forks'**
+  String get globalListsMostForks;
+
+  /// No description provided for @globalListsMirrors.
+  ///
+  /// In en, this message translates to:
+  /// **'Mirrors'**
+  String get globalListsMirrors;
+
+  /// No description provided for @globalListsForks.
+  ///
+  /// In en, this message translates to:
+  /// **'Forks'**
+  String get globalListsForks;
+
+  /// No description provided for @globalListsClearFilters.
+  ///
+  /// In en, this message translates to:
+  /// **'Clear filters'**
+  String get globalListsClearFilters;
+
+  /// No description provided for @globalListsRefresh.
+  ///
+  /// In en, this message translates to:
+  /// **'Refresh results'**
+  String get globalListsRefresh;
+
+  /// No description provided for @globalListsLoadError.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not load results.'**
+  String get globalListsLoadError;
+
+  /// No description provided for @globalListsNewIssue.
+  ///
+  /// In en, this message translates to:
+  /// **'New issue'**
+  String get globalListsNewIssue;
+
+  /// No description provided for @globalListsNewPullRequest.
+  ///
+  /// In en, this message translates to:
+  /// **'New pull request'**
+  String get globalListsNewPullRequest;
+
+  /// No description provided for @globalListsSelectRepository.
+  ///
+  /// In en, this message translates to:
+  /// **'Select a repository'**
+  String get globalListsSelectRepository;
+
+  /// No description provided for @globalListsChooseIssueTemplate.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose an issue template'**
+  String get globalListsChooseIssueTemplate;
+
+  /// No description provided for @globalListsBlankIssue.
+  ///
+  /// In en, this message translates to:
+  /// **'Blank issue'**
+  String get globalListsBlankIssue;
+
+  /// No description provided for @globalListsCreateFlowError.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not start the create flow.'**
+  String get globalListsCreateFlowError;
 
   /// No description provided for @navProjects.
   ///
@@ -2448,6 +3036,1614 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'{head}, and {last}'**
   String activityJoinMany(String head, String last);
+
+  /// No description provided for @settingsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Settings'**
+  String get settingsTitle;
+
+  /// No description provided for @settingsPageDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Manage your GitHub account and DioHub preferences in one place.'**
+  String get settingsPageDescription;
+
+  /// No description provided for @settingsPreferences.
+  ///
+  /// In en, this message translates to:
+  /// **'Preferences'**
+  String get settingsPreferences;
+
+  /// No description provided for @settingsCategory.
+  ///
+  /// In en, this message translates to:
+  /// **'Settings category'**
+  String get settingsCategory;
+
+  /// No description provided for @settingsGeneral.
+  ///
+  /// In en, this message translates to:
+  /// **'General'**
+  String get settingsGeneral;
+
+  /// No description provided for @settingsAppearance.
+  ///
+  /// In en, this message translates to:
+  /// **'Appearance'**
+  String get settingsAppearance;
+
+  /// No description provided for @settingsAccessibility.
+  ///
+  /// In en, this message translates to:
+  /// **'Accessibility'**
+  String get settingsAccessibility;
+
+  /// No description provided for @settingsCodeAndRepositories.
+  ///
+  /// In en, this message translates to:
+  /// **'Code & repositories'**
+  String get settingsCodeAndRepositories;
+
+  /// No description provided for @settingsNotifications.
+  ///
+  /// In en, this message translates to:
+  /// **'Notifications'**
+  String get settingsNotifications;
+
+  /// No description provided for @settingsPrivacy.
+  ///
+  /// In en, this message translates to:
+  /// **'Privacy & diagnostics'**
+  String get settingsPrivacy;
+
+  /// No description provided for @settingsAbout.
+  ///
+  /// In en, this message translates to:
+  /// **'About'**
+  String get settingsAbout;
+
+  /// No description provided for @settingsSaveError.
+  ///
+  /// In en, this message translates to:
+  /// **'The setting could not be saved.'**
+  String get settingsSaveError;
+
+  /// No description provided for @settingsGeneralDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose the app language, information density, and default browsing behavior.'**
+  String get settingsGeneralDescription;
+
+  /// No description provided for @settingsAppLanguage.
+  ///
+  /// In en, this message translates to:
+  /// **'App language'**
+  String get settingsAppLanguage;
+
+  /// No description provided for @settingsAppLanguageDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Follow the operating system or choose a language for DioHub.'**
+  String get settingsAppLanguageDescription;
+
+  /// No description provided for @settingsLayout.
+  ///
+  /// In en, this message translates to:
+  /// **'Layout'**
+  String get settingsLayout;
+
+  /// No description provided for @settingsLayoutDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Use one density across shared Android and desktop layouts.'**
+  String get settingsLayoutDescription;
+
+  /// No description provided for @settingsDensity.
+  ///
+  /// In en, this message translates to:
+  /// **'Information density'**
+  String get settingsDensity;
+
+  /// No description provided for @settingsDensityDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Adjust spacing without shrinking text or touch targets.'**
+  String get settingsDensityDescription;
+
+  /// No description provided for @settingsDensityCompact.
+  ///
+  /// In en, this message translates to:
+  /// **'Compact'**
+  String get settingsDensityCompact;
+
+  /// No description provided for @settingsDensityDefault.
+  ///
+  /// In en, this message translates to:
+  /// **'Default'**
+  String get settingsDensityDefault;
+
+  /// No description provided for @settingsDensitySpacious.
+  ///
+  /// In en, this message translates to:
+  /// **'Spacious'**
+  String get settingsDensitySpacious;
+
+  /// No description provided for @settingsStickyHeaders.
+  ///
+  /// In en, this message translates to:
+  /// **'Sticky section headers'**
+  String get settingsStickyHeaders;
+
+  /// No description provided for @settingsStickyHeadersDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Keep section context visible while scrolling supported legacy views.'**
+  String get settingsStickyHeadersDescription;
+
+  /// No description provided for @settingsFeedAndSearch.
+  ///
+  /// In en, this message translates to:
+  /// **'Feed & search'**
+  String get settingsFeedAndSearch;
+
+  /// No description provided for @settingsGroupRelatedActivity.
+  ///
+  /// In en, this message translates to:
+  /// **'Group related activity'**
+  String get settingsGroupRelatedActivity;
+
+  /// No description provided for @settingsGroupRelatedActivityDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Combine related GitHub events into a single feed entry.'**
+  String get settingsGroupRelatedActivityDescription;
+
+  /// No description provided for @settingsTimelineFeed.
+  ///
+  /// In en, this message translates to:
+  /// **'Timeline feed'**
+  String get settingsTimelineFeed;
+
+  /// No description provided for @settingsTimelineFeedDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Show activity with a continuous timeline instead of plain cards.'**
+  String get settingsTimelineFeedDescription;
+
+  /// No description provided for @settingsFuzzySearch.
+  ///
+  /// In en, this message translates to:
+  /// **'Fuzzy local filtering'**
+  String get settingsFuzzySearch;
+
+  /// No description provided for @settingsFuzzySearchDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Match approximate text in client-side filters.'**
+  String get settingsFuzzySearchDescription;
+
+  /// No description provided for @settingsAppearanceDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose the color mode and how profile colors influence the interface.'**
+  String get settingsAppearanceDescription;
+
+  /// No description provided for @settingsTheme.
+  ///
+  /// In en, this message translates to:
+  /// **'Theme'**
+  String get settingsTheme;
+
+  /// No description provided for @settingsThemeDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Material 3 colors remain centralized and respond immediately.'**
+  String get settingsThemeDescription;
+
+  /// No description provided for @settingsThemeMode.
+  ///
+  /// In en, this message translates to:
+  /// **'Theme mode'**
+  String get settingsThemeMode;
+
+  /// No description provided for @settingsThemeModeDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Follow the system or keep DioHub light or dark.'**
+  String get settingsThemeModeDescription;
+
+  /// No description provided for @settingsThemeSystem.
+  ///
+  /// In en, this message translates to:
+  /// **'System'**
+  String get settingsThemeSystem;
+
+  /// No description provided for @settingsThemeLight.
+  ///
+  /// In en, this message translates to:
+  /// **'Light'**
+  String get settingsThemeLight;
+
+  /// No description provided for @settingsThemeDark.
+  ///
+  /// In en, this message translates to:
+  /// **'Dark'**
+  String get settingsThemeDark;
+
+  /// No description provided for @settingsMaterialYou.
+  ///
+  /// In en, this message translates to:
+  /// **'Use system colors'**
+  String get settingsMaterialYou;
+
+  /// No description provided for @settingsMaterialYouDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Use dynamic Material You colors when the platform provides them.'**
+  String get settingsMaterialYouDescription;
+
+  /// No description provided for @settingsProfileColors.
+  ///
+  /// In en, this message translates to:
+  /// **'Profile colors'**
+  String get settingsProfileColors;
+
+  /// No description provided for @settingsProfileColorsDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Optionally blend a profile avatar color into profile pages.'**
+  String get settingsProfileColorsDescription;
+
+  /// No description provided for @settingsProfileTheme.
+  ///
+  /// In en, this message translates to:
+  /// **'Profile-based color'**
+  String get settingsProfileTheme;
+
+  /// No description provided for @settingsProfileThemeDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Apply a scoped color treatment when viewing a profile.'**
+  String get settingsProfileThemeDescription;
+
+  /// No description provided for @settingsProfileThemeIntensity.
+  ///
+  /// In en, this message translates to:
+  /// **'Color intensity'**
+  String get settingsProfileThemeIntensity;
+
+  /// No description provided for @settingsProfileThemeIntensityDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Control how strongly the profile color is blended.'**
+  String get settingsProfileThemeIntensityDescription;
+
+  /// No description provided for @settingsAccessibilityDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Control motion and physical feedback while preserving platform accessibility preferences.'**
+  String get settingsAccessibilityDescription;
+
+  /// No description provided for @settingsMotion.
+  ///
+  /// In en, this message translates to:
+  /// **'Motion'**
+  String get settingsMotion;
+
+  /// No description provided for @settingsMotionDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'The operating system Reduced Motion preference always takes priority.'**
+  String get settingsMotionDescription;
+
+  /// No description provided for @settingsAnimationLevel.
+  ///
+  /// In en, this message translates to:
+  /// **'Animation level'**
+  String get settingsAnimationLevel;
+
+  /// No description provided for @settingsAnimationLevelDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose how much interface motion DioHub adds.'**
+  String get settingsAnimationLevelDescription;
+
+  /// No description provided for @settingsAnimationNone.
+  ///
+  /// In en, this message translates to:
+  /// **'None'**
+  String get settingsAnimationNone;
+
+  /// No description provided for @settingsAnimationReduced.
+  ///
+  /// In en, this message translates to:
+  /// **'Reduced'**
+  String get settingsAnimationReduced;
+
+  /// No description provided for @settingsAnimationNormal.
+  ///
+  /// In en, this message translates to:
+  /// **'Normal'**
+  String get settingsAnimationNormal;
+
+  /// No description provided for @settingsAnimationEnhanced.
+  ///
+  /// In en, this message translates to:
+  /// **'Enhanced'**
+  String get settingsAnimationEnhanced;
+
+  /// No description provided for @settingsFeedback.
+  ///
+  /// In en, this message translates to:
+  /// **'Feedback'**
+  String get settingsFeedback;
+
+  /// No description provided for @settingsHaptics.
+  ///
+  /// In en, this message translates to:
+  /// **'Haptic feedback'**
+  String get settingsHaptics;
+
+  /// No description provided for @settingsHapticsDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Control vibration feedback on supported devices.'**
+  String get settingsHapticsDescription;
+
+  /// No description provided for @settingsHapticsOn.
+  ///
+  /// In en, this message translates to:
+  /// **'On'**
+  String get settingsHapticsOn;
+
+  /// No description provided for @settingsHapticsReduced.
+  ///
+  /// In en, this message translates to:
+  /// **'Reduced'**
+  String get settingsHapticsReduced;
+
+  /// No description provided for @settingsHapticsOff.
+  ///
+  /// In en, this message translates to:
+  /// **'Off'**
+  String get settingsHapticsOff;
+
+  /// No description provided for @settingsCodeAndRepositoriesDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Set repository entry behavior, file browsing details, and diff readability.'**
+  String get settingsCodeAndRepositoriesDescription;
+
+  /// No description provided for @settingsRepositoryDefaults.
+  ///
+  /// In en, this message translates to:
+  /// **'Repository defaults'**
+  String get settingsRepositoryDefaults;
+
+  /// No description provided for @settingsDefaultRepositoryTab.
+  ///
+  /// In en, this message translates to:
+  /// **'Default repository tab'**
+  String get settingsDefaultRepositoryTab;
+
+  /// No description provided for @settingsDefaultRepositoryTabDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Open this tab when a repository link does not specify a destination.'**
+  String get settingsDefaultRepositoryTabDescription;
+
+  /// No description provided for @settingsCommits.
+  ///
+  /// In en, this message translates to:
+  /// **'Commits'**
+  String get settingsCommits;
+
+  /// No description provided for @settingsCodeBrowser.
+  ///
+  /// In en, this message translates to:
+  /// **'Code browser'**
+  String get settingsCodeBrowser;
+
+  /// No description provided for @settingsFileSort.
+  ///
+  /// In en, this message translates to:
+  /// **'File sorting'**
+  String get settingsFileSort;
+
+  /// No description provided for @settingsFileSortDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose how directories and files are ordered.'**
+  String get settingsFileSortDescription;
+
+  /// No description provided for @settingsSortType.
+  ///
+  /// In en, this message translates to:
+  /// **'Type'**
+  String get settingsSortType;
+
+  /// No description provided for @settingsSortNameAscending.
+  ///
+  /// In en, this message translates to:
+  /// **'Name A–Z'**
+  String get settingsSortNameAscending;
+
+  /// No description provided for @settingsSortNameDescending.
+  ///
+  /// In en, this message translates to:
+  /// **'Name Z–A'**
+  String get settingsSortNameDescending;
+
+  /// No description provided for @settingsSortSize.
+  ///
+  /// In en, this message translates to:
+  /// **'Size'**
+  String get settingsSortSize;
+
+  /// No description provided for @settingsSortExtension.
+  ///
+  /// In en, this message translates to:
+  /// **'Extension'**
+  String get settingsSortExtension;
+
+  /// No description provided for @settingsShowDotfiles.
+  ///
+  /// In en, this message translates to:
+  /// **'Show dotfiles'**
+  String get settingsShowDotfiles;
+
+  /// No description provided for @settingsShowDotfilesDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Include files and directories whose names begin with a dot.'**
+  String get settingsShowDotfilesDescription;
+
+  /// No description provided for @settingsShowFileMetadata.
+  ///
+  /// In en, this message translates to:
+  /// **'Show file metadata'**
+  String get settingsShowFileMetadata;
+
+  /// No description provided for @settingsShowFileMetadataDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Display available size and type details in the file list.'**
+  String get settingsShowFileMetadataDescription;
+
+  /// No description provided for @settingsShowGeneratedFiles.
+  ///
+  /// In en, this message translates to:
+  /// **'Show generated files'**
+  String get settingsShowGeneratedFiles;
+
+  /// No description provided for @settingsShowGeneratedFilesDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Include files GitHub identifies as generated.'**
+  String get settingsShowGeneratedFilesDescription;
+
+  /// No description provided for @settingsShowLastCommit.
+  ///
+  /// In en, this message translates to:
+  /// **'Show last commit per path'**
+  String get settingsShowLastCommit;
+
+  /// No description provided for @settingsShowLastCommitDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Fetch commit information for visible paths. Large directories may require extra requests.'**
+  String get settingsShowLastCommitDescription;
+
+  /// No description provided for @settingsDiffViewer.
+  ///
+  /// In en, this message translates to:
+  /// **'Diff viewer'**
+  String get settingsDiffViewer;
+
+  /// No description provided for @settingsDiffLayout.
+  ///
+  /// In en, this message translates to:
+  /// **'Default diff layout'**
+  String get settingsDiffLayout;
+
+  /// No description provided for @settingsDiffLayoutDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose a unified or split comparison.'**
+  String get settingsDiffLayoutDescription;
+
+  /// No description provided for @settingsDiffUnified.
+  ///
+  /// In en, this message translates to:
+  /// **'Unified'**
+  String get settingsDiffUnified;
+
+  /// No description provided for @settingsDiffSplit.
+  ///
+  /// In en, this message translates to:
+  /// **'Split'**
+  String get settingsDiffSplit;
+
+  /// No description provided for @settingsWrapCode.
+  ///
+  /// In en, this message translates to:
+  /// **'Wrap long lines'**
+  String get settingsWrapCode;
+
+  /// No description provided for @settingsWrapCodeDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Wrap code and diff lines to the available width.'**
+  String get settingsWrapCodeDescription;
+
+  /// No description provided for @settingsLineNumbers.
+  ///
+  /// In en, this message translates to:
+  /// **'Show line numbers'**
+  String get settingsLineNumbers;
+
+  /// No description provided for @settingsLineNumbersDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Display source line numbers beside code.'**
+  String get settingsLineNumbersDescription;
+
+  /// No description provided for @settingsDiffHighlight.
+  ///
+  /// In en, this message translates to:
+  /// **'Change highlight'**
+  String get settingsDiffHighlight;
+
+  /// No description provided for @settingsDiffHighlightDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Adjust the contrast of added and removed lines.'**
+  String get settingsDiffHighlightDescription;
+
+  /// No description provided for @settingsHighlightSubtle.
+  ///
+  /// In en, this message translates to:
+  /// **'Subtle'**
+  String get settingsHighlightSubtle;
+
+  /// No description provided for @settingsHighlightDefault.
+  ///
+  /// In en, this message translates to:
+  /// **'Default'**
+  String get settingsHighlightDefault;
+
+  /// No description provided for @settingsHighlightHigh.
+  ///
+  /// In en, this message translates to:
+  /// **'High'**
+  String get settingsHighlightHigh;
+
+  /// No description provided for @settingsCodeFontScale.
+  ///
+  /// In en, this message translates to:
+  /// **'Code text size'**
+  String get settingsCodeFontScale;
+
+  /// No description provided for @settingsCodeFontScaleDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Scale monospace content independently from interface text.'**
+  String get settingsCodeFontScaleDescription;
+
+  /// No description provided for @settingsNotificationsDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Control inbox presentation and background notification checks.'**
+  String get settingsNotificationsDescription;
+
+  /// No description provided for @settingsInbox.
+  ///
+  /// In en, this message translates to:
+  /// **'Inbox'**
+  String get settingsInbox;
+
+  /// No description provided for @settingsAutoMarkRead.
+  ///
+  /// In en, this message translates to:
+  /// **'Auto-mark as read'**
+  String get settingsAutoMarkRead;
+
+  /// No description provided for @settingsAutoMarkReadDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Mark notifications as read when they become visible.'**
+  String get settingsAutoMarkReadDescription;
+
+  /// No description provided for @settingsGroupByRepository.
+  ///
+  /// In en, this message translates to:
+  /// **'Group by repository'**
+  String get settingsGroupByRepository;
+
+  /// No description provided for @settingsGroupByRepositoryDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Organize loaded notifications under repository headings.'**
+  String get settingsGroupByRepositoryDescription;
+
+  /// No description provided for @settingsBackgroundChecks.
+  ///
+  /// In en, this message translates to:
+  /// **'Background checks'**
+  String get settingsBackgroundChecks;
+
+  /// No description provided for @settingsBackgroundChecksDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Background availability depends on platform support and operating system permissions.'**
+  String get settingsBackgroundChecksDescription;
+
+  /// No description provided for @settingsInboxPolling.
+  ///
+  /// In en, this message translates to:
+  /// **'Inbox polling'**
+  String get settingsInboxPolling;
+
+  /// No description provided for @settingsInboxPollingDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Periodically check for new GitHub notifications.'**
+  String get settingsInboxPollingDescription;
+
+  /// No description provided for @settingsPollingInterval.
+  ///
+  /// In en, this message translates to:
+  /// **'Polling interval'**
+  String get settingsPollingInterval;
+
+  /// No description provided for @settingsPollingIntervalDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose how often the inbox is checked in the background.'**
+  String get settingsPollingIntervalDescription;
+
+  /// No description provided for @settingsMinutes.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 minute} other{{count} minutes}}'**
+  String settingsMinutes(int count);
+
+  /// No description provided for @settingsSystemNotifications.
+  ///
+  /// In en, this message translates to:
+  /// **'System notifications'**
+  String get settingsSystemNotifications;
+
+  /// No description provided for @settingsSystemNotificationsDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Show operating system notifications while DioHub is in the background.'**
+  String get settingsSystemNotificationsDescription;
+
+  /// No description provided for @settingsWorkflowAlerts.
+  ///
+  /// In en, this message translates to:
+  /// **'Workflow run alerts'**
+  String get settingsWorkflowAlerts;
+
+  /// No description provided for @settingsWorkflowAlertsDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Notify when a watched workflow run completes.'**
+  String get settingsWorkflowAlertsDescription;
+
+  /// No description provided for @settingsPrivacyDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose which diagnostics DioHub may collect when reporting failures.'**
+  String get settingsPrivacyDescription;
+
+  /// No description provided for @settingsDiagnostics.
+  ///
+  /// In en, this message translates to:
+  /// **'Diagnostics'**
+  String get settingsDiagnostics;
+
+  /// No description provided for @settingsDiagnosticsDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Diagnostic preferences take effect after the next app launch.'**
+  String get settingsDiagnosticsDescription;
+
+  /// No description provided for @settingsCrashReports.
+  ///
+  /// In en, this message translates to:
+  /// **'Crash reports'**
+  String get settingsCrashReports;
+
+  /// No description provided for @settingsCrashReportsDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Send anonymous stack traces when DioHub crashes.'**
+  String get settingsCrashReportsDescription;
+
+  /// No description provided for @settingsHttpDiagnostics.
+  ///
+  /// In en, this message translates to:
+  /// **'HTTP diagnostics'**
+  String get settingsHttpDiagnostics;
+
+  /// No description provided for @settingsHttpDiagnosticsDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Include anonymized API error patterns and timing.'**
+  String get settingsHttpDiagnosticsDescription;
+
+  /// No description provided for @settingsNavigationDiagnostics.
+  ///
+  /// In en, this message translates to:
+  /// **'Navigation diagnostics'**
+  String get settingsNavigationDiagnostics;
+
+  /// No description provided for @settingsNavigationDiagnosticsDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Include the sequence of screens visited before a crash.'**
+  String get settingsNavigationDiagnosticsDescription;
+
+  /// No description provided for @settingsPerformanceDiagnostics.
+  ///
+  /// In en, this message translates to:
+  /// **'Performance monitoring'**
+  String get settingsPerformanceDiagnostics;
+
+  /// No description provided for @settingsPerformanceDiagnosticsDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Measure responsiveness and slow operations.'**
+  String get settingsPerformanceDiagnosticsDescription;
+
+  /// No description provided for @settingsSessionReplay.
+  ///
+  /// In en, this message translates to:
+  /// **'Session replay'**
+  String get settingsSessionReplay;
+
+  /// No description provided for @settingsSessionReplayDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Record a masked visual trace when a crash occurs.'**
+  String get settingsSessionReplayDescription;
+
+  /// No description provided for @settingsRestartRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Changes to diagnostics take effect after the next app launch.'**
+  String get settingsRestartRequired;
+
+  /// No description provided for @settingsAboutDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Version, release notes, and open-source acknowledgements.'**
+  String get settingsAboutDescription;
+
+  /// No description provided for @settingsApplication.
+  ///
+  /// In en, this message translates to:
+  /// **'Application'**
+  String get settingsApplication;
+
+  /// No description provided for @settingsApplicationName.
+  ///
+  /// In en, this message translates to:
+  /// **'DioHub'**
+  String get settingsApplicationName;
+
+  /// No description provided for @settingsVersion.
+  ///
+  /// In en, this message translates to:
+  /// **'Version {version} ({build})'**
+  String settingsVersion(String version, String build);
+
+  /// No description provided for @settingsWhatsNew.
+  ///
+  /// In en, this message translates to:
+  /// **'What’s new'**
+  String get settingsWhatsNew;
+
+  /// No description provided for @settingsWhatsNewDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Read the changelog and release history.'**
+  String get settingsWhatsNewDescription;
+
+  /// No description provided for @settingsOpenSourceLicenses.
+  ///
+  /// In en, this message translates to:
+  /// **'Open-source licenses'**
+  String get settingsOpenSourceLicenses;
+
+  /// No description provided for @settingsOpenSourceLicensesDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'View licenses for Flutter and bundled dependencies.'**
+  String get settingsOpenSourceLicensesDescription;
+
+  /// No description provided for @settingsAccessGroup.
+  ///
+  /// In en, this message translates to:
+  /// **'Access'**
+  String get settingsAccessGroup;
+
+  /// No description provided for @settingsCodePlanningAutomation.
+  ///
+  /// In en, this message translates to:
+  /// **'Code, planning, and automation'**
+  String get settingsCodePlanningAutomation;
+
+  /// No description provided for @settingsDioHubGroup.
+  ///
+  /// In en, this message translates to:
+  /// **'DioHub app settings'**
+  String get settingsDioHubGroup;
+
+  /// No description provided for @settingsPublicProfile.
+  ///
+  /// In en, this message translates to:
+  /// **'Public profile'**
+  String get settingsPublicProfile;
+
+  /// No description provided for @settingsGitHubAccount.
+  ///
+  /// In en, this message translates to:
+  /// **'Account'**
+  String get settingsGitHubAccount;
+
+  /// No description provided for @settingsBillingAndLicensing.
+  ///
+  /// In en, this message translates to:
+  /// **'Billing and licensing'**
+  String get settingsBillingAndLicensing;
+
+  /// No description provided for @settingsEmails.
+  ///
+  /// In en, this message translates to:
+  /// **'Emails'**
+  String get settingsEmails;
+
+  /// No description provided for @settingsPasswordAndAuthentication.
+  ///
+  /// In en, this message translates to:
+  /// **'Password and authentication'**
+  String get settingsPasswordAndAuthentication;
+
+  /// No description provided for @settingsSessions.
+  ///
+  /// In en, this message translates to:
+  /// **'Sessions'**
+  String get settingsSessions;
+
+  /// No description provided for @settingsSshAndGpgKeys.
+  ///
+  /// In en, this message translates to:
+  /// **'SSH and GPG keys'**
+  String get settingsSshAndGpgKeys;
+
+  /// No description provided for @settingsOrganizations.
+  ///
+  /// In en, this message translates to:
+  /// **'Organizations'**
+  String get settingsOrganizations;
+
+  /// No description provided for @settingsEnterprises.
+  ///
+  /// In en, this message translates to:
+  /// **'Enterprises'**
+  String get settingsEnterprises;
+
+  /// No description provided for @settingsModeration.
+  ///
+  /// In en, this message translates to:
+  /// **'Moderation'**
+  String get settingsModeration;
+
+  /// No description provided for @settingsCodespaces.
+  ///
+  /// In en, this message translates to:
+  /// **'Codespaces'**
+  String get settingsCodespaces;
+
+  /// No description provided for @settingsSignedOutDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'DioHub preferences remain available without a GitHub account.'**
+  String get settingsSignedOutDescription;
+
+  /// No description provided for @settingsPersonalAccount.
+  ///
+  /// In en, this message translates to:
+  /// **'Your personal account'**
+  String get settingsPersonalAccount;
+
+  /// No description provided for @settingsSwitchContext.
+  ///
+  /// In en, this message translates to:
+  /// **'Switch settings context'**
+  String get settingsSwitchContext;
+
+  /// No description provided for @settingsPublicProfileDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Manage the information shown on your GitHub profile.'**
+  String get settingsPublicProfileDescription;
+
+  /// No description provided for @settingsProfileName.
+  ///
+  /// In en, this message translates to:
+  /// **'Name'**
+  String get settingsProfileName;
+
+  /// No description provided for @settingsProfilePublicEmail.
+  ///
+  /// In en, this message translates to:
+  /// **'Public email'**
+  String get settingsProfilePublicEmail;
+
+  /// No description provided for @settingsProfilePublicEmailDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'This address is visible on your public GitHub profile.'**
+  String get settingsProfilePublicEmailDescription;
+
+  /// No description provided for @settingsProfileEmailHidden.
+  ///
+  /// In en, this message translates to:
+  /// **'Don\'t show my email'**
+  String get settingsProfileEmailHidden;
+
+  /// No description provided for @settingsProfileEmailLoadError.
+  ///
+  /// In en, this message translates to:
+  /// **'Verified emails could not be loaded. Your current public email is unchanged.'**
+  String get settingsProfileEmailLoadError;
+
+  /// No description provided for @settingsProfileBio.
+  ///
+  /// In en, this message translates to:
+  /// **'Bio'**
+  String get settingsProfileBio;
+
+  /// No description provided for @settingsProfilePronouns.
+  ///
+  /// In en, this message translates to:
+  /// **'Pronouns'**
+  String get settingsProfilePronouns;
+
+  /// No description provided for @settingsProfileUrl.
+  ///
+  /// In en, this message translates to:
+  /// **'URL'**
+  String get settingsProfileUrl;
+
+  /// No description provided for @settingsProfileCompany.
+  ///
+  /// In en, this message translates to:
+  /// **'Company'**
+  String get settingsProfileCompany;
+
+  /// No description provided for @settingsProfileLocation.
+  ///
+  /// In en, this message translates to:
+  /// **'Location'**
+  String get settingsProfileLocation;
+
+  /// No description provided for @settingsProfileTwitter.
+  ///
+  /// In en, this message translates to:
+  /// **'X username'**
+  String get settingsProfileTwitter;
+
+  /// No description provided for @settingsProfileAvailableForHire.
+  ///
+  /// In en, this message translates to:
+  /// **'Available for hire'**
+  String get settingsProfileAvailableForHire;
+
+  /// No description provided for @settingsProfilePicture.
+  ///
+  /// In en, this message translates to:
+  /// **'Profile picture'**
+  String get settingsProfilePicture;
+
+  /// No description provided for @settingsManageProfilePicture.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit on GitHub'**
+  String get settingsManageProfilePicture;
+
+  /// No description provided for @settingsUpdateProfile.
+  ///
+  /// In en, this message translates to:
+  /// **'Update profile'**
+  String get settingsUpdateProfile;
+
+  /// No description provided for @settingsProfileUpdated.
+  ///
+  /// In en, this message translates to:
+  /// **'Your public profile was updated.'**
+  String get settingsProfileUpdated;
+
+  /// No description provided for @settingsPublicProfileLoadError.
+  ///
+  /// In en, this message translates to:
+  /// **'DioHub could not load the public profile for this account.'**
+  String get settingsPublicProfileLoadError;
+
+  /// No description provided for @settingsManagedByGitHub.
+  ///
+  /// In en, this message translates to:
+  /// **'Continue on GitHub'**
+  String get settingsManagedByGitHub;
+
+  /// No description provided for @settingsBrowserOnly.
+  ///
+  /// In en, this message translates to:
+  /// **'GitHub web setting'**
+  String get settingsBrowserOnly;
+
+  /// No description provided for @settingsBrowserOnlyDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'{setting} does not have a supported public API. DioHub opens the matching page for the active server.'**
+  String settingsBrowserOnlyDescription(String setting);
+
+  /// No description provided for @settingsPartialApiCoverage.
+  ///
+  /// In en, this message translates to:
+  /// **'Partial public API'**
+  String get settingsPartialApiCoverage;
+
+  /// No description provided for @settingsPartialApiCoverageDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'GitHub exposes only part of {setting} through public APIs. DioHub does not present an incomplete subset as the full setting.'**
+  String settingsPartialApiCoverageDescription(String setting);
+
+  /// No description provided for @settingsOAuthScopeRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Additional authorization required'**
+  String get settingsOAuthScopeRequired;
+
+  /// No description provided for @settingsOAuthScopeRequiredDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'{setting} has public API coverage, but the current DioHub OAuth scope does not authorize it. Authorization changes are handled separately.'**
+  String settingsOAuthScopeRequiredDescription(String setting);
+
+  /// No description provided for @settingsGitHubManagedDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'{setting} is managed by GitHub. DioHub opens the matching page for the active server instead of imitating unavailable private APIs.'**
+  String settingsGitHubManagedDescription(String setting);
+
+  /// No description provided for @settingsOpenOnGitHub.
+  ///
+  /// In en, this message translates to:
+  /// **'Open on GitHub'**
+  String get settingsOpenOnGitHub;
+
+  /// No description provided for @settingsSignInToManageGitHub.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign in to manage this GitHub setting.'**
+  String get settingsSignInToManageGitHub;
+
+  /// No description provided for @settingsOpenOnGitHubDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Open this setting on {host}.'**
+  String settingsOpenOnGitHubDescription(String host);
+
+  /// No description provided for @settingsCollectionLoadError.
+  ///
+  /// In en, this message translates to:
+  /// **'DioHub could not load this setting. Check the connection and try again.'**
+  String get settingsCollectionLoadError;
+
+  /// No description provided for @settingsLoadMore.
+  ///
+  /// In en, this message translates to:
+  /// **'Load more'**
+  String get settingsLoadMore;
+
+  /// No description provided for @settingsRefresh.
+  ///
+  /// In en, this message translates to:
+  /// **'Refresh'**
+  String get settingsRefresh;
+
+  /// No description provided for @settingsDelete.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete'**
+  String get settingsDelete;
+
+  /// No description provided for @settingsEmailsDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Manage the email addresses associated with your GitHub account.'**
+  String get settingsEmailsDescription;
+
+  /// No description provided for @settingsAddEmail.
+  ///
+  /// In en, this message translates to:
+  /// **'Add email address'**
+  String get settingsAddEmail;
+
+  /// No description provided for @settingsDeleteEmail.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete email address'**
+  String get settingsDeleteEmail;
+
+  /// No description provided for @settingsDeleteEmailConfirmation.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove {email} from your GitHub account?'**
+  String settingsDeleteEmailConfirmation(String email);
+
+  /// No description provided for @settingsPrimaryEmailVisibility.
+  ///
+  /// In en, this message translates to:
+  /// **'Primary email visibility'**
+  String get settingsPrimaryEmailVisibility;
+
+  /// No description provided for @settingsPrimaryEmailVisibilityDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose whether your primary email may be shown on your public GitHub profile.'**
+  String get settingsPrimaryEmailVisibilityDescription;
+
+  /// No description provided for @settingsNoEmails.
+  ///
+  /// In en, this message translates to:
+  /// **'No email addresses'**
+  String get settingsNoEmails;
+
+  /// No description provided for @settingsNoEmailsDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Add an email address to use it with your GitHub account.'**
+  String get settingsNoEmailsDescription;
+
+  /// No description provided for @settingsEmailPrimary.
+  ///
+  /// In en, this message translates to:
+  /// **'Primary'**
+  String get settingsEmailPrimary;
+
+  /// No description provided for @settingsEmailVerified.
+  ///
+  /// In en, this message translates to:
+  /// **'Verified'**
+  String get settingsEmailVerified;
+
+  /// No description provided for @settingsEmailUnverified.
+  ///
+  /// In en, this message translates to:
+  /// **'Unverified'**
+  String get settingsEmailUnverified;
+
+  /// No description provided for @settingsEmailPublic.
+  ///
+  /// In en, this message translates to:
+  /// **'Public'**
+  String get settingsEmailPublic;
+
+  /// No description provided for @settingsEmailPrivate.
+  ///
+  /// In en, this message translates to:
+  /// **'Private'**
+  String get settingsEmailPrivate;
+
+  /// No description provided for @settingsEmailAddress.
+  ///
+  /// In en, this message translates to:
+  /// **'Email address'**
+  String get settingsEmailAddress;
+
+  /// No description provided for @settingsEmailInvalid.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter a valid email address.'**
+  String get settingsEmailInvalid;
+
+  /// No description provided for @settingsKeysDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Manage the keys GitHub uses for authentication and verified signing.'**
+  String get settingsKeysDescription;
+
+  /// No description provided for @settingsSshKeys.
+  ///
+  /// In en, this message translates to:
+  /// **'SSH keys'**
+  String get settingsSshKeys;
+
+  /// No description provided for @settingsGpgKeys.
+  ///
+  /// In en, this message translates to:
+  /// **'GPG keys'**
+  String get settingsGpgKeys;
+
+  /// No description provided for @settingsSshSigningKeys.
+  ///
+  /// In en, this message translates to:
+  /// **'Signing keys'**
+  String get settingsSshSigningKeys;
+
+  /// No description provided for @settingsAddKey.
+  ///
+  /// In en, this message translates to:
+  /// **'New key'**
+  String get settingsAddKey;
+
+  /// No description provided for @settingsDeleteKey.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete key'**
+  String get settingsDeleteKey;
+
+  /// No description provided for @settingsDeleteKeyConfirmation.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete “{title}”? This cannot be undone.'**
+  String settingsDeleteKeyConfirmation(String title);
+
+  /// No description provided for @settingsNoSshKeys.
+  ///
+  /// In en, this message translates to:
+  /// **'No SSH keys'**
+  String get settingsNoSshKeys;
+
+  /// No description provided for @settingsNoSshKeysDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Add an SSH key to authenticate Git operations.'**
+  String get settingsNoSshKeysDescription;
+
+  /// No description provided for @settingsNoGpgKeys.
+  ///
+  /// In en, this message translates to:
+  /// **'No GPG keys'**
+  String get settingsNoGpgKeys;
+
+  /// No description provided for @settingsNoGpgKeysDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Add a GPG key to mark supported commits and tags as verified.'**
+  String get settingsNoGpgKeysDescription;
+
+  /// No description provided for @settingsNoSigningKeys.
+  ///
+  /// In en, this message translates to:
+  /// **'No SSH signing keys'**
+  String get settingsNoSigningKeys;
+
+  /// No description provided for @settingsNoSigningKeysDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Add an SSH signing key for verified Git signatures.'**
+  String get settingsNoSigningKeysDescription;
+
+  /// No description provided for @settingsAddedOn.
+  ///
+  /// In en, this message translates to:
+  /// **'Added {date}'**
+  String settingsAddedOn(String date);
+
+  /// No description provided for @settingsKeyNameOptional.
+  ///
+  /// In en, this message translates to:
+  /// **'Name (optional)'**
+  String get settingsKeyNameOptional;
+
+  /// No description provided for @settingsKeyTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Title'**
+  String get settingsKeyTitle;
+
+  /// No description provided for @settingsArmoredGpgKey.
+  ///
+  /// In en, this message translates to:
+  /// **'ASCII-armored GPG public key'**
+  String get settingsArmoredGpgKey;
+
+  /// No description provided for @settingsPublicKey.
+  ///
+  /// In en, this message translates to:
+  /// **'Public key'**
+  String get settingsPublicKey;
+
+  /// No description provided for @settingsFieldRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'This field is required.'**
+  String get settingsFieldRequired;
+
+  /// No description provided for @settingsOrganizationsDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Organizations associated with your GitHub account. Membership changes continue on GitHub.'**
+  String get settingsOrganizationsDescription;
+
+  /// No description provided for @settingsNoOrganizations.
+  ///
+  /// In en, this message translates to:
+  /// **'No organizations'**
+  String get settingsNoOrganizations;
+
+  /// No description provided for @settingsNoOrganizationsDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'This account does not currently belong to an organization.'**
+  String get settingsNoOrganizationsDescription;
+
+  /// No description provided for @settingsOrganizationSummary.
+  ///
+  /// In en, this message translates to:
+  /// **'{repositories} repositories · {members} members'**
+  String settingsOrganizationSummary(int repositories, int members);
+
+  /// No description provided for @settingsRepositoriesDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Browse repositories available to this account. Administrative controls continue on GitHub.'**
+  String get settingsRepositoriesDescription;
+
+  /// No description provided for @settingsNoRepositories.
+  ///
+  /// In en, this message translates to:
+  /// **'No repositories'**
+  String get settingsNoRepositories;
+
+  /// No description provided for @settingsNoRepositoriesDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'No repository is available to this account.'**
+  String get settingsNoRepositoriesDescription;
+
+  /// No description provided for @settingsFork.
+  ///
+  /// In en, this message translates to:
+  /// **'Fork'**
+  String get settingsFork;
+
+  /// No description provided for @settingsStars.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 star} other{{count} stars}}'**
+  String settingsStars(int count);
+
+  /// No description provided for @settingsUpdatedOn.
+  ///
+  /// In en, this message translates to:
+  /// **'Updated {date}'**
+  String settingsUpdatedOn(String date);
+
+  /// No description provided for @settingsModerationDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Review and manage users blocked by this GitHub account.'**
+  String get settingsModerationDescription;
+
+  /// No description provided for @settingsBlockUser.
+  ///
+  /// In en, this message translates to:
+  /// **'Block a user'**
+  String get settingsBlockUser;
+
+  /// No description provided for @settingsGitHubUsername.
+  ///
+  /// In en, this message translates to:
+  /// **'GitHub username'**
+  String get settingsGitHubUsername;
+
+  /// No description provided for @settingsBlock.
+  ///
+  /// In en, this message translates to:
+  /// **'Block'**
+  String get settingsBlock;
+
+  /// No description provided for @settingsNoBlockedUsers.
+  ///
+  /// In en, this message translates to:
+  /// **'No blocked users'**
+  String get settingsNoBlockedUsers;
+
+  /// No description provided for @settingsNoBlockedUsersDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Users blocked by this account will appear here.'**
+  String get settingsNoBlockedUsersDescription;
+
+  /// No description provided for @settingsUnblock.
+  ///
+  /// In en, this message translates to:
+  /// **'Unblock'**
+  String get settingsUnblock;
+
+  /// No description provided for @commonLoading.
+  ///
+  /// In en, this message translates to:
+  /// **'Loading…'**
+  String get commonLoading;
+
+  /// No description provided for @repoWorkflowStatusSuccess.
+  ///
+  /// In en, this message translates to:
+  /// **'Succeeded'**
+  String get repoWorkflowStatusSuccess;
+
+  /// No description provided for @repoWorkflowStatusFailure.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed'**
+  String get repoWorkflowStatusFailure;
+
+  /// No description provided for @repoWorkflowStatusTimedOut.
+  ///
+  /// In en, this message translates to:
+  /// **'Timed out'**
+  String get repoWorkflowStatusTimedOut;
+
+  /// No description provided for @repoWorkflowStatusCancelled.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancelled'**
+  String get repoWorkflowStatusCancelled;
+
+  /// No description provided for @repoWorkflowStatusInProgress.
+  ///
+  /// In en, this message translates to:
+  /// **'In progress'**
+  String get repoWorkflowStatusInProgress;
+
+  /// No description provided for @repoWorkflowStatusQueued.
+  ///
+  /// In en, this message translates to:
+  /// **'Queued'**
+  String get repoWorkflowStatusQueued;
+
+  /// No description provided for @repoWorkflowStatusWaiting.
+  ///
+  /// In en, this message translates to:
+  /// **'Waiting'**
+  String get repoWorkflowStatusWaiting;
+
+  /// No description provided for @repoWorkflowStatusPending.
+  ///
+  /// In en, this message translates to:
+  /// **'Pending'**
+  String get repoWorkflowStatusPending;
+
+  /// No description provided for @repoWorkflowStatusUnknown.
+  ///
+  /// In en, this message translates to:
+  /// **'Unknown status'**
+  String get repoWorkflowStatusUnknown;
+
+  /// No description provided for @compareFileStatusAdded.
+  ///
+  /// In en, this message translates to:
+  /// **'Added'**
+  String get compareFileStatusAdded;
+
+  /// No description provided for @compareFileStatusRemoved.
+  ///
+  /// In en, this message translates to:
+  /// **'Removed'**
+  String get compareFileStatusRemoved;
+
+  /// No description provided for @compareFileStatusRenamed.
+  ///
+  /// In en, this message translates to:
+  /// **'Renamed'**
+  String get compareFileStatusRenamed;
+
+  /// No description provided for @compareFileStatusModified.
+  ///
+  /// In en, this message translates to:
+  /// **'Modified'**
+  String get compareFileStatusModified;
+
+  /// No description provided for @compareTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Compare'**
+  String get compareTitle;
+
+  /// No description provided for @compareSelectBaseRef.
+  ///
+  /// In en, this message translates to:
+  /// **'Select base ref'**
+  String get compareSelectBaseRef;
+
+  /// No description provided for @compareSelectHeadRef.
+  ///
+  /// In en, this message translates to:
+  /// **'Select head ref'**
+  String get compareSelectHeadRef;
+
+  /// No description provided for @compareSelectBase.
+  ///
+  /// In en, this message translates to:
+  /// **'Select base…'**
+  String get compareSelectBase;
+
+  /// No description provided for @compareSelectHead.
+  ///
+  /// In en, this message translates to:
+  /// **'Select head…'**
+  String get compareSelectHead;
+
+  /// No description provided for @compareSwapBaseHead.
+  ///
+  /// In en, this message translates to:
+  /// **'Swap base and head'**
+  String get compareSwapBaseHead;
+
+  /// No description provided for @compareEnterRefs.
+  ///
+  /// In en, this message translates to:
+  /// **'Select base and head refs to compare changes.'**
+  String get compareEnterRefs;
+
+  /// No description provided for @compareLoadError.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not load comparison: {error}'**
+  String compareLoadError(String error);
+
+  /// No description provided for @compareAhead.
+  ///
+  /// In en, this message translates to:
+  /// **'ahead'**
+  String get compareAhead;
+
+  /// No description provided for @compareBehind.
+  ///
+  /// In en, this message translates to:
+  /// **'behind'**
+  String get compareBehind;
+
+  /// No description provided for @compareFilesChanged.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 file changed} other{{count} files changed}}'**
+  String compareFilesChanged(int count);
+
+  /// No description provided for @compareCommits.
+  ///
+  /// In en, this message translates to:
+  /// **'Commits'**
+  String get compareCommits;
+
+  /// No description provided for @compareFiles.
+  ///
+  /// In en, this message translates to:
+  /// **'Files'**
+  String get compareFiles;
+
+  /// No description provided for @projectPickerLinked.
+  ///
+  /// In en, this message translates to:
+  /// **'Linked'**
+  String get projectPickerLinked;
+
+  /// No description provided for @projectPickerAddToProject.
+  ///
+  /// In en, this message translates to:
+  /// **'Add to project'**
+  String get projectPickerAddToProject;
 }
 
 class _AppLocalizationsDelegate

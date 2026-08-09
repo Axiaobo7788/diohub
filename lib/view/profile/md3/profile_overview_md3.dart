@@ -362,30 +362,57 @@ class ProfileIdentityPanel extends StatelessWidget {
     }) {
       final String normalized = value?.trim() ?? '';
       if (normalized.isEmpty) return;
-      rows.add(
-        Padding(
-          padding: const EdgeInsets.only(bottom: 8),
-          child: InkWell(
-            onTap: onTap,
-            borderRadius: BorderRadius.circular(6),
-            child: Row(
-              children: <Widget>[
-                Icon(
-                  icon,
-                  size: 18,
-                  color: Theme.of(context).colorScheme.onSurfaceVariant,
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    normalized,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-              ],
+      final Widget row = Row(
+        children: <Widget>[
+          Icon(
+            icon,
+            size: 18,
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              normalized,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: onTap == null
+                  ? null
+                  : TextStyle(
+                      color: Theme.of(context).colorScheme.primary,
+                      decoration: TextDecoration.underline,
+                      decorationColor: Theme.of(context).colorScheme.primary,
+                    ),
             ),
           ),
+        ],
+      );
+      rows.add(
+        Padding(
+          padding: EdgeInsets.only(bottom: onTap == null ? 8 : 4),
+          child: onTap == null
+              ? ConstrainedBox(
+                  constraints: const BoxConstraints(minHeight: 32),
+                  child: Center(child: row),
+                )
+              : Semantics(
+                  container: true,
+                  link: true,
+                  label: normalized,
+                  onTap: onTap,
+                  child: ExcludeSemantics(
+                    child: Material(
+                      color: Colors.transparent,
+                      child: InkWell(
+                        onTap: onTap,
+                        borderRadius: BorderRadius.circular(6),
+                        child: ConstrainedBox(
+                          constraints: const BoxConstraints(minHeight: 48),
+                          child: Center(child: row),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
         ),
       );
     }

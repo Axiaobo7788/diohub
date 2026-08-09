@@ -9,6 +9,7 @@ import 'package:diohub_models/models/users/gist_mutation_models.dart';
 import 'package:diohub_models/models/users/gpg_key_item.dart';
 import 'package:diohub_models/models/users/ssh_key_item.dart';
 import 'package:diohub_models/models/users/ssh_signing_key_item.dart';
+import 'package:diohub_models/models/users/user_info_model.dart';
 import 'package:diohub/services/base/base_service.dart';
 
 /// Viewer-only settings and mutations: profile, status, blocks, SSH/GPG/SSH signing keys.
@@ -74,6 +75,30 @@ class ViewerSettingsService extends BaseService {
       if (e.response?.statusCode == 404) return false;
       rethrow;
     }
+  }
+
+  /// Lists users blocked by the authenticated viewer. GET /user/blocks.
+  Future<PaginatedResult<SimpleUser>> listBlockedUsers({
+    int page = 1,
+    int perPage = 30,
+  }) async {
+    final response = await rest.get<dynamic>(
+      '/user/blocks',
+      queryParameters: <String, dynamic>{'page': page, 'per_page': perPage},
+    );
+    final List<Object?> list = extractListFromResponse<Object?>(response);
+    final List<SimpleUser> items = list
+        .map(
+          (final Object? value) => SimpleUser.fromJson(
+            Map<String, dynamic>.from(value! as Map<dynamic, dynamic>),
+          ),
+        )
+        .toList(growable: false);
+    return parsePaginatedRestResponse<SimpleUser>(
+      response: response,
+      items: items,
+      currentPage: page,
+    );
   }
 
   /// Lists the authenticated user's SSH public keys. GET /user/keys.
@@ -293,7 +318,7 @@ class ViewerSettingsService extends BaseService {
             'files': filesMap,
           },
         );
-    return GistResponse.fromJson(res.data! as Map<String, dynamic>);
+    return GistResponse.fromJson(res.data!);
   }
 
   /// Updates a gist. PATCH /gists/:gist_id.
@@ -313,7 +338,7 @@ class ViewerSettingsService extends BaseService {
     }
     final Response<Map<String, dynamic>> res = await rest
         .patch<Map<String, dynamic>>('/gists/$gistId', data: data);
-    return GistResponse.fromJson(res.data! as Map<String, dynamic>);
+    return GistResponse.fromJson(res.data!);
   }
 
   /// Deletes a gist. DELETE /gists/:gist_id.

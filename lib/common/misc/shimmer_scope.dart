@@ -14,10 +14,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 /// Reads [disableShimmerAnimation] from [appearanceProvider]. When true,
 /// shows a static opacity placeholder instead of the breathing animation.
 ///
-/// Uses a calm "breathe" pulse animation — a sinusoidal opacity oscillation
-/// between 40% and 100% — instead of a directional shimmer sweep.
-/// This creates a more premium, organic feel aligned with the app's
-/// glass-pill / squircle design language.
+/// Uses a low-motion opacity pulse instead of a directional shimmer sweep.
+/// Shape belongs to each placeholder, so migrated MD3 surfaces can use neutral
+/// rounded rectangles without inheriting a legacy visual language.
 ///
 /// Example:
 /// ```dart

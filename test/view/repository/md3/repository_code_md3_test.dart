@@ -3,9 +3,11 @@ import 'dart:async';
 import 'package:diohub/app/settings/settings_cache.dart';
 import 'package:diohub/common/markdown_view/markdown_body.dart';
 import 'package:diohub/common/markdown_view/markdown_render_artifact.dart';
+import 'package:diohub/common/misc/shimmer_scope.dart';
 import 'package:diohub/l10n/app_localizations.dart';
 import 'package:diohub/models/repository_document.dart';
 import 'package:diohub/models/repository_preview.dart';
+import 'package:diohub/providers/code_browser/code_browser_state_provider.dart';
 import 'package:diohub/providers/code_browser/directory_last_commit_provider.dart';
 import 'package:diohub/providers/code_browser/directory_provider.dart';
 import 'package:diohub/providers/database_providers.dart';
@@ -75,7 +77,7 @@ void main() {
       expect(find.text('octocat / hello-world'), findsOneWidget);
       expect(find.byType(CustomScrollView), findsOneWidget);
       expect(find.byType(LinearProgressIndicator), findsOneWidget);
-      expect(find.byIcon(Icons.folder_outlined), findsNWidgets(9));
+      expect(find.byIcon(Icons.folder_outlined), findsNWidgets(5));
       expect(find.byType(CircularProgressIndicator), findsNothing);
       expect(
         find.byKey(
@@ -85,6 +87,107 @@ void main() {
         ),
         findsOneWidget,
       );
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets(
+    'uses a five-row file-table skeleton and stays static for Reduced Motion',
+    (final WidgetTester tester) async {
+      const RepoRef repoRef = RepoRef(owner: 'octocat', name: 'hello-world');
+      final Completer<RepoInfoData> repositoryCompleter =
+          Completer<RepoInfoData>();
+      final Completer<DirectoryLastCommit?> commitCompleter =
+          Completer<DirectoryLastCommit?>();
+      final ProviderContainer container = ProviderContainer(
+        overrides: <Override>[
+          repositoryProvider.overrideWith2(
+            (final RepoRef arg) =>
+                _PendingRepositoryNotifier(arg, repositoryCompleter),
+          ),
+          settingsCacheProvider.overrideWithValue(
+            SettingsCache(<String, String>{}),
+          ),
+          directoryProvider.overrideWith2(_PendingDirectoryNotifier.new),
+          directoryLastCommitProvider.overrideWith(
+            (final Ref ref, final LastCommitKey key) => commitCompleter.future,
+          ),
+        ],
+      );
+      addTearDown(() {
+        container.dispose();
+        if (!repositoryCompleter.isCompleted) {
+          repositoryCompleter.completeError(StateError('test disposed'));
+        }
+        if (!commitCompleter.isCompleted) {
+          commitCompleter.completeError(StateError('test disposed'));
+        }
+      });
+      container
+          .read(repositoryPreviewProvider(repoRef).notifier)
+          .seed(
+            const RepositoryPreview(
+              fullName: 'octocat/hello-world',
+              name: 'hello-world',
+              owner: 'octocat',
+              ownerAvatarUrl: null,
+              isPrivate: false,
+              defaultBranch: 'main',
+            ),
+          );
+      container
+          .read(codeBrowserStateProvider(repoRef).notifier)
+          .pushDirectory('lib');
+
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: MaterialApp(
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            theme: ThemeData(useMaterial3: true),
+            builder: (final BuildContext context, final Widget? child) =>
+                MediaQuery(
+                  data: MediaQuery.of(
+                    context,
+                  ).copyWith(disableAnimations: true),
+                  child: child!,
+                ),
+            home: Scaffold(
+              body: RepositoryCodeMd3(
+                repoRef: repoRef,
+                repo: null,
+                details: null,
+                detailsLoading: false,
+                detailsError: null,
+                onRetryDetails: () async {},
+                header: const Text('Repository identity'),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.pump();
+
+      expect(
+        find.byKey(const ValueKey<String>('repository-code-directory-loading')),
+        findsOneWidget,
+      );
+      for (int index = 0; index < 5; index++) {
+        expect(
+          find.byKey(
+            ValueKey<String>('repository-code-directory-loading-row-$index'),
+          ),
+          findsOneWidget,
+        );
+      }
+      expect(find.byType(ShimmerScope), findsNWidgets(2));
+      expect(
+        find.byKey(const ValueKey<String>('shimmer-scope-static')),
+        findsNWidgets(2),
+      );
+      expect(find.byType(CircularProgressIndicator), findsNothing);
       expect(tester.takeException(), isNull);
     },
   );
@@ -175,8 +278,39 @@ void main() {
           findsOneWidget,
         );
         expect(find.text('Keep the repository layout compact'), findsOneWidget);
+        if (width >= 600) {
+          final Text author = tester.widget<Text>(find.text('octocat'));
+          expect(author.style?.fontSize, 14);
+          expect(author.style?.height, closeTo(20 / 14, 0.0001));
+          expect(author.style?.fontWeight, FontWeight.w600);
+        }
         expect(find.text('lib'), findsOneWidget);
         expect(find.text('README.md'), findsOneWidget);
+        final Finder libRow = find.ancestor(
+          of: find.text('lib'),
+          matching: width < 600 ? find.byType(ListTile) : find.byType(InkWell),
+        );
+        expect(tester.getSize(libRow.first).height, greaterThanOrEqualTo(48));
+        if (width == 360) {
+          await tester.tap(
+            find.byKey(const ValueKey<String>('repository-code-options')),
+          );
+          await tester.pumpAndSettle();
+          await tester.tap(
+            find.byKey(
+              const ValueKey<String>('repository-open-directory-filter'),
+            ),
+          );
+          await tester.pumpAndSettle();
+          await tester.enterText(find.byType(TextField).first, 'lib');
+          await tester.pump();
+          final Finder clearTarget = find.byKey(
+            const ValueKey<String>('repository-directory-filter-clear'),
+          );
+          expect(clearTarget, findsOneWidget);
+          expect(tester.getSize(clearTarget).height, greaterThanOrEqualTo(48));
+          expect(tester.getSize(clearTarget).width, greaterThanOrEqualTo(48));
+        }
         expect(
           find.text('hello-world'),
           findsNothing,
@@ -196,6 +330,25 @@ void main() {
           isNotNull,
           reason:
               'The production Code README must consume the Runtime artifact.',
+        );
+        final Finder readmeTabSemantics = find.byWidgetPredicate(
+          (final Widget widget) =>
+              widget is Semantics &&
+              widget.properties.label == 'README' &&
+              widget.properties.selected == true,
+        );
+        expect(
+          readmeTabSemantics,
+          findsOneWidget,
+          reason:
+              'The visible README label must merge into one selected tab node.',
+        );
+        expect(
+          find.descendant(
+            of: readmeTabSemantics,
+            matching: find.text('README'),
+          ),
+          findsOneWidget,
         );
         expect(tester.takeException(), isNull);
       },
@@ -256,4 +409,11 @@ final class _TestDirectoryNotifier extends DirectoryNotifier {
       byteSize: 1024,
     ),
   ];
+}
+
+final class _PendingDirectoryNotifier extends DirectoryNotifier {
+  _PendingDirectoryNotifier(final DirectoryKey key) : super(key);
+
+  @override
+  Future<List<CodeTreeNode>> build() => Completer<List<CodeTreeNode>>().future;
 }

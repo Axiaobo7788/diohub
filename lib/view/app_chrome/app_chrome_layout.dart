@@ -7,6 +7,8 @@ abstract final class AppChromeLayout {
   const AppChromeLayout._();
 
   static const double desktopBreakpoint = 1040;
+  static const double desktopToolbarHeight = 52;
+  static const double compactToolbarHeight = 56;
   static const double navigationDrawerWidth = 360;
   static const double navigationDrawerEdgeReveal = 56;
   static const double globalSearchWidth = 320;

@@ -123,7 +123,6 @@ class _RepositoryScaffold extends StatelessWidget {
         owner: _repositoryParts.length > 1 ? _repositoryParts.first : null,
         title: _repositoryParts.last,
         compact: !_isExpanded,
-        trailing: const Icon(Icons.arrow_drop_down, size: 20),
       ),
       pageActions: <Widget>[
         ...pageActions,

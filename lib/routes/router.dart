@@ -30,6 +30,24 @@ class AppRouter extends RootStackRouter {
       transitionsBuilder: buildAppPageTransition,
     ),
     CustomRoute<dynamic>(
+      page: NotificationsRoute.page,
+      duration: kPageTransitionDuration,
+      reverseDuration: kPageTransitionReverseDuration,
+      transitionsBuilder: buildAppPageTransition,
+    ),
+    CustomRoute<dynamic>(
+      page: GlobalListsRoute.page,
+      duration: kPageTransitionDuration,
+      reverseDuration: kPageTransitionReverseDuration,
+      transitionsBuilder: buildAppPageTransition,
+    ),
+    CustomRoute<dynamic>(
+      page: SettingsRoute.page,
+      duration: kPageTransitionDuration,
+      reverseDuration: kPageTransitionReverseDuration,
+      transitionsBuilder: buildAppPageTransition,
+    ),
+    CustomRoute<dynamic>(
       page: IssueDetailRoute.page,
       duration: kPageTransitionDuration,
       reverseDuration: kPageTransitionReverseDuration,

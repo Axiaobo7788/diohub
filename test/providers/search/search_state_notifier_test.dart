@@ -85,6 +85,17 @@ void main() {
     },
   );
 
+  test('preserves an explicit account login before ViewerInfo resolves', () {
+    final ProviderContainer container = createContainer();
+    addTearDown(container.dispose);
+    const SearchScope scope = SearchScope.homeIssues(viewerLogin: 'octocat');
+
+    expect(
+      container.read(searchStateNotifierProvider(scope)).apiQuery,
+      'involves:octocat type:issue is:open',
+    );
+  });
+
   test('parses every qualifier in a multi-token preset', () {
     final ProviderContainer container = createContainer();
     addTearDown(container.dispose);

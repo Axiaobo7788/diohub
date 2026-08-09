@@ -15,6 +15,7 @@ import 'package:diohub_graphql/queries/users/user_info.graphql.dart';
 import 'package:diohub_models/models/authentication/account_session.dart';
 import 'package:diohub_models/models/entity_ref.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/semantics.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
@@ -241,6 +242,32 @@ void main() {
       findsNothing,
     );
     expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('Profile metadata links are visually and semantically links', (
+    final WidgetTester tester,
+  ) async {
+    final SemanticsHandle semantics = tester.ensureSemantics();
+    await pumpProfile(tester, size: const Size(800, 900));
+    await tester.pump(const Duration(milliseconds: 400));
+
+    final Finder website = find.text('https://github.blog');
+    expect(website, findsOneWidget);
+    await tester.ensureVisible(website);
+    await tester.pump();
+    final Text websiteText = tester.widget<Text>(website);
+    expect(websiteText.style?.decoration, TextDecoration.underline);
+    expect(
+      websiteText.style?.color,
+      Theme.of(tester.element(website)).colorScheme.primary,
+    );
+    final Finder semanticLink = find.bySemanticsLabel('https://github.blog');
+    expect(semanticLink, findsOneWidget);
+    final SemanticsNode node = tester.getSemantics(semanticLink);
+    expect(node.hasFlag(SemanticsFlag.isLink), isTrue);
+    expect(node.getSemanticsData().hasAction(SemanticsAction.tap), isTrue);
+    expect(tester.takeException(), isNull);
+    semantics.dispose();
   });
 
   testWidgets('Profile error is retryable inside the stable shell', (

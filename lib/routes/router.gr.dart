@@ -9,51 +9,56 @@
 // coverage:ignore-file
 
 // ignore_for_file: no_leading_underscores_for_library_prefixes
-import 'package:auto_route/auto_route.dart' as _i23;
-import 'package:collection/collection.dart' as _i27;
-import 'package:diohub/common/diff/models.dart' as _i26;
+import 'package:auto_route/auto_route.dart' as _i26;
+import 'package:collection/collection.dart' as _i30;
+import 'package:diohub/common/diff/models.dart' as _i29;
+import 'package:diohub/models/global_list_destination.dart' as _i32;
 import 'package:diohub/view/authentication/auth_screen.dart' as _i1;
 import 'package:diohub/view/changelog/changelog_screen.dart' as _i2;
-import 'package:diohub/view/home/home.dart' as _i11;
+import 'package:diohub/view/global_lists/global_lists_screen.dart' as _i11;
+import 'package:diohub/view/home/home.dart' as _i12;
 import 'package:diohub/view/issues_pulls/comment_screen.dart' as _i4;
 import 'package:diohub/view/issues_pulls/edit_issue_screen.dart' as _i7;
 import 'package:diohub/view/issues_pulls/edit_pull_request_screen.dart' as _i8;
-import 'package:diohub/view/issues_pulls/issue_detail_screen.dart' as _i12;
-import 'package:diohub/view/issues_pulls/new_pull_request_screen.dart' as _i15;
+import 'package:diohub/view/issues_pulls/issue_detail_screen.dart' as _i13;
+import 'package:diohub/view/issues_pulls/new_pull_request_screen.dart' as _i16;
 import 'package:diohub/view/issues_pulls/pull_request_detail_screen.dart'
-    as _i16;
+    as _i18;
 import 'package:diohub/view/issues_pulls/widgets/file_diff_screen.dart' as _i9;
 import 'package:diohub/view/landing/widgets/landing_loading_screen.dart'
-    as _i13;
-import 'package:diohub/view/profile/user_profile_screen.dart' as _i21;
+    as _i14;
+import 'package:diohub/view/notifications/notifications_md3_screen.dart'
+    as _i17;
+import 'package:diohub/view/profile/user_profile_screen.dart' as _i24;
 import 'package:diohub/view/repository/code/file_viewer_screen.dart' as _i10;
 import 'package:diohub/view/repository/commits/commit_info_screen.dart' as _i5;
 import 'package:diohub/view/repository/commits/widgets/changes_viewer.dart'
     as _i3;
 import 'package:diohub/view/repository/compare_view_screen.dart' as _i6;
-import 'package:diohub/view/repository/issues/new_issue_screen.dart' as _i14;
-import 'package:diohub/view/repository/repository_screen.dart' as _i17;
-import 'package:diohub/view/repository/wiki/wiki_viewer.dart' as _i22;
-import 'package:diohub/view/search/search.dart' as _i20;
-import 'package:diohub/view/ssh/ssh_connections_screen.dart' as _i18;
-import 'package:diohub/view/ssh/ssh_terminal_screen.dart' as _i19;
-import 'package:diohub_graphql/queries/repositories/repo_typedefs.dart' as _i30;
-import 'package:diohub_models/models/entity_ref.dart' as _i25;
-import 'package:diohub_models/models/home_filter.dart' as _i29;
+import 'package:diohub/view/repository/issues/new_issue_screen.dart' as _i15;
+import 'package:diohub/view/repository/repository_screen.dart' as _i19;
+import 'package:diohub/view/repository/wiki/wiki_viewer.dart' as _i25;
+import 'package:diohub/view/search/search.dart' as _i22;
+import 'package:diohub/view/settings/settings_screen.dart' as _i23;
+import 'package:diohub/view/ssh/ssh_connections_screen.dart' as _i20;
+import 'package:diohub/view/ssh/ssh_terminal_screen.dart' as _i21;
+import 'package:diohub_graphql/queries/repositories/repo_typedefs.dart' as _i34;
+import 'package:diohub_models/models/entity_ref.dart' as _i28;
+import 'package:diohub_models/models/home_filter.dart' as _i33;
 import 'package:diohub_models/models/repositories/code/code_tree_node.dart'
-    as _i28;
-import 'package:flutter/foundation.dart' as _i31;
-import 'package:flutter/material.dart' as _i24;
+    as _i31;
+import 'package:flutter/foundation.dart' as _i35;
+import 'package:flutter/material.dart' as _i27;
 
 /// generated route for
 /// [_i1.AuthScreen]
-class AuthRoute extends _i23.PageRouteInfo<void> {
-  const AuthRoute({List<_i23.PageRouteInfo>? children})
+class AuthRoute extends _i26.PageRouteInfo<void> {
+  const AuthRoute({List<_i26.PageRouteInfo>? children})
     : super(AuthRoute.name, initialChildren: children);
 
   static const String name = 'AuthRoute';
 
-  static _i23.PageInfo page = _i23.PageInfo(
+  static _i26.PageInfo page = _i26.PageInfo(
     name,
     builder: (data) {
       return const _i1.AuthScreen();
@@ -63,13 +68,13 @@ class AuthRoute extends _i23.PageRouteInfo<void> {
 
 /// generated route for
 /// [_i2.ChangelogScreen]
-class ChangelogRoute extends _i23.PageRouteInfo<void> {
-  const ChangelogRoute({List<_i23.PageRouteInfo>? children})
+class ChangelogRoute extends _i26.PageRouteInfo<void> {
+  const ChangelogRoute({List<_i26.PageRouteInfo>? children})
     : super(ChangelogRoute.name, initialChildren: children);
 
   static const String name = 'ChangelogRoute';
 
-  static _i23.PageInfo page = _i23.PageInfo(
+  static _i26.PageInfo page = _i26.PageInfo(
     name,
     builder: (data) {
       return const _i2.ChangelogScreen();
@@ -79,13 +84,13 @@ class ChangelogRoute extends _i23.PageRouteInfo<void> {
 
 /// generated route for
 /// [_i3.ChangesViewer]
-class ChangesViewer extends _i23.PageRouteInfo<ChangesViewerArgs> {
+class ChangesViewer extends _i26.PageRouteInfo<ChangesViewerArgs> {
   ChangesViewer({
     required String? patch,
     required String? contentURL,
     required String? fileType,
-    _i24.Key? key,
-    List<_i23.PageRouteInfo>? children,
+    _i27.Key? key,
+    List<_i26.PageRouteInfo>? children,
   }) : super(
          ChangesViewer.name,
          args: ChangesViewerArgs(
@@ -99,7 +104,7 @@ class ChangesViewer extends _i23.PageRouteInfo<ChangesViewerArgs> {
 
   static const String name = 'ChangesViewer';
 
-  static _i23.PageInfo page = _i23.PageInfo(
+  static _i26.PageInfo page = _i26.PageInfo(
     name,
     builder: (data) {
       final args = data.argsAs<ChangesViewerArgs>();
@@ -127,7 +132,7 @@ class ChangesViewerArgs {
 
   final String? fileType;
 
-  final _i24.Key? key;
+  final _i27.Key? key;
 
   @override
   String toString() {
@@ -151,12 +156,12 @@ class ChangesViewerArgs {
 
 /// generated route for
 /// [_i4.CommentScreen]
-class CommentRoute extends _i23.PageRouteInfo<CommentRouteArgs> {
+class CommentRoute extends _i26.PageRouteInfo<CommentRouteArgs> {
   CommentRoute({
-    _i24.Key? key,
-    _i25.IssueRef? issueRef,
-    _i25.PullRequestRef? pullRef,
-    List<_i23.PageRouteInfo>? children,
+    _i27.Key? key,
+    _i28.IssueRef? issueRef,
+    _i28.PullRequestRef? pullRef,
+    List<_i26.PageRouteInfo>? children,
   }) : super(
          CommentRoute.name,
          args: CommentRouteArgs(key: key, issueRef: issueRef, pullRef: pullRef),
@@ -165,7 +170,7 @@ class CommentRoute extends _i23.PageRouteInfo<CommentRouteArgs> {
 
   static const String name = 'CommentRoute';
 
-  static _i23.PageInfo page = _i23.PageInfo(
+  static _i26.PageInfo page = _i26.PageInfo(
     name,
     builder: (data) {
       final args = data.argsAs<CommentRouteArgs>(
@@ -183,11 +188,11 @@ class CommentRoute extends _i23.PageRouteInfo<CommentRouteArgs> {
 class CommentRouteArgs {
   const CommentRouteArgs({this.key, this.issueRef, this.pullRef});
 
-  final _i24.Key? key;
+  final _i27.Key? key;
 
-  final _i25.IssueRef? issueRef;
+  final _i28.IssueRef? issueRef;
 
-  final _i25.PullRequestRef? pullRef;
+  final _i28.PullRequestRef? pullRef;
 
   @override
   String toString() {
@@ -209,11 +214,11 @@ class CommentRouteArgs {
 
 /// generated route for
 /// [_i5.CommitInfoScreen]
-class CommitInfoRoute extends _i23.PageRouteInfo<CommitInfoRouteArgs> {
+class CommitInfoRoute extends _i26.PageRouteInfo<CommitInfoRouteArgs> {
   CommitInfoRoute({
-    required _i25.CommitRef commitRef,
-    _i24.Key? key,
-    List<_i23.PageRouteInfo>? children,
+    required _i28.CommitRef commitRef,
+    _i27.Key? key,
+    List<_i26.PageRouteInfo>? children,
   }) : super(
          CommitInfoRoute.name,
          args: CommitInfoRouteArgs(commitRef: commitRef, key: key),
@@ -222,7 +227,7 @@ class CommitInfoRoute extends _i23.PageRouteInfo<CommitInfoRouteArgs> {
 
   static const String name = 'CommitInfoRoute';
 
-  static _i23.PageInfo page = _i23.PageInfo(
+  static _i26.PageInfo page = _i26.PageInfo(
     name,
     builder: (data) {
       final args = data.argsAs<CommitInfoRouteArgs>();
@@ -234,9 +239,9 @@ class CommitInfoRoute extends _i23.PageRouteInfo<CommitInfoRouteArgs> {
 class CommitInfoRouteArgs {
   const CommitInfoRouteArgs({required this.commitRef, this.key});
 
-  final _i25.CommitRef commitRef;
+  final _i28.CommitRef commitRef;
 
-  final _i24.Key? key;
+  final _i27.Key? key;
 
   @override
   String toString() {
@@ -256,13 +261,13 @@ class CommitInfoRouteArgs {
 
 /// generated route for
 /// [_i6.CompareViewScreen]
-class CompareViewRoute extends _i23.PageRouteInfo<CompareViewRouteArgs> {
+class CompareViewRoute extends _i26.PageRouteInfo<CompareViewRouteArgs> {
   CompareViewRoute({
-    _i24.Key? key,
-    required _i25.RepoRef repoRef,
+    _i27.Key? key,
+    required _i28.RepoRef repoRef,
     String? base,
     String? head,
-    List<_i23.PageRouteInfo>? children,
+    List<_i26.PageRouteInfo>? children,
   }) : super(
          CompareViewRoute.name,
          args: CompareViewRouteArgs(
@@ -276,7 +281,7 @@ class CompareViewRoute extends _i23.PageRouteInfo<CompareViewRouteArgs> {
 
   static const String name = 'CompareViewRoute';
 
-  static _i23.PageInfo page = _i23.PageInfo(
+  static _i26.PageInfo page = _i26.PageInfo(
     name,
     builder: (data) {
       final args = data.argsAs<CompareViewRouteArgs>();
@@ -298,9 +303,9 @@ class CompareViewRouteArgs {
     this.head,
   });
 
-  final _i24.Key? key;
+  final _i27.Key? key;
 
-  final _i25.RepoRef repoRef;
+  final _i28.RepoRef repoRef;
 
   final String? base;
 
@@ -328,11 +333,11 @@ class CompareViewRouteArgs {
 
 /// generated route for
 /// [_i7.EditIssueScreen]
-class EditIssueRoute extends _i23.PageRouteInfo<EditIssueRouteArgs> {
+class EditIssueRoute extends _i26.PageRouteInfo<EditIssueRouteArgs> {
   EditIssueRoute({
-    required _i25.IssueRef issueRef,
-    _i24.Key? key,
-    List<_i23.PageRouteInfo>? children,
+    required _i28.IssueRef issueRef,
+    _i27.Key? key,
+    List<_i26.PageRouteInfo>? children,
   }) : super(
          EditIssueRoute.name,
          args: EditIssueRouteArgs(issueRef: issueRef, key: key),
@@ -341,7 +346,7 @@ class EditIssueRoute extends _i23.PageRouteInfo<EditIssueRouteArgs> {
 
   static const String name = 'EditIssueRoute';
 
-  static _i23.PageInfo page = _i23.PageInfo(
+  static _i26.PageInfo page = _i26.PageInfo(
     name,
     builder: (data) {
       final args = data.argsAs<EditIssueRouteArgs>();
@@ -353,9 +358,9 @@ class EditIssueRoute extends _i23.PageRouteInfo<EditIssueRouteArgs> {
 class EditIssueRouteArgs {
   const EditIssueRouteArgs({required this.issueRef, this.key});
 
-  final _i25.IssueRef issueRef;
+  final _i28.IssueRef issueRef;
 
-  final _i24.Key? key;
+  final _i27.Key? key;
 
   @override
   String toString() {
@@ -376,11 +381,11 @@ class EditIssueRouteArgs {
 /// generated route for
 /// [_i8.EditPullRequestScreen]
 class EditPullRequestRoute
-    extends _i23.PageRouteInfo<EditPullRequestRouteArgs> {
+    extends _i26.PageRouteInfo<EditPullRequestRouteArgs> {
   EditPullRequestRoute({
-    required _i25.PullRequestRef pullRef,
-    _i24.Key? key,
-    List<_i23.PageRouteInfo>? children,
+    required _i28.PullRequestRef pullRef,
+    _i27.Key? key,
+    List<_i26.PageRouteInfo>? children,
   }) : super(
          EditPullRequestRoute.name,
          args: EditPullRequestRouteArgs(pullRef: pullRef, key: key),
@@ -389,7 +394,7 @@ class EditPullRequestRoute
 
   static const String name = 'EditPullRequestRoute';
 
-  static _i23.PageInfo page = _i23.PageInfo(
+  static _i26.PageInfo page = _i26.PageInfo(
     name,
     builder: (data) {
       final args = data.argsAs<EditPullRequestRouteArgs>();
@@ -401,9 +406,9 @@ class EditPullRequestRoute
 class EditPullRequestRouteArgs {
   const EditPullRequestRouteArgs({required this.pullRef, this.key});
 
-  final _i25.PullRequestRef pullRef;
+  final _i28.PullRequestRef pullRef;
 
-  final _i24.Key? key;
+  final _i27.Key? key;
 
   @override
   String toString() {
@@ -423,15 +428,15 @@ class EditPullRequestRouteArgs {
 
 /// generated route for
 /// [_i9.FileDiffScreen]
-class FileDiffRoute extends _i23.PageRouteInfo<FileDiffRouteArgs> {
+class FileDiffRoute extends _i26.PageRouteInfo<FileDiffRouteArgs> {
   FileDiffRoute({
-    required _i25.PullRequestRef pullRef,
+    required _i28.PullRequestRef pullRef,
     required String path,
-    _i24.Key? key,
+    _i27.Key? key,
     Set<(int?, int?)>? highlightedLines,
     bool? viewedState,
-    _i24.ValueChanged<_i26.DiffLineTapDetails>? onLineTap,
-    List<_i23.PageRouteInfo>? children,
+    _i27.ValueChanged<_i29.DiffLineTapDetails>? onLineTap,
+    List<_i26.PageRouteInfo>? children,
   }) : super(
          FileDiffRoute.name,
          args: FileDiffRouteArgs(
@@ -447,7 +452,7 @@ class FileDiffRoute extends _i23.PageRouteInfo<FileDiffRouteArgs> {
 
   static const String name = 'FileDiffRoute';
 
-  static _i23.PageInfo page = _i23.PageInfo(
+  static _i26.PageInfo page = _i26.PageInfo(
     name,
     builder: (data) {
       final args = data.argsAs<FileDiffRouteArgs>();
@@ -473,17 +478,17 @@ class FileDiffRouteArgs {
     this.onLineTap,
   });
 
-  final _i25.PullRequestRef pullRef;
+  final _i28.PullRequestRef pullRef;
 
   final String path;
 
-  final _i24.Key? key;
+  final _i27.Key? key;
 
   final Set<(int?, int?)>? highlightedLines;
 
   final bool? viewedState;
 
-  final _i24.ValueChanged<_i26.DiffLineTapDetails>? onLineTap;
+  final _i27.ValueChanged<_i29.DiffLineTapDetails>? onLineTap;
 
   @override
   String toString() {
@@ -497,7 +502,7 @@ class FileDiffRouteArgs {
     return pullRef == other.pullRef &&
         path == other.path &&
         key == other.key &&
-        const _i27.SetEquality<(int?, int?)>().equals(
+        const _i30.SetEquality<(int?, int?)>().equals(
           highlightedLines,
           other.highlightedLines,
         ) &&
@@ -510,25 +515,25 @@ class FileDiffRouteArgs {
       pullRef.hashCode ^
       path.hashCode ^
       key.hashCode ^
-      const _i27.SetEquality<(int?, int?)>().hash(highlightedLines) ^
+      const _i30.SetEquality<(int?, int?)>().hash(highlightedLines) ^
       viewedState.hashCode ^
       onLineTap.hashCode;
 }
 
 /// generated route for
 /// [_i10.FileViewerScreen]
-class FileViewerRoute extends _i23.PageRouteInfo<FileViewerRouteArgs> {
+class FileViewerRoute extends _i26.PageRouteInfo<FileViewerRouteArgs> {
   FileViewerRoute({
-    required _i25.RepoRef repoRef,
+    required _i28.RepoRef repoRef,
     required String branch,
     required String filePath,
     String? sha,
     int? lineStart,
     int? lineEnd,
-    List<_i28.CodeTreeNode>? siblingFiles,
+    List<_i31.CodeTreeNode>? siblingFiles,
     int initialIndex = 0,
-    _i24.Key? key,
-    List<_i23.PageRouteInfo>? children,
+    _i27.Key? key,
+    List<_i26.PageRouteInfo>? children,
   }) : super(
          FileViewerRoute.name,
          args: FileViewerRouteArgs(
@@ -547,7 +552,7 @@ class FileViewerRoute extends _i23.PageRouteInfo<FileViewerRouteArgs> {
 
   static const String name = 'FileViewerRoute';
 
-  static _i23.PageInfo page = _i23.PageInfo(
+  static _i26.PageInfo page = _i26.PageInfo(
     name,
     builder: (data) {
       final args = data.argsAs<FileViewerRouteArgs>();
@@ -579,7 +584,7 @@ class FileViewerRouteArgs {
     this.key,
   });
 
-  final _i25.RepoRef repoRef;
+  final _i28.RepoRef repoRef;
 
   final String branch;
 
@@ -591,11 +596,11 @@ class FileViewerRouteArgs {
 
   final int? lineEnd;
 
-  final List<_i28.CodeTreeNode>? siblingFiles;
+  final List<_i31.CodeTreeNode>? siblingFiles;
 
   final int initialIndex;
 
-  final _i24.Key? key;
+  final _i27.Key? key;
 
   @override
   String toString() {
@@ -612,7 +617,7 @@ class FileViewerRouteArgs {
         sha == other.sha &&
         lineStart == other.lineStart &&
         lineEnd == other.lineEnd &&
-        const _i27.ListEquality<_i28.CodeTreeNode>().equals(
+        const _i30.ListEquality<_i31.CodeTreeNode>().equals(
           siblingFiles,
           other.siblingFiles,
         ) &&
@@ -628,19 +633,69 @@ class FileViewerRouteArgs {
       sha.hashCode ^
       lineStart.hashCode ^
       lineEnd.hashCode ^
-      const _i27.ListEquality<_i28.CodeTreeNode>().hash(siblingFiles) ^
+      const _i30.ListEquality<_i31.CodeTreeNode>().hash(siblingFiles) ^
       initialIndex.hashCode ^
       key.hashCode;
 }
 
 /// generated route for
-/// [_i11.HomeScreen]
-class HomeRoute extends _i23.PageRouteInfo<HomeRouteArgs> {
+/// [_i11.GlobalListsScreen]
+class GlobalListsRoute extends _i26.PageRouteInfo<GlobalListsRouteArgs> {
+  GlobalListsRoute({
+    required _i32.GlobalListDestination destination,
+    _i27.Key? key,
+    List<_i26.PageRouteInfo>? children,
+  }) : super(
+         GlobalListsRoute.name,
+         args: GlobalListsRouteArgs(destination: destination, key: key),
+         initialChildren: children,
+       );
+
+  static const String name = 'GlobalListsRoute';
+
+  static _i26.PageInfo page = _i26.PageInfo(
+    name,
+    builder: (data) {
+      final args = data.argsAs<GlobalListsRouteArgs>();
+      return _i11.GlobalListsScreen(
+        destination: args.destination,
+        key: args.key,
+      );
+    },
+  );
+}
+
+class GlobalListsRouteArgs {
+  const GlobalListsRouteArgs({required this.destination, this.key});
+
+  final _i32.GlobalListDestination destination;
+
+  final _i27.Key? key;
+
+  @override
+  String toString() {
+    return 'GlobalListsRouteArgs{destination: $destination, key: $key}';
+  }
+
+  @override
+  bool operator ==(Object other) {
+    if (identical(this, other)) return true;
+    if (other is! GlobalListsRouteArgs) return false;
+    return destination == other.destination && key == other.key;
+  }
+
+  @override
+  int get hashCode => destination.hashCode ^ key.hashCode;
+}
+
+/// generated route for
+/// [_i12.HomeScreen]
+class HomeRoute extends _i26.PageRouteInfo<HomeRouteArgs> {
   HomeRoute({
-    _i24.Key? key,
+    _i27.Key? key,
     String? initialTabPath,
-    _i29.HomeFilter? filter,
-    List<_i23.PageRouteInfo>? children,
+    _i33.HomeFilter? filter,
+    List<_i26.PageRouteInfo>? children,
   }) : super(
          HomeRoute.name,
          args: HomeRouteArgs(
@@ -653,13 +708,13 @@ class HomeRoute extends _i23.PageRouteInfo<HomeRouteArgs> {
 
   static const String name = 'HomeRoute';
 
-  static _i23.PageInfo page = _i23.PageInfo(
+  static _i26.PageInfo page = _i26.PageInfo(
     name,
     builder: (data) {
       final args = data.argsAs<HomeRouteArgs>(
         orElse: () => const HomeRouteArgs(),
       );
-      return _i11.HomeScreen(
+      return _i12.HomeScreen(
         key: args.key,
         initialTabPath: args.initialTabPath,
         filter: args.filter,
@@ -671,11 +726,11 @@ class HomeRoute extends _i23.PageRouteInfo<HomeRouteArgs> {
 class HomeRouteArgs {
   const HomeRouteArgs({this.key, this.initialTabPath, this.filter});
 
-  final _i24.Key? key;
+  final _i27.Key? key;
 
   final String? initialTabPath;
 
-  final _i29.HomeFilter? filter;
+  final _i33.HomeFilter? filter;
 
   @override
   String toString() {
@@ -696,14 +751,14 @@ class HomeRouteArgs {
 }
 
 /// generated route for
-/// [_i12.IssueDetailScreen]
-class IssueDetailRoute extends _i23.PageRouteInfo<IssueDetailRouteArgs> {
+/// [_i13.IssueDetailScreen]
+class IssueDetailRoute extends _i26.PageRouteInfo<IssueDetailRouteArgs> {
   IssueDetailRoute({
-    required _i25.IssueRef issueRef,
-    _i24.Key? key,
+    required _i28.IssueRef issueRef,
+    _i27.Key? key,
     DateTime? commentsSince,
     int initialIndex = 0,
-    List<_i23.PageRouteInfo>? children,
+    List<_i26.PageRouteInfo>? children,
   }) : super(
          IssueDetailRoute.name,
          args: IssueDetailRouteArgs(
@@ -717,11 +772,11 @@ class IssueDetailRoute extends _i23.PageRouteInfo<IssueDetailRouteArgs> {
 
   static const String name = 'IssueDetailRoute';
 
-  static _i23.PageInfo page = _i23.PageInfo(
+  static _i26.PageInfo page = _i26.PageInfo(
     name,
     builder: (data) {
       final args = data.argsAs<IssueDetailRouteArgs>();
-      return _i12.IssueDetailScreen(
+      return _i13.IssueDetailScreen(
         issueRef: args.issueRef,
         key: args.key,
         commentsSince: args.commentsSince,
@@ -739,9 +794,9 @@ class IssueDetailRouteArgs {
     this.initialIndex = 0,
   });
 
-  final _i25.IssueRef issueRef;
+  final _i28.IssueRef issueRef;
 
-  final _i24.Key? key;
+  final _i27.Key? key;
 
   final DateTime? commentsSince;
 
@@ -771,31 +826,31 @@ class IssueDetailRouteArgs {
 }
 
 /// generated route for
-/// [_i13.LandingLoadingScreen]
-class LandingLoadingRoute extends _i23.PageRouteInfo<void> {
-  const LandingLoadingRoute({List<_i23.PageRouteInfo>? children})
+/// [_i14.LandingLoadingScreen]
+class LandingLoadingRoute extends _i26.PageRouteInfo<void> {
+  const LandingLoadingRoute({List<_i26.PageRouteInfo>? children})
     : super(LandingLoadingRoute.name, initialChildren: children);
 
   static const String name = 'LandingLoadingRoute';
 
-  static _i23.PageInfo page = _i23.PageInfo(
+  static _i26.PageInfo page = _i26.PageInfo(
     name,
     builder: (data) {
-      return const _i13.LandingLoadingScreen();
+      return const _i14.LandingLoadingScreen();
     },
   );
 }
 
 /// generated route for
-/// [_i14.NewIssueScreen]
-class NewIssueRoute extends _i23.PageRouteInfo<NewIssueRouteArgs> {
+/// [_i15.NewIssueScreen]
+class NewIssueRoute extends _i26.PageRouteInfo<NewIssueRouteArgs> {
   NewIssueRoute({
-    required _i25.RepoRef repoRef,
-    _i24.Key? key,
-    _i30.RepoIssueTemplate? template,
+    required _i28.RepoRef repoRef,
+    _i27.Key? key,
+    _i34.RepoIssueTemplate? template,
     String? initialBody,
     String? initialTitle,
-    List<_i23.PageRouteInfo>? children,
+    List<_i26.PageRouteInfo>? children,
   }) : super(
          NewIssueRoute.name,
          args: NewIssueRouteArgs(
@@ -810,11 +865,11 @@ class NewIssueRoute extends _i23.PageRouteInfo<NewIssueRouteArgs> {
 
   static const String name = 'NewIssueRoute';
 
-  static _i23.PageInfo page = _i23.PageInfo(
+  static _i26.PageInfo page = _i26.PageInfo(
     name,
     builder: (data) {
       final args = data.argsAs<NewIssueRouteArgs>();
-      return _i14.NewIssueScreen(
+      return _i15.NewIssueScreen(
         repoRef: args.repoRef,
         key: args.key,
         template: args.template,
@@ -834,11 +889,11 @@ class NewIssueRouteArgs {
     this.initialTitle,
   });
 
-  final _i25.RepoRef repoRef;
+  final _i28.RepoRef repoRef;
 
-  final _i24.Key? key;
+  final _i27.Key? key;
 
-  final _i30.RepoIssueTemplate? template;
+  final _i34.RepoIssueTemplate? template;
 
   final String? initialBody;
 
@@ -870,14 +925,14 @@ class NewIssueRouteArgs {
 }
 
 /// generated route for
-/// [_i15.NewPullRequestScreen]
-class NewPullRequestRoute extends _i23.PageRouteInfo<NewPullRequestRouteArgs> {
+/// [_i16.NewPullRequestScreen]
+class NewPullRequestRoute extends _i26.PageRouteInfo<NewPullRequestRouteArgs> {
   NewPullRequestRoute({
-    required _i25.RepoRef repoRef,
-    _i24.Key? key,
+    required _i28.RepoRef repoRef,
+    _i27.Key? key,
     String? initialBaseRef,
     String? initialHeadRef,
-    List<_i23.PageRouteInfo>? children,
+    List<_i26.PageRouteInfo>? children,
   }) : super(
          NewPullRequestRoute.name,
          args: NewPullRequestRouteArgs(
@@ -891,11 +946,11 @@ class NewPullRequestRoute extends _i23.PageRouteInfo<NewPullRequestRouteArgs> {
 
   static const String name = 'NewPullRequestRoute';
 
-  static _i23.PageInfo page = _i23.PageInfo(
+  static _i26.PageInfo page = _i26.PageInfo(
     name,
     builder: (data) {
       final args = data.argsAs<NewPullRequestRouteArgs>();
-      return _i15.NewPullRequestScreen(
+      return _i16.NewPullRequestScreen(
         repoRef: args.repoRef,
         key: args.key,
         initialBaseRef: args.initialBaseRef,
@@ -913,9 +968,9 @@ class NewPullRequestRouteArgs {
     this.initialHeadRef,
   });
 
-  final _i25.RepoRef repoRef;
+  final _i28.RepoRef repoRef;
 
-  final _i24.Key? key;
+  final _i27.Key? key;
 
   final String? initialBaseRef;
 
@@ -945,15 +1000,31 @@ class NewPullRequestRouteArgs {
 }
 
 /// generated route for
-/// [_i16.PullRequestDetailScreen]
+/// [_i17.NotificationsScreen]
+class NotificationsRoute extends _i26.PageRouteInfo<void> {
+  const NotificationsRoute({List<_i26.PageRouteInfo>? children})
+    : super(NotificationsRoute.name, initialChildren: children);
+
+  static const String name = 'NotificationsRoute';
+
+  static _i26.PageInfo page = _i26.PageInfo(
+    name,
+    builder: (data) {
+      return const _i17.NotificationsScreen();
+    },
+  );
+}
+
+/// generated route for
+/// [_i18.PullRequestDetailScreen]
 class PullRequestDetailRoute
-    extends _i23.PageRouteInfo<PullRequestDetailRouteArgs> {
+    extends _i26.PageRouteInfo<PullRequestDetailRouteArgs> {
   PullRequestDetailRoute({
-    required _i25.PullRequestRef pullRef,
-    _i24.Key? key,
+    required _i28.PullRequestRef pullRef,
+    _i27.Key? key,
     DateTime? commentsSince,
     int initialIndex = 0,
-    List<_i23.PageRouteInfo>? children,
+    List<_i26.PageRouteInfo>? children,
   }) : super(
          PullRequestDetailRoute.name,
          args: PullRequestDetailRouteArgs(
@@ -967,11 +1038,11 @@ class PullRequestDetailRoute
 
   static const String name = 'PullRequestDetailRoute';
 
-  static _i23.PageInfo page = _i23.PageInfo(
+  static _i26.PageInfo page = _i26.PageInfo(
     name,
     builder: (data) {
       final args = data.argsAs<PullRequestDetailRouteArgs>();
-      return _i16.PullRequestDetailScreen(
+      return _i18.PullRequestDetailScreen(
         pullRef: args.pullRef,
         key: args.key,
         commentsSince: args.commentsSince,
@@ -989,9 +1060,9 @@ class PullRequestDetailRouteArgs {
     this.initialIndex = 0,
   });
 
-  final _i25.PullRequestRef pullRef;
+  final _i28.PullRequestRef pullRef;
 
-  final _i24.Key? key;
+  final _i27.Key? key;
 
   final DateTime? commentsSince;
 
@@ -1021,12 +1092,12 @@ class PullRequestDetailRouteArgs {
 }
 
 /// generated route for
-/// [_i17.RepositoryScreen]
-class RepositoryRoute extends _i23.PageRouteInfo<RepositoryRouteArgs> {
+/// [_i19.RepositoryScreen]
+class RepositoryRoute extends _i26.PageRouteInfo<RepositoryRouteArgs> {
   RepositoryRoute({
-    required _i25.RepoRef repo,
-    _i24.Key? key,
-    List<_i23.PageRouteInfo>? children,
+    required _i28.RepoRef repo,
+    _i27.Key? key,
+    List<_i26.PageRouteInfo>? children,
   }) : super(
          RepositoryRoute.name,
          args: RepositoryRouteArgs(repo: repo, key: key),
@@ -1035,11 +1106,11 @@ class RepositoryRoute extends _i23.PageRouteInfo<RepositoryRouteArgs> {
 
   static const String name = 'RepositoryRoute';
 
-  static _i23.PageInfo page = _i23.PageInfo(
+  static _i26.PageInfo page = _i26.PageInfo(
     name,
     builder: (data) {
       final args = data.argsAs<RepositoryRouteArgs>();
-      return _i17.RepositoryScreen(repo: args.repo, key: args.key);
+      return _i19.RepositoryScreen(repo: args.repo, key: args.key);
     },
   );
 }
@@ -1047,9 +1118,9 @@ class RepositoryRoute extends _i23.PageRouteInfo<RepositoryRouteArgs> {
 class RepositoryRouteArgs {
   const RepositoryRouteArgs({required this.repo, this.key});
 
-  final _i25.RepoRef repo;
+  final _i28.RepoRef repo;
 
-  final _i24.Key? key;
+  final _i27.Key? key;
 
   @override
   String toString() {
@@ -1068,28 +1139,28 @@ class RepositoryRouteArgs {
 }
 
 /// generated route for
-/// [_i18.SSHConnectionsScreen]
-class SSHConnectionsRoute extends _i23.PageRouteInfo<void> {
-  const SSHConnectionsRoute({List<_i23.PageRouteInfo>? children})
+/// [_i20.SSHConnectionsScreen]
+class SSHConnectionsRoute extends _i26.PageRouteInfo<void> {
+  const SSHConnectionsRoute({List<_i26.PageRouteInfo>? children})
     : super(SSHConnectionsRoute.name, initialChildren: children);
 
   static const String name = 'SSHConnectionsRoute';
 
-  static _i23.PageInfo page = _i23.PageInfo(
+  static _i26.PageInfo page = _i26.PageInfo(
     name,
     builder: (data) {
-      return const _i18.SSHConnectionsScreen();
+      return const _i20.SSHConnectionsScreen();
     },
   );
 }
 
 /// generated route for
-/// [_i19.SSHTerminalScreen]
-class SSHTerminalRoute extends _i23.PageRouteInfo<SSHTerminalRouteArgs> {
+/// [_i21.SSHTerminalScreen]
+class SSHTerminalRoute extends _i26.PageRouteInfo<SSHTerminalRouteArgs> {
   SSHTerminalRoute({
-    _i24.Key? key,
+    _i27.Key? key,
     required String connectionId,
-    List<_i23.PageRouteInfo>? children,
+    List<_i26.PageRouteInfo>? children,
   }) : super(
          SSHTerminalRoute.name,
          args: SSHTerminalRouteArgs(key: key, connectionId: connectionId),
@@ -1098,11 +1169,11 @@ class SSHTerminalRoute extends _i23.PageRouteInfo<SSHTerminalRouteArgs> {
 
   static const String name = 'SSHTerminalRoute';
 
-  static _i23.PageInfo page = _i23.PageInfo(
+  static _i26.PageInfo page = _i26.PageInfo(
     name,
     builder: (data) {
       final args = data.argsAs<SSHTerminalRouteArgs>();
-      return _i19.SSHTerminalScreen(
+      return _i21.SSHTerminalScreen(
         key: args.key,
         connectionId: args.connectionId,
       );
@@ -1113,7 +1184,7 @@ class SSHTerminalRoute extends _i23.PageRouteInfo<SSHTerminalRouteArgs> {
 class SSHTerminalRouteArgs {
   const SSHTerminalRouteArgs({this.key, required this.connectionId});
 
-  final _i24.Key? key;
+  final _i27.Key? key;
 
   final String connectionId;
 
@@ -1134,12 +1205,12 @@ class SSHTerminalRouteArgs {
 }
 
 /// generated route for
-/// [_i20.SearchScreen]
-class SearchRoute extends _i23.PageRouteInfo<SearchRouteArgs> {
+/// [_i22.SearchScreen]
+class SearchRoute extends _i26.PageRouteInfo<SearchRouteArgs> {
   SearchRoute({
-    _i24.Key? key,
+    _i27.Key? key,
     String? initialQuery,
-    List<_i23.PageRouteInfo>? children,
+    List<_i26.PageRouteInfo>? children,
   }) : super(
          SearchRoute.name,
          args: SearchRouteArgs(key: key, initialQuery: initialQuery),
@@ -1148,13 +1219,13 @@ class SearchRoute extends _i23.PageRouteInfo<SearchRouteArgs> {
 
   static const String name = 'SearchRoute';
 
-  static _i23.PageInfo page = _i23.PageInfo(
+  static _i26.PageInfo page = _i26.PageInfo(
     name,
     builder: (data) {
       final args = data.argsAs<SearchRouteArgs>(
         orElse: () => const SearchRouteArgs(),
       );
-      return _i20.SearchScreen(key: args.key, initialQuery: args.initialQuery);
+      return _i22.SearchScreen(key: args.key, initialQuery: args.initialQuery);
     },
   );
 }
@@ -1162,7 +1233,7 @@ class SearchRoute extends _i23.PageRouteInfo<SearchRouteArgs> {
 class SearchRouteArgs {
   const SearchRouteArgs({this.key, this.initialQuery});
 
-  final _i24.Key? key;
+  final _i27.Key? key;
 
   final String? initialQuery;
 
@@ -1183,12 +1254,64 @@ class SearchRouteArgs {
 }
 
 /// generated route for
-/// [_i21.UserProfileScreen]
-class UserProfileRoute extends _i23.PageRouteInfo<UserProfileRouteArgs> {
+/// [_i23.SettingsScreen]
+class SettingsRoute extends _i26.PageRouteInfo<SettingsRouteArgs> {
+  SettingsRoute({
+    String? initialSection,
+    _i27.Key? key,
+    List<_i26.PageRouteInfo>? children,
+  }) : super(
+         SettingsRoute.name,
+         args: SettingsRouteArgs(initialSection: initialSection, key: key),
+         initialChildren: children,
+       );
+
+  static const String name = 'SettingsRoute';
+
+  static _i26.PageInfo page = _i26.PageInfo(
+    name,
+    builder: (data) {
+      final args = data.argsAs<SettingsRouteArgs>(
+        orElse: () => const SettingsRouteArgs(),
+      );
+      return _i23.SettingsScreen(
+        initialSection: args.initialSection,
+        key: args.key,
+      );
+    },
+  );
+}
+
+class SettingsRouteArgs {
+  const SettingsRouteArgs({this.initialSection, this.key});
+
+  final String? initialSection;
+
+  final _i27.Key? key;
+
+  @override
+  String toString() {
+    return 'SettingsRouteArgs{initialSection: $initialSection, key: $key}';
+  }
+
+  @override
+  bool operator ==(Object other) {
+    if (identical(this, other)) return true;
+    if (other is! SettingsRouteArgs) return false;
+    return initialSection == other.initialSection && key == other.key;
+  }
+
+  @override
+  int get hashCode => initialSection.hashCode ^ key.hashCode;
+}
+
+/// generated route for
+/// [_i24.UserProfileScreen]
+class UserProfileRoute extends _i26.PageRouteInfo<UserProfileRouteArgs> {
   UserProfileRoute({
-    required _i25.UserRef userRef,
-    _i31.Key? key,
-    List<_i23.PageRouteInfo>? children,
+    required _i28.UserRef userRef,
+    _i35.Key? key,
+    List<_i26.PageRouteInfo>? children,
   }) : super(
          UserProfileRoute.name,
          args: UserProfileRouteArgs(userRef: userRef, key: key),
@@ -1197,11 +1320,11 @@ class UserProfileRoute extends _i23.PageRouteInfo<UserProfileRouteArgs> {
 
   static const String name = 'UserProfileRoute';
 
-  static _i23.PageInfo page = _i23.PageInfo(
+  static _i26.PageInfo page = _i26.PageInfo(
     name,
     builder: (data) {
       final args = data.argsAs<UserProfileRouteArgs>();
-      return _i21.UserProfileScreen(args.userRef, key: args.key);
+      return _i24.UserProfileScreen(args.userRef, key: args.key);
     },
   );
 }
@@ -1209,9 +1332,9 @@ class UserProfileRoute extends _i23.PageRouteInfo<UserProfileRouteArgs> {
 class UserProfileRouteArgs {
   const UserProfileRouteArgs({required this.userRef, this.key});
 
-  final _i25.UserRef userRef;
+  final _i28.UserRef userRef;
 
-  final _i31.Key? key;
+  final _i35.Key? key;
 
   @override
   String toString() {
@@ -1230,13 +1353,13 @@ class UserProfileRouteArgs {
 }
 
 /// generated route for
-/// [_i22.WikiViewer]
-class WikiViewer extends _i23.PageRouteInfo<WikiViewerArgs> {
+/// [_i25.WikiViewer]
+class WikiViewer extends _i26.PageRouteInfo<WikiViewerArgs> {
   WikiViewer({
-    _i24.Key? key,
-    _i25.RepoRef? repo,
+    _i27.Key? key,
+    _i28.RepoRef? repo,
     String? slug,
-    List<_i23.PageRouteInfo>? children,
+    List<_i26.PageRouteInfo>? children,
   }) : super(
          WikiViewer.name,
          args: WikiViewerArgs(key: key, repo: repo, slug: slug),
@@ -1245,13 +1368,13 @@ class WikiViewer extends _i23.PageRouteInfo<WikiViewerArgs> {
 
   static const String name = 'WikiViewer';
 
-  static _i23.PageInfo page = _i23.PageInfo(
+  static _i26.PageInfo page = _i26.PageInfo(
     name,
     builder: (data) {
       final args = data.argsAs<WikiViewerArgs>(
         orElse: () => const WikiViewerArgs(),
       );
-      return _i22.WikiViewer(key: args.key, repo: args.repo, slug: args.slug);
+      return _i25.WikiViewer(key: args.key, repo: args.repo, slug: args.slug);
     },
   );
 }
@@ -1259,9 +1382,9 @@ class WikiViewer extends _i23.PageRouteInfo<WikiViewerArgs> {
 class WikiViewerArgs {
   const WikiViewerArgs({this.key, this.repo, this.slug});
 
-  final _i24.Key? key;
+  final _i27.Key? key;
 
-  final _i25.RepoRef? repo;
+  final _i28.RepoRef? repo;
 
   final String? slug;
 

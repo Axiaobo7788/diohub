@@ -7,6 +7,7 @@ import 'package:diohub/models/search/search_scope.dart';
 import 'package:diohub/models/search/search_state.dart' show SearchState;
 import 'package:diohub/providers/search/search_session_provider.dart';
 import 'package:diohub/providers/users/user_providers.dart';
+import 'package:diohub_models/models/search/qualifier.dart';
 import 'package:diohub_models/models/search/search_expression.dart';
 import 'package:diohub_models/models/search/sort_config.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -89,7 +90,10 @@ class SearchStateNotifier extends Notifier<SearchState> {
   }
 
   SearchScope _resolveScope(SearchScope scope, String? viewerLogin) {
-    return scope.resolveViewerLogin(viewerLogin ?? '');
+    final String? normalized = viewerLogin?.trim();
+    return normalized == null || normalized.isEmpty
+        ? scope
+        : scope.resolveViewerLogin(normalized);
   }
 
   void updateFreeText(String text) {
@@ -132,6 +136,30 @@ class SearchStateNotifier extends Notifier<SearchState> {
     state = state.copyWith(activeQualifiers: [...state.activeQualifiers, q]);
   }
 
+  /// Replaces every active qualifier with the same query key.
+  ///
+  /// This is used by explicit UI controls such as Open/Closed and
+  /// Public/Private. It keeps the free-text query and unrelated filters intact.
+  void replaceQualifier(QualifierExpression qualifier) {
+    state = state.withParsedInput(
+      freeText: state.freeText,
+      qualifiers: <QualifierExpression>[qualifier],
+    );
+  }
+
+  void removeQualifierKey(String key) {
+    state = state.copyWith(
+      activeQualifiers: state.activeQualifiers
+          .where((expression) {
+            final String query = expression.qualifier.toQueryString();
+            final int separator = query.indexOf(':');
+            return (separator < 0 ? query : query.substring(0, separator)) !=
+                key;
+          })
+          .toList(growable: false),
+    );
+  }
+
   void removeQualifier(QualifierExpression q) {
     state = state.copyWith(
       activeQualifiers: state.activeQualifiers.where((e) => e != q).toList(),
@@ -144,6 +172,29 @@ class SearchStateNotifier extends Notifier<SearchState> {
 
   void toggleQuickFilter(QuickFilter filter) {
     state = state.withQuickFilter(filter);
+  }
+
+  /// Selects one page-level quick filter while preserving state/sort filters.
+  ///
+  /// Global work-list sidebars are navigation modes, not independent filter
+  /// chips, so Assigned/Created/Mentioned must not accumulate.
+  void selectExclusiveQuickFilter(QuickFilter? filter) {
+    final Set<String> quickFilterKeys = state.scope.quickFilters
+        .map(
+          (final QuickFilter item) => _qualifierKey(item.qualifier.qualifier),
+        )
+        .toSet();
+    final List<QualifierExpression> retained = state.activeQualifiers
+        .where(
+          (final QualifierExpression expression) =>
+              !quickFilterKeys.contains(_qualifierKey(expression.qualifier)),
+        )
+        .toList();
+    state = state.copyWith(
+      activeQualifiers: filter == null
+          ? retained
+          : <QualifierExpression>[...retained, filter.qualifier],
+    );
   }
 
   /// Replace state with [filter]'s qualifiers, sort, and free text.
@@ -207,6 +258,12 @@ class SearchStateNotifier extends Notifier<SearchState> {
 
   QualifierValueParser? parserForPartial(String partialToken) =>
       _registry.parserForPartial(partialToken);
+
+  static String _qualifierKey(final Qualifier qualifier) {
+    final String query = qualifier.toQueryString();
+    final int separator = query.indexOf(':');
+    return separator < 0 ? query : query.substring(0, separator);
+  }
 }
 
 final searchStateNotifierProvider =

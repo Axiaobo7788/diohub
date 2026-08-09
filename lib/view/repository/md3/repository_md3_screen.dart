@@ -269,7 +269,7 @@ class _RepositoryMd3ScreenState extends ConsumerState<RepositoryMd3Screen>
         final RepositoryWindowClass windowClass =
             RepositoryMd3Layout.windowClassFor(constraints.maxWidth);
         final bool expanded = windowClass == RepositoryWindowClass.expanded;
-        final Widget identityHeader = _RepositoryIdentityHeader(
+        final Widget identityHeader = RepositoryIdentityHeader(
           repoRef: widget.repoRef,
           repo: repo,
           preview: preview,
@@ -649,13 +649,14 @@ int _initialTabIndex(final RepositoryTabKind? kind) {
   };
 }
 
-class _RepositoryIdentityHeader extends ConsumerWidget {
-  const _RepositoryIdentityHeader({
+class RepositoryIdentityHeader extends ConsumerWidget {
+  const RepositoryIdentityHeader({
     required this.repoRef,
     required this.repo,
     required this.preview,
     required this.ownerAvatarUrl,
     required this.detailsReady,
+    super.key,
   });
 
   final RepoRef repoRef;
@@ -670,9 +671,12 @@ class _RepositoryIdentityHeader extends ConsumerWidget {
       builder: (final BuildContext context, final BoxConstraints constraints) {
         final bool compact =
             constraints.maxWidth < RepositoryMd3Layout.compactBreakpoint;
+        final bool? isPrivate = repo?.isPrivate ?? preview?.isPrivate;
         final Widget identity = Row(
+          key: const ValueKey<String>('repository-identity'),
           children: <Widget>[
             UserAvatar(
+              key: const ValueKey<String>('repository-identity-avatar'),
               avatarUrl: ownerAvatarUrl,
               fallbackText: repoRef.owner,
               size: RepositoryMd3Layout.avatarSize,
@@ -688,29 +692,42 @@ class _RepositoryIdentityHeader extends ConsumerWidget {
                     runSpacing: RepositoryMd3Layout.space4,
                     children: <Widget>[
                       Text(
-                        repo?.name ?? preview?.name ?? repoRef.name,
+                        compact
+                            ? repo?.nameWithOwner ??
+                                  preview?.fullName ??
+                                  repoRef.fullName
+                            : repo?.name ?? preview?.name ?? repoRef.name,
+                        key: const ValueKey<String>('repository-identity-name'),
                         style: Theme.of(context).textTheme.titleLarge?.copyWith(
                           fontWeight: FontWeight.w700,
                         ),
                       ),
-                      Chip(
-                        label: Text(
-                          (repo?.isPrivate ?? preview?.isPrivate ?? false)
-                              ? context.l10n.repoPrivate
-                              : context.l10n.repoPublic,
-                        ),
-                        visualDensity: VisualDensity.compact,
-                      ),
-                      if (repo?.isArchived == true)
+                      if (isPrivate != null)
                         Chip(
+                          key: ValueKey<String>(
+                            'repository-visibility-${isPrivate ? 'private' : 'public'}',
+                          ),
+                          label: Text(
+                            isPrivate
+                                ? context.l10n.repoPrivate
+                                : context.l10n.repoPublic,
+                          ),
+                          visualDensity: VisualDensity.compact,
+                        ),
+                      if (repo?.isArchived ?? false)
+                        Chip(
+                          key: const ValueKey<String>(
+                            'repository-archived-status',
+                          ),
                           label: Text(context.l10n.repoArchived),
                           visualDensity: VisualDensity.compact,
                         ),
                     ],
                   ),
-                  if (repo?.isFork == true && repo?.parent != null)
+                  if ((repo?.isFork ?? false) && repo?.parent != null)
                     Text(
                       context.l10n.repoForkedFrom(repo!.parent!.nameWithOwner),
+                      key: const ValueKey<String>('repository-fork-origin'),
                       style: Theme.of(context).textTheme.bodyMedium,
                     ),
                 ],
@@ -733,7 +750,17 @@ class _RepositoryIdentityHeader extends ConsumerWidget {
                 : RepositoryWindowClass.medium,
           ),
           child: compact
-              ? Align(alignment: Alignment.centerLeft, child: actions)
+              ? Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: <Widget>[
+                    identity,
+                    const SizedBox(height: RepositoryMd3Layout.space16),
+                    Align(
+                      alignment: AlignmentDirectional.centerStart,
+                      child: actions,
+                    ),
+                  ],
+                )
               : Row(
                   children: <Widget>[
                     Expanded(child: identity),
@@ -1144,22 +1171,41 @@ class _RepositoryContributorsSection extends ConsumerWidget {
             _AboutSectionHeading(title: context.l10n.repoContributors),
             const SizedBox(height: RepositoryMd3Layout.space12),
             Wrap(
-              spacing: RepositoryMd3Layout.space8,
-              runSpacing: RepositoryMd3Layout.space8,
+              spacing: 0,
+              runSpacing: 0,
               children: <Widget>[
                 for (final RepositoryContributorPreview contributor in items)
                   Tooltip(
                     message:
                         '${contributor.login} · ${contributor.contributions}',
-                    child: InkWell(
-                      customBorder: const CircleBorder(),
+                    excludeFromSemantics: true,
+                    child: Semantics(
+                      link: true,
+                      label:
+                          '${contributor.login} · ${contributor.contributions}',
                       onTap: () => UserRef(
                         login: contributor.login,
                       ).navigate(context, ref),
-                      child: UserAvatar(
-                        avatarUrl: contributor.avatarUrl,
-                        fallbackText: contributor.login,
-                        size: 36,
+                      child: ExcludeSemantics(
+                        child: Material(
+                          color: Colors.transparent,
+                          child: InkWell(
+                            customBorder: const CircleBorder(),
+                            onTap: () => UserRef(
+                              login: contributor.login,
+                            ).navigate(context, ref),
+                            child: SizedBox.square(
+                              dimension: 48,
+                              child: Center(
+                                child: UserAvatar(
+                                  avatarUrl: contributor.avatarUrl,
+                                  fallbackText: contributor.login,
+                                  size: 36,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
                       ),
                     ),
                   ),
@@ -1177,12 +1223,17 @@ class _ContributorAvatarPlaceholder extends StatelessWidget {
 
   @override
   Widget build(final BuildContext context) {
-    return Container(
-      width: 36,
-      height: 36,
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        color: Theme.of(context).colorScheme.surfaceContainerHighest,
+    return SizedBox.square(
+      dimension: 48,
+      child: Center(
+        child: Container(
+          width: 36,
+          height: 36,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: Theme.of(context).colorScheme.surfaceContainerHighest,
+          ),
+        ),
       ),
     );
   }
