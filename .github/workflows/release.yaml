@@ -1,11 +1,8 @@
 name: Release Pipeline
 
+# Downstream pause: releases require an explicit manual dispatch until the
+# fork-specific signing, private repositories, and publishing secrets exist.
 on:
-  push:
-    branches:
-      - develop
-      - beta
-      - main
   workflow_dispatch:
     inputs:
       branch:

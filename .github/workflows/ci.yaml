@@ -1,10 +1,8 @@
 name: CI
 
+# Downstream pause: keep the workflow available for explicit diagnostics, but
+# do not run it for every push or pull request.
 on:
-  push:
-    branches: [develop, beta, main]
-  pull_request:
-    branches: [develop, beta, main]
   workflow_dispatch:
 
 jobs:
