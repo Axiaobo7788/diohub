@@ -1,7 +1,7 @@
 # DioHub ResourceRuntime 信息流接入清单
 
 状态：Active migration（清单已建立；Repository Issues/PR、Notifications 与全局工作列表已成为分页生产入口）
-日期：2026-07-28
+日期：2026-08-12
 
 ## 1. 目的
 
@@ -35,8 +35,10 @@
   后按账号 scope 精确失效；
 - 全局 Issues/PR 正式入口使用短保留 Search page 与四查询 Controller LRU；All repositories 使用
   affiliation GraphQL page 与六查询 Controller LRU，文字/fork 只重投影已保留页，不拆分远程资源身份；
-- Home、Repository 主信息、Actions、Profile 等其他主要信息流仍分别使用 Riverpod keep-alive、
-  页面级 Controller、Service 聚合或直接 FutureProvider。
+- Home Events 的分组设置现在会显式重建查询投影，Repository Security 三类告警改为进入对应分区后
+  才启动；它们仍分别使用页面级 Controller / Service，并未因此成为 Runtime 资源。Repository
+  主信息、Actions、Profile 等其他主要信息流仍使用 Riverpod keep-alive、页面级 Controller、
+  Service 聚合或直接 FutureProvider。
 
 计数只用于说明迁移面较大，不能直接推导 67 个新资源或 25 个缺陷。每条信息流仍须按身份、生命周期、
 分页、mutation 和 UI 语义独立审计。
@@ -104,7 +106,7 @@ Route / page / main tab
 | 信息流 | 当前入口 | 风险/特征 | 决策 |
 | --- | --- | --- | --- |
 | Top repositories | `home_top_repositories_provider.dart` | Home 与抽屉可能复用；当前 Riverpod 定时保活 | Wave A；按账号、筛选和页身份接入 |
-| Events Feed | Dashboard events Provider / Service | 高频分页、图片与仓库摘要交错 | Wave A；页资源化并支持滚动前预取 |
+| Events Feed | Dashboard events Provider / Service | 高频分页、图片与仓库摘要交错；compound setting 会改变跨页分组语义 | Partial；设置变化已重建同一查询会话，待页资源化与距离预取 |
 | GitHub Changelog | `github_changelog_provider.dart` | 官方公共数据、低变更 | Wave B；公共 scope、长 fresh 窗口 |
 | Trending / Search repositories | Search Provider + `PaginationController` | 查询变化快、重复返回同一仓库 | Wave A；查询页进入 Runtime，搜索会话留在 Controller |
 | 推荐仓库 | 尚无完整可解释正式链路 | 算法、身份和解释字段未固定 | Wave C；先定产品合同，不用假数据接入 |
@@ -114,7 +116,7 @@ Route / page / main tab
 | 信息流 | 当前入口 | 风险/特征 | 决策 |
 | --- | --- | --- | --- |
 | Repository preview | `repository_preview_providers.dart` | 导航前已有轻量预热 | Partial；可作为 baseline source，需与完整实体身份对齐 |
-| Repository 主信息 | `repository_providers_core.dart` | 首查询带 6 组 Issues/PR 快捷计数 | Wave A；拆成 Code baseline 与惰性区域资源 |
+| Repository 主信息 | `repository_providers_core.dart` | 首查询带 6 组 Issues/PR 快捷计数；Star 写操作曾为轻量卡片启动整仓查询 | Partial；Star 已使用共享轻量 optimistic/authoritative 状态，支持账号隔离与权威 seed 对账，卡片写操作不创建整仓 Provider；读取仍待拆成 Code baseline 与惰性区域资源 |
 | 目录页 | `directory_provider.dart` | 已有 scope、branch、path、SWR 与预取 | Integrated |
 | 根 README source/artifact | Repository README resource providers | source → worker artifact | Integrated |
 | README 图片 source/classification | README image resource | 第三方下载、大小限制、分类 | Integrated |
@@ -137,7 +139,7 @@ Route / page / main tab
 | PR review threads | `allReviewThreadsMapProvider` | 当前循环抓取全部页再构建 map | Wave A；禁止详情首屏全量抓取，按可见 thread/page 获取 |
 | PR commits | `pull_commits_view.dart` | 分页列表 | Wave A；页资源化 |
 | PR changed files | `pull_changed_files_list.dart` | 大 PR 可能很多页和大 patch | Wave A；元数据页与 patch artifact 分离 |
-| 单文件 patch | `getPullFilePatch(path)` | 为找路径可能顺序遍历多页 | Wave A；建立 path 索引/页缓存，避免每次从头扫描 |
+| 单文件 patch | `pullFilePatchProvider` + Runtime page source | 首次找路径仍可能顺序遍历多页；此前每个文件都会重新从第一页扫描 | Partial；PR/page/pageSize/scope 页已进入 Runtime 并跨文件复用，仍待建立 path 索引以消除首次线性扫描 |
 | Reactions / assignee / labels / milestones | capability Provider / sheet Controller | 多弹层复用、mutation 后需同步 | Wave B；列表页资源 + mutation overlay/失效 |
 
 ### 5.5 Actions、Projects、Security 与 Insights
@@ -150,7 +152,7 @@ Route / page / main tab
 | Run / Job / Step snapshot | Actions Provider / stream | 详情读取与实时状态并存 | Wave B；稳定快照入 Runtime，实时轮询由专用 session 管理 |
 | Workflow live polling | StreamProvider / watcher | 长连接式轮询、前后台节奏 | Excluded；使用集中 PollingSession，不占普通资源 Lease |
 | ProjectsV2 | Projects Controller | 分页与权限状态 | Wave B；页资源化 |
-| Dependabot / code / secret alerts | Security Controllers | 三类分页并可能并发刷新 | Wave B；独立页资源，共享调度预算 |
+| Dependabot / code / secret alerts | Security Controllers | 三类分页此前在 overview 同时启动 | Partial；overview 0 告警请求，首次打开对应分区才启动单类且重返不重发；三分区请求计数合同已覆盖，后续再接独立页资源与共享调度预算 |
 | Commit activity / languages / participation | Insights Providers | 统计数据可复用，部分响应较大 | Wave B；仓库统计资源，使用较长 fresh |
 | Stargazer history | Repo list/stat service | 最多循环 5 页 × 100 | Wave B；明确上限、阶段结果与取消 |
 
@@ -162,8 +164,8 @@ Route / page / main tab
 | Profile 基础信息 | `user_providers.dart` | Chrome/Profile/评论作者可能复用 | Wave A；账号 scope 与公开 scope 分离 |
 | Profile README | Profile Provider / Markdown | source 与 render artifact 可复用 | Wave B；复用已有 Markdown artifact 合同 |
 | Pinned repositories | Profile Provider | 首屏独立区域 | Wave A；惰性摘要资源 |
-| Contributions 多年数据 | `user_contributions_service.dart` | 多年份 `Future.wait` | Wave B；按年度资源化，当前年优先，历史年延迟 |
-| Activity timeline | `user_activity_service.dart` | 多连接循环至耗尽并跨年聚合 | Wave A；禁止首屏全量，改时间窗口/页资源 |
+| Contributions 多年数据 | `user_contributions_service.dart` | 多年份 `Future.wait` | Partial；不再作为 Activity 启动门闩，仍待按年度资源化、当前年优先和历史年延迟 |
+| Activity timeline | `user_activity_service.dart` | 多连接循环至耗尽并跨年聚合 | Partial；已能与 contributions 并行启动，仍须禁止首屏全量并改成时间窗口/页资源 |
 | Repositories / Stars / Followers 等 | 多个 Profile Tab | 大量分页 Controller | Wave B；统一页资源模板，保留各自查询会话 |
 | Viewer Settings 集合 | 融合 Settings + `ViewerSettingsService` / `UserInfoService` | Emails、三类 keys、blocked users 为 REST page；Organizations/Repositories 为 GraphQL cursor；mutation 后要求精确一致 | Partial；通用 Runtime forward page、显式 page identity、Provider-owned 惰性 session 与 collection 精确失效已落地；小型列表仍保留 Controller 展开项，真实账号失败/限流和低内存 Profile 待验证 |
 
@@ -173,10 +175,12 @@ Route / page / main tab
 | --- | --- | --- | --- |
 | Notifications list | MD3 Notifications page + REST Service + Runtime source | All/Unread 两会话；原因/自定义/仓库筛选和查询/排序/分组为已加载窗口上的可逆投影；已读/完成 mutation；Controller 仍展开已加载实体 | Partial；页资源、Provider-owned 会话、overlay、可逆 `refilter()` 与精确失效已落地；Saved/Done 无官方 REST 列表，待有界页窗口/距离预取、服务端全局搜索决策和真实 Profile |
 | Notification count | count Provider / watcher | 轻量、周期更新 | Wave B；快照可缓存，轮询由 watcher 管理 |
-| Global Issues / Pull requests | `GlobalListsShell` + Search Service + Runtime source | 跨仓库 query 高基数；Open/Closed/筛选切换频繁；现有 GraphQL card 投影仍偏丰富 | Partial；短 retain page、Provider-owned 四会话 LRU、SWR/刷新/自动分页已落地；三个全局目的地在同一路由内懒加载并保留已访问会话，隐藏 sentinel 不推进；待最小字段投影与真实 Profile |
+| Global Issues / Pull requests | `GlobalListsShell` + Search Service + Runtime source | 跨仓库 query 高基数；Open/Closed/筛选切换频繁；现有 GraphQL card 投影仍偏丰富 | Partial；短 retain page、Provider-owned 四会话 LRU、SWR/刷新/自动分页已落地；五个全局目的地在同一路由内懒加载并保留已访问会话，隐藏 sentinel 不推进；待最小字段投影与真实 Profile |
 | Global repositories | `GlobalListsShell` + `UserInfoService.getUserRepositories` + Runtime source | affiliation cursor page；服务器无文本参数；纯贡献仓库需要第二 source 聚合 | Partial；远程页按账号/visibility/sort/cursor 身份，文字/fork 为可逆本地投影并复用 page；跨目的地返回保留查询和滚动；待 FanOut 合同与真实大列表 Profile |
+| Global Projects | `GlobalListsShell` + `UserInfoService.getUserProjectsV2Page` + Runtime source | 账号、服务端标题查询、排序和 cursor 形成高基数页身份；需要 `project` scope；组织项目属于第二 source | Partial；ProjectsV2 不可变页、Provider-owned 六查询 LRU、SWR/刷新/自动分页及跨目的地保留已落地；待组织/最近访问聚合、原生详情和真实大列表 Profile |
+| Global Discussions | `GlobalListsShell` + `SearchService.searchDiscussions` + Runtime source | `involves:` 与 answered 状态产生短生命周期查询；精确详情尚无原生路由 | Partial；Discussion Search page、Provider-owned 六查询 LRU、SWR/刷新/自动分页及跨目的地保留已落地；待最小投影评估、原生详情和真实大列表 Profile |
 | Global code/user search | Search Service / Controller | query 高基数、短生命周期 | Wave A；短 retain、严格预算、取消未开始预取 |
-| Background inbox polling | Watcher engine | 周期任务、数据库写入 | Excluded；专用 watcher，不伪装成页面资源 |
+| Background inbox polling | Watcher engine | 周期任务、数据库写入；与可见 Inbox 同源 | Excluded；专用 watcher，不伪装成页面资源。可见路由以计数租约暂停同一 watcher timer，app hidden/paused 释放租约，resumed 恢复可见会话；真实平台时序待验证 |
 | Avatar / repository icon | Flutter image stack / URL | HTTP bytes、解码、GPU 三层不同 | Wave B；只在有统一下载需求时接 source，像素缓存仍属 Flutter |
 
 ### 5.8 Workbench 与本地开发流

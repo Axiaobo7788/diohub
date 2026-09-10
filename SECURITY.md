@@ -1,85 +1,65 @@
 # Security Policy
 
-## Supported Versions
+## Supported versions
 
-We release patches for security vulnerabilities. Currently supported versions:
+Security reports are evaluated against the active `develop` branch and any
+downstream release explicitly marked as supported. This checkout does not promise
+maintenance for older or upstream releases.
 
-| Version | Supported          |
-| ------- | ------------------ |
-| 1.x     | :white_check_mark: |
-| < 1.0   | :x:                |
+## Reporting a vulnerability
 
-## Reporting a Vulnerability
+Do not report vulnerabilities in a public issue. Use the downstream
+[GitHub Security Advisory form](https://github.com/Axiaobo7788/diohub/security/advisories/new)
+so the report and follow-up can remain private.
 
-We take the security of DioHub seriously. If you discover a security vulnerability, please follow these steps:
+Include the affected version or commit, impacted files or feature, reproduction
+steps, expected impact, and a proof of concept when it is safe to share. Do not
+include access tokens, private repository contents, or unrelated personal data.
 
-### Where to Report
+No fixed acknowledgement or remediation deadline is promised until a maintainer
+and a private contact channel are formally designated. Wait for a private
+maintainer response before coordinated public disclosure.
 
-**Please DO NOT report security vulnerabilities through public GitHub issues.**
+## Current security boundaries
 
-Instead, please report them via one of the following methods:
+- GitHub access tokens are stored through `flutter_secure_storage`; the backing
+  protection and availability semantics are platform-specific.
+- GitHub Device Flow does not require a client secret. Optional integration values
+  are injected with `--dart-define-from-file` and must never be committed, logged,
+  cached, or included in generated-source artifacts.
+- Values compiled into a client application must not be treated as secrets from a
+  user who controls that application or device.
+- Repository and Markdown content comes from remote, user-controlled sources and
+  must remain subject to size, scheme, authentication, and rendering boundaries.
+- Drift access must use its typed/query APIs. New code must not interpolate
+  untrusted values into raw SQL.
+- OpenSSF Scorecard has a repository workflow. Snyk support is currently disabled
+  because it does not provide native Dart/Flutter analysis in this project; this
+  policy does not claim otherwise.
+- Certificate pinning and specific encryption algorithms are not project-wide
+  guarantees unless an implementation and platform validation are linked here.
 
-1. **Email**: Send details to the maintainer at [security contact - add your email here]
-2. **GitHub Security Advisories**: Use the [Security Advisories](https://github.com/namanshergill/diohub/security/advisories/new) tab
+## Contributor requirements
 
-### What to Include
+1. Never commit credentials, tokens, signing material, `.env` files, or populated
+   `--dart-define-from-file` configuration.
+2. Use the checked-in example configuration only as a schema; keep real values
+   outside the repository.
+3. Redact authentication headers, cookies, tokens, private URLs, and user content
+   from logs, screenshots, fixtures, crash reports, and CI artifacts.
+4. Validate URI schemes, response sizes, file paths, and user-controlled content
+   at the service boundary.
+5. Keep security-related workflow and dependency changes independently reviewable.
+6. If a credential may have entered Git history, generated sources, caches, or
+   artifacts, assume compromise and rotate it; deleting the current file is not
+   sufficient.
 
-Please include the following information in your report:
+## Historical credential migration
 
-- Type of vulnerability (e.g., SQL injection, XSS, authentication bypass)
-- Full paths of source file(s) related to the vulnerability
-- Location of the affected source code (tag/branch/commit or direct URL)
-- Step-by-step instructions to reproduce the issue
-- Proof-of-concept or exploit code (if possible)
-- Impact of the issue, including how an attacker might exploit it
-
-### Response Timeline
-
-- **Initial Response**: Within 48 hours, you'll receive acknowledgment of your report
-- **Status Update**: Within 7 days, you'll receive a detailed response indicating next steps
-- **Resolution**: We aim to release patches within 90 days for confirmed vulnerabilities
-
-### Disclosure Policy
-
-- Please give us reasonable time to address the issue before any public disclosure
-- We will credit you in the security advisory (unless you prefer to remain anonymous)
-- Coordinated disclosure helps protect all DioHub users
-
-## Security Measures
-
-DioHub implements the following security measures:
-
-- **Encrypted Storage**: AES-256-GCM encryption for sensitive data with PBKDF2 key derivation
-- **OAuth2 Authentication**: Secure authentication with GitHub's OAuth2 flow
-- **Certificate Pinning**: For API communications (when applicable)
-- **Secrets Management**: Environment-based configuration with `.env` files (never committed)
-- **Code Analysis**: Automated security scanning via Snyk and OpenSSF Scorecard
-- **Dependency Updates**: Automated via Dependabot with security-focused reviews
-
-## Security Best Practices for Contributors
-
-When contributing to DioHub:
-
-1. **Never commit secrets**: Use `.env` files for local development (already in `.gitignore`)
-2. **Validate all inputs**: Especially user-provided data from GitHub API
-3. **Use parameterized queries**: When working with the Drift database
-4. **Follow secure coding guidelines**: Refer to [OWASP Mobile Security](https://owasp.org/www-project-mobile-security/)
-5. **Keep dependencies updated**: Respond to Dependabot PRs promptly
-
-## Known Security Considerations
-
-- **OAuth Tokens**: Stored encrypted in local database. Users should revoke access if device is compromised.
-- **API Keys for MCP/LLM**: Users must secure their own API keys for third-party services.
-- **On-Device AI**: When using Apple Intelligence or Gemini Nano, data remains on device.
-
-## Security Updates
-
-Security updates are released as patch versions (e.g., 1.0.1 -> 1.0.2) and announced via:
-
-- GitHub Releases
-- Security Advisories tab
-- Telegram Community (for critical issues)
-
----
-
-**Thank you for helping keep DioHub and its users safe!**
+The repository contains a migration record for an earlier generated-source
+credential exposure risk in
+[`SECURITY_ROTATION_NOTICE.md`](SECURITY_ROTATION_NOTICE.md). Its repository-side
+packaging path has been corrected, but completion of external credential rotation
+and cache cleanup is not proven by this checkout. Keep that record until those
+actions have dated evidence; then retain the durable rules here and archive or
+remove the one-time notice.

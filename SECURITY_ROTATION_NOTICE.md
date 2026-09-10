@@ -1,85 +1,37 @@
-# Security Notice: Secret Rotation Required
+# Historical secret-rotation notice
 
-## Background
+Status: external completion not verified
 
-This PR migrates from Envied (compile-time `.env` file generation) to `--dart-define-from-file` for injecting secrets at build time. This change fixes a security vulnerability where secrets were being baked into generated code and then:
+Last repository review: 2026-08-12
 
-1. Packed into `generated-code.tar.gz`
-2. Uploaded as GitHub Actions artifacts
-3. Cached in `actions/cache` (shared across branches)
+## Why this record remains
 
-## Required Actions After Merge
+An upstream migration replaced Envied-generated secret sources with
+`--dart-define-from-file`. Before that migration, generated Dart sources could be
+placed in `generated-code.tar.gz` and uploaded or cached by GitHub Actions. The
+affected values named by the original notice were:
 
-### 1. Rotate All Affected GitHub Secrets
+- `OAUTH_CLIENT_SECRET`
+- `SENTRY_DSN`
+- `SLACK_CLIENT_ID`
+- `SLACK_CLIENT_SECRET`
 
-The following secrets **MUST** be rotated immediately after this PR is merged to production:
+The current checkout has no Envied dependency or generated environment source;
+runtime configuration reads values through `String.fromEnvironment`. The current
+`_codegen.yaml` archive step selects generated `*.g.dart`, `*.freezed.dart`, and
+`*.graphql.dart` files. Together these facts show that the old repository-side
+generation path is no longer present. They do not prove that every old credential
+was rotated or every external artifact/cache was removed.
 
-- `OAUTH_CLIENT_SECRET` - GitHub OAuth app secret
-- `SENTRY_DSN` - Sentry Data Source Name (contains project token)
-- `SLACK_CLIENT_ID` - Slack OAuth client ID
-- `SLACK_CLIENT_SECRET` - Slack OAuth client secret
+## Evidence required before closing
 
-**How to rotate:**
+- Record when each affected credential was rotated or explicitly retired.
+- Confirm obsolete GitHub Actions caches and artifacts were removed or expired.
+- Inspect a generated-code artifact and confirm it contains no injected values.
+- Run the relevant manual CI/release path with replacement credentials.
+- Record the verifier, date, repository, and workflow run or audit reference.
 
-1. **GitHub OAuth credentials** (`OAUTH_CLIENT_SECRET`):
-   - Go to [GitHub Developer Settings](https://github.com/settings/developers)
-   - Find your OAuth app
-   - Generate a new client secret
-   - Update the `OAUTH_CLIENT_SECRET` GitHub secret in repository settings
-
-2. **Sentry DSN** (`SENTRY_DSN`):
-   - Go to Sentry Project Settings → Client Keys (DSN)
-   - Revoke the old key and create a new one
-   - Update the `SENTRY_DSN` GitHub secret
-
-3. **Slack credentials** (`SLACK_CLIENT_ID`, `SLACK_CLIENT_SECRET`):
-   - Go to [Slack API Apps](https://api.slack.com/apps)
-   - Find your app and regenerate credentials
-   - Update both GitHub secrets
-
-### 2. Clear GitHub Actions Cache
-
-Run this command to clear all cached artifacts that may contain the old secrets:
-
-```bash
-# List all caches
-gh cache list
-
-# Delete all caches (or filter by key if needed)
-gh cache delete --all
-```
-
-Or manually delete from the Actions cache UI at:
-`https://github.com/namanshergill/diohub/actions/caches`
-
-### 3. Verify No Artifacts Contain Secrets
-
-Check that old artifacts have expired (retention is 1 day for codegen artifacts) or manually delete them:
-
-```bash
-# List artifacts
-gh run list --limit 10
-
-# Delete specific run artifacts if needed
-gh run delete <run-id>
-```
-
-## Timeline
-
-1. **Before merge**: Review this PR and plan rotation timing
-2. **Immediately after merge**: Rotate all secrets within 1 hour
-3. **Within 24 hours**: Clear caches and verify artifacts expired
-4. **Verification**: Run a full CI/release workflow to confirm the new flow works
-
-## Verification
-
-After rotation, verify the changes are working:
-
-1. Trigger a test release workflow (on `develop` or `beta`)
-2. Confirm the build completes successfully
-3. Check that secrets are not present in any uploaded artifacts
-4. Verify the app functions correctly with the new secrets
-
-## Questions?
-
-If you have questions about the rotation process, contact the security team or @namanshergill.
+Do not paste credential values into this file. Once every item has dated evidence,
+the durable contributor rules remain in [`SECURITY.md`](SECURITY.md) and this
+one-time record can be removed. Until then, deleting it would erase an unresolved
+security obligation rather than consolidate documentation.

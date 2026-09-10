@@ -70,3 +70,22 @@
 24. 更新受影响的进度/架构文档，并提供“需求—实现—验证”映射，区分已满足、仅有基础、已登记和待验证。
 25. 未经用户明确要求，不 commit、不 push、不创建 PR。
 26. 不使用 `git reset --hard`、`git clean`、破坏性 checkout 或其他会覆盖用户工作的命令。
+
+### 收尾闭环门禁
+
+27. 声明完成、交接、暂存或提交前，必须从当前 worktree 重新执行范围审计：检查 tracked/
+    untracked 文件、diff 规模、冲突、空白与生成文件成组性。不得使用最后一次代码修改之前的
+    检查结果证明当前状态。详细门禁见
+    [`docs/development-constraints.md` §7.6](docs/development-constraints.md#76-收尾闭环审计门禁)。
+28. 新增或替换 Provider/Notifier/Controller、Timer/轮询、Stream 订阅、缓存/会话、mutation overlay 或
+    生命周期观察者时，必须列出新旧 owner、全部生产调用点、并存条件、销毁/失效路径与负向断言。
+    旧 owner 必须删除、显式委托或经过可证伪的互斥协调，不得无协调并存。
+29. 异步功能必须按适用边界验证“在途结果晚返回”：dispose、unregister/update、路由/Tab 隐藏、
+    app lifecycle、查询更换及账号/scope 切换后的晚成功与晚失败。必须断言禁止过期状态写入、事件/反馈投递、
+    重排请求和缓存污染。
+30. 测试进程退出码为 0 只是必要条件。必须审阅完整日志；未被测试名称、断言或注入的 observer/logger 明确归属的
+    exception、assertion、关闭后写入、Provider 失败或 `[error]` 日志，均使该次验证无效。
+31. formatter 只能作用于本轮新建/触及文件，并必须先检查其 diff 规模。小范围功能修改若引发整文件格式扩散，
+    必须停止并收窄 hunk；不得用恢复未使用字段/import 或新增 warning 的方式单纯追求 diff 更小。
+32. 当 worktree 包含多个功能簇时，必须按簇分别报告状态与验证，不得用一个笼统的“优化完成”覆盖整个
+    dirty worktree。ARB 与 gen_l10n、GraphQL operation 与 codegen 合同、`part` 父文件与新 part 必须同组审阅。

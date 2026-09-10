@@ -1,6 +1,6 @@
 # DioHub 二次开发实施约束
 
-最后更新：2026-07-24
+最后更新：2026-08-14
 
 ## 1. 总原则
 
@@ -222,13 +222,18 @@ Android 与 Linux 基准并不表示可以破坏 Windows/macOS；未在对应 ru
 
 ### 7.4 完成标准
 
-涉及 Dart/Flutter 代码的轮次，声明完成前至少执行：
+涉及 Dart/Flutter 代码的轮次，声明完成前先对“本轮新建/触及文件 + 相关回归”执行定向检查：
 
 ```bash
-dart format --output=none --set-exit-if-changed .
-flutter analyze
-flutter test
+dart format --output=none --set-exit-if-changed <touched Dart paths>
+dart analyze --format=machine <touched Dart and test paths>
+flutter test --no-pub --concurrency=1 <target test paths>
+git diff --check
 ```
+
+不得在未预览 diff 的情况下对全仓或历史上未整体 format 的旧文件执行批量改写。若全仓基线在当前环境可运行，
+再按低内存串行约束补充 `flutter analyze --no-pub` 与 `flutter test --no-pub --concurrency=1`。定向通过只证明本轮
+触及路径，全仓基线结果必须单独报告。
 
 并按范围补充：
 
@@ -279,6 +284,119 @@ post-frame 回调作为修复。只有由点击、输入、刷新等明确用户
 用户再次报告已标记完成的问题时，立即将该事项降级为“待复核”。必须重新从生产入口复现、读取当前日志和请求链，
 不得以旧测试通过、进度文档已写完成或上下文中的既有结论作为反证。修复后更新原验收映射，明确此前漏测的层级和
 新增的负向断言。
+
+### 7.6 收尾闭环审计门禁
+
+本节适用于声明完成、交接、暂存、提交或创建 PR 之前。它检查的是“当前 worktree 真实状态”，不是 agent 的记忆、
+旧轮次总结或修改前的测试结果。任一门禁无法满足时，必须降级为“部分完成”、“已登记”或“待验证”，不得继续扩大完成结论。
+
+#### 7.6.1 当前快照与逐文件范围
+
+收尾时至少重新执行：
+
+```bash
+git status --short --branch
+git diff --stat
+git diff --numstat
+git diff --check
+git ls-files -u
+```
+
+若 index 非空，还必须检查 `git diff --cached --stat` 与实际 staged diff。`git diff --stat/--numstat` 不包含 untracked 内容，
+因此 `git status` 中每个 `??` 都必须单独追踪。每个变更或未跟踪文件必须归入且只归入以下一类：
+
+| 类别 | 要求 |
+| --- | --- |
+| 用户授权的功能 | 能映射到本轮精确需求和正式生产入口 |
+| 相关回归 | 直接证明该功能的正向结果和禁止事件 |
+| 生成或配对文件 | 与 source 同组，可由公开步骤重现，不只有本机产物 |
+| 进度/架构/政策文档 | 与当前代码一致，不把未验证内容写成完成或对外承诺 |
+| 必要 hygiene | 仅限触及文件不新增 warning/error 或保持 codegen/formatter 所需的最小变化，必须单独说明 |
+| 无关或无法解释 | 阻塞完成/暂存/提交；保留用户修改，不用破坏性命令处理 |
+
+对旧文件运行 formatter 前必须先预览可能的 diff。若小功能会引起整文件换行/尾逗号重排，应停止批量改写并收窄为功能 hunk。
+不得为减少 diff 而恢复未使用 import/字段、重新引入 analyzer warning，或覆盖用户已有修改。
+
+#### 7.6.2 单一所有权账本
+
+新增、替换或下沉以下任一边界时，必须先做全局定义/调用点搜索，并在结果中提供所有权账本：
+
+- Provider、Notifier、Controller 或业务状态机；
+- Timer、polling coordinator、Watcher、Stream/subscription 或 lifecycle observer；
+- query session、分页会话、缓存、overlay 或 optimistic mutation；
+- Resource Lease、generation、失效标签或背景调度。
+
+| 字段 | 必须回答的问题 |
+| --- | --- |
+| 资源/动作身份 | 是哪个账号、仓库、query、页、mutation 或长时任务 |
+| 正式数据源 | 哪个 Service/GraphQL/REST/本地库负责真实读写 |
+| 新 owner | 谁创建、保活、刷新、失效和销毁 |
+| 旧 owner | 是否删除、委托给新 owner，或在互斥状态下保留 |
+| 生产调用点 | 所有真实 UI/Service 调用者，不只是新测试或示例 |
+| 并存条件 | 新旧 owner 能否同时请求、写状态、投递反馈或持有资源 |
+| 结束路径 | dispose、invalidate、unregister、账号/scope/query 切换时谁释放 |
+| 负向证据 | 哪个测试证明旧 owner 不再启动、两者不同时运行或过期写入被禁止 |
+
+“新路径已有测试”不能证明旧 owner 消失。旧 owner 必须删除、变为对新 owner 的显式委托，或由可证伪状态表保证互斥。
+对同一 mutation，所有 UI 消费者必须共享同一个权威写入边界与对账规则。
+
+#### 7.6.3 异步晚返回与销毁矩阵
+
+凡是可能跨越一个 frame、路由、账号或 lifecycle 的 Future/Stream/Timer，都必须根据实际边界覆盖以下矩阵：
+
+| 转换 | 至少需要的证据 |
+| --- | --- |
+| active → dispose/unregister | 在途晚成功/晚失败不写已销毁状态、不访问已关闭 stream |
+| old owner → replacement owner | 旧 generation/identity 结果被丢弃，不覆盖新 owner |
+| route/Tab visible → hidden | 停止只有可见期才允许的请求、翻页、动画和反馈 |
+| resumed ↔ paused/hidden/detached | 调度所有权唯一，恢复时不立即双重请求 |
+| account/scope/query A → B | A 的延迟结果、缓存和反馈不泄漏到 B |
+
+负向断言至少包含适用的：没有 Provider/Controller 写入、没有 event/notification/dispatcher 投递、没有定时重排、没有额外请求、
+没有跨账号或跨 query 缓存污染。若底层不能真正取消网络，必须用 generation、identity 或 disposed gate 丢弃晚返回，不得只依赖 `mounted`。
+
+#### 7.6.4 测试日志也是验收输出
+
+退出码为 0 和用例数全绿只是必要条件，不是充分条件。必须审阅完整 stdout/stderr，以下内容默认阻塞完成：
+
+- `Another exception was thrown`、`Failed assertion`、未捕获 Future/Zone 错误或 Flutter 红屏；
+- 不在当前测试预期失败路径内的 `[error]`、`[exception]`、Provider failure 或 `Bad state`；
+- dispose 后写 stream/Provider/Controller、重复调度、重复请求或未收口的后台任务日志。
+
+若测试主动模拟网络/分页/mutation 失败，预期错误必须能由用例名称、显式断言或注入的 logger/observer 归属到该路径；
+无法归属的原始错误日志不得以“测试还是通过了”忽略。结果报告必须说明预期失败日志和非预期日志是否存在。
+
+#### 7.6.5 最后修改后重验
+
+任何会改变运行时、生成接口、测试 fixture 或正式调用链的最后补丁，都使该依赖闭包上之前的验证失效。补丁后必须至少重跑：
+
+1. 本轮新建/触及 Dart 文件的定向 format 检查；
+2. 触及生产/测试路径的定向 analyze；
+3. 新增失败回归与相关生产入口测试；
+4. `git diff --check` 与本节的当前快照。
+
+之后若只更新准确记录检查结果的 Markdown，无需重跑 Flutter；再次修改代码则必须重验。全仓检查中的历史 warning/error 与本轮新增问题
+必须分开计数，不得把“0 error 但有 baseline warning”写成“全仓 analyze 清零”。
+
+#### 7.6.6 多功能 worktree 的状态与成组不变量
+
+当 dirty worktree 同时包含多个需求时，必须先按“生产实现 + 相关测试 + 生成/配对文件 + 记录”列出逻辑变更组，并为每组单独标注：
+
+- 已满足；
+- 仅建立基础；
+- 已登记未处理；
+- 待自动验证；
+- 待真实账号/平台/Profile 验证。
+
+不得用一组通过的测试扩大为整个 worktree 完成。在暂存/提交设计中，ARB 与 gen_l10n 产物、GraphQL operation 与可重现 codegen 合同、
+`part` 父文件与新 part、生产文件与必需测试不得被拆到会使中间状态无法编译或无法复现的不同组。
+
+收尾报告至少提供以下账本：
+
+| 需求/变更组 | 生产入口/所有权 | 正向证据 | 禁止事件证据 | 当前状态 | 未验证项 |
+| --- | --- | --- | --- | --- | --- |
+
+空表、只列测试名或仅写“通过”不构成收尾证据。
 
 ## 8. 技术债处理
 

@@ -1,6 +1,6 @@
 # DioHub 技术债登记表
 
-最后更新：2026-08-09
+最后更新：2026-08-14
 
 ## 1. 用途与边界
 
@@ -146,9 +146,9 @@
 | ID | TD-007 |
 | 状态 | In Progress（Repository 根 README、CONTRIBUTING、SECURITY 顶层解析及 README 图片下载/分类已接入 Runtime；其他路径待处理） |
 | 优先级 | P1 |
-| 位置 | `lib/common/markdown_view/markdown_render_artifact.dart`；`lib/common/markdown_view/markdown_body.dart`；`lib/common/markdown_view/readme_image_resource.dart`；`lib/providers/repository/repository_readme_resource.dart`；`lib/providers/repository/repository_document_resource.dart`；`lib/view/repository/commits/widgets/changes_viewer.dart` |
-| 症状 | Repository 根 README 原本会在 Widget 状态初始化/更新时重复同步解析完整 HTML；其他 Markdown 入口仍走同步完整解析。Diff 仍在 `build()` 中同步解析完整 patch，并把完整 Diff 放入单个 `SingleChildScrollView`。README 栅格最终像素解码仍由 Flutter `ImageCache` 完成，不属于 Runtime worker。 |
-| 证据 | 当前根 README、CONTRIBUTING 与 SECURITY 的顶层解析、标题提取和 section 切分由 compute lane 中的真实 worker isolate 完成并缓存 artifact；Code/Security 双消费者、auto-dispose 返回、显式刷新和缺失负缓存回归证明相同身份的源请求和顶层解析不重复。README 图片下载/原始字节/分类已进入 Runtime：分类跨真实 worker，但栅格只返回元数据，artifact 与 source 复用同一份 bytes；合法 8 MiB 栅格链落入默认预算，且持有最外层 artifact Lease 时递归依赖链不会被普通 LRU 或内存 trim 单独逐出。失败继续局部重试；每个 `HtmlWidget` section 仍有内部构建/解析，License/Wiki/Profile/旧 Markdown 入口未迁移，`parseUnifiedDiff(widget.patch)` 仍在 build。 |
+| 位置 | `lib/common/markdown_view/markdown_render_artifact.dart`；`lib/common/markdown_view/markdown_body.dart`；`lib/common/markdown_view/readme_image_resource.dart`；`lib/providers/repository/repository_readme_resource.dart`；`lib/providers/repository/repository_document_resource.dart`；`lib/common/diff/parser.dart`；`lib/common/diff/diff_view.dart`；`lib/view/repository/commits/widgets/changes_viewer.dart` |
+| 症状 | Repository 根 README 原本会在 Widget 状态初始化/更新时重复同步解析完整 HTML；其他 Markdown 入口仍走同步完整解析。Diff 的首次完整 patch 解析仍在 UI isolate，并把完整 Diff 放入单个 `SingleChildScrollView`。README 栅格最终像素解码仍由 Flutter `ImageCache` 完成，不属于 Runtime worker。 |
+| 证据 | 当前根 README、CONTRIBUTING 与 SECURITY 的顶层解析、标题提取和 section 切分由 compute lane 中的真实 worker isolate 完成并缓存 artifact；Code/Security 双消费者、auto-dispose 返回、显式刷新和缺失负缓存回归证明相同身份的源请求和顶层解析不重复。README 图片下载/原始字节/分类已进入 Runtime：分类跨真实 worker，但栅格只返回元数据，artifact 与 source 复用同一份 bytes；合法 8 MiB 栅格链落入默认预算，且持有最外层 artifact Lease 时递归依赖链不会被普通 LRU 或内存 trim 单独逐出。失败继续局部重试；每个 `HtmlWidget` section 仍有内部构建/解析，License/Wiki/Profile/旧 Markdown 入口未迁移。Diff 现在对相同 patch 复用最多 4 个、合计最多 2 MiB 字符的不可变 parse artifact，同一 build 的宽度计算不再二次解析；大 patch 绕过该缓存，首次解析仍未迁移到 worker。 |
 | 用户影响 | 大 README 或大 Diff 可能占用 UI isolate 并产生长帧；实际阈值和影响待 Profile。 |
 | 冲突来源 | 上游 Markdown/Diff 组件按完整文档模型实现，新页面只完成了部分 Sliver 化。 |
 | 建议方案 | 保留当前 source → artifact 与图片 source → classification 边界；先 Profile 短生命周期 worker、长 README 和图片内存峰值，再决定常驻 worker pool 或其他正式 Markdown 入口迁移。另行构造大 Diff 基准，再评估 isolate/分块解析和虚拟化。 |
@@ -164,16 +164,16 @@
 | ID | TD-008 |
 | 状态 | Accepted |
 | 优先级 | P2 |
-| 位置 | 既有：`repository_md3_screen.dart` 1420 行、`repository_code_md3.dart` 2099 行、`repository_issue_pull_md3.dart` 1331 行、`github_dashboard_home.dart` 1112 行、`unified_home_screen.dart` 725 行；本轮新增：`notifications_inbox_toolbar.dart` 1201 行、`notifications_md3_screen.dart` 840 行、`settings_github_account_page.dart` 629 行、`global_lists_results.dart` 628 行；对应 Notifications/Global Lists 场景测试也已超过 600 行。 |
+| 位置 | 既有：`repository_md3_screen.dart` 1420 行、`repository_code_md3.dart` 2099 行、`repository_issue_pull_md3.dart` 1331 行、`github_dashboard_home.dart` 1112 行、`unified_home_screen.dart` 725 行；仍待处理：`settings_github_account_page.dart` 629 行、`global_lists_results.dart` 628 行及超过 600 行的 Notifications/Global Lists 场景测试。Notifications 本轮已按职责拆分，触及的生产文件均低于 600 行。 |
 | 症状 | 多个文件同时包含请求/状态协调、响应式布局、工具栏、导航、列表、辅助区和多种异步状态 Section。 |
-| 证据 | 静态行数和类清单显示：Repository shell 同时实现身份、操作、About 和 Contributors；Code 同时实现工具栏、目录、提交和文档；Issue/PR 同时实现查询、筛选、侧栏、列表与状态面板。共享导航/上下文已抽为独立组件，Wiki 已拆为数据协调器与纯响应式视图；Actions 与 Security 也把纯行/状态卡拆为同 library 的展示文件，Insights 拆出图表/指标组件。新 Notifications 工具栏仍同时包含状态分类、自定义筛选、仓库投影、查询、排序和分组；Notifications 协调页、Settings 账户页与 Global Lists 结果页也各自跨越多个 Section。判定依据是职责混合，不是单纯行数。 |
+| 证据 | 静态行数和类清单显示：Repository shell 同时实现身份、操作、About 和 Contributors；Code 同时实现工具栏、目录、提交和文档；Issue/PR 同时实现查询、筛选、侧栏、列表与状态面板。共享导航/上下文已抽为独立组件，Wiki 已拆为数据协调器与纯响应式视图；Actions 与 Security 也把纯行/状态卡拆为同 library 的展示文件，Insights 拆出图表/指标组件。Notifications 已拆为 shell、侧栏、查询/排序/分组 controls、滚动协调、异步状态、toolbar 与 rows，生产文件当前为 65–590 行；Settings 账户页与 Global Lists 结果页仍各自跨越多个 Section。判定依据是职责混合，不是单纯行数。 |
 | 用户影响 | 小改动触发大范围 review 和回归，容易再次出现重复尺寸、生命周期或“基础完成被误报为页面完成”。 |
 | 冲突来源 | UI 快速迁移阶段将样板页面持续堆叠在少数文件。 |
-| 建议方案 | 按 shell、数据协调、响应式布局、Section 和纯展示组件逐步抽取；Notifications 优先按分类导航、搜索/排序/分组和 Saved filter 编辑器拆分，Global Lists 按结果头/行/分页状态拆分，测试按可见状态与生命周期场景拆分；保持现有 Provider/Controller 为唯一业务源。 |
+| 建议方案 | 按 shell、数据协调、响应式布局、Section 和纯展示组件逐步抽取；Notifications 生产职责拆分已完成，后续保持现有边界并拆分超限场景测试；Global Lists 按结果头/行/分页状态拆分；保持现有 Provider/Controller 为唯一业务源。 |
 | 清理风险 | 机械拆文件会制造参数传递、重复状态和无语义组件，扩大 diff。 |
 | 前置条件 | 先建立当前入口、状态、响应式和关键交互测试；逐文件职责图；限定单轮只拆一条边界。 |
 | 回归验证 | 360/800/1440 Widget Test、导航/Tab/刷新测试、analyze/test 和截图对比。 |
-| 触发条件 | 下一次修改对应大文件前先拆其本轮触及职责；尤其 Notifications、Global Lists 或 Settings 再新增筛选、Section 或交互时，不允许继续直接增长现有超限文件。当前检查点不在提交前机械拆分，是为了保留已完成的 159 项 UI 回归证据；后续拆分必须以同一入口、请求次数、响应式、语义和 Reduced Motion 回归保持为完成条件。 |
+| 触发条件 | 下一次修改对应大文件前先拆其本轮触及职责；Global Lists 或 Settings 再新增筛选、Section 或交互时，不允许继续直接增长现有超限文件。Notifications 后续不得重新合并已拆边界；测试拆分必须以同一入口、请求次数、响应式、语义和 Reduced Motion 回归保持为完成条件。 |
 
 ### TD-009 Dense Typography 与可访问性验证尚未形成单一入口
 
@@ -234,17 +234,17 @@
 | 字段 | 内容 |
 | --- | --- |
 | ID | TD-012 |
-| 状态 | In Progress（首个 Repository Issues/PR forward page 生产试点已接入） |
+| 状态 | In Progress（Repository Issues/PR、Notifications、全局列表及 PR patch page 均已有 forward page 生产消费者） |
 | 优先级 | P1 |
-| 位置 | `lib/providers`；`lib/view`；`lib/services`；`lib/view/repository/md3/repository_issue_pull_md3.dart`；`docs/resource-runtime-information-flow-inventory.md`；`docs/resource-runtime-integration-template.md` |
+| 位置 | `lib/providers`；`lib/view`；`lib/services`；`lib/view/repository/md3/repository_issue_pull_md3.dart`；`lib/providers/issue_pulls/pull_file_patch_page_resource.dart`；`docs/resource-runtime-information-flow-inventory.md`；`docs/resource-runtime-integration-template.md` |
 | 症状 | Runtime 已覆盖 Repository Code/文档/图片及 Issues/PR 不可变列表页，但 Controller 仍展开持有全部已加载项目；首个 Issues/PR 试点还由 Widget 读取 active scope、选择 fallback 并构造 Runtime page source，尚未形成可直接复用的 Riverpod/query-session binding；Home、Repository 主信息、详情时间线、Actions、Profile、Notifications 等仍由页面级分页 Controller、Riverpod 定时保活或 Service 聚合分别管理。 |
-| 证据 | Issues/PR 正式入口现在按 scope + repository + transport + query + cursor/page + size 建立页身份，GraphQL/REST 仍复用原 Service；登录列表已从全局重卡片 fragment 分离为只含行字段的 GraphQL 投影，不再取正文、review/check/project/reaction 等详情数据，labels 从 100 收敛为 5。Runtime stale 首页立即回显并后台原位替换，隐藏 Tab sentinel 保持 0 请求；但 `_runtimePageSource()` 与 `_buildListContent()` 仍在 Widget state 中读取 `activeResourceScopeProvider`、处理 null fallback 并选择 page source。静态搜索仍有 67 处 `PaginationController<...>` 类型引用和 25 处 `keepAliveFor(ref)`。`allReviewThreadsMapProvider` 会分页到耗尽；单文件 patch 查找可能从第一页循环；workflow overview 对工作流列表执行多请求 `Future.wait`；Profile activity 会跨连接和年份聚合；Repository 完整首查询仍携带 6 组 Issues/PR 快捷计数。尚无 Profile 耗时结论。 |
+| 证据 | Issues/PR 正式入口现在按 scope + repository + transport + query + cursor/page + size 建立页身份，GraphQL/REST 仍复用原 Service；登录列表已从全局重卡片 fragment 分离为只含行字段的 GraphQL 投影，不再取正文、review/check/project/reaction 等详情数据，labels 从 100 收敛为 5。Runtime stale 首页立即回显并后台原位替换，隐藏 Tab sentinel 保持 0 请求；PR 单文件 patch 查找也已按 scope + PR + page + size 复用 Runtime 页，后续文件不再重复请求已读页。但 `_runtimePageSource()` 与 `_buildListContent()` 仍在 Widget state 中读取 `activeResourceScopeProvider`、处理 null fallback 并选择 page source；Controller 仍无界展开已载入项。静态搜索的 67 处 `PaginationController<...>` 与 25 处 `keepAliveFor(ref)` 为 2026-07-24 基线，本轮未重计。`allReviewThreadsMapProvider` 会分页到耗尽；单文件 patch 首次查找仍可能线性扫描；workflow overview 仍有多请求 `Future.wait`；Profile activity 仍跨连接/年份聚合，只是不再被 contributions 门闩串行阻塞；Repository 完整首查询仍携带 6 组 Issues/PR 快捷计数。尚无 Profile/Release 耗时结论。 |
 | 用户影响 | 高频页面可能重复请求、在辅助数据到齐前等待、产生网络扇出，或让 Controller 长期持有大列表；具体卡顿和内存影响仍待 Profile/Release 测量。 |
 | 冲突来源 | 上游按页面建立 Provider/Controller，ResourceRuntime 后加入且只做了窄试点；分页会话与页资源所有权此前被错误理解为二选一。 |
 | 建议方案 | 使用混合边界：`PaginationController` 保留 query/cursor/order/refresh/scroll，会话中的不可变 page result 以 query + cursor/page + size + scope 接入 Runtime；先把 Issues/PR 的 scope、transport、fallback 与 source factory 收进显式 Riverpod/query-session binding，再用第二个 forward-page 消费者验证执行器只需新 Recipe/Loader；大列表 Controller 改为有界页窗口或轻量索引。之后再拆 Repository baseline、PR 时间线/files/reviews、Home feed、Notifications 和 Actions 扇出。 |
 | 清理风险 | 直接替换全部 Controller 会破坏双向分页、滚动恢复、mutation overlay、公开 REST 回退和既有查询 LRU；只加 Runtime 缓存但继续无界保留实体则不会降低内存。 |
 | 前置条件 | 逐信息流填写接入模板；明确身份、页窗口、SWR、失效、Lease、预算和禁止事件；先建立请求次数与 Controller 身份失败回归。 |
-| 回归验证 | 本轮定向 43/43：通用 source 5/5、分页 sliver 3/3、轻量查询合同 1/1、正式 Runtime 入口 4/4、Repository Issues/PR 20/20、Tab transition + guest shell 10/10。已证明 Single Flight、fresh/stale 复用与后台替换、显式下一页、隐藏页 0 请求、刷新失败保留旧项、Open→Closed→Open、REST transport、账号 scope 与独立 Material 边界。尚待真实大仓库、LRU 后实体/Lease、360/800/1440px 人工复核及 Profile/Release 冷暖与内存对比。 |
+| 回归验证 | 原 Issues/PR 定向 43/43 保留；2026-08-12 合并加载正确性回归 50/50 通过。其中 PR patch 直接 page + 正式 Provider 3/3 证明两文件复用同一 Runtime 页，且满页首页命中时禁止第二页请求；同组同时覆盖 Diff LRU、Events 投影、Star 对账、Notifications 调度/生命周期、Profile 解串行和 Security 惰性分区。尚待真实大仓库、LRU 后实体/Lease、有界页窗口及 Profile/Release 冷暖与内存对比。 |
 | 触发条件 | 先人工复核首个试点并收敛 Widget 中的 Runtime 胶水，再设计有界 Controller 页窗口、距离式预取和 mutation 失效；第二个 forward-page 消费者必须验证执行器无需再次修改，完成前不机械扩散到全仓分页。 |
 
 ### TD-013 Repository 隐藏 Tab 的异步图片会污染活动 Tab 布局
@@ -273,14 +273,14 @@
 | 状态 | Open（活动 Inbox 已完成，本项只登记不可等价部分） |
 | 优先级 | P2 |
 | 位置 | `lib/view/notifications/notifications_md3_screen.dart`；`lib/providers/notifications/notifications_filters_provider.dart`；GitHub Notifications REST |
-| 症状 | GitHub 网页公开展示 Saved、Done、全文搜索、排序、分组及条件引导，但公开 REST 列表只提供 All/Unread、Participating、时间范围和分页；没有 Saved/Done 列表、服务端全文搜索、排序或分组参数，也没有公开“Clear out the clutter”触发合同。 |
-| 证据 | 当前页面的 All/Unread 使用正式 REST 会话；原因、自定义、仓库筛选及查询/排序/分组只对已加载窗口做可逆本地投影。宽屏侧栏与 360/800px 底部面板复用同一分类模型；Saved/Done 带 lock 和能力说明，不创建假列表。账户初始化、失败重试、确认未登录、已登录已分离，仅已登录构造 inbox 与 Runtime scope；条件提示只在 All 范围存在已读可见项且本地未关闭时显示。 |
-| 用户影响 | 三档宽度都能到达同一通知分类，但本地搜索仍不能命中尚未加载的历史页；Saved/Done 不能像网页一样列出内容；提示出现条件可能与 GitHub 私有服务端策略不同。 |
+| 症状 | GitHub 网页公开展示 Saved、Done、全文搜索、排序、分组及条件引导，但公开 REST 列表只提供 All/Unread、Participating、时间范围和分页；单 thread 的 Done mutation 是公开能力，Saved/Done 历史列表不是。公开列表也没有服务端全文搜索、排序或分组参数，且没有公开“Clear out the clutter”触发合同。 |
+| 证据 | 当前页面的 All/Unread 使用正式 REST 会话；完成 action 调用官方 thread Done endpoint，并先向已加载会话应用可回滚 overlay。路由前台可见时按 GitHub 返回的 `X-Poll-Interval` 条件重新校验已加载的当前 Controller，因此网页端完成通知后活动 Inbox 会在建议窗口内收敛；这不是推送实时流，也不会创建隐藏会话。原因、自定义、仓库筛选及查询/排序/分组只对已加载窗口做可逆本地投影。宽屏侧栏与 360/800px 底部面板复用同一分类模型；Saved/Done 历史入口显示能力说明，不创建假列表。 |
+| 用户影响 | 三档宽度都能到达同一通知分类，网页与客户端对活动 Inbox 的 Done 状态可以收敛；但本地搜索仍不能命中尚未加载的历史页，Saved/Done 不能像网页一样列出历史内容，提示出现条件也可能与 GitHub 私有服务端策略不同。 |
 | 冲突来源 | 网页产品能力与公开 REST 契约不对等，不是通过更换 Flutter 组件或再建一套本地列表即可可靠补齐。 |
 | 建议方案 | 保持当前诚实边界。若要补齐 Saved/Done 或全局搜索，先确认官方 GraphQL/REST 是否出现稳定等价接口；否则单独评估本地持久化索引的产品语义、跨设备一致性、账号隔离和迁移成本，不抓取网页私有接口。 |
 | 清理风险 | 把当前已加载窗口结果冒充全局结果，或只在本地维护 Saved/Done，会造成跨设备与 GitHub 网页状态不一致；反向工程网页私有接口会引入稳定性和合规风险。 |
 | 前置条件 | 明确产品是否接受“仅本地”语义；建立账号切换、分页历史、mutation 回滚、数据库迁移和跨设备不一致提示。 |
-| 回归验证 | 当前呈现定向 15/15 证明 All/Unread 会话、本地投影、过滤可恢复、360/800/1440 分类可达、账户四态、文字缩放、Reduced Motion 与错误重试；未证明 Saved/Done、跨未加载页搜索、GitHub 私有提示条件或真实账户平台视觉。 |
+| 回归验证 | 2026-08-10 通知/动效定向 27/27：除既有 All/Unread、本地投影、360/800/1440、文字缩放、Reduced Motion 与错误重试外，新增证明网页完成后的前台会话收敛、只刷新已加载 Controller、按最新服务端间隔重排程和销毁停止；未证明 Saved/Done 历史、跨未加载页搜索、GitHub 私有提示条件或真实账户平台轮询时序。 |
 | 触发条件 | 用户明确要求本地 Saved/Done，或 GitHub 提供稳定公开接口时重新评估；在此之前不把入口扩写为完整实现。 |
 
 ### TD-015 旧设置表面仍有未迁移的高级与运维能力
@@ -372,6 +372,114 @@
 | 前置条件 | 已保持正式 `WorkflowRunItem` 与生产行，没有重建第二套 workflow model。 |
 | 回归验证 | 二级 Tab 7/7 通过；仍需 Android/Linux 真实已登录长名 workflow 复核字形、行高和触控，且在平台验收前不扩大为整张 Actions 页“已完成”。 |
 | 触发条件 | 若 Actions 行字段或布局再改，必须保持该回归；平台实拍异常时以新证据重开。 |
+
+### TD-020 全局 Projects / Discussions 尚缺原生精确详情与跨所有者聚合
+
+| 字段 | 内容 |
+| --- | --- |
+| ID | TD-020 |
+| 状态 | Accepted（账号级正式列表已完成；详情与跨所有者集合待迁移） |
+| 优先级 | P2 |
+| 位置 | `lib/view/global_lists/`；`lib/providers/search/global_search_*`；ProjectsV2 / Discussion Search Service |
+| 症状 | 全局 Projects 与 Discussions 已有真实分页列表，但 Project 行和 Discussion 行仍打开 API 返回的精确网页 URL；Projects 只读取当前用户拥有的 ProjectsV2，不聚合组织项目或 Recently viewed。 |
+| 证据 | 当前路由没有 ProjectV2 详情页；既有 `DiscussionRef` 只能进入 Repository Discussions Tab，不能保留 discussion number 的精确详情语义。GitHub GraphQL 将用户 ProjectsV2、组织 ProjectsV2 与讨论搜索暴露为不同连接，不能在 Widget 中临时拼接。 |
+| 用户影响 | 用户可在原生列表中搜索、筛选、刷新和连续翻页，但打开条目会离开应用；组织项目与最近访问项目也不会出现在当前列表，因此不能声称网页功能完全对等。 |
+| 冲突来源 | 页面迁移先完成了公开稳定的账号级只读连接；项目字段/视图与讨论回复属于独立详情/Mutation 边界，跨所有者聚合还需要稳定去重、排序和失败降级合同。 |
+| 建议方案 | 分别建立 ProjectV2 详情和 Discussion number 类型化路由，复用正式 Service/Runtime 资源；确认组织项目为产品范围后，再定义第二 source 与通用 FanOut 合同。写操作继续由领域 Service/Notifier 管理，成功后精确失效列表和详情资源。 |
+| 清理风险 | 把 Repository Discussions Tab 冒充精确讨论详情会丢失编号；在 Widget 中并发抓用户/组织项目并本地全量排序会破坏首屏、游标、预算和错误语义。 |
+| 前置条件 | 精确深链合同；Project/Discussion 详情最小投影；组织身份与权限 fixture；FanOut 的第二消费者；真实大列表 Profile/Release 基线。 |
+| 回归验证 | 点击列表项进入唯一精确原生路由；返回保留列表查询、分页和滚动；mutation 精确同步；360/800/1440px、2×、限流/权限/空状态及请求次数通过。 |
+| 触发条件 | 下一轮迁移 Project 或 Discussion 详情，或产品要求组织/最近访问项目进入全局列表时。 |
+
+### TD-021 Notifications 前台同步与后台 Watcher 调度所有权重叠
+
+| 字段 | 内容 |
+| --- | --- |
+| ID | TD-021 |
+| 状态 | In Progress（前/后台调度所有权、应用生命周期与联合回归已落地；待真实账号验证与提交后关闭） |
+| 优先级 | P1 |
+| 位置 | `lib/providers/notifications/notifications_inbox_session_provider.dart`；`lib/providers/resource_runtime/resource_runtime_lifecycle.dart`；`lib/services/watchers/watcher_engine.dart`；`lib/services/watchers/watcher_service.dart`；`lib/services/watchers/definitions/inbox_poll_watcher.dart`；`lib/services/activity/notifications_service.dart` |
+| 症状 | 原实现中，通知路由可见时 `NotificationsVisibleInboxSyncCoordinator` 与同一账号的 `InboxPollWatcher` 都会请求 Notifications Service。当前工作区已让可见路由取得调度租约：前台租约存在时仅暂停 `inbox_poll:default` 计时器，不注销 Watcher、不改持久化开关；最后一个租约释放后按正常 interval 恢复，不立即发起重复请求。 |
+| 证据 | `WatcherEngine.suppressScheduling/resumeScheduling` 与 `WatcherService` 引用计数建立了单一计时所有权；前台 one-shot sync 已收口异常，失败后继续下一窗口，销毁后不重排。合并回归曾暴露“Watcher 已 dispose，在途 check 仍向已关闭 event stream 写入”的真实竞态；当前通过 disposed/registration identity gate 丢弃过期结果，不投递 alert、不更新已销毁状态。2026-08-12 通知会话、前台协调器、应用生命周期与 Watcher 精确回归 10/10 通过，包含禁止重复调度、正常间隔恢复、失败续调度、dispose、在途返回及 app hidden/paused/resumed。账号切换已有 Home 生产入口的 stop → invalidate → 鉴权后重建链路；真实账号请求记录仍待平台复核。 |
+| 用户影响 | 原重叠调度会在慢网络或低内存设备上增加条件缓存复验、后台唤醒和通知页卡顿风险；当前自动合同已禁止两个 timer 同时运行，但实际频率、延迟和耗电仍待真实账号请求记录。 |
+| 冲突来源 | 活动 Inbox 的网页状态收敛和后台新通知提醒是两个合理用例，但各自增加了调度器，没有定义路由可见、应用前/后台与账号切换时的唯一所有者。 |
+| 建议方案 | 已按状态表实施：前台且 Notifications 可见时由 visible session 持有同步所有权，路由/应用不可见时由 Watcher 负责提醒；继续复用现有 Service 与 HTTP conditional cache，不把长时调度塞进普通 Runtime page。剩余工作是真实账号请求/耗电验证及未来账号切换入口改变时的根级所有权复核。 |
+| 清理风险 | 直接删除任一条会使前台跨端状态收敛或后台系统提醒回归；暂停/恢复还必须处理账号切换、应用生命周期和已在途请求。 |
+| 前置条件 | 列出路由可见性、应用生命周期、Watcher 开关、All/Unread 加载状态和账号 scope 组合；为两个调度者注入可计数的 Service 边界。 |
+| 回归验证 | 首次页面加载、visible 周期、Watcher 周期、应用进入后台/恢复、路由关闭与账号切换分别断言请求次数；前台不丢收敛，后台不丢提醒，销毁后无定时器/请求泄漏。 |
+| 触发条件 | 真实账号请求记录与解决提交尚未完成时，不得转为 `Resolved` 或声称真实轮询性能已验收。若账号切换未来可绕过 Home 入口，需先将 Watcher 重建所有权上移到根级 account listener。 |
+
+### TD-022 Repository Star 乐观层尚缺权威值对账与完整消费者验证
+
+| 字段 | 内容 |
+| --- | --- |
+| ID | TD-022 |
+| 状态 | In Progress（权威 seed、账号隔离、双消费者与 i18n 回归已落地；待真实账号验证与提交后关闭） |
+| 优先级 | P1 |
+| 位置 | `lib/providers/repository/repository_providers_core.dart`；`lib/common/misc/repository_card.dart`；`lib/view/repository/md3/repository_md3_screen.dart`；`test/providers/repository/repository_star_provider_test.dart`；`lib/l10n/` |
+| 症状 | 原实现只定义了按 `RepoRef` 共享 Star overlay 的写入期，会长期遮蔽新服务端 seed，且 Provider 硬编码英文反馈。当前工作区已区分 optimistic 与 authoritative result，mutation 期拒绝旧 seed，成功后由 Repository/Profile 显式刷新对账；账号 scope 切换会清除保留值，旧账号延迟返回不能再发布或弹出反馈。 |
+| 证据 | Repository action 与 `RepoStarChipFromData` 共享同一状态；反馈文案改由 UI 从现有 `gen_l10n` 注入。已删除无生产调用、仍维护完整 Repository 乐观状态和硬编码英文反馈的旧 `RepositoryNotifier.toggleStar()`，避免两个 mutation owner 重新分叉。2026-08-12 Star 精确回归 7/7 通过，覆盖两个 mounted 消费者、乐观/成功/失败、权威 seed 冲突、旧 seed 不复活、账号切换与旧账号延迟 mutation；同时断言轻量操作前后均不创建完整 `repositoryProvider`。 |
+| 用户影响 | 原路径会在另一端、网页或刷新后更改 Star 状态时，让本地卡片和 Repository 页继续显示旧乐观值，中文环境也可能出现未本地化反馈。当前自动合同已禁止这些分叉；真实账号跨端时序仍待验证。 |
+| 冲突来源 | 为避免卡片触发完整 Repository 查询而新增了轻量共享层，早期只定义写入时的乐观生命周期，且保留了旧完整 Repository mutation owner，因而缺权威对账并有双状态源风险。 |
+| 建议方案 | 已保留唯一共享轻量 mutation 边界，以 optimistic/authoritative 状态表达 pending/confirmed/reconciled 合同；冲突时由后续权威 seed 收敛，反馈文案由现有 `gen_l10n` ARB 注入。剩余工作是真实账号人工验证，不再增加第二个 Star owner。 |
+| 清理风险 | 过早清空 overlay 会让 UI 在 mutation 响应和旧缓存 seed 之间闪回；永不清空则会遮蔽跨端更新。必须区分本次 mutation 响应、旧 cache 和后续权威 fetch。 |
+| 前置条件 | 固定 `RepoRef` 身份与 repository/card 两条 seed 的发布顺序；为 mutation 结果和服务端查询注入可控 revision。 |
+| 回归验证 | 同时 mounted 的 Repository action 与 card chip 在乐观期、成功、失败、权威 seed 相同/冲突及账号 scope 切换时保持一致；确认不因对账重启完整 Repository 查询，中英反馈 key parity 通过。 |
+| 触发条件 | 真实账号跨表面人工验证与解决提交完成后可转 `Resolved`；在此之前只声称自动合同已闭环，不扩大为真实网络或性能已验收。 |
+
+### TD-023 当前未提交工作混合多个功能簇与格式化扩散
+
+| 字段 | 内容 |
+| --- | --- |
+| ID | TD-023 |
+| 状态 | In Progress（功能 hunk 已收敛；逻辑提交分组待执行） |
+| 优先级 | P2 |
+| 位置 | 当前未提交 worktree；重点为 `lib/services/pulls/pull_service.dart`、`lib/common/misc/repository_card.dart`、`lib/providers/issue_pulls/pull_files_providers.dart`、`lib/services/activity/notifications_service.dart`与 `lib/common/animations/motion.dart` |
+| 症状 | 当前变更同时包含 Star/Events/Security/PR patch/Diff/Profile 加载修正、Notifications 调度与文件拆分、Projects/Discussions、Motion/i18n、Runtime/进度文档以及顶层公开文档。初次审计还发现旧文件小范围功能修改混入大量换行、尾逗号、泛型标注和重排；这部分 hunk 已收敛，剩余风险是多个逻辑功能簇尚未分组提交。 |
+| 证据 | 2026-08-12 初次审计时，跟踪 diff 已有 56 个修改文件、约 2516 行新增/2384 行删除，另有 17 个未跟踪源码/测试文件；未跟踪项本身未发现生成产物、二进制或密钥。后续已逐 hunk 收窄五个重点文件：`pull_service.dart`、`repository_card.dart`、`pull_files_providers.dart`、`notifications_service.dart` 和 `motion.dart` 的合计 diff 从 +388/-296 收窄为 +172/-53，减少 459 行无关重排并恢复 `mass: 1.0`。`pull_files_providers.dart` 保留的少量重排与 unused 清理是该已触及文件通过 formatter/analyzer 所需的 hygiene，不再伪装成独立功能。2026-08-14 开始本轮约束固化前整个 worktree 有 60 个 tracked 状态项与 20 个 untracked 状态项；纳入 `AGENTS.md` 和开发约束后，当前快照为 62 个 tracked 状态项与 20 个 untracked 状态项，多功能簇尚未拆分提交。本次漏项已被固化为强制闭环门禁：逐文件范围分类、新旧 owner 账本、异步晚返回矩阵、全量测试日志审阅与最后修改后重验已进入 `AGENTS.md` 和开发约束；该规程会阻止再次扩大范围，但不代替当前 worktree 仍需的逻辑提交分组。 |
+| 用户影响 | 不会直接改变功能，但会掩盖回归、增加冲突和 review 成本，也使某项检查通过被误扩大为整批完成。 |
+| 冲突来源 | 长轮次中功能、性能、UI、文档和自动格式化累积在同一 dirty worktree，缺少每个可证伪边界的中间检查点。 |
+| 建议方案 | 在不破坏用户工作的前提下手工收窄格式化 hunk，再按“加载正确性”、“PR patch/Diff”、“Notifications”、“Projects/Discussions”、“Motion/i18n”、“内部架构文档”和“顶层公开文档”建立可独立验证的变更组；生成 l10n 与其 ARB 必须同组。 |
+| 清理风险 | 使用整文件 checkout/reset 会覆盖功能修改；只能逐 hunk 处理，并在每组后重跑对应测试。过度拆分也可能使生成文件或新拆组件失去必需依赖。 |
+| 前置条件 | 保留当前 worktree 备注和各功能的目标测试清单；先解决 TD-021/TD-022 或将其所属变更明确标记为未完成。 |
+| 回归验证 | 每个变更组分别运行 `git diff --check`、相关定向 format/analyze/test；最终再按低内存约束串行运行适用的全量验证。确认每组只带入自身必需的生产、生成、测试与文档文件。 |
+| 触发条件 | 下一次 commit 之前必须处理；未拆分前不将整个 worktree 写成单一“性能优化”事项。 |
+
+### TD-024 顶层公开文档与功能变更混合，Privacy Policy 尚未发布就绪
+
+| 字段 | 内容 |
+| --- | --- |
+| ID | TD-024 |
+| 状态 | In Progress（内容边界已收敛；发布审阅与独立提交待完成） |
+| 优先级 | P1 |
+| 位置 | `README.md`；`CONTRIBUTING.md`；`PrivacyPolicy.md`；`SECURITY.md`；`SECURITY_ROTATION_NOTICE.md` |
+| 症状 | 五份面向使用者/贡献者/安全报告者的顶层文档在当前 Runtime、UI 与加载优化工作中被同时大幅重写，超出单一功能边界。其中 `PrivacyPolicy.md` 虽比旧的“不处理数据”描述更贴近当前实现，仍不是可直接发布的完整隐私政策。 |
+| 证据 | 2026-08-12 已按文档逐份收敛：README 只保留稳定入口并链接进度/技术债；CONTRIBUTING 不再复制 AGENTS/开发约束；Security 不再虚构“最新发布版”或时限承诺；Rotation Notice 保留未完成的外部轮换义务；Privacy 与当前 Sentry 默认值、DSN gate、PII/body/screenshot/view-tree 边界对照，并显式标记 `not a release privacy notice`。五份文档本地链接与 `git diff --check` 通过；operator、contact、retention、processor、jurisdiction 仍需项目所有者确认，未被猜测填入。 |
+| 用户影响 | 若与功能提交一起发布，用户难以区分产品行为与项目政策变化；不完整的隐私/安全文档还可能造成误导。 |
+| 冲突来源 | 在清理历史不准确声明时，没有与当前工程优化建立独立的文档治理轮次和发布审阅人。 |
+| 建议方案 | 从性能/Runtime/UI 提交中拆出顶层公开文档。README 只保留稳定的产品入口和经验证现状；CONTRIBUTING 链接而不复制强制约束；Security/轮换通知由维护者确认报告通道与凭据状态；Privacy Policy 建立独立发布检查清单并经产品/维护者明确批准。 |
+| 清理风险 | 简单恢复旧文本会重新引入已知不实声明；直接接受当前文本又会把尚未审核的政策写成有效对外承诺。必须按文档逐份复核，不整批 checkout 或整批合入。 |
+| 前置条件 | 确认当前 Sentry/遥测默认值、外部图片/链接、账号/token 存储、日志与缓存行为；由项目所有者确认联系与发布语义。 |
+| 回归验证 | 顶层文档链接、安全联系和当前生产默认值与代码一致；隐私数据流逐项与实际 Service/设置对照；发布前经责任人人工批准。 |
+| 触发条件 | 任何对外发布、PR 或包含这五份文档的 commit 之前；未审核时 `PrivacyPolicy.md` 必须保持“未发布就绪”状态。 |
+
+### TD-025 Global Lists 的类型化会话池重复有形成第三套执行器的风险
+
+| 字段 | 内容 |
+| --- | --- |
+| ID | TD-025 |
+| 状态 | Proposed |
+| 优先级 | P2 |
+| 位置 | `lib/providers/search/global_search_session_provider.dart` |
+| 症状 | `BoundedGlobalRepositorySessionPool` 与 `BoundedGlobalProjectSessionPool` 各自复制了“按类型化 query 命中 Controller → LRU 提升 → 构造 `RuntimeForwardPageSource` → 超容量 dispose → pool dispose”的完整形状；继续为新的类型化列表复制该结构会产生第三套会话执行器。 |
+| 证据 | 两个 pool 都以容量 6 的 `LinkedHashMap<Query, PaginationController>` 实现相同 LRU/销毁算法，差异主要是 query 类型、resource spec/refresh selector、`idOf` 与 Repository 的本地投影。同文件已有按 `String query` 的通用 `BoundedGlobalSearchSessionPool<T>`，但尚不能表达类型化 query 和可选投影。当前生产功能和有界保活回归可用，本轮没有发现正确性故障。 |
+| 用户影响 | 当前无直接用户回归；长期会让容量、淘汰、refresh selector 和 dispose 规则分叉，增加返回列表重请求或 Controller 泄漏的风险。 |
+| 冲突来源 | 全局 Repositories/Projects 需要强类型 query，而最早的通用 pool 只接受字符串；为完成产品页面而分别落地，尚未经过第三个消费者证明共性边界。 |
+| 建议方案 | 当前保持两套生产实现不动。若下一个类型化 forward-page 会话需要相同 LRU 形状，再提取领域无关的 `BoundedQuerySessionPool<Q, T, K>` 或等价薄执行器；通过注入 source factory、refresh selector、`idOf` 和可选投影保留领域差异，不把 Repository/Project 字段推入 Runtime 核心。 |
+| 清理风险 | 仅为减少行数立即泛化，可能把 Repository 的本地 filter、Project 的服务端排序和各自精确失效隐藏在过度抽象的 callback 中，降低可审查性。 |
+| 前置条件 | 第三个明确消费者；两个现有 pool 的请求次数、LRU 淘汰、refresh、scope 切换与 dispose 对等回归；抽象前后 API 差异表。 |
+| 回归验证 | Repositories 与 Projects 的 Open/query/sort 返回不新建 Controller，第七个 query 只淘汰最旧会话，隐藏页不翻页，显式刷新仅影响当前 query，scope 切换和 pool dispose 释放全部 Controller；新消费者不要求修改 Runtime 核心。 |
+| 触发条件 | 新增第三个类型化 query pool，或两套现有 LRU 行为首次发生分叉时；本轮只登记，不因顺手抽象扩大当前性能优化。 |
 
 ## 3. 本轮未确认成技术债的检查项
 

@@ -1,7 +1,7 @@
 # ResourceRuntime 信息流接入任务模板
 
 状态：Reusable template
-日期：2026-07-24
+日期：2026-08-11
 
 使用本模板时复制“任务卡”章节到当轮设计或实现记录。不得只填写 Runtime 类型和测试文件；
 必须从当前生产入口追踪到正式 Service，并证明用户可见行为。
@@ -121,8 +121,10 @@ Resource Recipe / spec factory：
 如果接入要求修改 Runtime 核心、通用 `PaginationController`，或让 Widget 直接管理 Lease、
 generation、identity 或请求调度，先停止页面实现并审查是否缺少通用执行能力。新增公共执行器必须
 对应新的访问模式并至少有第二个明确潜在消费者；当前已证明的公共路径只有直接
-snapshot/source→artifact。`RuntimeForwardPageSource` 已完成首个生产试点，但尚未由第二个消费者
-证明抽象成熟，且当前 Issues/PR Widget 中的 scope/source 胶水不得复制。
+snapshot/source→artifact 与 `RuntimeForwardPageSource`。后者已由 Repository Issues/PR 和
+Notifications 两个生产消费者验证，但有界页窗口、距离式预取和更完整的 mutation
+失效仍属后续能力。Timeline、Tree、FanOut、Live 等仍是候选分类，不是已存在的执行器；
+当前 Issues/PR Widget 中的 scope/source 过渡胶水不得复制。
 
 ### 3.3 为什么接入
 

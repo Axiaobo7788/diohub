@@ -1,7 +1,7 @@
 # ResourceRuntime 第三阶段架构
 
 状态：Implemented（统一控制面、Repository Code/文档/图片试点；Repository Issues/PR 与 Notifications 分页部分接入）
-日期：2026-07-25
+日期：2026-08-11
 
 ## 1. 决策
 
@@ -282,13 +282,23 @@ GraphQL 首页使用 `cursor:start`，后续页必须有非空 `endCursor`；RES
 - mutation 先向两会话应用 overlay，失败只回滚对应 thread patch；
 - Provider 负责 Controller/source 销毁；Widget 不注册全局 controller，也不在生命周期回调中写共享
   Provider；
-- 返回新 Route session 时，30 秒内的 fresh 首页可由 Runtime 直接交付。
+- 返回新 Route session 时，30 秒内的 fresh 首页可由 Runtime 直接交付；
+- Notifications 路由位于前台时，由独立的 visible-inbox session 按 GitHub 响应中的
+  `X-Poll-Interval`（最少 60 秒）重新校验已经加载的当前 All/Unread Controller。校验继续走
+  `NotificationsService` 与现有 HTTP conditional cache，`304` 复用缓存结果；它不创建隐藏
+  Controller、不接管数据缓存。可见 session 持有计数租约时，同一账号的 `InboxPollWatcher`
+  仅暂停 timer 调度，不注销 Watcher 或改写持久化开关；最后租约释放后按正常 interval 恢复，
+  不立即重复请求。路由不可见、关闭，或 app 进入 `hidden/paused/detached` 时取消计时并释放所有权；
+  `resumed` 且路由仍可见时才重新调度。这样网页端把 thread 标记 Done 后，
+  客户端活动 Inbox 会在服务端建议窗口内收敛，而不是把轮询误称为推送实时流。
 
 自动回归证明 All → Unread → All 只有两次首次 Loader、返回 All 不出现骨架、原因筛选零请求，以及
-销毁页面会话后新会话复用 fresh Runtime 页。该入口仍是 Partial：Controller 仍展开已加载实体，
+销毁页面会话后新会话复用 fresh Runtime 页；联合调度回归另外覆盖禁止前台/Watcher 重复 timer、失败续调度、
+dispose、app `hidden/paused/resumed` 和正常间隔恢复。该入口仍是 Partial：Controller 仍展开已加载实体，
 分页触发仍是视口 sentinel 而非带预算的距离式预取；未读 count 与后台 watcher 继续使用独立合同，
-Saved/Done 收件箱也没有可用的 GitHub REST 查询，不能伪造为已实现。当前查询只覆盖已加载窗口；
-GitHub REST 列表没有服务端搜索、排序和分组参数，因此它不能表述为跨所有未加载通知的全局搜索。
+`DELETE /notifications/threads/{thread_id}` 可以把单条 thread 标记 Done，但公开 REST 仍没有可用的
+Saved/Done 历史列表查询，因此不能伪造为已实现。当前查询只覆盖已加载窗口；GitHub REST 列表没有
+服务端搜索、排序和分组参数，因此它不能表述为跨所有未加载通知的全局搜索。
 
 ## 6. Repository Code 正式试点
 
