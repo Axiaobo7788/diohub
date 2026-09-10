@@ -1,12 +1,17 @@
 import 'package:diohub/l10n/app_localizations.dart';
 import 'package:diohub/providers/repository/insights_providers.dart';
+import 'package:diohub/providers/repository/repository_security_alert_loaders.dart';
 import 'package:diohub/view/repository/md3/repository_actions_md3.dart';
 import 'package:diohub/view/repository/md3/repository_insights_md3.dart';
 import 'package:diohub/view/repository/md3/repository_projects_md3.dart';
 import 'package:diohub/view/repository/md3/repository_security_md3.dart';
 import 'package:diohub/view/repository/md3/repository_tab_scaffold.dart';
 import 'package:diohub_models/models/entity_ref.dart';
+import 'package:diohub_models/models/pagination/paginated_result.dart';
+import 'package:diohub_models/models/repositories/code_scanning_alert_item.dart';
 import 'package:diohub_models/models/repositories/participation_response.dart';
+import 'package:diohub_models/models/repositories/secret_scanning_alert.dart';
+import 'package:diohub_models/models/repositories/vulnerability_alert_item.dart';
 import 'package:diohub_models/models/repositories/workflow_run.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
@@ -178,6 +183,73 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('Security overview defers alert transports until selected', (
+    final WidgetTester tester,
+  ) async {
+    const RepoRef repoRef = RepoRef(owner: 'octocat', name: 'hello-world');
+    final _SecurityRequestCounters requests = _SecurityRequestCounters();
+    await pumpAt(
+      tester,
+      size: const Size(1440, 900),
+      child: RepositorySecurityMd3Page(
+        repoRef: repoRef,
+        signedIn: true,
+        onRefreshReady: (final Future<void> Function()? callback) {},
+      ),
+      overrides: <Override>[
+        repositorySecurityAlertLoadersProvider.overrideWith(
+          (final Ref ref, final RepoRef arg) => requests.loaders,
+        ),
+      ],
+    );
+
+    expect(find.text('Open to load alerts'), findsNWidgets(3));
+    expect(requests.snapshot, (
+      dependabot: 0,
+      codeScanning: 0,
+      secretScanning: 0,
+    ));
+    expect(tester.takeException(), isNull);
+
+    await tester.tap(find.text('Dependabot').first);
+    await tester.pump();
+    await tester.pump();
+    expect(requests.snapshot, (
+      dependabot: 1,
+      codeScanning: 0,
+      secretScanning: 0,
+    ));
+
+    await tester.tap(find.text('Security overview').first);
+    await tester.pump();
+    await tester.tap(find.text('Dependabot').first);
+    await tester.pump();
+    expect(requests.snapshot, (
+      dependabot: 1,
+      codeScanning: 0,
+      secretScanning: 0,
+    ));
+
+    await tester.tap(find.text('Code scanning').first);
+    await tester.pump();
+    await tester.pump();
+    expect(requests.snapshot, (
+      dependabot: 1,
+      codeScanning: 1,
+      secretScanning: 0,
+    ));
+
+    await tester.tap(find.text('Secret scanning').first);
+    await tester.pump();
+    await tester.pump();
+    expect(requests.snapshot, (
+      dependabot: 1,
+      codeScanning: 1,
+      secretScanning: 1,
+    ));
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets(
     'Actions run row reflows API metadata at 360px and 2x text scale',
     (final WidgetTester tester) async {
@@ -264,4 +336,38 @@ void main() {
     expect(find.byType(CustomPaint), findsWidgets);
     expect(tester.takeException(), isNull);
   });
+}
+
+final class _SecurityRequestCounters {
+  int dependabot = 0;
+  int codeScanning = 0;
+  int secretScanning = 0;
+
+  ({int dependabot, int codeScanning, int secretScanning}) get snapshot => (
+    dependabot: dependabot,
+    codeScanning: codeScanning,
+    secretScanning: secretScanning,
+  );
+
+  late final RepositorySecurityAlertLoaders loaders =
+      RepositorySecurityAlertLoaders(
+        loadDependabot:
+            ({required final int first, final String? after}) async {
+              dependabot++;
+              return const PaginatedResult<VulnerabilityAlertEdge>(
+                items: <VulnerabilityAlertEdge>[],
+                hasNextPage: false,
+              );
+            },
+        loadCodeScanning:
+            ({required final int page, required final int perPage}) async {
+              codeScanning++;
+              return const <CodeScanningAlertItem>[];
+            },
+        loadSecretScanning:
+            ({required final int page, required final int perPage}) async {
+              secretScanning++;
+              return const <SecretScanningAlert>[];
+            },
+      );
 }

@@ -100,6 +100,49 @@ void main() {
       reason: 'the 30-second fresh page must not repeat its REST request',
     );
   });
+
+  test(
+    'visible synchronization converges after GitHub web marks Done',
+    () async {
+      final InMemoryResourceRuntime runtime = InMemoryResourceRuntime();
+      final _NotificationPageBackend backend = _NotificationPageBackend();
+      final NotificationsInboxSessionPool pool = NotificationsInboxSessionPool(
+        runtime: runtime,
+        specFactory: backend.specFactory,
+        scope: _scope,
+      );
+      addTearDown(() {
+        pool.dispose();
+        runtime.dispose();
+      });
+
+      final PaginationController<Thread, Thread> all = pool.controllerFor(
+        showAll: true,
+      );
+      await _waitForIdle(all);
+      expect(
+        all.state.value.items.map((final Thread item) => item.id),
+        <String>['mention', 'author'],
+      );
+
+      backend.allItems = <Thread>[_author];
+      await pool.synchronizeLoaded(showAll: true);
+
+      expect(backend.calls, <String>['all:1', 'all:1']);
+      expect(
+        all.state.value.items.map((final Thread item) => item.id),
+        <String>['author'],
+        reason: 'active inbox membership is authoritative after refresh',
+      );
+
+      await pool.synchronizeLoaded(showAll: false);
+      expect(
+        backend.calls.length,
+        2,
+        reason: 'synchronization must not create the hidden Unread session',
+      );
+    },
+  );
 }
 
 Future<void> _waitForIdle(
@@ -117,6 +160,8 @@ Future<void> _waitForIdle(
 
 final class _NotificationPageBackend {
   final List<String> calls = <String>[];
+  List<Thread> allItems = <Thread>[_mention, _author];
+  List<Thread> unreadItems = <Thread>[_mention];
 
   ResourceSpec<PaginatedResourcePage<Thread, NotificationPageKey>> specFactory({
     required final ResourceScope scope,
@@ -140,9 +185,7 @@ final class _NotificationPageBackend {
       contract: 'test-notifications-inbox-page-v1',
       load: (final ResourceLoadContext _) async {
         calls.add('$query:${pageKey.page}');
-        final List<Thread> items = showAll
-            ? <Thread>[_mention, _author]
-            : <Thread>[_mention];
+        final List<Thread> items = showAll ? allItems : unreadItems;
         return ResourceLoadResult<
           PaginatedResourcePage<Thread, NotificationPageKey>
         >(

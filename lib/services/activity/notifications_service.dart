@@ -15,7 +15,17 @@ class NotificationsService {
       : _restHandler = client.rest;
 
   static const String _url = '/notifications';
+  static const Duration _minimumPollInterval = Duration(seconds: 60);
   final RESTHandler _restHandler;
+  Duration _recommendedPollInterval = _minimumPollInterval;
+
+  /// GitHub's latest `X-Poll-Interval` recommendation.
+  ///
+  /// The notifications endpoint is conditionally cached by [RESTHandler], so
+  /// a refresh can resolve a `304 Not Modified` from the cached response body.
+  /// Foreground inbox synchronization must still obey this server-provided
+  /// lower bound instead of inventing a faster client timer.
+  Duration get recommendedPollInterval => _recommendedPollInterval;
 
   /// Fetch notifications for the authenticated user.
   ///
@@ -41,12 +51,27 @@ class NotificationsService {
         await _restHandler.get<List<dynamic>>(
       _url,
       queryParameters: queryParameters,
-      // Must refresh to avoid 304 on this endpoint.
+          // Revalidate the existing conditional cache instead of accepting a
+          // fresh TTL hit; a 304 is reconstructed from the cached body.
       refreshCache: true,
     );
+    _updateRecommendedPollInterval(response);
     return response.data!
         .map((final dynamic e) => Thread.fromJson(e as Map<String, dynamic>))
         .toList();
+  }
+
+  void _updateRecommendedPollInterval(final Response<dynamic> response) {
+    final int? seconds = int.tryParse(
+      response.headers.value('x-poll-interval') ?? '',
+    );
+    if (seconds == null || seconds <= 0) {
+      return;
+    }
+    final Duration candidate = Duration(seconds: seconds);
+    _recommendedPollInterval = candidate < _minimumPollInterval
+        ? _minimumPollInterval
+        : candidate;
   }
 
   /// Returns the number of unread notifications (length of first page, max 50).
@@ -61,7 +86,7 @@ class NotificationsService {
 
   /// Mark a single notification thread as read.
   Future<void> markThreadAsRead(final String id) async {
-    await _restHandler.patch('/notifications/threads/$id');
+    await _restHandler.patch<void>('/notifications/threads/$id');
   }
 
   /// Mark a notification thread as done (permanently removes from inbox).
@@ -72,7 +97,7 @@ class NotificationsService {
 
   /// Mark all notifications as read up to now.
   Future<void> markAllAsRead() async {
-    await _restHandler.put(
+    await _restHandler.put<void>(
       '/notifications',
       queryParameters: <String, dynamic>{
         'last_read_at': DateTime.now().toIso8601String(),

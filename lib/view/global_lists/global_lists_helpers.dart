@@ -13,6 +13,8 @@ SearchScope _searchScope(
   GlobalListDestination.repositories => SearchScope.userRepos(
     user: UserRef(login: account.username, nodeId: account.nodeId),
   ),
+  GlobalListDestination.projects || GlobalListDestination.discussions =>
+    throw StateError('$destination does not use SearchStateNotifier'),
 };
 
 GlobalNavigationDestination _navigationDestination(
@@ -23,6 +25,8 @@ GlobalNavigationDestination _navigationDestination(
     GlobalNavigationDestination.pullRequests,
   GlobalListDestination.repositories =>
     GlobalNavigationDestination.repositories,
+  GlobalListDestination.projects => GlobalNavigationDestination.projects,
+  GlobalListDestination.discussions => GlobalNavigationDestination.discussions,
 };
 
 String _title(
@@ -32,6 +36,8 @@ String _title(
   GlobalListDestination.issues => context.l10n.navAllIssues,
   GlobalListDestination.pullRequests => context.l10n.navAllPullRequests,
   GlobalListDestination.repositories => context.l10n.navAllRepositories,
+  GlobalListDestination.projects => context.l10n.navProjects,
+  GlobalListDestination.discussions => context.l10n.navDiscussions,
 };
 
 String _searchHint(
@@ -43,6 +49,9 @@ String _searchHint(
     context.l10n.globalListsSearchPullRequests,
   GlobalListDestination.repositories =>
     context.l10n.globalListsSearchRepositories,
+  GlobalListDestination.projects => context.l10n.globalListsSearchProjects,
+  GlobalListDestination.discussions =>
+    context.l10n.globalListsSearchDiscussions,
 };
 
 IconData _destinationIcon(final GlobalListDestination destination) =>
@@ -50,6 +59,8 @@ IconData _destinationIcon(final GlobalListDestination destination) =>
       GlobalListDestination.issues => Icons.adjust_outlined,
       GlobalListDestination.pullRequests => Icons.call_merge_outlined,
       GlobalListDestination.repositories => Icons.book_outlined,
+      GlobalListDestination.projects => Icons.grid_view_outlined,
+      GlobalListDestination.discussions => Icons.forum_outlined,
     };
 
 IconData _quickFilterIcon(final QuickFilter filter) {

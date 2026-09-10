@@ -4,6 +4,7 @@ import 'package:diohub/common/pagination/pagination_controller.dart';
 import 'package:diohub/common/pagination/runtime_forward_page_source.dart';
 import 'package:diohub/common/resource_runtime/resource_runtime.dart';
 import 'package:diohub/models/global_list_destination.dart';
+import 'package:diohub/models/global_project_browse_query.dart';
 import 'package:diohub/models/global_repository_browse_query.dart';
 import 'package:diohub/providers/database_providers.dart';
 import 'package:diohub/providers/resource_runtime/resource_runtime_provider.dart';
@@ -13,6 +14,7 @@ import 'package:diohub/services/search/search_service.dart';
 import 'package:diohub/services/users/user_info_service.dart';
 import 'package:diohub_graphql/queries/users/user_repositories_list.graphql.dart';
 import 'package:diohub_graphql/queries/users/user_typedefs.dart';
+import 'package:diohub_graphql/fragments/fragment_typedefs.dart';
 import 'package:diohub_models/models/search/issue_or_pull.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart';
@@ -32,6 +34,13 @@ typedef GlobalRepositoryControllerKey = ({
   ResourceScope scope,
   GlobalRepositoryBrowseQuery query,
 });
+
+typedef GlobalProjectControllerKey = ({
+  ResourceScope scope,
+  GlobalProjectBrowseQuery query,
+});
+
+typedef GlobalDiscussionControllerKey = ({ResourceScope scope, String query});
 
 abstract interface class GlobalSearchSessionPool<T> {
   PaginationController<T, T> controllerFor(final String query);
@@ -141,6 +150,43 @@ globalRepositoryPageSpecFactoryProvider =
         required final GlobalSearchPageKey pageKey,
         required final int pageSize,
       }) => globalRepositoryPageSpec(
+        service: service,
+        scope: scope,
+        query: query,
+        pageKey: pageKey,
+        pageSize: pageSize,
+      );
+    });
+
+final Provider<GlobalProjectPageSpecFactory>
+globalProjectPageSpecFactoryProvider = Provider<GlobalProjectPageSpecFactory>((
+  final Ref ref,
+) {
+  final UserInfoService service = ref.watch(userInfoServiceProvider);
+  return ({
+    required final ResourceScope scope,
+    required final GlobalProjectBrowseQuery query,
+    required final GlobalSearchPageKey pageKey,
+    required final int pageSize,
+  }) => globalProjectPageSpec(
+    service: service,
+    scope: scope,
+    query: query,
+    pageKey: pageKey,
+    pageSize: pageSize,
+  );
+});
+
+final Provider<GlobalDiscussionPageSpecFactory>
+globalDiscussionPageSpecFactoryProvider =
+    Provider<GlobalDiscussionPageSpecFactory>((final Ref ref) {
+      final SearchService service = ref.watch(globalServicesProvider).search;
+      return ({
+        required final ResourceScope scope,
+        required final String query,
+        required final GlobalSearchPageKey pageKey,
+        required final int pageSize,
+      }) => globalDiscussionPageSpec(
         service: service,
         scope: scope,
         query: query,
@@ -307,6 +353,139 @@ globalRepositorySessionPoolProvider = Provider.autoDispose
       return pool;
     });
 
+abstract interface class GlobalProjectSessionPool {
+  PaginationController<UserProjectV2Edge, UserProjectV2Edge> controllerFor(
+    final GlobalProjectBrowseQuery query,
+  );
+  void dispose();
+}
+
+final class BoundedGlobalProjectSessionPool
+    implements GlobalProjectSessionPool {
+  BoundedGlobalProjectSessionPool({
+    required this.runtime,
+    required this.scope,
+    required this.specFactory,
+    this.capacity = 6,
+  });
+
+  final ResourceRuntime runtime;
+  final ResourceScope scope;
+  final GlobalProjectPageSpecFactory specFactory;
+  final int capacity;
+  final LinkedHashMap<
+    GlobalProjectBrowseQuery,
+    PaginationController<UserProjectV2Edge, UserProjectV2Edge>
+  >
+  _controllers =
+      LinkedHashMap<
+        GlobalProjectBrowseQuery,
+        PaginationController<UserProjectV2Edge, UserProjectV2Edge>
+      >();
+  bool _disposed = false;
+
+  @override
+  PaginationController<UserProjectV2Edge, UserProjectV2Edge> controllerFor(
+    final GlobalProjectBrowseQuery query,
+  ) {
+    if (_disposed) {
+      throw StateError('GlobalProjectSessionPool is disposed');
+    }
+    final PaginationController<UserProjectV2Edge, UserProjectV2Edge>? retained =
+        _controllers.remove(query);
+    if (retained != null) {
+      _controllers[query] = retained;
+      return retained;
+    }
+    final RuntimeForwardPageSource<UserProjectV2Edge, GlobalSearchPageKey>
+    source = RuntimeForwardPageSource<UserProjectV2Edge, GlobalSearchPageKey>(
+      runtime: runtime,
+      firstPageKey: const GlobalSearchPageKey.first(),
+      specFactory:
+          ({
+            required final GlobalSearchPageKey pageKey,
+            required final int pageSize,
+          }) => specFactory(
+            scope: scope,
+            query: query,
+            pageKey: pageKey,
+            pageSize: pageSize,
+          ),
+      refreshSelector: globalProjectQuerySelector(scope: scope, query: query),
+    );
+    final PaginationController<UserProjectV2Edge, UserProjectV2Edge>
+    controller = PaginationController<UserProjectV2Edge, UserProjectV2Edge>(
+      source: source,
+      idOf: (final UserProjectV2Edge edge) => edge.node?.id ?? edge.cursor,
+    );
+    _controllers[query] = controller;
+    while (_controllers.length > capacity) {
+      _controllers.remove(_controllers.keys.first)?.dispose();
+    }
+    return controller;
+  }
+
+  @override
+  void dispose() {
+    if (_disposed) {
+      return;
+    }
+    _disposed = true;
+    for (final PaginationController<UserProjectV2Edge, UserProjectV2Edge>
+        controller
+        in _controllers.values) {
+      controller.dispose();
+    }
+    _controllers.clear();
+  }
+}
+
+final ProviderFamily<GlobalProjectSessionPool, ResourceScope>
+globalProjectSessionPoolProvider = Provider.autoDispose
+    .family<GlobalProjectSessionPool, ResourceScope>((
+      final Ref ref,
+      final ResourceScope scope,
+    ) {
+      final BoundedGlobalProjectSessionPool pool =
+          BoundedGlobalProjectSessionPool(
+            runtime: ref.watch(resourceRuntimeProvider),
+            scope: scope,
+            specFactory: ref.watch(globalProjectPageSpecFactoryProvider),
+          );
+      ref.onDispose(pool.dispose);
+      return pool;
+    });
+
+final ProviderFamily<GlobalSearchSessionPool<DiscussionCardData>, ResourceScope>
+globalDiscussionSessionPoolProvider = Provider.autoDispose
+    .family<GlobalSearchSessionPool<DiscussionCardData>, ResourceScope>((
+      final Ref ref,
+      final ResourceScope scope,
+    ) {
+      final GlobalDiscussionPageSpecFactory resourceSpecFactory = ref.watch(
+        globalDiscussionPageSpecFactoryProvider,
+      );
+      final BoundedGlobalSearchSessionPool<DiscussionCardData> pool =
+          BoundedGlobalSearchSessionPool<DiscussionCardData>(
+            runtime: ref.watch(resourceRuntimeProvider),
+            scope: scope,
+            kind: 'discussion',
+            specFactory: (final String query) =>
+                ({
+                  required final GlobalSearchPageKey pageKey,
+                  required final int pageSize,
+                }) => resourceSpecFactory(
+                  scope: scope,
+                  query: query,
+                  pageKey: pageKey,
+                  pageSize: pageSize,
+                ),
+            idOf: (final DiscussionCardData item) => item.id,
+          );
+      ref.onDispose(pool.dispose);
+      return pool;
+    });
+
 final ProviderFamily<
   PaginationController<IssueOrPull, IssueOrPull>,
   GlobalSearchControllerKey
@@ -337,5 +516,33 @@ globalRepositoryControllerProvider = Provider.autoDispose
     >(
       (final Ref ref, final GlobalRepositoryControllerKey key) => ref
           .watch(globalRepositorySessionPoolProvider(key.scope))
+          .controllerFor(key.query),
+    );
+
+final ProviderFamily<
+  PaginationController<UserProjectV2Edge, UserProjectV2Edge>,
+  GlobalProjectControllerKey
+>
+globalProjectControllerProvider = Provider.autoDispose
+    .family<
+      PaginationController<UserProjectV2Edge, UserProjectV2Edge>,
+      GlobalProjectControllerKey
+    >(
+      (final Ref ref, final GlobalProjectControllerKey key) => ref
+          .watch(globalProjectSessionPoolProvider(key.scope))
+          .controllerFor(key.query),
+    );
+
+final ProviderFamily<
+  PaginationController<DiscussionCardData, DiscussionCardData>,
+  GlobalDiscussionControllerKey
+>
+globalDiscussionControllerProvider = Provider.autoDispose
+    .family<
+      PaginationController<DiscussionCardData, DiscussionCardData>,
+      GlobalDiscussionControllerKey
+    >(
+      (final Ref ref, final GlobalDiscussionControllerKey key) => ref
+          .watch(globalDiscussionSessionPoolProvider(key.scope))
           .controllerFor(key.query),
     );

@@ -244,6 +244,9 @@ class _AppChromeState extends ConsumerState<AppChrome> {
         GlobalListDestination.pullRequests,
       GlobalNavigationDestination.repositories =>
         GlobalListDestination.repositories,
+      GlobalNavigationDestination.projects => GlobalListDestination.projects,
+      GlobalNavigationDestination.discussions =>
+        GlobalListDestination.discussions,
       GlobalNavigationDestination.home => throw StateError(
         'Home is handled before list routing',
       ),

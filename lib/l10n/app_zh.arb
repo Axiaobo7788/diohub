@@ -40,6 +40,7 @@
   "notificationsDate": "日期",
   "notificationsDateUnknown": "日期未知",
   "notificationsRefresh": "刷新通知",
+  "notificationsSyncing": "正在检查通知更新",
   "notificationsMarkAllRead": "全部标为已读",
   "notificationsMarkRead": "标为已读",
   "notificationsMarkDone": "标为完成",
@@ -69,6 +70,7 @@
   "notificationsNoUnread": "没有未读通知。",
   "notificationsNoResults": "没有符合当前筛选条件的通知。",
   "notificationsLoadError": "无法加载通知。",
+  "notificationsRefreshError": "无法检查最新通知状态，已有通知保持不变。",
   "notificationsUpdateError": "无法更新通知。",
   "notificationsSignInTitle": "登录后查看通知",
   "notificationsSignInBody": "GitHub 通知仅对你的账号可见。",
@@ -82,6 +84,8 @@
   "notificationsDismiss": "关闭",
   "notificationsGetStarted": "开始",
   "notificationsSectionUnavailable": "当前 GitHub API 无法列出“{section}”通知。",
+  "notificationsSavedHistoryUnavailable": "GitHub 公开 API 无法列出或修改已保存通知。",
+  "notificationsDoneHistoryUnavailable": "标记完成会同步到 GitHub，但公开 API 无法列出已完成历史。",
   "homeCouldNotOpenLink": "无法打开链接。",
   "homeFeatureNotAvailable": "此阶段尚未接入“{feature}”。",
   "homeNoSystemBrowser": "没有可用的系统浏览器。",
@@ -122,12 +126,14 @@
   "navAllPullRequests": "所有拉取请求",
   "navAllRepositories": "所有仓库",
   "globalListsSignInTitle": "登录后查看你的工作",
-  "globalListsSignInDescription": "登录后即可查看与你的账户相关的议题、拉取请求和仓库。",
+  "globalListsSignInDescription": "登录后即可查看与你的账户相关的议题、拉取请求、仓库、项目和讨论。",
   "globalListsSignInAction": "登录",
   "globalListsAll": "全部",
   "globalListsSearchIssues": "搜索你的议题",
   "globalListsSearchPullRequests": "搜索你的拉取请求",
   "globalListsSearchRepositories": "查找仓库",
+  "globalListsSearchProjects": "查找项目",
+  "globalListsSearchDiscussions": "搜索你参与的讨论",
   "globalListsResultsCount": "{count} 个结果",
   "@globalListsResultsCount": {
     "placeholders": {
@@ -176,6 +182,42 @@
   "globalListsLoadError": "无法加载结果。",
   "globalListsNewIssue": "新建议题",
   "globalListsNewPullRequest": "新建拉取请求",
+  "globalProjectsOwnedBy": "@{login} 拥有的项目",
+  "@globalProjectsOwnedBy": {
+    "placeholders": {"login": {"type": "String"}}
+  },
+  "globalProjectsNew": "新建项目",
+  "globalProjectsOpenError": "无法打开此项目。",
+  "globalProjectsEmpty": "没有与搜索条件匹配的项目",
+  "globalProjectsOpen": "开启",
+  "globalProjectsClosed": "已关闭",
+  "globalProjectsMetadata": "#{number} · {state} · {updated}",
+  "@globalProjectsMetadata": {
+    "placeholders": {
+      "number": {"type": "int"},
+      "state": {"type": "String"},
+      "updated": {"type": "String"}
+    }
+  },
+  "globalProjectsPermissionTitle": "需要项目访问权限",
+  "globalProjectsPermissionDescription": "当前账户令牌不包含读取 GitHub Projects 所需的 project 权限。",
+  "globalProjectsReauthorize": "重新授权账户",
+  "globalDiscussionsInvolving": "@{login} 发起、被提及或参与评论的讨论",
+  "@globalDiscussionsInvolving": {
+    "placeholders": {"login": {"type": "String"}}
+  },
+  "globalDiscussionsAnswered": "已回答",
+  "globalDiscussionsUnanswered": "未回答",
+  "globalDiscussionsEmpty": "没有与搜索条件匹配的讨论",
+  "globalDiscussionsOpenError": "无法打开此讨论。",
+  "globalDiscussionsMetadata": "{repository} · {author} · 更新于 {time}",
+  "@globalDiscussionsMetadata": {
+    "placeholders": {
+      "repository": {"type": "String"},
+      "author": {"type": "String"},
+      "time": {"type": "String"}
+    }
+  },
   "globalListsSelectRepository": "选择仓库",
   "globalListsChooseIssueTemplate": "选择议题模板",
   "globalListsBlankIssue": "空白议题",
@@ -290,6 +332,9 @@
   "repoWatchCount": "监视 {count}",
   "repoForkCount": "复刻 {count}",
   "repoStarCount": "星标 {count}",
+  "repoStarredFeedback": "已为仓库添加星标",
+  "repoUnstarredFeedback": "已取消仓库星标",
+  "repoStarUpdateError": "无法更新仓库星标。",
   "repoAllActivity": "所有活动",
   "repoNotWatching": "不监视",
   "repoIgnore": "忽略",
@@ -471,6 +516,7 @@
   "@repoSecurityPermissionBody": {"placeholders": {"error": {"type": "String"}}},
   "repoSecurityAlertsLoaded": "已加载 {count} 条可见警报",
   "@repoSecurityAlertsLoaded": {"placeholders": {"count": {"type": "int"}}},
+  "repoSecurityAlertsNotLoaded": "打开后加载警报",
   "repoUnknownLocation": "未知位置",
   "repoSecret": "机密",
   "repoPulse": "脉搏",

@@ -3,6 +3,7 @@
 library;
 
 import 'dart:async';
+import 'package:diohub/app/app_logger.dart';
 import 'package:diohub_models/models/repositories/star_mutation_result.dart';
 import 'package:diohub/providers/database_providers.dart';
 
@@ -25,6 +26,193 @@ import 'package:riverpod/src/providers/future_provider.dart';
 
 final repositoryProvider = AsyncNotifierProvider.autoDispose
     .family<RepositoryNotifier, RepoInfoData, RepoRef>(RepositoryNotifier.new);
+
+typedef RepositoryStarMutation =
+    Future<StarMutationResult?> Function({
+      required bool isStarred,
+      required String repoNodeId,
+    });
+
+typedef RepositoryStarFeedback =
+    void Function({required bool success, required String message});
+
+/// Stable principal identity for account-scoped Star state.
+///
+/// The family argument intentionally remains [RepoRef] so all repository
+/// surfaces share one mutation state. Watching this value makes Riverpod
+/// rebuild that state when the active GitHub/GHES account changes, preventing
+/// the short retain window from carrying one account's Star result into the
+/// next account.
+final repositoryStarAccountKeyProvider = Provider<String?>((final Ref ref) {
+  return ref.watch(
+    accountProvider.select(
+      (final account) => account.value?.activeAccountModel?.accountKey,
+    ),
+  );
+});
+
+/// Localized feedback supplied by the UI at the mutation boundary.
+///
+/// Repository providers do not own a [BuildContext], so keeping translated
+/// copy outside the provider avoids introducing a second localization path.
+class RepositoryStarFeedbackMessages {
+  const RepositoryStarFeedbackMessages({
+    required this.starred,
+    required this.unstarred,
+    required this.updateFailed,
+  });
+
+  final String starred;
+  final String unstarred;
+  final String updateFailed;
+}
+
+/// Injectable boundary for the existing repository star mutation.
+///
+/// Keeping this separate from [repositoryProvider] prevents a card-level star
+/// action from starting the much larger repository screen query.
+final repositoryStarMutationProvider =
+    Provider.family<RepositoryStarMutation, RepoRef>((
+      final Ref ref,
+      final RepoRef repoRef,
+    ) {
+      final RepositoryServices services = repoRef.services(
+        ref.watch(apiClientProvider),
+      );
+      return ({
+        required final bool isStarred,
+        required final String repoNodeId,
+      }) => services.changeStar(isStarred: isStarred, repoNodeId: repoNodeId);
+    });
+
+final repositoryStarFeedbackProvider = Provider<RepositoryStarFeedback>((
+  final Ref ref,
+) {
+  return ({required final bool success, required final String message}) {
+    final notification = ref.read(notificationServiceProvider);
+    if (success) {
+      notification.success(message);
+    } else {
+      notification.error(message);
+    }
+  };
+});
+
+/// Shared lightweight state for star controls mounted in different surfaces.
+///
+/// [optimisticResult] exists only while a mutation is in flight. A successful
+/// mutation promotes its response to [authoritativeResult], so clearing the
+/// overlay cannot expose a stale seed retained by another mounted widget.
+class RepositoryStarState {
+  const RepositoryStarState({
+    this.optimisticResult,
+    this.authoritativeResult,
+    this.isMutating = false,
+  });
+
+  final StarMutationResult? optimisticResult;
+  final StarMutationResult? authoritativeResult;
+  final bool isMutating;
+
+  StarMutationResult? get result => optimisticResult ?? authoritativeResult;
+
+  bool get hasOptimisticOverlay => optimisticResult != null;
+}
+
+class RepositoryStarNotifier extends Notifier<RepositoryStarState> {
+  RepositoryStarNotifier(this.arg);
+
+  final RepoRef arg;
+
+  @override
+  RepositoryStarState build() {
+    ref.watch(repositoryStarAccountKeyProvider);
+    keepAliveFor(ref);
+    return const RepositoryStarState();
+  }
+
+  Future<void> toggle({
+    required final String repoNodeId,
+    required final bool currentIsStarred,
+    required final int currentCount,
+    required final RepositoryStarFeedbackMessages feedbackMessages,
+  }) async {
+    if (state.isMutating) return;
+
+    final String? mutationAccountKey = ref.read(
+      repositoryStarAccountKeyProvider,
+    );
+    final RepositoryStarState previous = state;
+    final bool willStar = !currentIsStarred;
+    final int optimisticCount =
+        currentCount + (willStar ? 1 : (currentCount > 0 ? -1 : 0));
+    state = RepositoryStarState(
+      optimisticResult: StarMutationResult(
+        viewerHasStarred: willStar,
+        stargazerCount: optimisticCount,
+      ),
+      authoritativeResult: previous.authoritativeResult,
+      isMutating: true,
+    );
+
+    try {
+      final StarMutationResult? result =
+          await ref.read(repositoryStarMutationProvider(arg))(
+            // RepositoryServices.changeStar expects the current state and
+            // chooses add/remove from it.
+            isStarred: currentIsStarred,
+            repoNodeId: repoNodeId,
+          );
+      if (ref.read(repositoryStarAccountKeyProvider) != mutationAccountKey) {
+        return;
+      }
+      if (result == null) throw StateError('changeStar returned null');
+      state = RepositoryStarState(authoritativeResult: result);
+      ref.invalidate(repoCardProvider(arg));
+      ref.read(repositoryStarFeedbackProvider)(
+        success: true,
+        message: result.viewerHasStarred
+            ? feedbackMessages.starred
+            : feedbackMessages.unstarred,
+      );
+    } catch (error, stackTrace) {
+      if (ref.read(repositoryStarAccountKeyProvider) != mutationAccountKey) {
+        return;
+      }
+      state = previous;
+      AppLogger.warning(
+        'Repository star mutation failed',
+        error: error,
+        stackTrace: stackTrace,
+        tag: 'RepositoryStar',
+      );
+      ref.read(repositoryStarFeedbackProvider)(
+        success: false,
+        message: feedbackMessages.updateFailed,
+      );
+    }
+  }
+
+  /// Accepts a seed returned by an explicit authoritative refresh.
+  ///
+  /// An older request completing during a mutation must not replace the
+  /// optimistic frame. Once the mutation settles, the next explicit refresh
+  /// can replace the session value for every mounted consumer.
+  void acceptAuthoritativeSeed(final StarMutationResult seed) {
+    if (state.isMutating) return;
+    final StarMutationResult? current = state.authoritativeResult;
+    if (current?.viewerHasStarred == seed.viewerHasStarred &&
+        current?.stargazerCount == seed.stargazerCount) {
+      return;
+    }
+    state = RepositoryStarState(authoritativeResult: seed);
+  }
+}
+
+final repositoryStarProvider = NotifierProvider.autoDispose
+    .family<RepositoryStarNotifier, RepositoryStarState, RepoRef>(
+      RepositoryStarNotifier.new,
+    );
 
 /// Lightweight provider that fetches repository data for card contexts.
 final repoCardProvider = FutureProvider.autoDispose.family<RepoCardData, RepoRef>((
@@ -88,42 +276,6 @@ class RepositoryNotifier extends AsyncNotifier<RepoInfoData>
     return looksLikeFullSha(branch) ? null : branch;
   }
 
-  Future<void> toggleStar() async {
-    final RepoInfo current = state.requireValue.repository!;
-    final bool willStar = !current.viewerHasStarred;
-    final StarMutationResult? res = await optimistic(
-      transform: (final RepoInfoData full) {
-        final repo = full.repository;
-        if (repo == null) return full;
-        return full.copyWith.repository(
-          viewerHasStarred: willStar,
-          stargazerCount: repo.stargazerCount + (willStar ? 1 : -1),
-        );
-      },
-      mutation: () async {
-        final StarMutationResult? raw = await _services.changeStar(
-          isStarred: willStar,
-          repoNodeId: current.id,
-        );
-        if (raw == null) throw StateError('changeStar returned null');
-        return raw;
-      },
-      errorMessage: (_, __) => "Couldn't update star",
-      applyResponse: (final RepoInfoData full, final StarMutationResult? res) {
-        if (res == null) return full;
-        return full.copyWith.repository(
-          viewerHasStarred: res.viewerHasStarred,
-          stargazerCount: res.stargazerCount,
-        );
-      },
-    );
-    if (res != null) {
-      ref
-          .read(notificationServiceProvider)
-          .success(willStar ? 'Starred' : 'Unstarred');
-    }
-  }
-
   Future<void> toggleWatch(final SubscriptionState targetState) async {
     final RepoInfo current = state.requireValue.repository!;
     final SubscriptionState? res = await optimistic(
@@ -175,9 +327,21 @@ class RepositoryNotifier extends AsyncNotifier<RepoInfoData>
   }
 
   Future<void> refresh() async {
-    state = await AsyncValue.guard(
+    final AsyncValue<RepoInfoData> refreshed = await AsyncValue.guard(
       () => _services.fetchRepositoryGraphQLFull(refresh: true),
     );
+    state = refreshed;
+    final RepoInfo? repository = refreshed.value?.repository;
+    if (repository != null && ref.exists(repositoryStarProvider(arg))) {
+      ref
+          .read(repositoryStarProvider(arg).notifier)
+          .acceptAuthoritativeSeed(
+            StarMutationResult(
+              viewerHasStarred: repository.viewerHasStarred,
+              stargazerCount: repository.stargazerCount,
+            ),
+          );
+    }
   }
 
   Future<int?> createIssue(

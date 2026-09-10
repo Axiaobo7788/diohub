@@ -133,6 +133,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get notificationsRefresh => '刷新通知';
 
   @override
+  String get notificationsSyncing => '正在检查通知更新';
+
+  @override
   String get notificationsMarkAllRead => '全部标为已读';
 
   @override
@@ -228,6 +231,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get notificationsLoadError => '无法加载通知。';
 
   @override
+  String get notificationsRefreshError => '无法检查最新通知状态，已有通知保持不变。';
+
+  @override
   String get notificationsUpdateError => '无法更新通知。';
 
   @override
@@ -267,6 +273,14 @@ class AppLocalizationsZh extends AppLocalizations {
   String notificationsSectionUnavailable(String section) {
     return '当前 GitHub API 无法列出“$section”通知。';
   }
+
+  @override
+  String get notificationsSavedHistoryUnavailable =>
+      'GitHub 公开 API 无法列出或修改已保存通知。';
+
+  @override
+  String get notificationsDoneHistoryUnavailable =>
+      '标记完成会同步到 GitHub，但公开 API 无法列出已完成历史。';
 
   @override
   String get homeCouldNotOpenLink => '无法打开链接。';
@@ -391,7 +405,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get globalListsSignInTitle => '登录后查看你的工作';
 
   @override
-  String get globalListsSignInDescription => '登录后即可查看与你的账户相关的议题、拉取请求和仓库。';
+  String get globalListsSignInDescription => '登录后即可查看与你的账户相关的议题、拉取请求、仓库、项目和讨论。';
 
   @override
   String get globalListsSignInAction => '登录';
@@ -407,6 +421,12 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get globalListsSearchRepositories => '查找仓库';
+
+  @override
+  String get globalListsSearchProjects => '查找项目';
+
+  @override
+  String get globalListsSearchDiscussions => '搜索你参与的讨论';
 
   @override
   String globalListsResultsCount(int count) {
@@ -493,6 +513,67 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get globalListsNewPullRequest => '新建拉取请求';
+
+  @override
+  String globalProjectsOwnedBy(String login) {
+    return '@$login 拥有的项目';
+  }
+
+  @override
+  String get globalProjectsNew => '新建项目';
+
+  @override
+  String get globalProjectsOpenError => '无法打开此项目。';
+
+  @override
+  String get globalProjectsEmpty => '没有与搜索条件匹配的项目';
+
+  @override
+  String get globalProjectsOpen => '开启';
+
+  @override
+  String get globalProjectsClosed => '已关闭';
+
+  @override
+  String globalProjectsMetadata(int number, String state, String updated) {
+    return '#$number · $state · $updated';
+  }
+
+  @override
+  String get globalProjectsPermissionTitle => '需要项目访问权限';
+
+  @override
+  String get globalProjectsPermissionDescription =>
+      '当前账户令牌不包含读取 GitHub Projects 所需的 project 权限。';
+
+  @override
+  String get globalProjectsReauthorize => '重新授权账户';
+
+  @override
+  String globalDiscussionsInvolving(String login) {
+    return '@$login 发起、被提及或参与评论的讨论';
+  }
+
+  @override
+  String get globalDiscussionsAnswered => '已回答';
+
+  @override
+  String get globalDiscussionsUnanswered => '未回答';
+
+  @override
+  String get globalDiscussionsEmpty => '没有与搜索条件匹配的讨论';
+
+  @override
+  String get globalDiscussionsOpenError => '无法打开此讨论。';
+
+  @override
+  String globalDiscussionsMetadata(
+    String repository,
+    String author,
+    String time,
+  ) {
+    return '$repository · $author · 更新于 $time';
+  }
 
   @override
   String get globalListsSelectRepository => '选择仓库';
@@ -877,6 +958,15 @@ class AppLocalizationsZh extends AppLocalizations {
   String repoStarCount(String count) {
     return '星标 $count';
   }
+
+  @override
+  String get repoStarredFeedback => '已为仓库添加星标';
+
+  @override
+  String get repoUnstarredFeedback => '已取消仓库星标';
+
+  @override
+  String get repoStarUpdateError => '无法更新仓库星标。';
 
   @override
   String get repoAllActivity => '所有活动';
@@ -1436,6 +1526,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String repoSecurityAlertsLoaded(int count) {
     return '已加载 $count 条可见警报';
   }
+
+  @override
+  String get repoSecurityAlertsNotLoaded => '打开后加载警报';
 
   @override
   String get repoUnknownLocation => '未知位置';

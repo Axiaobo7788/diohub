@@ -1,6 +1,17 @@
-query getUserProjectsV2($user: String!, $first: Int!, $after: String) {
+query getUserProjectsV2(
+  $user: String!
+  $first: Int!
+  $after: String
+  $query: String
+  $orderBy: ProjectV2Order
+) {
   user(login: $user) {
-    projectsV2(first: $first, after: $after) {
+    projectsV2(
+      first: $first
+      after: $after
+      query: $query
+      orderBy: $orderBy
+    ) {
       totalCount
       pageInfo {
         hasNextPage

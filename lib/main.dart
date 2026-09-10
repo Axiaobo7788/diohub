@@ -281,15 +281,18 @@ class _RootAppState extends ConsumerState<RootApp> with WidgetsBindingObserver {
   void didChangeAppLifecycleState(AppLifecycleState state) {
     super.didChangeAppLifecycleState(state);
     if (!mounted) return;
+    ref.read(resourceAppLifecycleProvider.notifier).updateFromFlutter(state);
     updateResourceRuntimeLifecycle(ref.read(resourceRuntimeProvider), state);
     try {
       final service = ref.read(watcherServiceProvider);
       switch (state) {
         case AppLifecycleState.resumed:
           service.resume();
-        case AppLifecycleState.paused:
-          // Only pause on actual backgrounding, not on inactive (which fires
-          // frequently on iOS for system overlays, permission dialogs, etc.)
+        case AppLifecycleState.hidden ||
+            AppLifecycleState.paused ||
+            AppLifecycleState.detached:
+          // Pause on actual backgrounding or detachment, not on inactive
+          // (which fires frequently for system overlays and dialogs).
           service.pause();
         default:
           break;

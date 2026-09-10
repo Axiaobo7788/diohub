@@ -145,6 +145,7 @@ class WatcherService {
   static const int _maxRecentAlerts = 20;
 
   bool _started = false;
+  int _visibleInboxPollingOwners = 0;
 
   final StreamController<WatcherManagerState> _stateController =
       StreamController<WatcherManagerState>.broadcast();
@@ -239,6 +240,26 @@ class WatcherService {
   Future<void> checkNow(String watcherId) async {
     await _engine.checkNow(watcherId);
     _emitState();
+  }
+
+  /// Gives the visible Notifications route exclusive ownership of inbox
+  /// polling while keeping the background watcher registered and persisted.
+  void acquireVisibleInboxPollingOwnership() {
+    _visibleInboxPollingOwners++;
+    if (_visibleInboxPollingOwners == 1) {
+      _engine.suppressScheduling('inbox_poll:default');
+    }
+  }
+
+  /// Restores background inbox polling when the last visible route lease ends.
+  void releaseVisibleInboxPollingOwnership() {
+    if (_visibleInboxPollingOwners == 0) {
+      return;
+    }
+    _visibleInboxPollingOwners--;
+    if (_visibleInboxPollingOwners == 0) {
+      _engine.resumeScheduling('inbox_poll:default');
+    }
   }
 
   // ── Settings Sync ──────────────────────────────────────────────────────────

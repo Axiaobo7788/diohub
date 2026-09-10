@@ -338,6 +338,12 @@ abstract class AppLocalizations {
   /// **'Refresh notifications'**
   String get notificationsRefresh;
 
+  /// No description provided for @notificationsSyncing.
+  ///
+  /// In en, this message translates to:
+  /// **'Checking for notification updates'**
+  String get notificationsSyncing;
+
   /// No description provided for @notificationsMarkAllRead.
   ///
   /// In en, this message translates to:
@@ -512,6 +518,12 @@ abstract class AppLocalizations {
   /// **'Notifications could not be loaded.'**
   String get notificationsLoadError;
 
+  /// No description provided for @notificationsRefreshError.
+  ///
+  /// In en, this message translates to:
+  /// **'New notification state could not be checked. Existing notifications are unchanged.'**
+  String get notificationsRefreshError;
+
   /// No description provided for @notificationsUpdateError.
   ///
   /// In en, this message translates to:
@@ -589,6 +601,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'{section} cannot be listed through the current GitHub API.'**
   String notificationsSectionUnavailable(String section);
+
+  /// No description provided for @notificationsSavedHistoryUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'The public GitHub API cannot list or change saved notifications.'**
+  String get notificationsSavedHistoryUnavailable;
+
+  /// No description provided for @notificationsDoneHistoryUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Marking a notification as done syncs with GitHub, but the public API cannot list completed history.'**
+  String get notificationsDoneHistoryUnavailable;
 
   /// No description provided for @homeCouldNotOpenLink.
   ///
@@ -833,7 +857,7 @@ abstract class AppLocalizations {
   /// No description provided for @globalListsSignInDescription.
   ///
   /// In en, this message translates to:
-  /// **'Issues, pull requests, and repositories associated with your account are available after sign-in.'**
+  /// **'Issues, pull requests, repositories, projects, and discussions associated with your account are available after sign-in.'**
   String get globalListsSignInDescription;
 
   /// No description provided for @globalListsSignInAction.
@@ -865,6 +889,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Find a repository'**
   String get globalListsSearchRepositories;
+
+  /// No description provided for @globalListsSearchProjects.
+  ///
+  /// In en, this message translates to:
+  /// **'Find a project'**
+  String get globalListsSearchProjects;
+
+  /// No description provided for @globalListsSearchDiscussions.
+  ///
+  /// In en, this message translates to:
+  /// **'Search discussions involving you'**
+  String get globalListsSearchDiscussions;
 
   /// No description provided for @globalListsResultsCount.
   ///
@@ -1015,6 +1051,106 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'New pull request'**
   String get globalListsNewPullRequest;
+
+  /// No description provided for @globalProjectsOwnedBy.
+  ///
+  /// In en, this message translates to:
+  /// **'Projects owned by @{login}'**
+  String globalProjectsOwnedBy(String login);
+
+  /// No description provided for @globalProjectsNew.
+  ///
+  /// In en, this message translates to:
+  /// **'New project'**
+  String get globalProjectsNew;
+
+  /// No description provided for @globalProjectsOpenError.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not open this project.'**
+  String get globalProjectsOpenError;
+
+  /// No description provided for @globalProjectsEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No projects match this search'**
+  String get globalProjectsEmpty;
+
+  /// No description provided for @globalProjectsOpen.
+  ///
+  /// In en, this message translates to:
+  /// **'Open'**
+  String get globalProjectsOpen;
+
+  /// No description provided for @globalProjectsClosed.
+  ///
+  /// In en, this message translates to:
+  /// **'Closed'**
+  String get globalProjectsClosed;
+
+  /// No description provided for @globalProjectsMetadata.
+  ///
+  /// In en, this message translates to:
+  /// **'#{number} · {state} · {updated}'**
+  String globalProjectsMetadata(int number, String state, String updated);
+
+  /// No description provided for @globalProjectsPermissionTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Project access required'**
+  String get globalProjectsPermissionTitle;
+
+  /// No description provided for @globalProjectsPermissionDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'This account token does not include the project permission required to read your GitHub Projects.'**
+  String get globalProjectsPermissionDescription;
+
+  /// No description provided for @globalProjectsReauthorize.
+  ///
+  /// In en, this message translates to:
+  /// **'Re-authorize account'**
+  String get globalProjectsReauthorize;
+
+  /// No description provided for @globalDiscussionsInvolving.
+  ///
+  /// In en, this message translates to:
+  /// **'Discussions authored, mentioned, or commented on by @{login}'**
+  String globalDiscussionsInvolving(String login);
+
+  /// No description provided for @globalDiscussionsAnswered.
+  ///
+  /// In en, this message translates to:
+  /// **'Answered'**
+  String get globalDiscussionsAnswered;
+
+  /// No description provided for @globalDiscussionsUnanswered.
+  ///
+  /// In en, this message translates to:
+  /// **'Unanswered'**
+  String get globalDiscussionsUnanswered;
+
+  /// No description provided for @globalDiscussionsEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No discussions match this search'**
+  String get globalDiscussionsEmpty;
+
+  /// No description provided for @globalDiscussionsOpenError.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not open this discussion.'**
+  String get globalDiscussionsOpenError;
+
+  /// No description provided for @globalDiscussionsMetadata.
+  ///
+  /// In en, this message translates to:
+  /// **'{repository} · {author} · Updated {time}'**
+  String globalDiscussionsMetadata(
+    String repository,
+    String author,
+    String time,
+  );
 
   /// No description provided for @globalListsSelectRepository.
   ///
@@ -1699,6 +1835,24 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Star {count}'**
   String repoStarCount(String count);
+
+  /// No description provided for @repoStarredFeedback.
+  ///
+  /// In en, this message translates to:
+  /// **'Repository starred'**
+  String get repoStarredFeedback;
+
+  /// No description provided for @repoUnstarredFeedback.
+  ///
+  /// In en, this message translates to:
+  /// **'Repository unstarred'**
+  String get repoUnstarredFeedback;
+
+  /// No description provided for @repoStarUpdateError.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not update the repository star.'**
+  String get repoStarUpdateError;
 
   /// No description provided for @repoAllActivity.
   ///
@@ -2754,6 +2908,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'{count, plural, =1{1 visible alert} other{{count} visible alerts}}'**
   String repoSecurityAlertsLoaded(int count);
+
+  /// No description provided for @repoSecurityAlertsNotLoaded.
+  ///
+  /// In en, this message translates to:
+  /// **'Open to load alerts'**
+  String get repoSecurityAlertsNotLoaded;
 
   /// No description provided for @repoUnknownLocation.
   ///

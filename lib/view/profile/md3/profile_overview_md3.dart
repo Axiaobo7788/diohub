@@ -186,21 +186,17 @@ class ProfileOverviewMd3 extends ConsumerWidget {
               ),
             ),
           ),
-          if (contributions.hasValue) ...<Widget>[
-            SliverToBoxAdapter(
-              child: _ProfileSectionHeading(
-                title: context.l10n.profileContributionActivity,
-                icon: Icons.timeline_outlined,
-                margin: EdgeInsets.fromLTRB(inset, 28, inset, 8),
-              ),
+          SliverToBoxAdapter(
+            child: _ProfileSectionHeading(
+              title: context.l10n.profileContributionActivity,
+              icon: Icons.timeline_outlined,
+              margin: EdgeInsets.fromLTRB(inset, 28, inset, 8),
             ),
-            SliverPadding(
-              padding: EdgeInsets.fromLTRB(inset, 0, inset, 32),
-              sliver: ActivityTimelineSection(
-                providerKey: contributionQueryKey,
-              ),
-            ),
-          ],
+          ),
+          SliverPadding(
+            padding: EdgeInsets.fromLTRB(inset, 0, inset, 32),
+            sliver: ActivityTimelineSection(providerKey: contributionQueryKey),
+          ),
         ],
         const SliverToBoxAdapter(child: SizedBox(height: 32)),
       ],

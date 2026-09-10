@@ -476,19 +476,59 @@ class UserInfoService extends BaseService {
     @Skip() final bool refresh = false,
     @Desc('Pagination cursor') final String? after,
   }) async {
+    final PaginatedResult<UserProjectV2Edge> page = await getUserProjectsV2Page(
+      login,
+      profileListPageSize,
+      refresh: refresh,
+      after: after,
+    );
+    return page.items;
+  }
+
+  /// Cursor page used by account-wide ProjectV2 surfaces.
+  ///
+  /// Unlike the legacy profile helper, this preserves GitHub's pageInfo and
+  /// totalCount and applies title search and ordering at the formal service
+  /// boundary rather than filtering an incomplete page in a Widget.
+  Future<PaginatedResult<UserProjectV2Edge>> getUserProjectsV2Page(
+    final String login,
+    final int first, {
+    final bool refresh = false,
+    final String? after,
+    final String? query,
+    final Input$ProjectV2Order? orderBy,
+  }) async {
     final GQLResponse res = await gql.query(
       documentNodeQuerygetUserProjectsV2,
       Variables$Query$getUserProjectsV2(
         user: login,
-        first: profileListPageSize,
+        first: first,
         after: after,
+        query: query,
+        orderBy: orderBy,
       ).toJson(),
       refreshCache: refresh,
     );
     final GetUserProjectsV2Data data = GetUserProjectsV2Data.fromJson(
       res.data!,
     );
-    return data.user?.projectsV2.edges?.toList() ?? <UserProjectV2Edge?>[];
+    final Query$getUserProjectsV2$user$projectsV2? projects =
+        data.user?.projectsV2;
+    if (projects == null) {
+      return const PaginatedResult<UserProjectV2Edge>(
+        items: <UserProjectV2Edge>[],
+        hasNextPage: false,
+        totalCount: 0,
+      );
+    }
+    return PaginatedResult<UserProjectV2Edge>(
+      items:
+          projects.edges?.whereType<UserProjectV2Edge>().toList() ??
+          const <UserProjectV2Edge>[],
+      hasNextPage: projects.pageInfo.hasNextPage,
+      endCursor: projects.pageInfo.endCursor,
+      totalCount: projects.totalCount,
+    );
   }
 
   @Lens(

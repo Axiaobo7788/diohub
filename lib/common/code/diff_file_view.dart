@@ -32,9 +32,9 @@ class DiffFileView extends ConsumerWidget {
     this.onExpandRequested,
     this.collapsibleHunks = false,
   }) : assert(
-          parsedDiff != null || patch != null,
-          'Either parsedDiff or patch must be provided',
-        );
+         parsedDiff != null || patch != null,
+         'Either parsedDiff or patch must be provided',
+       );
 
   final ParsedDiff? parsedDiff;
   final String? patch;
@@ -52,7 +52,7 @@ class DiffFileView extends ConsumerWidget {
 
   @override
   Widget build(final BuildContext context, final WidgetRef ref) {
-    final ParsedDiff diff = parsedDiff ?? parseUnifiedDiff(patch);
+    final ParsedDiff diff = parsedDiff ?? parseUnifiedDiffCached(patch);
     if (diff.isEmpty) {
       return Padding(
         padding: context.spacing.cardContentPadding,
@@ -81,8 +81,8 @@ class DiffFileView extends ConsumerWidget {
       final int? effectiveLimit = limitLines;
       final List<DiffLine> displayLines =
           effectiveLimit != null && lines.length > effectiveLimit
-              ? lines.sublist(0, effectiveLimit)
-              : lines;
+          ? lines.sublist(0, effectiveLimit)
+          : lines;
       final bool isTruncated =
           effectiveLimit != null && lines.length > effectiveLimit;
 
@@ -220,12 +220,7 @@ class DiffFileView extends ConsumerWidget {
       final bool matchLeft =
           t.side == DiffSide.left && line.oldLineNumber == t.line;
       if (matchRight || matchLeft) {
-        columnChildren.add(
-          InlineThreadCard(
-            data: t,
-            compact: compact,
-          ),
-        );
+        columnChildren.add(InlineThreadCard(data: t, compact: compact));
       }
     }
   }

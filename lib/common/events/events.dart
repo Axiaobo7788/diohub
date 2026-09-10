@@ -126,6 +126,7 @@ class _EventsState extends ConsumerState<Events> {
 
   late final PaginationController<EventsModel, ActorEventSection>
   _paginationController;
+  ProviderSubscription<bool>? _compoundActionsSubscription;
 
   Future<bool> _loadMore() async {
     final PaginationState<ActorEventSection> before =
@@ -199,12 +200,25 @@ class _EventsState extends ConsumerState<Events> {
         );
     widget.refreshRegistrar?.value = () => _paginationController.refresh();
     widget.loadMoreRegistrar?.value = _loadMore;
+    _compoundActionsSubscription = ref.listenManual<bool>(
+      settings_events.eventsProvider.select(
+        (final settings) => settings.compoundActions,
+      ),
+      (final bool? previous, final bool next) {
+        if (previous == null || previous == next) return;
+        // Grouping is part of the feed query session projection. Retaining old
+        // sections would mix two incompatible projections across page
+        // boundaries, so replace them with a fresh first page.
+        unawaited(_paginationController.refresh(retainItems: false));
+      },
+    );
   }
 
   @override
   void dispose() {
     widget.refreshRegistrar?.value = null;
     widget.loadMoreRegistrar?.value = null;
+    _compoundActionsSubscription?.close();
     _paginationController.dispose();
     super.dispose();
   }

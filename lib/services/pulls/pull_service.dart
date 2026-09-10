@@ -284,7 +284,9 @@ class PullService extends EntityService<PullRequestRef> with CapableEntityMixin<
       final List<DiffEntry> batch = await getPullFilePatchesPage(
         page: page,
         perPage: kDefaultPageSize,
-        refresh: page == 1,
+        // Transport cache and ResourceRuntime own freshness. A single-file
+        // lookup must not force-bypass the first page on every open.
+        refresh: false,
       );
       if (batch.isEmpty) return null;
       for (final e in batch) {

@@ -9,15 +9,13 @@ import 'package:diohub/common/pagination/pagination_state.dart';
 import 'package:diohub/l10n/l10n.dart';
 import 'package:diohub/l10n/relative_time.dart';
 import 'package:diohub/models/repository_document.dart';
-import 'package:diohub/providers/database_providers.dart';
 import 'package:diohub/providers/repository/repository_document_provider.dart';
 import 'package:diohub/providers/repository/repository_document_resource.dart';
+import 'package:diohub/providers/repository/repository_security_alert_loaders.dart';
 import 'package:diohub/routes/router.gr.dart';
-import 'package:diohub/services/base/service_extensions.dart';
 import 'package:diohub/view/repository/md3/repository_md3_layout.dart';
 import 'package:diohub/view/repository/md3/repository_tab_scaffold.dart';
 import 'package:diohub_models/models/entity_ref.dart';
-import 'package:diohub_models/models/pagination/paginated_result.dart';
 import 'package:diohub_models/models/repositories/code_scanning_alert_item.dart';
 import 'package:diohub_models/models/repositories/secret_scanning_alert.dart';
 import 'package:diohub_models/models/repositories/vulnerability_alert_item.dart';
@@ -60,58 +58,43 @@ class _RepositorySecurityMd3PageState
   late final PaginationController<SecretScanningAlert, SecretScanningAlert>
   _secretScanning;
   _SecuritySection _section = _SecuritySection.overview;
+  final Set<_SecuritySection> _startedSections = <_SecuritySection>{};
 
   @override
   void initState() {
     super.initState();
+    final RepositorySecurityAlertLoaders loaders = ref.read(
+      repositorySecurityAlertLoadersProvider(widget.repoRef),
+    );
     _dependabot =
         PaginationController<VulnerabilityAlertEdge, VulnerabilityAlertEdge>(
           source: CursorForwardSource<VulnerabilityAlertEdge>(
-            fetch: ({required final int first, final String? after}) async {
-              final result = await widget.repoRef
-                  .stats(ref.read(apiClientProvider))
-                  .fetchVulnerabilityAlerts(first: first, after: after);
-              return PaginatedResult<VulnerabilityAlertEdge>(
-                items: result.items,
-                hasNextPage: result.hasNextPage,
-                endCursor: result.endCursor,
-              );
-            },
+            fetch: loaders.loadDependabot,
           ),
           idOf: (final VulnerabilityAlertEdge alert) => alert.node.id,
           pageSize: 30,
-          autoFetch: widget.signedIn,
+          autoFetch: false,
         );
     _codeScanning =
         PaginationController<CodeScanningAlertItem, CodeScanningAlertItem>(
           source: PageNumberForwardSource<CodeScanningAlertItem>(
-            fetch:
-                ({required final int page, required final int perPage}) async {
-                  final result = await widget.repoRef
-                      .stats(ref.read(apiClientProvider))
-                      .listCodeScanningAlerts(page: page, perPage: perPage);
-                  return result.items;
-                },
+            fetch: loaders.loadCodeScanning,
           ),
           idOf: (final CodeScanningAlertItem alert) => '${alert.number}',
           pageSize: 30,
-          autoFetch: widget.signedIn,
+          autoFetch: false,
         );
     _secretScanning =
         PaginationController<SecretScanningAlert, SecretScanningAlert>(
           source: PageNumberForwardSource<SecretScanningAlert>(
-            fetch:
-                ({required final int page, required final int perPage}) async {
-                  return widget.repoRef
-                      .services(ref.read(apiClientProvider))
-                      .listSecretScanningAlerts(page: page, perPage: perPage);
-                },
+            fetch: loaders.loadSecretScanning,
           ),
           idOf: (final SecretScanningAlert alert) => '${alert.number}',
           pageSize: 30,
-          autoFetch: widget.signedIn,
+          autoFetch: false,
         );
     widget.onRefreshReady(widget.signedIn ? _refresh : null);
+    if (widget.signedIn) _ensureSectionStarted(_section);
   }
 
   @override
@@ -120,7 +103,7 @@ class _RepositorySecurityMd3PageState
     if (oldWidget.signedIn == widget.signedIn) return;
     widget.onRefreshReady(widget.signedIn ? _refresh : null);
     if (widget.signedIn) {
-      unawaited(_refresh(retainItems: false));
+      _ensureSectionStarted(_section);
     }
   }
 
@@ -154,9 +137,12 @@ class _RepositorySecurityMd3PageState
     await switch (_section) {
       _SecuritySection.overview => Future.wait<void>(<Future<void>>[
         if (policyRefresh != null) policyRefresh,
-        _dependabot.refresh(retainItems: retainItems),
-        _codeScanning.refresh(retainItems: retainItems),
-        _secretScanning.refresh(retainItems: retainItems),
+        if (_startedSections.contains(_SecuritySection.dependabot))
+          _dependabot.refresh(retainItems: retainItems),
+        if (_startedSections.contains(_SecuritySection.codeScanning))
+          _codeScanning.refresh(retainItems: retainItems),
+        if (_startedSections.contains(_SecuritySection.secretScanning))
+          _secretScanning.refresh(retainItems: retainItems),
       ]),
       _SecuritySection.dependabot => _dependabot.refresh(
         retainItems: retainItems,
@@ -250,7 +236,22 @@ class _RepositorySecurityMd3PageState
   void _selectSection(final int index) {
     final _SecuritySection next = _SecuritySection.values[index];
     if (next == _section) return;
+    _ensureSectionStarted(next);
     setState(() => _section = next);
+  }
+
+  void _ensureSectionStarted(final _SecuritySection section) {
+    if (section == _SecuritySection.overview ||
+        !widget.signedIn ||
+        !_startedSections.add(section)) {
+      return;
+    }
+    unawaited(switch (section) {
+      _SecuritySection.dependabot => _dependabot.fetchForward(),
+      _SecuritySection.codeScanning => _codeScanning.fetchForward(),
+      _SecuritySection.secretScanning => _secretScanning.fetchForward(),
+      _SecuritySection.overview => Future<void>.value(),
+    });
   }
 
   List<Widget> _buildSection() => switch (_section) {
@@ -390,6 +391,9 @@ class _RepositorySecurityMd3PageState
               width: width,
               child: _SecuritySummaryCard(
                 controller: _dependabot,
+                requested: _startedSections.contains(
+                  _SecuritySection.dependabot,
+                ),
                 icon: Icons.inventory_2_outlined,
                 title: context.l10n.repoDependabot,
                 onTap: () => _selectSection(_SecuritySection.dependabot.index),
@@ -399,6 +403,9 @@ class _RepositorySecurityMd3PageState
               width: width,
               child: _SecuritySummaryCard(
                 controller: _codeScanning,
+                requested: _startedSections.contains(
+                  _SecuritySection.codeScanning,
+                ),
                 icon: Icons.rule_folder_outlined,
                 title: context.l10n.repoCodeScanning,
                 onTap: () =>
@@ -409,6 +416,9 @@ class _RepositorySecurityMd3PageState
               width: width,
               child: _SecuritySummaryCard(
                 controller: _secretScanning,
+                requested: _startedSections.contains(
+                  _SecuritySection.secretScanning,
+                ),
                 icon: Icons.key_outlined,
                 title: context.l10n.repoSecretScanning,
                 onTap: () =>

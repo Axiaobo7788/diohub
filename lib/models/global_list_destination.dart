@@ -1,1 +1,7 @@
-enum GlobalListDestination { issues, pullRequests, repositories }
+enum GlobalListDestination {
+  issues,
+  pullRequests,
+  repositories,
+  projects,
+  discussions,
+}

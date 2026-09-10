@@ -59,12 +59,14 @@ class _SecurityPolicyCard extends StatelessWidget {
 class _SecuritySummaryCard extends StatelessWidget {
   const _SecuritySummaryCard({
     required this.controller,
+    required this.requested,
     required this.icon,
     required this.title,
     required this.onTap,
   });
 
   final PaginationController<dynamic, dynamic> controller;
+  final bool requested;
   final IconData icon;
   final String title;
   final VoidCallback onTap;
@@ -94,7 +96,9 @@ class _SecuritySummaryCard extends StatelessWidget {
                   style: const TextStyle(fontWeight: FontWeight.w700),
                 ),
                 subtitle: Text(
-                  error == null
+                  !requested
+                      ? context.l10n.repoSecurityAlertsNotLoaded
+                      : error == null
                       ? context.l10n.repoSecurityAlertsLoaded(
                           state.items.length,
                         )

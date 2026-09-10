@@ -4,6 +4,7 @@ import 'dart:math' as math;
 import 'package:auto_route/auto_route.dart';
 import 'package:diohub/app/app_logger.dart';
 import 'package:diohub/common/animations/motion.dart';
+import 'package:diohub/common/animations/single_tree_content_transition.dart';
 import 'package:diohub/common/issues/issue_label.dart';
 import 'package:diohub/common/misc/shimmer_bone.dart';
 import 'package:diohub/common/misc/shimmer_scope.dart';
@@ -15,6 +16,8 @@ import 'package:diohub/common/utils/github_visual_styles.dart';
 import 'package:diohub/l10n/l10n.dart';
 import 'package:diohub/l10n/relative_time.dart';
 import 'package:diohub/models/global_list_destination.dart';
+import 'package:diohub/models/global_discussion_browse_query.dart';
+import 'package:diohub/models/global_project_browse_query.dart';
 import 'package:diohub/models/global_repository_browse_query.dart';
 import 'package:diohub/models/home_repository_item.dart';
 import 'package:diohub/models/repository_preview.dart';
@@ -31,12 +34,15 @@ import 'package:diohub/providers/search/search_state_notifier.dart';
 import 'package:diohub/providers/users/user_providers.dart';
 import 'package:diohub/routes/navigable_actions.dart';
 import 'package:diohub/routes/router.gr.dart';
+import 'package:diohub/services/authentication/scope_gate.dart';
+import 'package:diohub/utils/open_in_app_browser.dart';
 import 'package:diohub/utils/utils.dart';
 import 'package:diohub/view/app_chrome/app_chrome.dart';
 import 'package:diohub/view/app_chrome/global_header.dart';
 import 'package:diohub/view/app_chrome/global_navigation_drawer.dart';
 import 'package:diohub/view/repository/md3/repository_issue_pull_row.dart';
 import 'package:diohub_graphql/queries/repositories/repo_typedefs.dart';
+import 'package:diohub_graphql/fragments/fragment_typedefs.dart';
 import 'package:diohub_graphql/queries/users/user_repositories_list.graphql.dart';
 import 'package:diohub_graphql/queries/users/user_typedefs.dart';
 import 'package:diohub_graphql/queries/viewer/viewer_typedefs.dart';
@@ -47,6 +53,7 @@ import 'package:diohub_models/models/search/issue_or_pull.dart';
 import 'package:diohub_models/models/search/qualifier.dart';
 import 'package:diohub_models/models/search/search_expression.dart';
 import 'package:diohub_models/models/search/sort_config.dart';
+import 'package:diohub_models/models/server_config.dart';
 import 'package:diohub_models/models/visual_state.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -55,6 +62,8 @@ part 'global_lists_filters.dart';
 part 'global_lists_results.dart';
 part 'global_lists_flows.dart';
 part 'global_lists_helpers.dart';
+part 'global_lists_community_pages.dart';
+part 'global_lists_community_results.dart';
 
 @RoutePage()
 class GlobalListsScreen extends ConsumerWidget {
@@ -96,10 +105,10 @@ class GlobalListsScreen extends ConsumerWidget {
   }
 }
 
-/// Stable production shell for the three account-wide work lists.
+/// Stable production shell for account-wide work lists.
 ///
 /// Drawer navigation is local to this shell so switching between Issues,
-/// Pull requests, and Repositories does not replace the route and dispose the
+/// Pull requests, Repositories, Projects, and Discussions does not replace the
 /// visited query sessions. Each destination is created lazily and remains
 /// mounted after its first visit; hidden destinations have ticker-driven
 /// pagination disabled.
@@ -216,14 +225,30 @@ class _RetainedGlobalListsBodyState extends State<_RetainedGlobalListsBody> {
                       ? Duration.zero
                       : kContentTransitionDuration,
                   curve: kContentTransitionCurve,
-                  child: GlobalListsPage(
-                    key: ValueKey<String>(
-                      '${widget.account.accountKey}:${destination.name}',
+                  child: switch (destination) {
+                    GlobalListDestination.projects => GlobalProjectsPage(
+                      key: ValueKey<String>(
+                        '${widget.account.accountKey}:${destination.name}',
+                      ),
+                      account: widget.account,
+                      scope: widget.scope,
                     ),
-                    destination: destination,
-                    account: widget.account,
-                    scope: widget.scope,
-                  ),
+                    GlobalListDestination.discussions => GlobalDiscussionsPage(
+                      key: ValueKey<String>(
+                        '${widget.account.accountKey}:${destination.name}',
+                      ),
+                      account: widget.account,
+                      scope: widget.scope,
+                    ),
+                    _ => GlobalListsPage(
+                      key: ValueKey<String>(
+                        '${widget.account.accountKey}:${destination.name}',
+                      ),
+                      destination: destination,
+                      account: widget.account,
+                      scope: widget.scope,
+                    ),
+                  },
                 ),
               ),
             ),
@@ -238,7 +263,11 @@ class GlobalListsPage extends ConsumerStatefulWidget {
     required this.account,
     required this.scope,
     super.key,
-  });
+  }) : assert(
+         destination != GlobalListDestination.projects &&
+             destination != GlobalListDestination.discussions,
+         'Projects and Discussions use their dedicated global page.',
+       );
 
   final GlobalListDestination destination;
   final AccountModel account;

@@ -1,11 +1,13 @@
 import 'dart:async';
 
 import 'package:diohub/app/settings/settings_cache.dart';
+import 'package:diohub/common/pagination/page_source.dart';
 import 'package:diohub/l10n/app_localizations.dart';
 import 'package:diohub/models/contributions/contribution_query_models.dart';
 import 'package:diohub/providers/account/account_provider.dart';
 import 'package:diohub/providers/database_providers.dart';
 import 'package:diohub/providers/users/user_contributions_provider.dart';
+import 'package:diohub/providers/users/user_activity_provider.dart';
 import 'package:diohub/providers/users/user_providers.dart';
 import 'package:diohub/view/app_chrome/app_chrome_layout.dart';
 import 'package:diohub/view/profile/md3/profile_md3_screen.dart';
@@ -13,6 +15,7 @@ import 'package:diohub/view/profile/md3/profile_navigation.dart';
 import 'package:diohub/view/profile/user_profile_screen.dart';
 import 'package:diohub_graphql/queries/users/user_info.graphql.dart';
 import 'package:diohub_models/models/authentication/account_session.dart';
+import 'package:diohub_models/models/activity/activity_timeline_event.dart';
 import 'package:diohub_models/models/entity_ref.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/semantics.dart';
@@ -31,6 +34,7 @@ void main() {
     final bool pending = false,
     final Object? error,
     final bool useProductionEntry = false,
+    final VoidCallback? onTimelineFetch,
   }) async {
     tester.view
       ..devicePixelRatio = 1
@@ -57,6 +61,19 @@ void main() {
         userContributionsProvider.overrideWith(
           (final Ref ref, final ContributionQueryKey key) =>
               Completer<ContributionCollectionResult>().future,
+        ),
+        userActivityTimelineSourceProvider.overrideWith(
+          (final Ref ref, final ContributionQueryKey key) =>
+              PageNumberForwardSource<TimelineEventWithFlags>(
+                fetch:
+                    ({
+                      required final int page,
+                      required final int perPage,
+                    }) async {
+                      onTimelineFetch?.call();
+                      return <TimelineEventWithFlags>[];
+                    },
+              ),
         ),
       ],
     );
@@ -142,6 +159,28 @@ void main() {
       find.byKey(const ValueKey<String>('profile-md3-medium')),
       findsOneWidget,
     );
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('activity can load while contribution calendar is pending', (
+    final WidgetTester tester,
+  ) async {
+    var timelineRequests = 0;
+    await pumpProfile(
+      tester,
+      size: const Size(800, 900),
+      onTimelineFetch: () => timelineRequests++,
+    );
+
+    for (var attempt = 0; attempt < 8 && timelineRequests == 0; attempt++) {
+      await tester.drag(
+        find.byKey(const PageStorageKey<String>('profile-overview-scroll')),
+        const Offset(0, -400),
+      );
+      await tester.pump();
+    }
+
+    expect(timelineRequests, 1);
     expect(tester.takeException(), isNull);
   });
 

@@ -2,6 +2,45 @@ import 'package:diohub/common/diff/diff.dart';
 import 'package:test/test.dart';
 
 void main() {
+  test('cached parser reuses the immutable artifact for the same patch', () {
+    const String patch = '@@ -1,1 +1,1 @@\n-old\n+new';
+
+    final ParsedDiff first = parseUnifiedDiffCached(patch);
+    final ParsedDiff second = parseUnifiedDiffCached(patch);
+
+    expect(identical(first, second), isTrue);
+  });
+
+  test('cached parser evicts the least recently used patch', () {
+    ParsedDiff parse(final int index) =>
+        parseUnifiedDiffCached('@@ -1,1 +1,1 @@\n-old-$index\n+new-$index');
+
+    final ParsedDiff oldest = parse(10);
+    for (var index = 11; index <= 14; index++) {
+      parse(index);
+    }
+
+    expect(
+      identical(oldest, parse(10)),
+      isFalse,
+      reason: 'the fifth distinct artifact must evict the oldest entry',
+    );
+  });
+
+  test('cached parser does not retain patches above the byte budget', () {
+    final String oversizedPatch =
+        '@@ -1,1 +1,1 @@\n-${'a' * (2 * 1024 * 1024)}\n+new';
+
+    final ParsedDiff first = parseUnifiedDiffCached(oversizedPatch);
+    final ParsedDiff second = parseUnifiedDiffCached(oversizedPatch);
+
+    expect(
+      identical(first, second),
+      isFalse,
+      reason: 'oversized artifacts must not occupy the bounded LRU cache',
+    );
+  });
+
   group('parseUnifiedDiff', () {
     test('returns empty for null', () {
       final ParsedDiff result = parseUnifiedDiff(null);
@@ -33,7 +72,12 @@ void main() {
       expect(hunk.info.removeCount, 5);
       expect(hunk.info.addStart, 1);
       expect(hunk.info.addCount, 6);
-      expect(hunk.rawLines, <String>[' line1', '-line2', '+line2new', ' line3']);
+      expect(hunk.rawLines, <String>[
+        ' line1',
+        '-line2',
+        '+line2new',
+        ' line3',
+      ]);
     });
 
     test('parses multiple hunks', () {
@@ -71,8 +115,10 @@ void main() {
 ''';
       final ParsedDiff parsed = parseUnifiedDiff(patch);
       expect(parsed.hunks.length, 1);
-      final List<DiffLine> lines =
-          buildDiffLines(parsed.hunks.first.info, parsed.hunks.first.rawLines);
+      final List<DiffLine> lines = buildDiffLines(
+        parsed.hunks.first.info,
+        parsed.hunks.first.rawLines,
+      );
       expect(lines.length, 4);
       expect(lines[0].prefix, ' ');
       expect(lines[0].oldLineNumber, 1);

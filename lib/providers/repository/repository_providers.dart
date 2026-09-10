@@ -54,7 +54,14 @@ export 'package:diohub/providers/repository/repository_providers_core.dart'
         compareResultProvider,
         repoCardProvider,
         repositoryProvider,
-        RepositoryNotifier;
+        repositoryStarFeedbackProvider,
+        repositoryStarAccountKeyProvider,
+        repositoryStarMutationProvider,
+        repositoryStarProvider,
+        RepositoryNotifier,
+        RepositoryStarFeedbackMessages,
+        RepositoryStarNotifier,
+        RepositoryStarState;
 
 /// Fetches the profile README HTML for a **user** (from the `{login}/{login}`
 /// repo) without depending on [branchProvider] or [repositoryProvider].

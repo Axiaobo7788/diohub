@@ -11,6 +11,7 @@ import 'package:diohub/common/misc/entity_header.dart';
 import 'package:diohub/common/misc/shimmer_scope.dart';
 import 'package:diohub/common/popup/popup_button.dart';
 import 'package:diohub/common/riverpod/async_value_builder.dart';
+import 'package:diohub/l10n/l10n.dart';
 import 'package:diohub_graphql/fragments/fragment_typedefs.dart';
 import 'package:diohub_graphql/fragments/repo_card_fields.graphql.dart';
 import 'package:diohub_graphql/queries/repositories/repo_typedefs.dart';
@@ -33,8 +34,8 @@ import 'package:flutter_vector_icons/flutter_vector_icons.dart';
 import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
 
-/// Star chip that reads and mutates via [repositoryProvider]. Use when the
-/// repo card is backed by the provider (e.g. [RepoCardLoading]).
+/// Star chip backed by full repository data while sharing the lightweight
+/// mutation state used by card and profile surfaces.
 class RepoStarChipFromProvider extends ConsumerWidget {
   const RepoStarChipFromProvider({
     required this.repoRef,
@@ -52,13 +53,11 @@ class RepoStarChipFromProvider extends ConsumerWidget {
         if (repo == null)
           return RepoStarChip(
               repo: repoRef, initialStarCount: 0, initialIsStarred: false);
-        return RepoStarChip(
-          repo: repoRef,
+        return RepoStarChipFromData(
+          repoRef: repoRef,
+          repoNodeId: repo.id,
           initialStarCount: repo.stargazerCount,
           initialIsStarred: repo.viewerHasStarred,
-          onTap: () {
-            ref.read(repositoryProvider(repoRef).notifier).toggleStar();
-          },
         );
       },
       loading: () => RepoStarChip(
@@ -71,6 +70,56 @@ class RepoStarChipFromProvider extends ConsumerWidget {
         initialStarCount: 0,
         initialIsStarred: false,
       ),
+    );
+  }
+}
+
+/// Star chip seeded by an existing lightweight/full query. Mutations are
+/// shared by [RepoRef] and do not initialize [repositoryProvider].
+class RepoStarChipFromData extends ConsumerWidget {
+  const RepoStarChipFromData({
+    required this.repoRef,
+    required this.repoNodeId,
+    required this.initialStarCount,
+    required this.initialIsStarred,
+    super.key,
+  });
+
+  final RepoRef repoRef;
+  final String repoNodeId;
+  final int initialStarCount;
+  final bool initialIsStarred;
+
+  @override
+  Widget build(final BuildContext context, final WidgetRef ref) {
+    final RepositoryStarState starState = ref.watch(
+      repositoryStarProvider(repoRef),
+    );
+    final result = starState.result;
+    final bool isStarred = result?.viewerHasStarred ?? initialIsStarred;
+    final int count = result?.stargazerCount ?? initialStarCount;
+    final RepositoryStarFeedbackMessages feedbackMessages =
+        RepositoryStarFeedbackMessages(
+          starred: context.l10n.repoStarredFeedback,
+          unstarred: context.l10n.repoUnstarredFeedback,
+          updateFailed: context.l10n.repoStarUpdateError,
+        );
+    return RepoStarChip(
+      repo: repoRef,
+      initialStarCount: count,
+      initialIsStarred: isStarred,
+      onTap: starState.isMutating
+          ? null
+          : () async {
+              await ref
+                  .read(repositoryStarProvider(repoRef).notifier)
+                  .toggle(
+                    repoNodeId: repoNodeId,
+                    currentIsStarred: isStarred,
+                    currentCount: count,
+                    feedbackMessages: feedbackMessages,
+                  );
+            },
     );
   }
 }
@@ -553,6 +602,7 @@ class RepositoryCard extends ConsumerWidget {
   }
 
 
+
   Widget _statusChip(
     final BuildContext context, {
     required final IconData icon,
@@ -646,14 +696,11 @@ class RepoCardLoading extends ConsumerWidget {
           ref: RepoRef.fromRepoCardFields(repoData),
           child: RepositoryCard(
             repoData,
-            starChip: RepoStarChip(
-              repo: repo,
+            starChip: RepoStarChipFromData(
+              repoRef: repo,
+              repoNodeId: repoData.id,
               initialStarCount: repoData.stargazerCount,
               initialIsStarred: repoData.viewerHasStarred,
-              onTap: () {
-                // Lazily initialize full repositoryProvider for star mutation
-                ref.read(repositoryProvider(repo).notifier).toggleStar();
-              },
             ),
           ),
         );

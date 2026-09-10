@@ -21,6 +21,14 @@ void main() {
           key: 'global-nav-repositories',
           destination: GlobalNavigationDestination.repositories,
         ),
+        (
+          key: 'global-nav-projects',
+          destination: GlobalNavigationDestination.projects,
+        ),
+        (
+          key: 'global-nav-discussions',
+          destination: GlobalNavigationDestination.discussions,
+        ),
       ]) {
     testWidgets('${scenario.destination.name} invokes the formal destination', (
       final WidgetTester tester,

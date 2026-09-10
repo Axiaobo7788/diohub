@@ -4,6 +4,8 @@
 /// No Flutter/widget dependency; unit-testable.
 library;
 
+import 'dart:collection';
+
 /// Info from a unified diff hunk header: @@ -oldStart,oldCount +newStart,newCount @@
 class DiffHunkInfo {
   const DiffHunkInfo({
@@ -55,8 +57,9 @@ ParsedDiff parseUnifiedDiff(final String? patch) {
     return const ParsedDiff(hunks: <DiffHunk>[]);
   }
   final String normalized = patch.replaceAll('\r\n', '\n');
-  final List<RegExpMatch> matches =
-      _headerPattern.allMatches(normalized).toList();
+  final List<RegExpMatch> matches = _headerPattern
+      .allMatches(normalized)
+      .toList();
   if (matches.isEmpty) {
     return const ParsedDiff(hunks: <DiffHunk>[]);
   }
@@ -71,8 +74,9 @@ ParsedDiff parseUnifiedDiff(final String? patch) {
     if (info == null) continue;
 
     final int start = match.end;
-    final int end =
-        i + 1 < matches.length ? matches[i + 1].start : normalized.length;
+    final int end = i + 1 < matches.length
+        ? matches[i + 1].start
+        : normalized.length;
     final String body = normalized.substring(start, end);
     final List<String> rawLines = body.split('\n');
     // Drop leading/trailing empty lines from split artifacts.
@@ -91,6 +95,39 @@ ParsedDiff parseUnifiedDiff(final String? patch) {
   }
 
   return ParsedDiff(hunks: hunks);
+}
+
+const int _maxCachedDiffEntries = 4;
+const int _maxCachedDiffCharacters = 2 * 1024 * 1024;
+final LinkedHashMap<String, ParsedDiff> _parsedDiffCache =
+    LinkedHashMap<String, ParsedDiff>();
+int _cachedDiffCharacters = 0;
+
+/// Parses a patch while retaining a small, bounded set of render artifacts.
+///
+/// Diff widgets rebuild for settings and layout changes that do not change the
+/// patch. Keeping the immutable parse result avoids repeating the synchronous
+/// parser on the UI isolate. Very large patches bypass this cache so it cannot
+/// become an unbounded second resource store.
+ParsedDiff parseUnifiedDiffCached(final String? patch) {
+  if (patch == null || patch.isEmpty) return parseUnifiedDiff(patch);
+  final ParsedDiff? cached = _parsedDiffCache.remove(patch);
+  if (cached != null) {
+    _parsedDiffCache[patch] = cached;
+    return cached;
+  }
+
+  final ParsedDiff parsed = parseUnifiedDiff(patch);
+  if (patch.length > _maxCachedDiffCharacters) return parsed;
+  while (_parsedDiffCache.length >= _maxCachedDiffEntries ||
+      _cachedDiffCharacters + patch.length > _maxCachedDiffCharacters) {
+    final String oldest = _parsedDiffCache.keys.first;
+    _cachedDiffCharacters -= oldest.length;
+    _parsedDiffCache.remove(oldest);
+  }
+  _parsedDiffCache[patch] = parsed;
+  _cachedDiffCharacters += patch.length;
+  return parsed;
 }
 
 /// Parses header body like "-1,5 +1,6" into [DiffHunkInfo], or null if invalid.

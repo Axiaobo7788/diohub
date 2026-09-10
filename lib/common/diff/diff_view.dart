@@ -26,17 +26,16 @@ class WrapIconButton extends StatelessWidget {
 
   @override
   Widget build(final BuildContext context) => TapFeedback(
-        onTap: () => onWrap(!wrap),
-        child: Padding(
-          padding: EdgeInsets.all(size / 2),
-          child: Icon(
-            Icons.wrap_text_rounded,
-            size: size,
-            color:
-                context.colorScheme.onSurface.withValues(alpha: wrap ? 1 : 0.5),
-          ),
-        ),
-      );
+    onTap: () => onWrap(!wrap),
+    child: Padding(
+      padding: EdgeInsets.all(size / 2),
+      child: Icon(
+        Icons.wrap_text_rounded,
+        size: size,
+        color: context.colorScheme.onSurface.withValues(alpha: wrap ? 1 : 0.5),
+      ),
+    ),
+  );
 }
 
 /// Column width constants for diff line layout.
@@ -136,10 +135,7 @@ class DiffLineRow extends StatelessWidget {
         child: row,
       );
     }
-    return ColoredBox(
-      color: bg,
-      child: row,
-    );
+    return ColoredBox(color: bg, child: row);
   }
 
   Color _backgroundColor(final BuildContext context, final double opacity) {
@@ -248,7 +244,7 @@ class DiffView extends StatelessWidget {
 
   @override
   Widget build(final BuildContext context) {
-    final ParsedDiff diff = parsedDiff ?? parseUnifiedDiff(patch);
+    final ParsedDiff diff = parsedDiff ?? parseUnifiedDiffCached(patch);
     if (diff.isEmpty) {
       return Padding(
         padding: context.spacing.cardContentPadding,
@@ -261,7 +257,7 @@ class DiffView extends StatelessWidget {
       );
     }
 
-    final double maxWidth = _maxContentWidth(context);
+    final double maxWidth = _maxContentWidth(context, diff);
     final SingleChildScrollView child = SingleChildScrollView(
       scrollDirection: Axis.horizontal,
       child: SizedBox(
@@ -272,13 +268,15 @@ class DiffView extends StatelessWidget {
           itemCount: diff.hunks.length,
           itemBuilder: (final BuildContext context, final int chunkIndex) {
             final DiffHunk hunk = diff.hunks[chunkIndex];
-            final List<DiffLine> lines =
-                buildDiffLines(hunk.info, hunk.rawLines);
+            final List<DiffLine> lines = buildDiffLines(
+              hunk.info,
+              hunk.rawLines,
+            );
             final int? effectiveLimit = limitLines;
             final List<DiffLine> displayLines =
                 effectiveLimit != null && lines.length > effectiveLimit
-                    ? lines.sublist(0, effectiveLimit)
-                    : lines;
+                ? lines.sublist(0, effectiveLimit)
+                : lines;
             final bool isTruncated =
                 effectiveLimit != null && lines.length > effectiveLimit;
 
@@ -310,25 +308,27 @@ class DiffView extends StatelessWidget {
                       overflow: TextOverflow.ellipsis,
                     ),
                   ),
-                ...displayLines.map(
-                  (final DiffLine line) {
-                    final DiffLineKey key =
-                        (line.oldLineNumber, line.newLineNumber);
-                    return DiffLineRow(
-                      line: line,
-                      config: config,
-                      fileType: fileType,
-                      onTap: onLineTap != null
-                          ? () => onLineTap!(DiffLineTapDetails(
-                                oldLineNumber: line.oldLineNumber,
-                                newLineNumber: line.newLineNumber,
-                                prefix: line.prefix,
-                              ))
-                          : null,
-                      isHighlighted: highlightedLines?.contains(key) ?? false,
-                    );
-                  },
-                ),
+                ...displayLines.map((final DiffLine line) {
+                  final DiffLineKey key = (
+                    line.oldLineNumber,
+                    line.newLineNumber,
+                  );
+                  return DiffLineRow(
+                    line: line,
+                    config: config,
+                    fileType: fileType,
+                    onTap: onLineTap != null
+                        ? () => onLineTap!(
+                            DiffLineTapDetails(
+                              oldLineNumber: line.oldLineNumber,
+                              newLineNumber: line.newLineNumber,
+                              prefix: line.prefix,
+                            ),
+                          )
+                        : null,
+                    isHighlighted: highlightedLines?.contains(key) ?? false,
+                  );
+                }),
                 if (isTruncated) ...<Widget>[
                   Padding(
                     padding: context.spacing.cardContentPadding,
@@ -370,21 +370,9 @@ class DiffView extends StatelessWidget {
     );
   }
 
-  double _maxContentWidth(final BuildContext context) {
-    if (parsedDiff == null && patch != null) {
-      final ParsedDiff diff = parseUnifiedDiff(patch);
-      int maxChars = 0;
-      for (final DiffHunk hunk in diff.hunks) {
-        for (final String line in hunk.rawLines) {
-          if (line.length > maxChars) maxChars = line.length;
-        }
-      }
-      return (maxChars * 10)
-          .clamp(200.0, MediaQuery.of(context).size.width * 2)
-          .toDouble();
-    }
+  double _maxContentWidth(final BuildContext context, final ParsedDiff diff) {
     int maxChars = 0;
-    for (final DiffHunk hunk in parsedDiff!.hunks) {
+    for (final DiffHunk hunk in diff.hunks) {
       for (final String line in hunk.rawLines) {
         if (line.length > maxChars) maxChars = line.length;
       }

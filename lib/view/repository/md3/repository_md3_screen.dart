@@ -816,6 +816,19 @@ class _RepositoryActions extends ConsumerWidget {
     final RepositoryNotifier notifier = ref.read(
       repositoryProvider(repoRef).notifier,
     );
+    final RepositoryStarState starState = ref.watch(
+      repositoryStarProvider(repoRef),
+    );
+    final starResult = starState.result;
+    final bool isStarred =
+        starResult?.viewerHasStarred ?? repo.viewerHasStarred;
+    final int starCount = starResult?.stargazerCount ?? repo.stargazerCount;
+    final RepositoryStarFeedbackMessages starFeedbackMessages =
+        RepositoryStarFeedbackMessages(
+          starred: context.l10n.repoStarredFeedback,
+          unstarred: context.l10n.repoUnstarredFeedback,
+          updateFailed: context.l10n.repoStarUpdateError,
+        );
     final bool isWatching =
         repo.viewerSubscription == SubscriptionState.SUBSCRIBED;
     return Wrap(
@@ -875,19 +888,37 @@ class _RepositoryActions extends ConsumerWidget {
           icon: const Icon(Icons.call_split),
           label: Text(context.l10n.repoForkCount(_formatCount(repo.forkCount))),
         ),
-        repo.viewerHasStarred
+        isStarred
             ? FilledButton.tonalIcon(
-                onPressed: detailsReady ? notifier.toggleStar : null,
+                onPressed: detailsReady && !starState.isMutating
+                    ? () => ref
+                          .read(repositoryStarProvider(repoRef).notifier)
+                          .toggle(
+                            repoNodeId: repo.id,
+                            currentIsStarred: isStarred,
+                            currentCount: starCount,
+                            feedbackMessages: starFeedbackMessages,
+                          )
+                    : null,
                 icon: const Icon(Icons.star),
                 label: Text(
-                  context.l10n.repoStarCount(_formatCount(repo.stargazerCount)),
+                  context.l10n.repoStarCount(_formatCount(starCount)),
                 ),
               )
             : OutlinedButton.icon(
-                onPressed: detailsReady ? notifier.toggleStar : null,
+                onPressed: detailsReady && !starState.isMutating
+                    ? () => ref
+                          .read(repositoryStarProvider(repoRef).notifier)
+                          .toggle(
+                            repoNodeId: repo.id,
+                            currentIsStarred: isStarred,
+                            currentCount: starCount,
+                            feedbackMessages: starFeedbackMessages,
+                          )
+                    : null,
                 icon: const Icon(Icons.star_border),
                 label: Text(
-                  context.l10n.repoStarCount(_formatCount(repo.stargazerCount)),
+                  context.l10n.repoStarCount(_formatCount(starCount)),
                 ),
               ),
       ],

@@ -20,6 +20,11 @@ Widget buildAppPageTransition(
     curve: kPageTransitionCurve,
     reverseCurve: kPageTransitionReverseCurve,
   );
+  final Animation<double> secondaryCurved = CurvedAnimation(
+    parent: secondaryAnimation,
+    curve: kPageTransitionCurve,
+    reverseCurve: kPageTransitionReverseCurve,
+  );
   final double direction = Directionality.maybeOf(context) == TextDirection.rtl
       ? -1
       : 1;
@@ -32,7 +37,10 @@ Widget buildAppPageTransition(
       final double fractionalOffset = width > 0
           ? kPageTransitionOffset / width
           : 0;
-      return FadeTransition(
+      final double exitFractionalOffset = width > 0
+          ? kPageTransitionExitOffset / width
+          : 0;
+      final Widget entering = FadeTransition(
         key: const ValueKey<String>('app-page-fade-transition'),
         opacity: curved,
         child: SlideTransition(
@@ -42,6 +50,21 @@ Widget buildAppPageTransition(
             end: Offset.zero,
           ).animate(curved),
           child: child,
+        ),
+      );
+      return FadeTransition(
+        key: const ValueKey<String>('app-page-exit-fade-transition'),
+        opacity: Tween<double>(
+          begin: 1,
+          end: kPageTransitionExitOpacity,
+        ).animate(secondaryCurved),
+        child: SlideTransition(
+          key: const ValueKey<String>('app-page-exit-slide-transition'),
+          position: Tween<Offset>(
+            begin: Offset.zero,
+            end: Offset(-exitFractionalOffset * direction, 0),
+          ).animate(secondaryCurved),
+          child: entering,
         ),
       );
     },

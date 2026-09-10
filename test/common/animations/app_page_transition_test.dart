@@ -8,6 +8,7 @@ void main() {
     final WidgetTester tester, {
     required final bool disableAnimations,
     final double progress = 0.5,
+    final double secondaryProgress = 0,
   }) async {
     await tester.pumpWidget(
       MaterialApp(
@@ -17,7 +18,7 @@ void main() {
             builder: (final BuildContext context) => buildAppPageTransition(
               context,
               AlwaysStoppedAnimation<double>(progress),
-              const AlwaysStoppedAnimation<double>(0),
+              AlwaysStoppedAnimation<double>(secondaryProgress),
               const SizedBox.expand(key: ValueKey<String>('page-child')),
             ),
           ),
@@ -39,8 +40,32 @@ void main() {
       find.byKey(const ValueKey<String>('app-page-slide-transition')),
       findsOneWidget,
     );
+    expect(
+      find.byKey(const ValueKey<String>('app-page-exit-fade-transition')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const ValueKey<String>('app-page-exit-slide-transition')),
+      findsOneWidget,
+    );
     expect(kPageTransitionDuration, const Duration(milliseconds: 240));
     expect(kPageTransitionReverseDuration, const Duration(milliseconds: 220));
+  });
+
+  testWidgets('covered page gets subtle depth without a second motion system', (
+    final WidgetTester tester,
+  ) async {
+    await pumpTransition(
+      tester,
+      disableAnimations: false,
+      progress: 1,
+      secondaryProgress: 1,
+    );
+
+    expect(
+      tester.getTopLeft(find.byKey(const ValueKey<String>('page-child'))).dx,
+      closeTo(-kPageTransitionExitOffset, 0.01),
+    );
   });
 
   testWidgets('page transition uses a visible logical-pixel offset', (
@@ -65,6 +90,14 @@ void main() {
     );
     expect(
       find.byKey(const ValueKey<String>('app-page-slide-transition')),
+      findsNothing,
+    );
+    expect(
+      find.byKey(const ValueKey<String>('app-page-exit-fade-transition')),
+      findsNothing,
+    );
+    expect(
+      find.byKey(const ValueKey<String>('app-page-exit-slide-transition')),
       findsNothing,
     );
     expect(find.byKey(const ValueKey<String>('page-child')), findsOneWidget);

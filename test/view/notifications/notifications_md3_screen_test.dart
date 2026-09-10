@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:ui' as ui;
 
 import 'package:diohub/app/settings/settings_cache.dart';
 import 'package:diohub/common/animations/motion.dart';
@@ -19,7 +20,6 @@ import 'package:diohub_models/models/authentication/account_model.dart';
 import 'package:diohub_models/models/authentication/account_session.dart';
 import 'package:diohub_models/models/events/notifications_model.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/semantics.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
@@ -176,7 +176,7 @@ void main() {
           find.descendant(
             of: navigation,
             matching: find.byKey(
-              const ValueKey<String>('notifications-done-unavailable'),
+              const ValueKey<String>('notifications-done-history-unavailable'),
             ),
           ),
           findsOneWidget,
@@ -266,10 +266,13 @@ void main() {
     );
     expect(tester.getSize(all).height, greaterThanOrEqualTo(48));
     expect(tester.getSize(unread).height, greaterThanOrEqualTo(48));
-    expect(tester.getSemantics(all).hasFlag(SemanticsFlag.isSelected), isTrue);
     expect(
-      tester.getSemantics(unread).hasFlag(SemanticsFlag.isSelected),
-      isFalse,
+      tester.getSemantics(all).flagsCollection.isSelected,
+      ui.Tristate.isTrue,
+    );
+    expect(
+      tester.getSemantics(unread).flagsCollection.isSelected,
+      ui.Tristate.isFalse,
     );
 
     final Finder sidebar = find.byKey(
@@ -281,8 +284,8 @@ void main() {
     );
     expect(tester.getSize(inbox).height, greaterThanOrEqualTo(48));
     expect(
-      tester.getSemantics(inbox).hasFlag(SemanticsFlag.isSelected),
-      isTrue,
+      tester.getSemantics(inbox).flagsCollection.isSelected,
+      ui.Tristate.isTrue,
     );
     expect(
       tester
@@ -322,8 +325,9 @@ void main() {
               matching: find.bySemanticsLabel('Unread'),
             ),
           )
-          .hasFlag(SemanticsFlag.isSelected),
-      isTrue,
+          .flagsCollection
+          .isSelected,
+      ui.Tristate.isTrue,
     );
     expect(tester.takeException(), isNull);
     semantics.dispose();
@@ -849,6 +853,10 @@ ProviderContainer _container({
       (final Ref ref, final ResourceScope scope) =>
           const _FakeNotificationActions(),
     ),
+    notificationsVisibleInboxSyncProvider.overrideWith(
+      (final Ref ref, final NotificationsInboxVisibleSyncKey key) =>
+          _disabledVisibleSync(),
+    ),
     notificationSavedFiltersProvider.overrideWithValue(
       const AsyncData<List<NotificationSavedFilter>>(<NotificationSavedFilter>[
         (
@@ -897,6 +905,10 @@ Future<_ScreenHarness> _pumpProductionScreen(
       notificationsInboxActionsProvider.overrideWith(
         (final Ref ref, final ResourceScope scope) =>
             const _FakeNotificationActions(),
+      ),
+      notificationsVisibleInboxSyncProvider.overrideWith(
+        (final Ref ref, final NotificationsInboxVisibleSyncKey key) =>
+            _disabledVisibleSync(),
       ),
       notificationSavedFiltersProvider.overrideWithValue(
         const AsyncData<List<NotificationSavedFilter>>(
@@ -1025,6 +1037,12 @@ final class _FakeNotificationActions
   ) async =>
       NotificationsBulkActionResult(succeeded: threads.length, failed: 0);
 }
+
+NotificationsVisibleInboxSyncCoordinator _disabledVisibleSync() =>
+    NotificationsVisibleInboxSyncCoordinator(
+      synchronize: () async {},
+      nextInterval: () => const Duration(days: 1),
+    );
 
 final class _WidgetNotificationBackend {
   _WidgetNotificationBackend({

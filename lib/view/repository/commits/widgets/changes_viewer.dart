@@ -24,17 +24,29 @@ class ChangesViewer extends ConsumerStatefulWidget {
 class _ChangesViewerState extends ConsumerState<ChangesViewer> {
   /// Null = use settings; non-null = user override for this screen.
   bool? wrapOverride;
+  late ParsedDiff _parsedDiff;
+
+  @override
+  void initState() {
+    super.initState();
+    _parsedDiff = parseUnifiedDiffCached(widget.patch);
+  }
+
+  @override
+  void didUpdateWidget(covariant final ChangesViewer oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.patch != widget.patch) {
+      _parsedDiff = parseUnifiedDiffCached(widget.patch);
+    }
+  }
 
   @override
   Widget build(final BuildContext context) {
     final DiffSettings diffSettings = ref.watch(diffSettingsProvider);
     final bool effectiveWrap = wrapOverride ?? diffSettings.wrapLines;
-    final DiffViewConfig config =
-        DiffViewConfig.fromSettings(diffSettings).copyWith(
-      wrap: effectiveWrap,
-    );
-    final ParsedDiff parsedDiff = parseUnifiedDiff(widget.patch);
-
+    final DiffViewConfig config = DiffViewConfig.fromSettings(
+      diffSettings,
+    ).copyWith(wrap: effectiveWrap);
     return Scaffold(
       appBar: AppBar(
         actions: <Widget>[
@@ -62,7 +74,7 @@ class _ChangesViewerState extends ConsumerState<ChangesViewer> {
         child: Padding(
           padding: context.spacing.pagePadding,
           child: DiffFileView(
-            parsedDiff: parsedDiff,
+            parsedDiff: _parsedDiff,
             config: config,
             fileType: widget.fileType,
             mode: diffSettings.defaultDiffDisplayMode,

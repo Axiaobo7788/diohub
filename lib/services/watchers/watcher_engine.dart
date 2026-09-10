@@ -27,8 +27,8 @@ import 'package:diohub/utils/fire_and_forget.dart';
 import 'package:diohub/services/watchers/watcher_types.dart';
 
 /// Creates a [WatcherContext] for a watcher. When null, engine uses [AppMetaWatcherContext].
-typedef WatcherContextFactory = WatcherContext Function(
-    WatcherDefinition watcher);
+typedef WatcherContextFactory =
+    WatcherContext Function(WatcherDefinition watcher);
 
 /// Callback invoked by the engine when a watcher fires.
 ///
@@ -37,11 +37,12 @@ typedef WatcherContextFactory = WatcherContext Function(
 typedef AlertDispatcher = Future<void> Function(List<AlertPayload> alerts);
 
 /// Callback invoked when a watcher check encounters an error.
-typedef WatcherErrorHandler = void Function(
-  WatcherDefinition watcher,
-  Object error,
-  StackTrace? stackTrace,
-);
+typedef WatcherErrorHandler =
+    void Function(
+      WatcherDefinition watcher,
+      Object error,
+      StackTrace? stackTrace,
+    );
 
 /// Engine state change events for UI and persistence.
 enum WatcherEvent {
@@ -70,14 +71,14 @@ class WatcherEngine {
     AppMetaDao? appMetaDao,
     WatcherApiClient? apiClient,
     Set<String> Function()? grantedScopesFn,
-  })  : _dispatcher = dispatcher,
-        _onError = onError,
-        _contextFactory = contextFactory,
-        _watcherDao = watcherDao,
-        _accountKey = accountKey,
-        _appMetaDao = appMetaDao,
-        _apiClient = apiClient,
-        _grantedScopesFn = grantedScopesFn;
+  }) : _dispatcher = dispatcher,
+       _onError = onError,
+       _contextFactory = contextFactory,
+       _watcherDao = watcherDao,
+       _accountKey = accountKey,
+       _appMetaDao = appMetaDao,
+       _apiClient = apiClient,
+       _grantedScopesFn = grantedScopesFn;
 
   final AlertDispatcher _dispatcher;
   final WatcherErrorHandler? _onError;
@@ -93,6 +94,7 @@ class WatcherEngine {
   final Map<String, WatcherDefinition> _watchers = {};
   final Map<String, Timer> _timers = {};
   final Map<String, WatcherContext> _contexts = {};
+  final Set<String> _schedulingSuppressions = <String>{};
 
   /// Per-watcher metadata for management UI.
   final Map<String, DateTime> _lastCheckTimes = {};
@@ -110,6 +112,7 @@ class WatcherEngine {
   static const Duration _deduplicationCooldown = Duration(minutes: 5);
 
   bool _running = false;
+  bool _disposed = false;
 
   /// Whether the engine is actively scheduling checks.
   bool get isRunning => _running;
@@ -134,7 +137,9 @@ class WatcherEngine {
   void register(WatcherDefinition watcher) {
     _watchers[watcher.watcherId] = watcher;
     _eventController.add(WatcherEvent.registered);
-    if (_running && watcher.enabled) {
+    if (_running &&
+        watcher.enabled &&
+        !_schedulingSuppressions.contains(watcher.watcherId)) {
       _startTimer(watcher);
     }
     fireAndForget(() => _persistWatcherList(), label: 'Watcher persist');
@@ -164,7 +169,9 @@ class WatcherEngine {
   void update(WatcherDefinition watcher) {
     _cancelTimer(watcher.watcherId);
     _watchers[watcher.watcherId] = watcher;
-    if (_running && watcher.enabled) {
+    if (_running &&
+        watcher.enabled &&
+        !_schedulingSuppressions.contains(watcher.watcherId)) {
       _startTimer(watcher);
     }
     fireAndForget(() => _persistWatcherList(), label: 'Watcher persist');
@@ -189,9 +196,36 @@ class WatcherEngine {
     }
   }
 
+  /// Temporarily stops timer-driven checks without changing registration or
+  /// persisted watcher settings.
+  ///
+  /// This is used when a foreground screen owns a more appropriate polling
+  /// loop for the same remote resource. It does not cancel a check that has
+  /// already reached the network boundary.
+  void suppressScheduling(String watcherId) {
+    if (_schedulingSuppressions.add(watcherId)) {
+      _cancelTimer(watcherId);
+    }
+  }
+
+  /// Returns timer ownership to a previously suppressed watcher.
+  void resumeScheduling(String watcherId) {
+    if (!_schedulingSuppressions.remove(watcherId) || !_running) {
+      return;
+    }
+    final WatcherDefinition? watcher = _watchers[watcherId];
+    if (watcher != null && watcher.enabled) {
+      // The foreground owner has just completed or abandoned a fetch for the
+      // same resource. Resume at the normal interval rather than issuing an
+      // immediate duplicate request during route teardown.
+      _startTimer(watcher, runImmediately: false);
+    }
+  }
+
   /// Manually trigger a check for a specific watcher (ignoring the timer).
   /// Useful for "check now" buttons in UI.
   Future<void> checkNow(String watcherId) async {
+    if (_disposed) return;
     final watcher = _watchers[watcherId];
     if (watcher == null) return;
     await _runCheck(watcher);
@@ -199,9 +233,12 @@ class WatcherEngine {
 
   /// Dispose the engine entirely.  Call on logout / app teardown.
   Future<void> dispose() async {
+    if (_disposed) return;
+    _disposed = true;
     stop();
     _watchers.clear();
     _contexts.clear();
+    _schedulingSuppressions.clear();
     _lastCheckTimes.clear();
     _lastResults.clear();
     _recentAlertIds.clear();
@@ -210,11 +247,15 @@ class WatcherEngine {
 
   // ── Internal ──────────────────────────────────────────────────────────────
 
-  void _startTimer(WatcherDefinition watcher) {
+  void _startTimer(WatcherDefinition watcher, {bool runImmediately = true}) {
     _cancelTimer(watcher.watcherId);
+    if (_schedulingSuppressions.contains(watcher.watcherId)) {
+      return;
+    }
 
-    // Run once immediately, then periodically.
-    fireAndForget(() => _runCheck(watcher), label: 'Watcher check');
+    if (runImmediately) {
+      fireAndForget(() => _runCheck(watcher), label: 'Watcher check');
+    }
 
     _timers[watcher.watcherId] = Timer.periodic(
       watcher.interval,
@@ -232,16 +273,13 @@ class WatcherEngine {
       watcher.watcherId,
       () => factory != null
           ? factory(watcher)
-          : AppMetaWatcherContext(
-              watcher.watcherId,
-              _appMetaDao!,
-              _apiClient!,
-            ),
+          : AppMetaWatcherContext(watcher.watcherId, _appMetaDao!, _apiClient!),
     );
   }
 
   Future<void> _runCheck(WatcherDefinition watcher) async {
     final watcherId = watcher.watcherId;
+    if (_disposed) return;
     
     // Scope gate: skip if required scopes aren't granted
     if (watcher.requiredScopes.isNotEmpty && _grantedScopesFn != null) {
@@ -255,10 +293,13 @@ class WatcherEngine {
     
     try {
       final result = await watcher.check(_contextFor(watcher));
+      if (_disposed || !identical(_watchers[watcherId], watcher)) {
+        return;
+      }
 
       _lastCheckTimes[watcherId] = DateTime.now();
       _lastResults[watcherId] = result;
-      _eventController.add(WatcherEvent.checkCompleted);
+      _emit(WatcherEvent.checkCompleted);
 
       switch (result) {
         case CheckIdle():
@@ -267,14 +308,14 @@ class WatcherEngine {
         case CheckFired(:final alerts):
           final deduplicated = _deduplicate(alerts);
           if (deduplicated.isNotEmpty) {
-            _eventController.add(WatcherEvent.alertFired);
+            _emit(WatcherEvent.alertFired);
             await _dispatcher(deduplicated);
           }
 
         case CheckDone(:final finalAlerts):
           final deduplicated = _deduplicate(finalAlerts);
           if (deduplicated.isNotEmpty) {
-            _eventController.add(WatcherEvent.alertFired);
+            _emit(WatcherEvent.alertFired);
             await _dispatcher(deduplicated);
           }
           // Auto-unregister — watcher's purpose is fulfilled.
@@ -285,16 +326,24 @@ class WatcherEngine {
           unawaited(_persistWatcherList());
 
         case CheckError(:final error, :final stackTrace):
-          _eventController.add(WatcherEvent.error);
+          _emit(WatcherEvent.error);
           _onError?.call(watcher, error, stackTrace);
       }
     } catch (e, s) {
+      if (_disposed || !identical(_watchers[watcherId], watcher)) {
+        return;
+      }
       _lastCheckTimes[watcherId] = DateTime.now();
       _lastResults[watcherId] = CheckError(e, s);
-      _eventController.add(WatcherEvent.error);
+      _emit(WatcherEvent.error);
       // Watcher violated the "don't throw" contract — handle gracefully.
       _onError?.call(watcher, e, s);
     }
+  }
+
+  void _emit(final WatcherEvent event) {
+    if (_disposed || _eventController.isClosed) return;
+    _eventController.add(event);
   }
 
   List<AlertPayload> _deduplicate(List<AlertPayload> alerts) {
@@ -321,11 +370,9 @@ class WatcherEngine {
     if (dao == null || accountKey == null || accountKey.isEmpty) return;
     final entries = _watchers.values
         .whereType<SerializableWatcher>()
-        .map((w) => (
-              nodeId: w.watcherId,
-              watcherType: w.key,
-              config: w.toJson(),
-            ))
+        .map(
+          (w) => (nodeId: w.watcherId, watcherType: w.key, config: w.toJson()),
+        )
         .toList();
     await dao.writeSerialised(entries);
     await _appMetaDao?.setActiveAccountKey(accountKey);

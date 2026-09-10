@@ -7,8 +7,9 @@ import 'package:diohub_graphql/fragments/fragment_typedefs.dart';
 import 'package:diohub_graphql/queries/users/user_typedefs.dart'
     show UserWatchingEdge, UserWatchingNode;
 import 'package:diohub_models/models/entity_ref.dart';
-import 'package:diohub/providers/repository/repository_providers.dart';
 import 'package:diohub/providers/users/user_providers.dart';
+import 'package:diohub/providers/repository/repository_providers.dart';
+import 'package:diohub_models/models/repositories/star_mutation_result.dart';
 import 'package:flutter/foundation.dart' show ValueNotifier;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -25,15 +26,31 @@ TabBody createWatchingBody(
     getCursor: (item) => item?.cursor,
     queryNotifier: queryNotifier,
     strategy: ref.watch(matchStrategyProvider),
-    fields: [
-      (item) => (item?.node as RepoCardData?)?.nameWithOwner,
-      (item) => (item?.node as RepoCardData?)?.name,
-    ],
+    fields: [(item) => item?.node?.nameWithOwner, (item) => item?.node?.name],
     fetcher:
         ({String? after, int first = _pageSize, bool refresh = false}) async {
           final list = await ref
               .read(userInfoServiceProvider)
               .getUserWatching(userRef.login, refresh: refresh, after: after);
+          if (refresh) {
+            for (final UserWatchingEdge? edge in list) {
+              final UserWatchingNode? node = edge?.node;
+              if (node == null) continue;
+              final RepoCardData repository = node;
+              final RepoRef repositoryRef = RepoRef.fromRepoCardFields(
+                repository,
+              );
+              if (!ref.exists(repositoryStarProvider(repositoryRef))) continue;
+              ref
+                  .read(repositoryStarProvider(repositoryRef).notifier)
+                  .acceptAuthoritativeSeed(
+                    StarMutationResult(
+                      viewerHasStarred: repository.viewerHasStarred,
+                      stargazerCount: repository.stargazerCount,
+                    ),
+                  );
+            }
+          }
           final last = list.isNotEmpty ? list.last : null;
           return PaginatedResult(
             items: list,
@@ -44,19 +61,18 @@ TabBody createWatchingBody(
     itemBuilder: (BuildContext context, UserWatchingEdge? item) {
       final UserWatchingNode? node = item?.node;
       if (node == null) return const SizedBox.shrink();
-      final RepoCardData repoFields = node as RepoCardData;
+      final RepoCardData repoFields = node;
       final RepoRef repoRef = RepoRef.fromRepoCardFields(repoFields);
       return Consumer(
         builder: (BuildContext ctx, WidgetRef r, _) => BorderedContainer(
           ref: repoRef,
           child: RepositoryCard(
             repoFields,
-            starChip: RepoStarChip(
-              repo: repoRef,
+            starChip: RepoStarChipFromData(
+              repoRef: repoRef,
+              repoNodeId: repoFields.id,
               initialStarCount: repoFields.stargazerCount,
               initialIsStarred: repoFields.viewerHasStarred,
-              onTap: () =>
-                  r.read(repositoryProvider(repoRef).notifier).toggleStar(),
             ),
           ),
         ),

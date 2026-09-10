@@ -9,7 +9,14 @@ import 'package:diohub_models/models/authentication/account_model.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-enum GlobalNavigationDestination { home, issues, pullRequests, repositories }
+enum GlobalNavigationDestination {
+  home,
+  issues,
+  pullRequests,
+  repositories,
+  projects,
+  discussions,
+}
 
 /// GitHub-style global navigation shared by Home and Repository pages.
 class GlobalNavigationDrawer extends StatelessWidget {
@@ -118,9 +125,29 @@ class GlobalNavigationDrawer extends StatelessWidget {
               () => onDestination(GlobalNavigationDestination.repositories),
             ),
           ),
+          _DrawerNavigationTile(
+            key: const ValueKey<String>('global-nav-projects'),
+            icon: Icons.grid_view_outlined,
+            label: context.l10n.navProjects,
+            selected:
+                selectedDestination == GlobalNavigationDestination.projects,
+            onTap: () => _closeThen(
+              context,
+              () => onDestination(GlobalNavigationDestination.projects),
+            ),
+          ),
+          _DrawerNavigationTile(
+            key: const ValueKey<String>('global-nav-discussions'),
+            icon: Icons.forum_outlined,
+            label: context.l10n.navDiscussions,
+            selected:
+                selectedDestination == GlobalNavigationDestination.discussions,
+            onTap: () => _closeThen(
+              context,
+              () => onDestination(GlobalNavigationDestination.discussions),
+            ),
+          ),
           for (final (IconData, String) destination in <(IconData, String)>[
-            (Icons.grid_view_outlined, context.l10n.navProjects),
-            (Icons.forum_outlined, context.l10n.navDiscussions),
             (Icons.computer_outlined, context.l10n.navCodespaces),
             (Icons.smart_toy_outlined, context.l10n.navCopilot),
           ])

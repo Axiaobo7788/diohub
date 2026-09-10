@@ -133,6 +133,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get notificationsRefresh => 'Refresh notifications';
 
   @override
+  String get notificationsSyncing => 'Checking for notification updates';
+
+  @override
   String get notificationsMarkAllRead => 'Mark all as read';
 
   @override
@@ -247,6 +250,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get notificationsLoadError => 'Notifications could not be loaded.';
 
   @override
+  String get notificationsRefreshError =>
+      'New notification state could not be checked. Existing notifications are unchanged.';
+
+  @override
   String get notificationsUpdateError =>
       'The notification could not be updated.';
 
@@ -289,6 +296,14 @@ class AppLocalizationsEn extends AppLocalizations {
   String notificationsSectionUnavailable(String section) {
     return '$section cannot be listed through the current GitHub API.';
   }
+
+  @override
+  String get notificationsSavedHistoryUnavailable =>
+      'The public GitHub API cannot list or change saved notifications.';
+
+  @override
+  String get notificationsDoneHistoryUnavailable =>
+      'Marking a notification as done syncs with GitHub, but the public API cannot list completed history.';
 
   @override
   String get homeCouldNotOpenLink => 'Could not open the link.';
@@ -417,7 +432,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get globalListsSignInDescription =>
-      'Issues, pull requests, and repositories associated with your account are available after sign-in.';
+      'Issues, pull requests, repositories, projects, and discussions associated with your account are available after sign-in.';
 
   @override
   String get globalListsSignInAction => 'Sign in';
@@ -433,6 +448,12 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get globalListsSearchRepositories => 'Find a repository';
+
+  @override
+  String get globalListsSearchProjects => 'Find a project';
+
+  @override
+  String get globalListsSearchDiscussions => 'Search discussions involving you';
 
   @override
   String globalListsResultsCount(int count) {
@@ -521,6 +542,67 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get globalListsNewPullRequest => 'New pull request';
+
+  @override
+  String globalProjectsOwnedBy(String login) {
+    return 'Projects owned by @$login';
+  }
+
+  @override
+  String get globalProjectsNew => 'New project';
+
+  @override
+  String get globalProjectsOpenError => 'Could not open this project.';
+
+  @override
+  String get globalProjectsEmpty => 'No projects match this search';
+
+  @override
+  String get globalProjectsOpen => 'Open';
+
+  @override
+  String get globalProjectsClosed => 'Closed';
+
+  @override
+  String globalProjectsMetadata(int number, String state, String updated) {
+    return '#$number · $state · $updated';
+  }
+
+  @override
+  String get globalProjectsPermissionTitle => 'Project access required';
+
+  @override
+  String get globalProjectsPermissionDescription =>
+      'This account token does not include the project permission required to read your GitHub Projects.';
+
+  @override
+  String get globalProjectsReauthorize => 'Re-authorize account';
+
+  @override
+  String globalDiscussionsInvolving(String login) {
+    return 'Discussions authored, mentioned, or commented on by @$login';
+  }
+
+  @override
+  String get globalDiscussionsAnswered => 'Answered';
+
+  @override
+  String get globalDiscussionsUnanswered => 'Unanswered';
+
+  @override
+  String get globalDiscussionsEmpty => 'No discussions match this search';
+
+  @override
+  String get globalDiscussionsOpenError => 'Could not open this discussion.';
+
+  @override
+  String globalDiscussionsMetadata(
+    String repository,
+    String author,
+    String time,
+  ) {
+    return '$repository · $author · Updated $time';
+  }
 
   @override
   String get globalListsSelectRepository => 'Select a repository';
@@ -944,6 +1026,15 @@ class AppLocalizationsEn extends AppLocalizations {
   String repoStarCount(String count) {
     return 'Star $count';
   }
+
+  @override
+  String get repoStarredFeedback => 'Repository starred';
+
+  @override
+  String get repoUnstarredFeedback => 'Repository unstarred';
+
+  @override
+  String get repoStarUpdateError => 'Could not update the repository star.';
 
   @override
   String get repoAllActivity => 'All activity';
@@ -1546,6 +1637,9 @@ class AppLocalizationsEn extends AppLocalizations {
     );
     return '$_temp0';
   }
+
+  @override
+  String get repoSecurityAlertsNotLoaded => 'Open to load alerts';
 
   @override
   String get repoUnknownLocation => 'Unknown location';

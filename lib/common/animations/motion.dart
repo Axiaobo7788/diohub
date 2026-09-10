@@ -12,6 +12,8 @@ const Duration kPageTransitionReverseDuration = Duration(milliseconds: 220);
 const Curve kPageTransitionCurve = Curves.easeOutCubic;
 const Curve kPageTransitionReverseCurve = Curves.easeInCubic;
 const double kPageTransitionOffset = 16;
+const double kPageTransitionExitOffset = 4;
+const double kPageTransitionExitOpacity = 0.98;
 
 // Migrated MD3 content transitions: async states and retained tab content.
 const Duration kContentTransitionDuration = Duration(milliseconds: 180);

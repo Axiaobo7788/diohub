@@ -69,6 +69,7 @@
   "notificationsDate": "Date",
   "notificationsDateUnknown": "Unknown date",
   "notificationsRefresh": "Refresh notifications",
+  "notificationsSyncing": "Checking for notification updates",
   "notificationsMarkAllRead": "Mark all as read",
   "notificationsMarkRead": "Mark as read",
   "notificationsMarkDone": "Mark as done",
@@ -126,6 +127,7 @@
   "notificationsNoUnread": "You have no unread notifications.",
   "notificationsNoResults": "No notifications match the selected filters.",
   "notificationsLoadError": "Notifications could not be loaded.",
+  "notificationsRefreshError": "New notification state could not be checked. Existing notifications are unchanged.",
   "notificationsUpdateError": "The notification could not be updated.",
   "notificationsSignInTitle": "Sign in to view notifications",
   "notificationsSignInBody": "GitHub notifications are private to your account.",
@@ -146,6 +148,8 @@
       }
     }
   },
+  "notificationsSavedHistoryUnavailable": "The public GitHub API cannot list or change saved notifications.",
+  "notificationsDoneHistoryUnavailable": "Marking a notification as done syncs with GitHub, but the public API cannot list completed history.",
   "homeCouldNotOpenLink": "Could not open the link.",
   "homeFeatureNotAvailable": "{feature} is not connected in this phase yet.",
   "@homeFeatureNotAvailable": {
@@ -193,12 +197,14 @@
   "navAllPullRequests": "All pull requests",
   "navAllRepositories": "All repositories",
   "globalListsSignInTitle": "Sign in to view your work",
-  "globalListsSignInDescription": "Issues, pull requests, and repositories associated with your account are available after sign-in.",
+  "globalListsSignInDescription": "Issues, pull requests, repositories, projects, and discussions associated with your account are available after sign-in.",
   "globalListsSignInAction": "Sign in",
   "globalListsAll": "All",
   "globalListsSearchIssues": "Search your issues",
   "globalListsSearchPullRequests": "Search your pull requests",
   "globalListsSearchRepositories": "Find a repository",
+  "globalListsSearchProjects": "Find a project",
+  "globalListsSearchDiscussions": "Search discussions involving you",
   "globalListsResultsCount": "{count} results",
   "@globalListsResultsCount": {
     "placeholders": {
@@ -247,6 +253,42 @@
   "globalListsLoadError": "Could not load results.",
   "globalListsNewIssue": "New issue",
   "globalListsNewPullRequest": "New pull request",
+  "globalProjectsOwnedBy": "Projects owned by @{login}",
+  "@globalProjectsOwnedBy": {
+    "placeholders": {"login": {"type": "String"}}
+  },
+  "globalProjectsNew": "New project",
+  "globalProjectsOpenError": "Could not open this project.",
+  "globalProjectsEmpty": "No projects match this search",
+  "globalProjectsOpen": "Open",
+  "globalProjectsClosed": "Closed",
+  "globalProjectsMetadata": "#{number} · {state} · {updated}",
+  "@globalProjectsMetadata": {
+    "placeholders": {
+      "number": {"type": "int"},
+      "state": {"type": "String"},
+      "updated": {"type": "String"}
+    }
+  },
+  "globalProjectsPermissionTitle": "Project access required",
+  "globalProjectsPermissionDescription": "This account token does not include the project permission required to read your GitHub Projects.",
+  "globalProjectsReauthorize": "Re-authorize account",
+  "globalDiscussionsInvolving": "Discussions authored, mentioned, or commented on by @{login}",
+  "@globalDiscussionsInvolving": {
+    "placeholders": {"login": {"type": "String"}}
+  },
+  "globalDiscussionsAnswered": "Answered",
+  "globalDiscussionsUnanswered": "Unanswered",
+  "globalDiscussionsEmpty": "No discussions match this search",
+  "globalDiscussionsOpenError": "Could not open this discussion.",
+  "globalDiscussionsMetadata": "{repository} · {author} · Updated {time}",
+  "@globalDiscussionsMetadata": {
+    "placeholders": {
+      "repository": {"type": "String"},
+      "author": {"type": "String"},
+      "time": {"type": "String"}
+    }
+  },
   "globalListsSelectRepository": "Select a repository",
   "globalListsChooseIssueTemplate": "Choose an issue template",
   "globalListsBlankIssue": "Blank issue",
@@ -506,6 +548,9 @@
       }
     }
   },
+  "repoStarredFeedback": "Repository starred",
+  "repoUnstarredFeedback": "Repository unstarred",
+  "repoStarUpdateError": "Could not update the repository star.",
   "repoAllActivity": "All activity",
   "repoNotWatching": "Not watching",
   "repoIgnore": "Ignore",
@@ -736,6 +781,7 @@
   "@repoSecurityPermissionBody": {"placeholders": {"error": {"type": "String"}}},
   "repoSecurityAlertsLoaded": "{count, plural, =1{1 visible alert} other{{count} visible alerts}}",
   "@repoSecurityAlertsLoaded": {"placeholders": {"count": {"type": "int"}}},
+  "repoSecurityAlertsNotLoaded": "Open to load alerts",
   "repoUnknownLocation": "Unknown location",
   "repoSecret": "Secret",
   "repoPulse": "Pulse",

@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:auto_route/auto_route.dart';
 import 'package:diohub/app/settings/notifications.dart';
 import 'package:diohub/common/animations/motion.dart';
+import 'package:diohub/common/animations/single_tree_content_transition.dart';
 import 'package:diohub/common/misc/shimmer_bone.dart';
 import 'package:diohub/common/misc/shimmer_scope.dart';
 import 'package:diohub/common/pagination/paginated_sliver_list.dart';
@@ -34,73 +35,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sliver_tools/sliver_tools.dart';
 
-part 'widgets/notifications_inbox_rows.dart';
-part 'widgets/notifications_inbox_toolbar.dart';
 part 'widgets/notifications_account_states.dart';
-
-typedef NotificationSelectionChanged =
-    void Function(Thread thread, {required bool selected});
-
-@RoutePage()
-class NotificationsScreen extends ConsumerWidget {
-  const NotificationsScreen({super.key});
-
-  @override
-  Widget build(final BuildContext context, final WidgetRef ref) {
-    final AsyncValue<AccountSession?> accountState = ref.watch(accountProvider);
-    final bool accountResolved = accountState.hasValue;
-    final AccountModel? account = accountResolved
-        ? accountState.value?.activeAccountModel
-        : null;
-    final ViewerInfo? viewerCandidate = account == null
-        ? null
-        : ref.watch(currentUserProvider).value;
-    final ViewerInfo? viewer = viewerCandidate?.id == account?.nodeId
-        ? viewerCandidate
-        : null;
-    final AsyncValue<List<HomeRepositoryItem>> topRepositories = account == null
-        ? const AsyncData<List<HomeRepositoryItem>>(<HomeRepositoryItem>[])
-        : ref.watch(
-            homeTopRepositoriesProvider((
-              accountKey: account.accountKey,
-              login: account.username,
-            )),
-          );
-
-    final Widget body;
-    if (!accountResolved && accountState.hasError) {
-      body = _NotificationsAccountErrorState(
-        onRetry: () => ref.invalidate(accountProvider),
-      );
-    } else if (!accountResolved) {
-      body = const _NotificationsAccountLoadingState();
-    } else if (account == null) {
-      body = const _NotificationsSignInState();
-    } else {
-      body = NotificationsMd3Page(scope: resourceScopeForAccount(account));
-    }
-
-    return AppChrome(
-      title: GlobalHeaderTitle(title: context.l10n.homeNotifications),
-      account: account,
-      accountLoading: !accountResolved,
-      topRepositories: topRepositories,
-      statusEmoji: viewer?.status?.emoji,
-      statusMessage: viewer?.status?.message,
-      body: body,
-    );
-  }
-}
-
-class NotificationsMd3Page extends ConsumerStatefulWidget {
-  const NotificationsMd3Page({required this.scope, super.key});
-
-  final ResourceScope scope;
-
-  @override
-  ConsumerState<NotificationsMd3Page> createState() =>
-      _NotificationsMd3PageState();
-}
+part 'widgets/notifications_inbox_controls.dart';
+part 'widgets/notifications_inbox_rows.dart';
+part 'widgets/notifications_inbox_scroll_view.dart';
+part 'widgets/notifications_inbox_sidebar.dart';
+part 'widgets/notifications_inbox_states.dart';
+part 'widgets/notifications_inbox_toolbar.dart';
+part 'widgets/notifications_screen_shell.dart';
 
 class _NotificationsMd3PageState extends ConsumerState<NotificationsMd3Page> {
   final Map<String, Thread> _selected = <String, Thread>{};
@@ -184,12 +126,10 @@ class _NotificationsMd3PageState extends ConsumerState<NotificationsMd3Page> {
     _dismissCleanupPrompt();
   }
 
-  void _showUnavailableSection(final String section) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(context.l10n.notificationsSectionUnavailable(section)),
-      ),
-    );
+  void _showUnavailableSection(final String message) {
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(message)));
   }
 
   Future<void> _showAddFilterDialog() async {
@@ -532,6 +472,14 @@ class _NotificationsMd3PageState extends ConsumerState<NotificationsMd3Page> {
             settings.cleanupPromptDismissed,
       ),
     );
+    if (TickerMode.valuesOf(context).enabled) {
+      ref.watch(
+        notificationsVisibleInboxSyncProvider((
+          scope: widget.scope,
+          showAll: filters.showAll,
+        )),
+      );
+    }
 
     return LayoutBuilder(
       builder: (final BuildContext context, final BoxConstraints constraints) {
@@ -552,7 +500,7 @@ class _NotificationsMd3PageState extends ConsumerState<NotificationsMd3Page> {
                     state.items.every(
                       (final Thread item) => _selected.containsKey(item.id),
                     );
-                final Widget inbox = _NotificationsInboxScrollView(
+                final Widget inboxContent = _NotificationsInboxScrollView(
                   controller: controller,
                   state: state,
                   filters: filters,
@@ -589,6 +537,12 @@ class _NotificationsMd3PageState extends ConsumerState<NotificationsMd3Page> {
                       _markRead(actions, thread),
                   onMarkDone: (final Thread thread) =>
                       _markDone(actions, thread),
+                );
+                final Widget inbox = SingleTreeContentTransition(
+                  transitionKey:
+                      'notifications-query-${filters.showAll ? 'all' : 'unread'}',
+                  horizontalDirection: filters.showAll ? -1 : 1,
+                  child: inboxContent,
                 );
                 if (!showSidebar) {
                   return inbox;
@@ -631,210 +585,6 @@ class _NotificationsMd3PageState extends ConsumerState<NotificationsMd3Page> {
               },
         );
       },
-    );
-  }
-}
-
-class _NotificationsInboxScrollView extends StatelessWidget {
-  const _NotificationsInboxScrollView({
-    required this.controller,
-    required this.state,
-    required this.filters,
-    required this.projection,
-    required this.selected,
-    required this.pending,
-    required this.allSelected,
-    required this.groupByRepository,
-    required this.autoMarkRead,
-    required this.showCleanupPrompt,
-    required this.bulkBusy,
-    required this.windowClass,
-    required this.onSetUnread,
-    required this.onSetQuery,
-    required this.onSetSortOrder,
-    required this.onSetGroupByRepository,
-    required this.onOpenFilters,
-    required this.onRefresh,
-    required this.onMarkAllRead,
-    required this.onDismissCleanupPrompt,
-    required this.onStartCleanup,
-    required this.onMarkSelectedDone,
-    required this.onClearSelection,
-    required this.onToggleAll,
-    required this.onToggleSelected,
-    required this.onOpen,
-    required this.onMarkRead,
-    required this.onMarkDone,
-  });
-
-  final PaginationController<Thread, Thread> controller;
-  final PaginationState<Thread> state;
-  final NotificationsFiltersState filters;
-  final NotificationsProjectionState projection;
-  final Map<String, Thread> selected;
-  final Set<String> pending;
-  final bool allSelected;
-  final bool groupByRepository;
-  final bool autoMarkRead;
-  final bool showCleanupPrompt;
-  final bool bulkBusy;
-  final NotificationsWindowClass windowClass;
-  final ValueChanged<bool> onSetUnread;
-  final ValueChanged<String> onSetQuery;
-  final ValueChanged<NotificationSortOrder> onSetSortOrder;
-  final ValueChanged<bool> onSetGroupByRepository;
-  final VoidCallback onOpenFilters;
-  final Future<void> Function() onRefresh;
-  final VoidCallback onMarkAllRead;
-  final VoidCallback onDismissCleanupPrompt;
-  final VoidCallback onStartCleanup;
-  final VoidCallback onMarkSelectedDone;
-  final VoidCallback onClearSelection;
-  final ValueChanged<bool> onToggleAll;
-  final NotificationSelectionChanged onToggleSelected;
-  final ValueChanged<Thread> onOpen;
-  final ValueChanged<Thread> onMarkRead;
-  final ValueChanged<Thread> onMarkDone;
-
-  @override
-  Widget build(final BuildContext context) {
-    final bool compact = windowClass == NotificationsWindowClass.compact;
-    final EdgeInsets pagePadding = NotificationsMd3Layout.pagePaddingFor(
-      windowClass,
-    );
-    return RefreshIndicator(
-      onRefresh: onRefresh,
-      child: CustomScrollView(
-        key: ValueKey<String>(
-          filters.showAll
-              ? 'notifications-scroll-all'
-              : 'notifications-scroll-unread',
-        ),
-        physics: const AlwaysScrollableScrollPhysics(),
-        slivers: <Widget>[
-          SliverPadding(
-            padding: pagePadding.copyWith(bottom: 12),
-            sliver: SliverToBoxAdapter(
-              child: _NotificationsToolbar(
-                filters: filters,
-                projection: projection,
-                groupByRepository: groupByRepository,
-                selectedCount: selected.length,
-                allSelected: allSelected,
-                bulkBusy: bulkBusy,
-                compact: compact,
-                showFilterAction:
-                    windowClass != NotificationsWindowClass.expanded,
-                refreshing: state.phase is Refreshing,
-                onSetUnread: onSetUnread,
-                onSetQuery: onSetQuery,
-                onSetSortOrder: onSetSortOrder,
-                onSetGroupByRepository: onSetGroupByRepository,
-                onOpenFilters: onOpenFilters,
-                onRefresh: onRefresh,
-                onMarkAllRead: onMarkAllRead,
-                onMarkSelectedDone: onMarkSelectedDone,
-                onClearSelection: onClearSelection,
-                onToggleAll: onToggleAll,
-              ),
-            ),
-          ),
-          if (showCleanupPrompt)
-            SliverPadding(
-              padding: pagePadding.copyWith(top: 0, bottom: 16),
-              sliver: SliverToBoxAdapter(
-                child: _NotificationsCleanupPrompt(
-                  onDismiss: onDismissCleanupPrompt,
-                  onGetStarted: onStartCleanup,
-                ),
-              ),
-            ),
-          SliverPadding(
-            padding: pagePadding.copyWith(top: 0),
-            sliver: MultiSliver(
-              key: const ValueKey<String>('notifications-inbox-list'),
-              children: <Widget>[
-                SliverToBoxAdapter(
-                  child: _NotificationsListHeader(
-                    hasItems: state.items.isNotEmpty,
-                    selectedCount: selected.length,
-                    allSelected: allSelected,
-                    onToggleAll: onToggleAll,
-                  ),
-                ),
-                PaginatedSliverList<Thread>(
-                  controller: controller,
-                  loadingBuilder: (final BuildContext context) =>
-                      const _NotificationsLoading(),
-                  errorBuilder:
-                      (
-                        final BuildContext context,
-                        final Object error,
-                        final VoidCallback retry,
-                      ) => _NotificationsError(onRetry: retry),
-                  emptyBuilder: (final BuildContext context) =>
-                      _NotificationsEmpty(filters: filters),
-                  itemBuilder:
-                      (
-                        final BuildContext context,
-                        final Thread thread,
-                        final int index,
-                      ) {
-                        final String groupKey = groupByRepository
-                            ? thread.repository.fullName
-                            : _notificationDateGroupKey(thread.updatedAt);
-                        final String? previousGroupKey = index == 0
-                            ? null
-                            : groupByRepository
-                            ? state.items[index - 1].repository.fullName
-                            : _notificationDateGroupKey(
-                                state.items[index - 1].updatedAt,
-                              );
-                        final bool showGroup = groupKey != previousGroupKey;
-                        final Widget row = _NotificationInboxRow(
-                          thread: thread,
-                          selected: selected.containsKey(thread.id),
-                          pending: pending.contains(thread.id),
-                          compact: compact,
-                          showRepository: !groupByRepository,
-                          onSelected: (final bool value) =>
-                              onToggleSelected(thread, selected: value),
-                          onOpen: () => onOpen(thread),
-                          onMarkRead: thread.unread
-                              ? () => onMarkRead(thread)
-                              : null,
-                          onMarkDone: () => onMarkDone(thread),
-                        );
-                        return Column(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: <Widget>[
-                            if (showGroup)
-                              _NotificationGroupHeader(
-                                groupKey: groupKey,
-                                label: groupByRepository
-                                    ? groupKey
-                                    : _notificationDateGroupLabel(
-                                        context,
-                                        thread.updatedAt,
-                                      ),
-                              ),
-                            if (autoMarkRead && thread.unread)
-                              _AutoMarkNotificationRead(
-                                threadId: thread.id,
-                                onMarkRead: () => onMarkRead(thread),
-                                child: row,
-                              )
-                            else
-                              row,
-                          ],
-                        );
-                      },
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
     );
   }
 }
